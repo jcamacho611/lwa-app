@@ -8,7 +8,9 @@ class Settings:
         self.allowed_origins = [origin.strip() for origin in origins.split(",") if origin.strip()]
         self.environment = os.getenv("ENVIRONMENT", "development")
         self.app_name = os.getenv("LWA_APP_NAME", "LWA Backend")
-        self.api_base_url = os.getenv("API_BASE_URL", "")
+        railway_public_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+        derived_public_base_url = f"https://{railway_public_domain}" if railway_public_domain else ""
+        self.api_base_url = os.getenv("API_BASE_URL", "").strip() or derived_public_base_url
         self.port = int(os.getenv("PORT", "8000"))
         self.log_level = os.getenv("LOG_LEVEL", "info")
         self.default_plan_name = os.getenv("LWA_DEFAULT_PLAN_NAME", "Starter Trial")
@@ -16,7 +18,13 @@ class Settings:
         self.default_turnaround = os.getenv("LWA_DEFAULT_TURNAROUND", "45 seconds")
         self.ffmpeg_path = os.getenv("FFMPEG_PATH", "/usr/bin/ffmpeg")
         self.yt_dlp_temp_dir = os.getenv("YT_DLP_TEMP_DIR", "/tmp")
-        self.generated_assets_dir = os.getenv("LWA_GENERATED_ASSETS_DIR", os.path.join(os.getcwd(), "generated"))
+        railway_volume_mount_path = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
+        default_generated_dir = (
+            os.path.join(railway_volume_mount_path, "lwa-generated")
+            if railway_volume_mount_path
+            else os.path.join(os.getcwd(), "generated")
+        )
+        self.generated_assets_dir = os.getenv("LWA_GENERATED_ASSETS_DIR", default_generated_dir)
         self.max_upload_mb = int(os.getenv("MAX_UPLOAD_MB", "500"))
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
@@ -33,7 +41,11 @@ class Settings:
         self.meta_app_secret = os.getenv("META_APP_SECRET", "")
         self.facebook_page_access_token = os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN", "")
         self.instagram_access_token = os.getenv("INSTAGRAM_ACCESS_TOKEN", "")
-        self.service_version = os.getenv("RENDER_GIT_COMMIT", "local")
+        self.service_version = (
+            os.getenv("RENDER_GIT_COMMIT")
+            or os.getenv("RAILWAY_GIT_COMMIT_SHA")
+            or "local"
+        )
 
 
 @lru_cache

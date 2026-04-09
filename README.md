@@ -24,6 +24,7 @@ LWA/
 │   │   └── trends.py
 │   ├── .dockerignore
 │   ├── Dockerfile
+│   ├── railway.toml
 │   └── requirements.txt
 └── lwa-ios/
     ├── LWA.xcodeproj/
@@ -52,6 +53,7 @@ LWA/
 - `lwa-backend/app/trends.py`: Public trend aggregation from Google Trends, Reddit, and Hacker News.
 - `lwa-backend/requirements.txt`: Python dependencies, including `yt-dlp` and deployment-ready HTTP and AI packages.
 - `lwa-backend/Dockerfile`: Render-friendly container image with `ffmpeg`, `curl`, and a Docker health check.
+- `lwa-backend/railway.toml`: Railway config-as-code file for Docker deploys from the backend subdirectory.
 - `render.yaml`: One-file Render blueprint for deploying the backend with a persistent disk and prompted secrets.
 - `lwa-ios/LWA/LWAApp.swift`: SwiftUI app entry point.
 - `lwa-ios/LWA/ContentView.swift`: Main dark UI, pricing sheet, settings sheet, results, and saved history.
@@ -180,6 +182,65 @@ Manual fallback:
 5. Leave the Docker command empty so Render uses the Dockerfile `CMD`
 6. Set `Health Check Path` to `/health`
 7. Attach a disk so generated clip assets persist between deploys
+
+## Railway Deployment
+
+This repo is also compatible with Railway using the existing backend Dockerfile plus a Railway config file at [`lwa-backend/railway.toml`](/Users/bdm/LWA/lwa-backend/railway.toml).
+
+For this monorepo, Railway’s official monorepo docs say you should:
+
+1. Create a new Railway service from this GitHub repo
+2. Set the service `Root Directory` to `lwa-backend`
+3. Set the config-as-code file path to `/lwa-backend/railway.toml`
+4. Let Railway build from the `Dockerfile` in that directory
+5. Attach a volume so generated clip assets persist
+
+Recommended Railway volume mount path:
+
+```text
+/data
+```
+
+The backend now auto-detects these Railway-provided values when available:
+
+- `RAILWAY_PUBLIC_DOMAIN` to derive the public API base URL if `API_BASE_URL` is unset
+- `RAILWAY_VOLUME_MOUNT_PATH` to store generated clip assets if `LWA_GENERATED_ASSETS_DIR` is unset
+- `RAILWAY_GIT_COMMIT_SHA` for the service version if no Render commit SHA exists
+
+Suggested Railway variables:
+
+```text
+ENVIRONMENT=production
+LWA_APP_NAME=LWA Backend
+LWA_DEFAULT_PLAN_NAME=Starter Trial
+LWA_DEFAULT_CREDITS_REMAINING=2
+LWA_DEFAULT_TURNAROUND=45 seconds
+FFMPEG_PATH=/usr/bin/ffmpeg
+YT_DLP_TEMP_DIR=/tmp
+ALLOWED_ORIGINS=*
+LOG_LEVEL=info
+OPENAI_API_KEY=your_real_key
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+Optional but useful:
+
+```text
+API_BASE_URL=https://your-custom-domain.com
+LWA_GENERATED_ASSETS_DIR=/data/lwa-generated
+```
+
+If you do not set `API_BASE_URL`, the app will use `https://${RAILWAY_PUBLIC_DOMAIN}` automatically on Railway.
+
+Local CLI deploy path:
+
+```bash
+brew install railway
+cd /Users/bdm/LWA/lwa-backend
+railway login
+railway link
+railway up
+```
 
 Required env vars in Render:
 
