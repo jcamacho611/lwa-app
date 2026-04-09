@@ -34,6 +34,7 @@ struct ProcessingSummary: Codable {
     let sourceTitle: String?
     let sourceDurationSeconds: Int?
     let assetsCreated: Int
+    let editedAssetsCreated: Int
 
     enum CodingKeys: String, CodingKey {
         case planName = "plan_name"
@@ -49,6 +50,25 @@ struct ProcessingSummary: Codable {
         case sourceTitle = "source_title"
         case sourceDurationSeconds = "source_duration_seconds"
         case assetsCreated = "assets_created"
+        case editedAssetsCreated = "edited_assets_created"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        planName = try container.decode(String.self, forKey: .planName)
+        creditsRemaining = try container.decode(Int.self, forKey: .creditsRemaining)
+        estimatedTurnaround = try container.decode(String.self, forKey: .estimatedTurnaround)
+        recommendedNextStep = try container.decode(String.self, forKey: .recommendedNextStep)
+        aiProvider = try container.decode(String.self, forKey: .aiProvider)
+        targetPlatform = try container.decode(String.self, forKey: .targetPlatform)
+        trendUsed = try container.decodeIfPresent(String.self, forKey: .trendUsed)
+        sourcesConsidered = try container.decode([String].self, forKey: .sourcesConsidered)
+        processingMode = try container.decode(String.self, forKey: .processingMode)
+        selectionStrategy = try container.decode(String.self, forKey: .selectionStrategy)
+        sourceTitle = try container.decodeIfPresent(String.self, forKey: .sourceTitle)
+        sourceDurationSeconds = try container.decodeIfPresent(Int.self, forKey: .sourceDurationSeconds)
+        assetsCreated = try container.decodeIfPresent(Int.self, forKey: .assetsCreated) ?? 0
+        editedAssetsCreated = try container.decodeIfPresent(Int.self, forKey: .editedAssetsCreated) ?? 0
     }
 }
 
@@ -116,7 +136,11 @@ struct ClipResult: Codable, Identifiable {
     let score: Int
     let format: String
     let clipURL: String?
+    let rawClipURL: String?
+    let editedClipURL: String?
     let transcriptExcerpt: String?
+    let editProfile: String?
+    let aspectRatio: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -128,7 +152,11 @@ struct ClipResult: Codable, Identifiable {
         case score
         case format
         case clipURL = "clip_url"
+        case rawClipURL = "raw_clip_url"
+        case editedClipURL = "edited_clip_url"
         case transcriptExcerpt = "transcript_excerpt"
+        case editProfile = "edit_profile"
+        case aspectRatio = "aspect_ratio"
     }
 }
 

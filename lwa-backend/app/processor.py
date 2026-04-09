@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import textwrap
 from typing import Any, List, Optional
 from urllib.parse import quote
 
@@ -24,7 +25,9 @@ class ClipSeed:
     id: str
     start_time: str
     end_time: str
+    asset_path: Path
     clip_url: Optional[str]
+    raw_clip_url: Optional[str]
     format: str
     transcript_excerpt: Optional[str] = None
 
@@ -88,6 +91,8 @@ def process_video_source(
         transcript_windows = load_transcript_windows(work_dir)
 
         duration_seconds = parse_duration_seconds(info.get("duration"))
+        if duration_seconds is None:
+            duration_seconds = probe_video_duration(source_file=source_file, ffmpeg_path=ffmpeg_path)
         segments, selection_strategy = build_segment_plan(
             duration_seconds=duration_seconds,
             chapters=info.get("chapters") or [],
@@ -255,22 +260,29 @@ def create_clips(
 ) -> List[ClipSeed]:
     seeds: List[ClipSeed] = []
     for index, segment in enumerate(segments[:3], start=1):
-        output_name = f"clip_{index:03d}.mp4"
+        output_name = f"clip_{index:03d}_raw.mp4"
         output_path = generated_dir / output_name
-        cut_clip(
-            ffmpeg_path=ffmpeg_path,
-            source_file=source_file,
-            output_path=output_path,
-            start=segment["start"],
-            duration=segment["duration"],
-        )
+        try:
+            cut_clip(
+                ffmpeg_path=ffmpeg_path,
+                source_file=source_file,
+                output_path=output_path,
+                start=segment["start"],
+                duration=segment["duration"],
+            )
+            ensure_clip_output(output_path)
+        except Exception:
+            continue
+
         clip_url = f"{public_base_url}/generated/{request_id}/{quote(output_name)}"
         seeds.append(
             ClipSeed(
                 id=f"clip_{index:03d}",
                 start_time=format_timestamp(segment["start"]),
                 end_time=format_timestamp(segment["start"] + segment["duration"]),
+                asset_path=output_path,
                 clip_url=clip_url,
+                raw_clip_url=clip_url,
                 format=str(segment.get("format", segment_format(index))),
                 transcript_excerpt=string_or_none(segment.get("transcript_excerpt")),
             )
@@ -317,6 +329,251 @@ def cut_clip(
     ]
 
     subprocess.run(command, check=True, capture_output=True, text=True)
+
+
+def probe_video_duration(*, source_file: Path, ffmpeg_path: str) -> Optional[int]:
+    command = [ffmpeg_path, "-i", str(source_file), "-f", "null", "-"]
+    process = subprocess.run(command, capture_output=True, text=True)
+    combined = f"{process.stdout}\n{process.stderr}"
+    match = re.search(r"Duration:\s*(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)", combined)
+    if not match:
+        return None
+
+    hours = int(match.group(1))
+    minutes = int(match.group(2))
+    seconds = float(match.group(3))
+    return int((hours * 3600) + (minutes * 60) + seconds)
+
+
+def ensure_clip_output(path: Path) -> None:
+    if not path.exists():
+        raise FileNotFoundError(f"clip output missing: {path}")
+    if path.stat().st_size < 8_192:
+        raise RuntimeError(f"clip output too small to be valid: {path}")
+
+
+def create_social_exports(
+    *,
+    clip_results: List[Any],
+    clip_seeds: List[ClipSeed],
+    generated_dir: Path,
+    request_id: str,
+    public_base_url: str,
+    ffmpeg_path: str,
+) -> tuple[List[Any], int]:
+    seed_map = {seed.id: seed for seed in clip_seeds}
+    exported_results: List[Any] = []
+    edited_assets_created = 0
+
+    for clip in clip_results:
+        seed = seed_map.get(getattr(clip, "id", ""))
+        raw_clip_url = seed.raw_clip_url if seed else getattr(clip, "raw_clip_url", None) or getattr(clip, "clip_url", None)
+
+        if not seed or not seed.asset_path.exists():
+            exported_results.append(
+                clip.model_copy(
+                    update={
+                        "raw_clip_url": raw_clip_url,
+                        "edit_profile": "Source cut fallback",
+                        "aspect_ratio": "source",
+                    }
+                )
+            )
+            continue
+
+        output_name = f"{seed.id}.mp4"
+        output_path = generated_dir / output_name
+
+        try:
+            export_social_ready_clip(
+                ffmpeg_path=ffmpeg_path,
+                input_path=seed.asset_path,
+                output_path=output_path,
+                title_text=build_title_overlay(getattr(clip, "hook", ""), getattr(clip, "format", seed.format)),
+                subtitle_text=build_subtitle_overlay(
+                    getattr(clip, "transcript_excerpt", None) or getattr(clip, "caption", "")
+                ),
+            )
+            edited_url = f"{public_base_url}/generated/{request_id}/{quote(output_name)}"
+            exported_results.append(
+                clip.model_copy(
+                    update={
+                        "clip_url": edited_url,
+                        "raw_clip_url": raw_clip_url,
+                        "edited_clip_url": edited_url,
+                        "edit_profile": "9:16 Smart Crop + Overlay Copy",
+                        "aspect_ratio": "9:16",
+                    }
+                )
+            )
+            edited_assets_created += 1
+        except Exception:
+            exported_results.append(
+                clip.model_copy(
+                    update={
+                        "clip_url": raw_clip_url or getattr(clip, "clip_url", None),
+                        "raw_clip_url": raw_clip_url,
+                        "edit_profile": "Source cut fallback",
+                        "aspect_ratio": "source",
+                    }
+                )
+            )
+
+    return exported_results, edited_assets_created
+
+
+def export_social_ready_clip(
+    *,
+    ffmpeg_path: str,
+    input_path: Path,
+    output_path: Path,
+    title_text: str,
+    subtitle_text: str,
+) -> None:
+    bold_font = resolve_drawtext_font(bold=True)
+    regular_font = resolve_drawtext_font(bold=False)
+
+    filter_steps = [
+        "scale=720:1280:force_original_aspect_ratio=increase",
+        "crop=720:1280",
+        "drawbox=x=0:y=0:w=iw:h=228:color=black@0.28:t=fill",
+        "drawbox=x=0:y=ih-342:w=iw:h=342:color=black@0.54:t=fill",
+    ]
+
+    with tempfile.TemporaryDirectory(prefix="iwa_text_") as temp_dir:
+        title_path = Path(temp_dir) / "title.txt"
+        subtitle_path = Path(temp_dir) / "subtitle.txt"
+        title_path.write_text(title_text, encoding="utf-8")
+        subtitle_path.write_text(subtitle_text, encoding="utf-8")
+
+        filter_steps.append(
+            drawtext_filter(
+                textfile=title_path,
+                fontfile=bold_font,
+                fontsize=46,
+                x="40",
+                y="52",
+                fontcolor="white",
+                line_spacing=10,
+            )
+        )
+        filter_steps.append(
+            drawtext_filter(
+                textfile=subtitle_path,
+                fontfile=regular_font,
+                fontsize=34,
+                x="42",
+                y="h-th-82",
+                fontcolor="white",
+                line_spacing=12,
+                box=True,
+                boxcolor="black@0.28",
+                boxborderw=18,
+            )
+        )
+
+        command = [
+            ffmpeg_path,
+            "-y",
+            "-i",
+            str(input_path),
+            "-map",
+            "0:v:0",
+            "-map",
+            "0:a?",
+            "-vf",
+            ",".join(filter_steps),
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "22",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-movflags",
+            "+faststart",
+            str(output_path),
+        ]
+
+        subprocess.run(command, check=True, capture_output=True, text=True)
+
+
+def drawtext_filter(
+    *,
+    textfile: Path,
+    fontfile: Optional[str],
+    fontsize: int,
+    x: str,
+    y: str,
+    fontcolor: str,
+    line_spacing: int,
+    box: bool = False,
+    boxcolor: str = "black@0.0",
+    boxborderw: int = 0,
+) -> str:
+    parts = [
+        f"textfile={escape_filter_value(str(textfile))}",
+        f"fontsize={fontsize}",
+        f"x={x}",
+        f"y={y}",
+        f"fontcolor={fontcolor}",
+        f"line_spacing={line_spacing}",
+        "fix_bounds=true",
+    ]
+    if fontfile:
+        parts.append(f"fontfile={escape_filter_value(fontfile)}")
+    if box:
+        parts.append("box=1")
+        parts.append(f"boxcolor={boxcolor}")
+        parts.append(f"boxborderw={boxborderw}")
+
+    return "drawtext=" + ":".join(parts)
+
+
+def resolve_drawtext_font(*, bold: bool) -> Optional[str]:
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/Library/Fonts/Arial Bold.ttf" if bold else "/Library/Fonts/Arial.ttf",
+    ]
+
+    for candidate in candidates:
+        if Path(candidate).exists():
+            return candidate
+
+    return None
+
+
+def escape_filter_value(value: str) -> str:
+    return value.replace("\\", "\\\\").replace(":", "\\:").replace(" ", "\\ ")
+
+
+def build_title_overlay(hook: str, fallback_label: str) -> str:
+    text = hook.strip() or fallback_label.strip() or "IWA Clip"
+    return wrap_overlay_text(text, max_chars_per_line=18, max_lines=3)
+
+
+def build_subtitle_overlay(value: str) -> str:
+    text = value.strip() or "Auto-cut for short-form review and publishing."
+    return wrap_overlay_text(text, max_chars_per_line=28, max_lines=4)
+
+
+def wrap_overlay_text(value: str, *, max_chars_per_line: int, max_lines: int) -> str:
+    normalized = re.sub(r"\s+", " ", value).strip()
+    lines = textwrap.wrap(normalized, width=max_chars_per_line)
+    clipped = lines[:max_lines]
+
+    if not clipped:
+        return normalized[: max_chars_per_line * max_lines]
+
+    remaining = lines[max_lines:]
+    if remaining:
+        clipped[-1] = clipped[-1].rstrip(". ") + "..."
+
+    return "\n".join(clipped)
 
 
 def format_timestamp(total_seconds: float) -> str:

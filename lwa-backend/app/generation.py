@@ -44,6 +44,7 @@ async def generate_clips(
                 target_platform=target_platform,
                 selected_trend=selected_trend,
                 trend_context=trend_context,
+                source_context=source_context,
             )
         except Exception:
             pass
@@ -56,6 +57,7 @@ async def generate_clips(
                 target_platform=target_platform,
                 selected_trend=selected_trend,
                 trend_context=trend_context,
+                source_context=source_context,
             )
         except Exception:
             pass
@@ -176,7 +178,10 @@ def parse_generated_clips(
                 score=int(clip.get("score", max(70, 95 - (index * 4)))),
                 format=str(clip.get("format", seed.format if seed else "Trend First")),
                 clip_url=seed.clip_url if seed else clip.get("clip_url"),
+                raw_clip_url=seed.raw_clip_url if seed else clip.get("raw_clip_url"),
                 transcript_excerpt=seed.transcript_excerpt if seed else clip.get("transcript_excerpt"),
+                edit_profile=clip.get("edit_profile"),
+                aspect_ratio=clip.get("aspect_ratio"),
             )
         )
 

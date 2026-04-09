@@ -444,6 +444,9 @@ struct ContentView: View {
             Text("Assets created: \(summary.assetsCreated)")
                 .foregroundStyle(Color.white.opacity(0.78))
 
+            Text("Edited exports: \(summary.editedAssetsCreated)")
+                .foregroundStyle(Color.white.opacity(0.78))
+
             if let trendUsed = summary.trendUsed, !trendUsed.isEmpty {
                 Text("Trend used: \(trendUsed)")
                     .foregroundStyle(Color.white.opacity(0.78))
@@ -514,7 +517,7 @@ struct ContentView: View {
 
             if let clipURL = clip.clipURL, let url = URL(string: clipURL) {
                 Link(destination: url) {
-                    Text("Open Clip Asset")
+                    Text(clip.editedClipURL != nil ? "Open Edited Clip" : "Open Clip Asset")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.black)
                         .padding(.horizontal, 12)
@@ -522,6 +525,32 @@ struct ContentView: View {
                         .background(Color(red: 0.34, green: 0.89, blue: 0.82))
                         .clipShape(Capsule())
                 }
+            }
+
+            if let rawClipURL = clip.rawClipURL,
+               rawClipURL != clip.clipURL,
+               let rawURL = URL(string: rawClipURL) {
+                Link(destination: rawURL) {
+                    Text("Open Raw Cut")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(Capsule())
+                }
+            }
+
+            if let editProfile = clip.editProfile, !editProfile.isEmpty {
+                Text("Edit profile: \(editProfile)")
+                    .font(.caption)
+                    .foregroundStyle(Color.white.opacity(0.62))
+            }
+
+            if let aspectRatio = clip.aspectRatio, !aspectRatio.isEmpty {
+                Text("Aspect ratio: \(aspectRatio)")
+                    .font(.caption)
+                    .foregroundStyle(Color.white.opacity(0.62))
             }
 
             if let transcriptExcerpt = clip.transcriptExcerpt, !transcriptExcerpt.isEmpty {

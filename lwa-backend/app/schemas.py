@@ -29,7 +29,11 @@ class ClipResult(BaseModel):
     score: int
     format: str
     clip_url: Optional[str] = None
+    raw_clip_url: Optional[str] = None
+    edited_clip_url: Optional[str] = None
     transcript_excerpt: Optional[str] = None
+    edit_profile: Optional[str] = None
+    aspect_ratio: Optional[str] = None
 
 
 class ProcessingSummary(BaseModel):
@@ -46,6 +50,7 @@ class ProcessingSummary(BaseModel):
     source_title: Optional[str] = None
     source_duration_seconds: Optional[int] = None
     assets_created: int = 0
+    edited_assets_created: int = 0
 
 
 class ClipBatchResponse(BaseModel):

@@ -134,7 +134,8 @@ final class ContentViewModel: ObservableObject {
             \(index + 1). \(clip.title) [\(clip.startTime)-\(clip.endTime)] score \(clip.score)
             Hook: \(clip.hook)
             Caption: \(clip.caption)
-            Asset: \(clip.clipURL ?? "not available")
+            Edited asset: \(clip.editedClipURL ?? clip.clipURL ?? "not available")
+            Raw cut: \(clip.rawClipURL ?? "not available")
             """
         }
 
@@ -147,6 +148,7 @@ final class ContentViewModel: ObservableObject {
         Mode: \(response.processingSummary.processingMode)
         Selection: \(response.processingSummary.selectionStrategy)
         Plan: \(response.processingSummary.planName)
+        Edited exports: \(response.processingSummary.editedAssetsCreated)
 
         \(clipLines.joined(separator: "\n\n"))
         """

@@ -17,9 +17,9 @@ def build_mock_clips(
     lead_trend = selected_trend or (trend_context[0].title if trend_context else "creator growth")
     platform_label = target_platform or "TikTok"
     title_prefix = source_title or platform_label
-    clip_urls = clip_urls or [None, None, None]
-    start_end_pairs = start_end_pairs or [("00:03", "00:18"), ("00:24", "00:39"), ("00:47", "01:04")]
-    transcript_excerpts = transcript_excerpts or [None, None, None]
+    clip_urls = normalize_clip_urls(clip_urls)
+    start_end_pairs = normalize_start_end_pairs(start_end_pairs)
+    transcript_excerpts = normalize_transcript_excerpts(transcript_excerpts)
 
     return [
         ClipResult(
@@ -35,7 +35,10 @@ def build_mock_clips(
             score=92,
             format="Hook First",
             clip_url=clip_urls[0],
+            raw_clip_url=clip_urls[0],
             transcript_excerpt=transcript_excerpts[0],
+            edit_profile="Source cut preview" if clip_urls[0] else None,
+            aspect_ratio="source" if clip_urls[0] else None,
         ),
         ClipResult(
             id="clip_002",
@@ -50,7 +53,10 @@ def build_mock_clips(
             score=88,
             format="Opinion",
             clip_url=clip_urls[1],
+            raw_clip_url=clip_urls[1],
             transcript_excerpt=transcript_excerpts[1],
+            edit_profile="Source cut preview" if clip_urls[1] else None,
+            aspect_ratio="source" if clip_urls[1] else None,
         ),
         ClipResult(
             id="clip_003",
@@ -65,6 +71,25 @@ def build_mock_clips(
             score=85,
             format="Story CTA",
             clip_url=clip_urls[2],
+            raw_clip_url=clip_urls[2],
             transcript_excerpt=transcript_excerpts[2],
+            edit_profile="Source cut preview" if clip_urls[2] else None,
+            aspect_ratio="source" if clip_urls[2] else None,
         ),
     ]
+
+
+def normalize_clip_urls(values: Optional[List[Optional[str]]]) -> List[Optional[str]]:
+    normalized = list(values or [])
+    return (normalized + [None, None, None])[:3]
+
+
+def normalize_start_end_pairs(values: Optional[List[tuple[str, str]]]) -> List[tuple[str, str]]:
+    defaults = [("00:03", "00:18"), ("00:24", "00:39"), ("00:47", "01:04")]
+    normalized = list(values or [])
+    return (normalized + defaults)[0:3]
+
+
+def normalize_transcript_excerpts(values: Optional[List[Optional[str]]]) -> List[Optional[str]]:
+    normalized = list(values or [])
+    return (normalized + [None, None, None])[:3]

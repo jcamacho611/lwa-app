@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import get_settings
 from .generation import generate_clips
 from .job_store import JobStore
-from .processor import process_video_source, resolve_ffmpeg_path
+from .processor import create_social_exports, process_video_source, resolve_ffmpeg_path
 from .schemas import (
     ClipBatchResponse,
     JobCreatedResponse,
@@ -154,6 +154,19 @@ async def build_clip_response(
         trend_context=trend_context,
         source_context=source_context,
     )
+    edited_assets_created = 0
+    if source_context:
+        ffmpeg_path = resolve_ffmpeg_path(settings)
+        if ffmpeg_path:
+            clips, edited_assets_created = await asyncio.to_thread(
+                create_social_exports,
+                clip_results=clips,
+                clip_seeds=source_context.clip_seeds,
+                generated_dir=Path(settings.generated_assets_dir) / request_id,
+                request_id=request_id,
+                public_base_url=public_base_url,
+                ffmpeg_path=ffmpeg_path,
+            )
     processing_mode = source_context.processing_mode if source_context else "mock"
     source_title = source_context.title if source_context else None
     source_duration_seconds = source_context.duration_seconds if source_context else None
@@ -185,6 +198,7 @@ async def build_clip_response(
             source_title=source_title,
             source_duration_seconds=source_duration_seconds,
             assets_created=assets_created,
+            edited_assets_created=edited_assets_created,
         ),
         trend_context=trend_context[:6],
         clips=clips,
