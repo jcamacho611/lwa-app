@@ -10,11 +10,13 @@ LWA takes a video URL, sends it to a backend, and returns clip ideas with hooks 
 LWA/
 ├── README.md
 ├── .gitignore
+├── render.yaml
 ├── lwa-backend/
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── config.py
 │   │   ├── generation.py
+│   │   ├── job_store.py
 │   │   ├── main.py
 │   │   ├── mock_data.py
 │   │   ├── processor.py
@@ -43,12 +45,14 @@ LWA/
 - `lwa-backend/app/main.py`: FastAPI app with `POST /process` and `GET /health`.
 - `lwa-backend/app/config.py`: Lightweight environment-based backend configuration.
 - `lwa-backend/app/generation.py`: Hook, caption, and angle generation with OpenAI, Ollama, or heuristic fallback.
+- `lwa-backend/app/job_store.py`: In-memory async job tracking for long-running clip generation.
 - `lwa-backend/app/schemas.py`: Request and response models.
 - `lwa-backend/app/mock_data.py`: Fallback clip copy when real generation is unavailable.
-- `lwa-backend/app/processor.py`: Real `yt-dlp` plus `ffmpeg` pipeline that downloads a source video and cuts MP4 clips.
+- `lwa-backend/app/processor.py`: Real `yt-dlp` plus `ffmpeg` pipeline that downloads a source video, reads captions when available, and cuts MP4 clips.
 - `lwa-backend/app/trends.py`: Public trend aggregation from Google Trends, Reddit, and Hacker News.
 - `lwa-backend/requirements.txt`: Python dependencies, including `yt-dlp` and deployment-ready HTTP and AI packages.
 - `lwa-backend/Dockerfile`: Render-friendly container image with `ffmpeg`, `curl`, and a Docker health check.
+- `render.yaml`: One-file Render blueprint for deploying the backend with a persistent disk and prompted secrets.
 - `lwa-ios/LWA/LWAApp.swift`: SwiftUI app entry point.
 - `lwa-ios/LWA/ContentView.swift`: Main dark UI, pricing sheet, settings sheet, results, and saved history.
 - `lwa-ios/LWA/Models/ClipResult.swift`: Codable API and local persistence models.
@@ -60,8 +64,10 @@ LWA/
 ## MVP Features Included
 
 - Video URL input and end-to-end backend call.
+- Async backend jobs with polling for longer video processing.
 - Real source download via `yt-dlp`.
 - Real MP4 clip cutting via `ffmpeg`.
+- Transcript-aware clip window selection when subtitles or auto-captions are available.
 - Live trend radar from Google Trends, Reddit, and Hacker News.
 - Hooks, captions, clip score, and clip format generation with heuristic or AI provider fallback.
 - Processing summary with plan name and remaining credits.
@@ -94,6 +100,8 @@ Useful endpoints:
 - `GET /health`
 - `GET /v1/status/health`
 - `GET /v1/trends`
+- `POST /v1/jobs`
+- `GET /v1/jobs/{job_id}`
 - `POST /process`
 - `POST /v1/generate`
 
@@ -122,6 +130,14 @@ curl -X POST http://127.0.0.1:8000/process \
   -d '{"video_url":"https://www.youtube.com/watch?v=example"}'
 ```
 
+Async job example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"video_url":"https://www.youtube.com/watch?v=example","target_platform":"TikTok"}'
+```
+
 ## Backend: Docker Run
 
 From the repository root:
@@ -146,7 +162,16 @@ docker run --rm -p 8000:8000 \
 
 ## Render Deployment
 
-This repo is set up as a monorepo. In Render, the cleanest setup is:
+This repo now includes a ready-to-use [`render.yaml`](/Users/bdm/LWA/render.yaml) blueprint.
+
+Fastest path:
+
+1. In Render, create a new Blueprint service from this repository
+2. Let Render read `render.yaml`
+3. Fill in the `sync: false` secrets when prompted
+4. Deploy
+
+Manual fallback:
 
 1. Create a new `Web Service`
 2. Connect this GitHub repository
@@ -154,6 +179,7 @@ This repo is set up as a monorepo. In Render, the cleanest setup is:
 4. Set `Language` to `Docker`
 5. Leave the Docker command empty so Render uses the Dockerfile `CMD`
 6. Set `Health Check Path` to `/health`
+7. Attach a disk so generated clip assets persist between deploys
 
 Required env vars in Render:
 
@@ -221,12 +247,12 @@ Important note:
 
 This repo is now a usable MVP, but it is not a finished SaaS business yet. Before charging real customers, add:
 
-- Transcript-aware clip picking instead of duration-based segment selection.
 - Authentication and user accounts.
 - Real billing with App Store subscriptions, Stripe, or both.
-- Hosted backend deployment with persistent storage.
+- Persistent job storage instead of in-memory job tracking.
 - Analytics, error monitoring, and support flows.
 - Social publishing and export delivery beyond direct clip asset URLs.
+- Whop entitlement or access gating in the app instead of an external checkout link alone.
 
 ## Exact Commands To Run Next
 

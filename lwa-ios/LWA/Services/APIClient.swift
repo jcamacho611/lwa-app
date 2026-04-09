@@ -69,6 +69,10 @@ enum AppConfiguration {
 }
 
 struct APIClient {
+    private var jobsEndpoint: URL {
+        APIConfig.baseURL.appendingPathComponent("v1/jobs")
+    }
+
     private var processEndpoint: URL? {
         APIConfig.baseURL.appendingPathComponent("process")
     }
@@ -119,6 +123,67 @@ struct APIClient {
         }
 
         return try JSONDecoder().decode(ClipResponse.self, from: data)
+    }
+
+    func createJob(
+        videoURL: String,
+        selectedTrend: TrendItem?,
+        targetPlatform: String
+    ) async throws -> JobCreatedResponse {
+        guard let candidateURL = URL(string: videoURL),
+              let scheme = candidateURL.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            throw APIError.invalidVideoURL
+        }
+
+        var request = URLRequest(url: jobsEndpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30
+        request.httpBody = try JSONEncoder().encode(
+            ProcessRequest(
+                videoURL: videoURL,
+                selectedTrend: selectedTrend?.title,
+                trendSource: selectedTrend?.source,
+                targetPlatform: targetPlatform,
+                contentAngle: nil
+            )
+        )
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard (200 ... 299).contains(httpResponse.statusCode) else {
+            let fallback = "Backend error \(httpResponse.statusCode)"
+            let message = String(data: data, encoding: .utf8) ?? fallback
+            throw APIError.server(message)
+        }
+
+        return try JSONDecoder().decode(JobCreatedResponse.self, from: data)
+    }
+
+    func fetchJob(jobID: String) async throws -> JobStatusResponse {
+        let endpoint = jobsEndpoint.appendingPathComponent(jobID)
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard (200 ... 299).contains(httpResponse.statusCode) else {
+            let fallback = "Backend error \(httpResponse.statusCode)"
+            let message = String(data: data, encoding: .utf8) ?? fallback
+            throw APIError.server(message)
+        }
+
+        return try JSONDecoder().decode(JobStatusResponse.self, from: data)
     }
 
     func fetchTrends() async throws -> [TrendItem] {

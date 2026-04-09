@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -25,6 +26,15 @@ class ClipSeed:
     end_time: str
     clip_url: Optional[str]
     format: str
+    transcript_excerpt: Optional[str] = None
+
+
+@dataclass
+class TranscriptWindow:
+    start_seconds: float
+    end_seconds: float
+    excerpt: str
+    score: int
 
 
 @dataclass
@@ -36,6 +46,7 @@ class SourceContext:
     source_url: str
     clip_seeds: List[ClipSeed]
     processing_mode: str
+    selection_strategy: str
 
 
 def resolve_ffmpeg_path(settings: Settings) -> Optional[str]:
@@ -74,9 +85,14 @@ def process_video_source(
         work_dir = Path(temp_dir)
         info = download_source(video_url=video_url, work_dir=work_dir, ffmpeg_path=ffmpeg_path)
         source_file = locate_source_file(work_dir)
+        transcript_windows = load_transcript_windows(work_dir)
 
         duration_seconds = parse_duration_seconds(info.get("duration"))
-        segments = build_segment_plan(duration_seconds, info.get("chapters") or [])
+        segments, selection_strategy = build_segment_plan(
+            duration_seconds=duration_seconds,
+            chapters=info.get("chapters") or [],
+            transcript_windows=transcript_windows,
+        )
         clip_seeds = create_clips(
             source_file=source_file,
             generated_dir=generated_dir,
@@ -94,6 +110,7 @@ def process_video_source(
         source_url=str(info.get("webpage_url") or video_url),
         clip_seeds=clip_seeds,
         processing_mode="real",
+        selection_strategy=selection_strategy,
     )
 
 
@@ -107,6 +124,10 @@ def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str) -> dict
         "merge_output_format": "mp4",
         "overwrites": True,
         "ffmpeg_location": str(Path(ffmpeg_path).parent),
+        "writesubtitles": True,
+        "writeautomaticsub": True,
+        "subtitleslangs": ["en", "en-US", "en-GB", "en.*"],
+        "subtitlesformat": "vtt/best",
     }
 
     with YoutubeDL(options) as ydl:
@@ -126,22 +147,31 @@ def locate_source_file(work_dir: Path) -> Path:
     return max(candidates, key=lambda path: path.stat().st_size)
 
 
-def build_segment_plan(duration_seconds: Optional[int], chapters: List[dict[str, Any]]) -> List[dict[str, float]]:
+def build_segment_plan(
+    *,
+    duration_seconds: Optional[int],
+    chapters: List[dict[str, Any]],
+    transcript_windows: List[TranscriptWindow],
+) -> tuple[List[dict[str, Any]], str]:
     clip_length = choose_clip_length(duration_seconds)
+    transcript_segments = build_transcript_segments(transcript_windows, clip_length)
+    if transcript_segments:
+        return transcript_segments[:3], "transcript"
+
     segments = build_chapter_segments(chapters=chapters, clip_length=clip_length)
     if segments:
-        return segments[:3]
+        return segments[:3], "chapters"
 
     if duration_seconds is None or duration_seconds <= 0:
         return [
             {"start": 0.0, "duration": float(clip_length)},
             {"start": 15.0, "duration": float(clip_length)},
             {"start": 30.0, "duration": float(clip_length)},
-        ]
+        ], "timeline"
 
     latest_start = max(float(duration_seconds - clip_length), 0.0)
     if latest_start == 0:
-        return [{"start": 0.0, "duration": float(clip_length)}]
+        return [{"start": 0.0, "duration": float(clip_length)}], "timeline"
 
     fractions = [0.12, 0.42, 0.72]
     planned = []
@@ -149,7 +179,7 @@ def build_segment_plan(duration_seconds: Optional[int], chapters: List[dict[str,
         start = min(latest_start, max(0.0, duration_seconds * fraction))
         planned.append({"start": round(start, 2), "duration": float(clip_length)})
 
-    return dedupe_segments(planned)[:3]
+    return dedupe_segments(planned)[:3], "timeline"
 
 
 def build_chapter_segments(chapters: List[dict[str, Any]], clip_length: int) -> List[dict[str, float]]:
@@ -161,6 +191,35 @@ def build_chapter_segments(chapters: List[dict[str, Any]], clip_length: int) -> 
         planned.append({"start": round(start, 2), "duration": duration})
 
     return dedupe_segments(planned)
+
+
+def build_transcript_segments(transcript_windows: List[TranscriptWindow], clip_length: int) -> List[dict[str, Any]]:
+    if not transcript_windows:
+        return []
+
+    selected: List[TranscriptWindow] = []
+    for window in sorted(transcript_windows, key=lambda current: current.score, reverse=True):
+        if any(abs(window.start_seconds - existing.start_seconds) < 8 for existing in selected):
+            continue
+        selected.append(window)
+        if len(selected) == 3:
+            break
+
+    planned = []
+    for index, window in enumerate(sorted(selected, key=lambda current: current.start_seconds), start=1):
+        padded_start = max(window.start_seconds - 1.0, 0.0)
+        base_duration = max(window.end_seconds - window.start_seconds + 2.0, 8.0)
+        duration = min(max(base_duration, float(clip_length)), 24.0)
+        planned.append(
+            {
+                "start": round(padded_start, 2),
+                "duration": round(duration, 2),
+                "transcript_excerpt": window.excerpt,
+                "format": segment_format(index),
+            }
+        )
+
+    return planned
 
 
 def dedupe_segments(segments: List[dict[str, float]]) -> List[dict[str, float]]:
@@ -212,7 +271,8 @@ def create_clips(
                 start_time=format_timestamp(segment["start"]),
                 end_time=format_timestamp(segment["start"] + segment["duration"]),
                 clip_url=clip_url,
-                format=segment_format(index),
+                format=str(segment.get("format", segment_format(index))),
+                transcript_excerpt=string_or_none(segment.get("transcript_excerpt")),
             )
         )
     return seeds
@@ -291,3 +351,124 @@ def string_or_none(value: Any) -> Optional[str]:
         return None
     text = str(value).strip()
     return text or None
+
+
+def load_transcript_windows(work_dir: Path) -> List[TranscriptWindow]:
+    subtitle_files = sorted(work_dir.rglob("*.vtt"))
+    for subtitle_file in subtitle_files:
+        windows = parse_vtt_windows(subtitle_file)
+        if windows:
+            return windows
+    return []
+
+
+def parse_vtt_windows(path: Path) -> List[TranscriptWindow]:
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    cues: List[tuple[float, float, str]] = []
+    index = 0
+
+    while index < len(lines):
+        line = lines[index].strip()
+
+        if not line or line.startswith("WEBVTT") or line.startswith("Kind:") or line.startswith("Language:") or line.startswith("NOTE"):
+            index += 1
+            continue
+
+        if "-->" not in line:
+            index += 1
+            continue
+
+        start_text, end_text = [part.strip() for part in line.split("-->", 1)]
+        start_seconds = parse_vtt_timestamp(start_text.split(" ")[0])
+        end_seconds = parse_vtt_timestamp(end_text.split(" ")[0])
+        index += 1
+
+        text_lines = []
+        while index < len(lines) and lines[index].strip():
+            text_lines.append(lines[index].strip())
+            index += 1
+
+        text = normalize_caption_text(" ".join(text_lines))
+        if text and end_seconds > start_seconds:
+            if not cues or cues[-1][2] != text:
+                cues.append((start_seconds, end_seconds, text))
+
+    return build_transcript_windows_from_cues(cues)
+
+
+def build_transcript_windows_from_cues(cues: List[tuple[float, float, str]]) -> List[TranscriptWindow]:
+    windows: List[TranscriptWindow] = []
+    for start_index in range(len(cues)):
+        window_start = cues[start_index][0]
+        window_end = cues[start_index][1]
+        parts = [cues[start_index][2]]
+
+        for current_index in range(start_index + 1, len(cues)):
+            cue_start, cue_end, cue_text = cues[current_index]
+            if cue_start - window_start > 18:
+                break
+            window_end = cue_end
+            parts.append(cue_text)
+            joined = " ".join(parts)
+            if len(joined.split()) >= 24 or (window_end - window_start) >= 10:
+                break
+
+        excerpt = normalize_caption_text(" ".join(parts))
+        if len(excerpt.split()) < 6:
+            continue
+
+        windows.append(
+            TranscriptWindow(
+                start_seconds=window_start,
+                end_seconds=window_end,
+                excerpt=excerpt,
+                score=score_excerpt(excerpt),
+            )
+        )
+
+    return windows
+
+
+def parse_vtt_timestamp(value: str) -> float:
+    parts = value.replace(",", ".").split(":")
+    parts = [part.strip() for part in parts]
+    if len(parts) == 3:
+        hours = int(parts[0])
+        minutes = int(parts[1])
+        seconds = float(parts[2])
+        return hours * 3600 + minutes * 60 + seconds
+    if len(parts) == 2:
+        minutes = int(parts[0])
+        seconds = float(parts[1])
+        return minutes * 60 + seconds
+    return float(parts[0])
+
+
+def normalize_caption_text(value: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", value)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def score_excerpt(excerpt: str) -> int:
+    lower = excerpt.lower()
+    words = excerpt.split()
+    keyword_hits = sum(
+        1
+        for keyword in [
+            "how",
+            "why",
+            "best",
+            "worst",
+            "first",
+            "mistake",
+            "secret",
+            "never",
+            "stop",
+            "you",
+            "your",
+        ]
+        if keyword in lower
+    )
+    punctuation_bonus = 3 if "?" in excerpt or "!" in excerpt else 0
+    return min(len(words), 35) + (keyword_hits * 4) + punctuation_bonus

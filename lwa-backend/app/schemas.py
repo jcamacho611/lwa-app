@@ -29,6 +29,7 @@ class ClipResult(BaseModel):
     score: int
     format: str
     clip_url: Optional[str] = None
+    transcript_excerpt: Optional[str] = None
 
 
 class ProcessingSummary(BaseModel):
@@ -41,6 +42,7 @@ class ProcessingSummary(BaseModel):
     trend_used: Optional[str] = None
     sources_considered: List[str]
     processing_mode: str
+    selection_strategy: str
     source_title: Optional[str] = None
     source_duration_seconds: Optional[int] = None
     assets_created: int = 0
@@ -60,3 +62,20 @@ class TrendsResponse(BaseModel):
     status: str
     updated_at: str
     trends: List[TrendItem]
+
+
+class JobCreatedResponse(BaseModel):
+    job_id: str
+    status: str
+    poll_url: str
+    message: str
+
+
+class JobStatusResponse(BaseModel):
+    job_id: str
+    status: str
+    message: str
+    created_at: str
+    updated_at: str
+    result: Optional[ClipBatchResponse] = None
+    error: Optional[str] = None

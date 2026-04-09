@@ -69,6 +69,7 @@ async def generate_clips(
             clip_urls=[seed.clip_url for seed in source_context.clip_seeds] if source_context else None,
             start_end_pairs=[(seed.start_time, seed.end_time) for seed in source_context.clip_seeds] if source_context else None,
             source_title=source_context.title if source_context else None,
+            transcript_excerpts=[seed.transcript_excerpt for seed in source_context.clip_seeds] if source_context else None,
         ),
         "heuristic",
     )
@@ -158,6 +159,7 @@ def parse_generated_clips(
             clip_urls=[seed.clip_url for seed in source_context.clip_seeds] if source_context else None,
             start_end_pairs=[(seed.start_time, seed.end_time) for seed in source_context.clip_seeds] if source_context else None,
             source_title=source_context.title if source_context else None,
+            transcript_excerpts=[seed.transcript_excerpt for seed in source_context.clip_seeds] if source_context else None,
         )
 
     normalized: list[ClipResult] = []
@@ -174,6 +176,7 @@ def parse_generated_clips(
                 score=int(clip.get("score", max(70, 95 - (index * 4)))),
                 format=str(clip.get("format", seed.format if seed else "Trend First")),
                 clip_url=seed.clip_url if seed else clip.get("clip_url"),
+                transcript_excerpt=seed.transcript_excerpt if seed else clip.get("transcript_excerpt"),
             )
         )
 
@@ -225,6 +228,9 @@ def build_seed_lines(clip_seeds: Optional[List[ClipSeed]]) -> str:
     if not clip_seeds:
         return "- no precomputed clip windows"
     return "\n".join(
-        f"- {seed.id}: {seed.start_time} to {seed.end_time} ({seed.format})"
+        (
+            f"- {seed.id}: {seed.start_time} to {seed.end_time} ({seed.format})"
+            + (f" | transcript: {seed.transcript_excerpt}" if seed.transcript_excerpt else "")
+        )
         for seed in clip_seeds
     )

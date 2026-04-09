@@ -1,0 +1,63 @@
+services:
+  - type: web
+    name: lwa-backend
+    runtime: docker
+    rootDir: lwa-backend
+    plan: starter
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - lwa-backend/**
+        - render.yaml
+        - README.md
+    disk:
+      name: generated-assets
+      mountPath: /var/data
+      sizeGB: 5
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: LWA_APP_NAME
+        value: LWA Backend
+      - key: LWA_DEFAULT_PLAN_NAME
+        value: Starter Trial
+      - key: LWA_DEFAULT_CREDITS_REMAINING
+        value: "2"
+      - key: LWA_DEFAULT_TURNAROUND
+        value: 45 seconds
+      - key: FFMPEG_PATH
+        value: /usr/bin/ffmpeg
+      - key: YT_DLP_TEMP_DIR
+        value: /tmp
+      - key: LWA_GENERATED_ASSETS_DIR
+        value: /var/data/lwa-generated
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: LOG_LEVEL
+        value: info
+      - key: API_BASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: WHOP_API_KEY
+        sync: false
+      - key: WHOP_COMPANY_ID
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: TIKTOK_CLIENT_KEY
+        sync: false
+      - key: TIKTOK_CLIENT_SECRET
+        sync: false
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: FACEBOOK_PAGE_ACCESS_TOKEN
+        sync: false
+      - key: INSTAGRAM_ACCESS_TOKEN
+        sync: false

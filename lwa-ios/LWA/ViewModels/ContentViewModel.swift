@@ -16,6 +16,7 @@ final class ContentViewModel: ObservableObject {
     @Published private(set) var trends: [TrendItem] = []
     @Published var selectedTrend: TrendItem?
     @Published var selectedPlatform = "TikTok"
+    @Published private(set) var jobStatusMessage = "Preparing request."
 
     private let apiClient: APIClient
 
@@ -48,13 +49,16 @@ final class ContentViewModel: ObservableObject {
 
         isLoading = true
         errorMessage = nil
+        jobStatusMessage = "Queueing processing job."
 
         do {
-            let response = try await apiClient.process(
+            let job = try await apiClient.createJob(
                 videoURL: trimmedURL,
                 selectedTrend: selectedTrend,
                 targetPlatform: selectedPlatform
             )
+            jobStatusMessage = job.message
+            let response = try await waitForJob(jobID: job.jobID)
             clips = response.clips
             lastSubmittedURL = response.videoURL
             latestResponse = response
@@ -141,10 +145,34 @@ final class ContentViewModel: ObservableObject {
         Target: \(response.processingSummary.targetPlatform)
         AI: \(response.processingSummary.aiProvider)
         Mode: \(response.processingSummary.processingMode)
+        Selection: \(response.processingSummary.selectionStrategy)
         Plan: \(response.processingSummary.planName)
 
         \(clipLines.joined(separator: "\n\n"))
         """
+    }
+
+    private func waitForJob(jobID: String) async throws -> ClipResponse {
+        let deadline = Date().addingTimeInterval(180)
+
+        while Date() < deadline {
+            let status = try await apiClient.fetchJob(jobID: jobID)
+            jobStatusMessage = status.message
+
+            switch status.status {
+            case "completed":
+                if let result = status.result {
+                    return result
+                }
+                throw APIError.server("The backend marked the job complete without returning a result.")
+            case "failed":
+                throw APIError.server(status.error ?? "Processing failed.")
+            default:
+                try await Task.sleep(nanoseconds: 1_500_000_000)
+            }
+        }
+
+        throw APIError.server("Processing timed out. Try a shorter video or a different source.")
     }
 
     private func saveRun(_ response: ClipResponse) {

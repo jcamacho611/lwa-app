@@ -30,6 +30,7 @@ struct ProcessingSummary: Codable {
     let trendUsed: String?
     let sourcesConsidered: [String]
     let processingMode: String
+    let selectionStrategy: String
     let sourceTitle: String?
     let sourceDurationSeconds: Int?
     let assetsCreated: Int
@@ -44,9 +45,44 @@ struct ProcessingSummary: Codable {
         case trendUsed = "trend_used"
         case sourcesConsidered = "sources_considered"
         case processingMode = "processing_mode"
+        case selectionStrategy = "selection_strategy"
         case sourceTitle = "source_title"
         case sourceDurationSeconds = "source_duration_seconds"
         case assetsCreated = "assets_created"
+    }
+}
+
+struct JobCreatedResponse: Codable {
+    let jobID: String
+    let status: String
+    let pollURL: String
+    let message: String
+
+    enum CodingKeys: String, CodingKey {
+        case jobID = "job_id"
+        case status
+        case pollURL = "poll_url"
+        case message
+    }
+}
+
+struct JobStatusResponse: Codable {
+    let jobID: String
+    let status: String
+    let message: String
+    let createdAt: String
+    let updatedAt: String
+    let result: ClipResponse?
+    let error: String?
+
+    enum CodingKeys: String, CodingKey {
+        case jobID = "job_id"
+        case status
+        case message
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case result
+        case error
     }
 }
 
@@ -80,6 +116,7 @@ struct ClipResult: Codable, Identifiable {
     let score: Int
     let format: String
     let clipURL: String?
+    let transcriptExcerpt: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -91,6 +128,7 @@ struct ClipResult: Codable, Identifiable {
         case score
         case format
         case clipURL = "clip_url"
+        case transcriptExcerpt = "transcript_excerpt"
     }
 }
 

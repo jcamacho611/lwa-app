@@ -320,7 +320,7 @@ struct ContentView: View {
             } else if viewModel.isLoading {
                 statusCard(
                     title: "Talking to backend",
-                    body: "The app is waiting for \(AppConfiguration.apiBaseURL)/process to return sellable clip suggestions.",
+                    body: viewModel.jobStatusMessage,
                     tint: Color(red: 0.34, green: 0.89, blue: 0.82)
                 )
             } else if viewModel.clips.isEmpty {
@@ -393,6 +393,9 @@ struct ContentView: View {
                 .foregroundStyle(Color.white.opacity(0.78))
 
             Text("Processing mode: \(summary.processingMode)")
+                .foregroundStyle(Color.white.opacity(0.78))
+
+            Text("Selection strategy: \(summary.selectionStrategy)")
                 .foregroundStyle(Color.white.opacity(0.78))
 
             Text("Target platform: \(summary.targetPlatform)")
@@ -488,6 +491,18 @@ struct ContentView: View {
                         .padding(.vertical, 10)
                         .background(Color(red: 0.34, green: 0.89, blue: 0.82))
                         .clipShape(Capsule())
+                }
+            }
+
+            if let transcriptExcerpt = clip.transcriptExcerpt, !transcriptExcerpt.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Transcript Excerpt")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.white.opacity(0.62))
+
+                    Text(transcriptExcerpt)
+                        .font(.caption)
+                        .foregroundStyle(Color.white.opacity(0.72))
                 }
             }
         }

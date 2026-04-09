@@ -11,6 +11,7 @@ def build_mock_clips(
     clip_urls: Optional[List[str]] = None,
     start_end_pairs: Optional[List[tuple[str, str]]] = None,
     source_title: Optional[str] = None,
+    transcript_excerpts: Optional[List[Optional[str]]] = None,
 ) -> List[ClipResult]:
     source_label = video_url.split("//")[-1].split("/")[0]
     lead_trend = selected_trend or (trend_context[0].title if trend_context else "creator growth")
@@ -18,6 +19,7 @@ def build_mock_clips(
     title_prefix = source_title or platform_label
     clip_urls = clip_urls or [None, None, None]
     start_end_pairs = start_end_pairs or [("00:03", "00:18"), ("00:24", "00:39"), ("00:47", "01:04")]
+    transcript_excerpts = transcript_excerpts or [None, None, None]
 
     return [
         ClipResult(
@@ -33,6 +35,7 @@ def build_mock_clips(
             score=92,
             format="Hook First",
             clip_url=clip_urls[0],
+            transcript_excerpt=transcript_excerpts[0],
         ),
         ClipResult(
             id="clip_002",
@@ -47,6 +50,7 @@ def build_mock_clips(
             score=88,
             format="Opinion",
             clip_url=clip_urls[1],
+            transcript_excerpt=transcript_excerpts[1],
         ),
         ClipResult(
             id="clip_003",
@@ -61,5 +65,6 @@ def build_mock_clips(
             score=85,
             format="Story CTA",
             clip_url=clip_urls[2],
+            transcript_excerpt=transcript_excerpts[2],
         ),
     ]
