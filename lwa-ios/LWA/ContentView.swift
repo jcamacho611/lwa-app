@@ -55,7 +55,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("LWA")
+                    Text("IWA")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
@@ -93,7 +93,7 @@ struct ContentView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            Text("This App Store build points at the live LWA backend over HTTPS. You can still override the API base URL in Settings for local testing.")
+            Text("This App Store build points at the live IWA backend over HTTPS. You can still override the API base URL in Settings for local testing.")
                 .font(.subheadline)
                 .foregroundStyle(Color.white.opacity(0.72))
 
@@ -735,7 +735,7 @@ private struct PaywallSheet: View {
                 .ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Manage LWA on the web")
+                    Text("Manage IWA on the web")
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
@@ -789,7 +789,7 @@ private struct PaywallSheet: View {
                             .font(.caption)
                             .foregroundStyle(Color.white.opacity(0.56))
                     } else {
-                        Text("Web storefront: \(AppConfiguration.checkoutURL)")
+                        Text("Mobile purchases are not handled in this build. Use the website for support or account changes if needed.")
                             .font(.caption)
                             .foregroundStyle(Color.white.opacity(0.56))
                     }

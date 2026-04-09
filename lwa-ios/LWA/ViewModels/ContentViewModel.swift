@@ -63,7 +63,7 @@ final class ContentViewModel: ObservableObject {
             lastSubmittedURL = response.videoURL
             latestResponse = response
             saveRun(response)
-            showPaywall = response.processingSummary.creditsRemaining <= 1
+            showPaywall = !AppConfiguration.isAppStoreMode && response.processingSummary.creditsRemaining <= 1
         } catch {
             clips = []
             lastSubmittedURL = ""
@@ -139,7 +139,7 @@ final class ContentViewModel: ObservableObject {
         }
 
         return """
-        LWA clip pack
+        IWA clip pack
         Source: \(response.videoURL)
         Platform: \(response.sourcePlatform)
         Target: \(response.processingSummary.targetPlatform)
