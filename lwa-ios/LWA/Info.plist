@@ -18,6 +18,14 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LWAAPIBaseURL</key>
+	<string>http://127.0.0.1:8000</string>
+	<key>LWADebugAPIBaseURL</key>
+	<string>http://127.0.0.1:8000</string>
+	<key>LWAProductionAPIBaseURL</key>
+	<string>https://lwa-backend.onrender.com</string>
+	<key>LWACheckoutURL</key>
+	<string>https://example.com/lwa-checkout</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -42,4 +50,3 @@
 	</array>
 </dict>
 </plist>
-

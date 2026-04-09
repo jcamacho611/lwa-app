@@ -1,24 +1,85 @@
 import Foundation
 
-struct ClipResponse: Decodable {
+struct ClipResponse: Codable {
+    let requestID: String
     let videoURL: String
     let status: String
+    let sourcePlatform: String
+    let processingSummary: ProcessingSummary
+    let trendContext: [TrendItem]
     let clips: [ClipResult]
 
     enum CodingKeys: String, CodingKey {
+        case requestID = "request_id"
         case videoURL = "video_url"
         case status
+        case sourcePlatform = "source_platform"
+        case processingSummary = "processing_summary"
+        case trendContext = "trend_context"
         case clips
     }
 }
 
-struct ClipResult: Decodable, Identifiable {
+struct ProcessingSummary: Codable {
+    let planName: String
+    let creditsRemaining: Int
+    let estimatedTurnaround: String
+    let recommendedNextStep: String
+    let aiProvider: String
+    let targetPlatform: String
+    let trendUsed: String?
+    let sourcesConsidered: [String]
+    let processingMode: String
+    let sourceTitle: String?
+    let sourceDurationSeconds: Int?
+    let assetsCreated: Int
+
+    enum CodingKeys: String, CodingKey {
+        case planName = "plan_name"
+        case creditsRemaining = "credits_remaining"
+        case estimatedTurnaround = "estimated_turnaround"
+        case recommendedNextStep = "recommended_next_step"
+        case aiProvider = "ai_provider"
+        case targetPlatform = "target_platform"
+        case trendUsed = "trend_used"
+        case sourcesConsidered = "sources_considered"
+        case processingMode = "processing_mode"
+        case sourceTitle = "source_title"
+        case sourceDurationSeconds = "source_duration_seconds"
+        case assetsCreated = "assets_created"
+    }
+}
+
+struct TrendItem: Codable, Identifiable, Hashable {
+    let id: String
+    let title: String
+    let source: String
+    let detail: String
+    let url: String?
+}
+
+struct TrendsResponse: Codable {
+    let status: String
+    let updatedAt: String
+    let trends: [TrendItem]
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case updatedAt = "updated_at"
+        case trends
+    }
+}
+
+struct ClipResult: Codable, Identifiable {
     let id: String
     let title: String
     let hook: String
     let caption: String
     let startTime: String
     let endTime: String
+    let score: Int
+    let format: String
+    let clipURL: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -27,6 +88,20 @@ struct ClipResult: Decodable, Identifiable {
         case caption
         case startTime = "start_time"
         case endTime = "end_time"
+        case score
+        case format
+        case clipURL = "clip_url"
     }
 }
 
+struct SavedRun: Codable, Identifiable {
+    let id: String
+    let createdAt: Date
+    let response: ClipResponse
+
+    init(createdAt: Date = .now, response: ClipResponse) {
+        self.id = response.requestID
+        self.createdAt = createdAt
+        self.response = response
+    }
+}

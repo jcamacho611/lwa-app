@@ -1,8 +1,8 @@
 # LWA
 
-Starter repository for an iOS app plus local FastAPI backend.
+Local MVP for an AI content repurposer aimed at short-form video creators.
 
-LWA is an AI content repurposer for short-form creators. In this first version, the iOS app accepts a video URL, sends it to a local backend, and shows mock clip results with hooks and captions.
+LWA takes a video URL, sends it to a backend, and returns clip ideas with hooks and captions. This version is stronger than a bare scaffold: it includes a monetization-oriented iOS UI, saved run history, a configurable backend base URL, a configurable checkout link, and a Render-ready FastAPI deployment setup with Docker, FFmpeg, `yt-dlp`, and health checks.
 
 ## Project Structure
 
@@ -13,9 +13,13 @@ LWA/
 ├── lwa-backend/
 │   ├── app/
 │   │   ├── __init__.py
+│   │   ├── config.py
+│   │   ├── generation.py
 │   │   ├── main.py
 │   │   ├── mock_data.py
-│   │   └── schemas.py
+│   │   ├── processor.py
+│   │   ├── schemas.py
+│   │   └── trends.py
 │   ├── .dockerignore
 │   ├── Dockerfile
 │   └── requirements.txt
@@ -37,17 +41,35 @@ LWA/
 ## What Each Part Does
 
 - `lwa-backend/app/main.py`: FastAPI app with `POST /process` and `GET /health`.
+- `lwa-backend/app/config.py`: Lightweight environment-based backend configuration.
+- `lwa-backend/app/generation.py`: Hook, caption, and angle generation with OpenAI, Ollama, or heuristic fallback.
 - `lwa-backend/app/schemas.py`: Request and response models.
-- `lwa-backend/app/mock_data.py`: Placeholder clip results so the full flow works before real AI is added.
-- `lwa-backend/requirements.txt`: Python dependencies.
-- `lwa-backend/Dockerfile`: Optional containerized backend run.
+- `lwa-backend/app/mock_data.py`: Fallback clip copy when real generation is unavailable.
+- `lwa-backend/app/processor.py`: Real `yt-dlp` plus `ffmpeg` pipeline that downloads a source video and cuts MP4 clips.
+- `lwa-backend/app/trends.py`: Public trend aggregation from Google Trends, Reddit, and Hacker News.
+- `lwa-backend/requirements.txt`: Python dependencies, including `yt-dlp` and deployment-ready HTTP and AI packages.
+- `lwa-backend/Dockerfile`: Render-friendly container image with `ffmpeg`, `curl`, and a Docker health check.
 - `lwa-ios/LWA/LWAApp.swift`: SwiftUI app entry point.
-- `lwa-ios/LWA/ContentView.swift`: Single-screen dark UI with URL input, generate button, and results list.
-- `lwa-ios/LWA/Models/ClipResult.swift`: Decodable response models for the app.
-- `lwa-ios/LWA/Services/APIClient.swift`: Local network call to `http://127.0.0.1:8000/process`.
-- `lwa-ios/LWA/ViewModels/ContentViewModel.swift`: Simple state management for loading, results, and errors.
-- `lwa-ios/LWA/Info.plist`: App config, including relaxed transport rules for local HTTP during development.
+- `lwa-ios/LWA/ContentView.swift`: Main dark UI, pricing sheet, settings sheet, results, and saved history.
+- `lwa-ios/LWA/Models/ClipResult.swift`: Codable API and local persistence models.
+- `lwa-ios/LWA/Services/APIClient.swift`: Local network call plus runtime configuration for API base URL and checkout URL.
+- `lwa-ios/LWA/ViewModels/ContentViewModel.swift`: State management, local history persistence, and export/share text generation.
+- `lwa-ios/LWA/Info.plist`: App config, including debug and production API defaults plus checkout URL.
 - `lwa-ios/LWA.xcodeproj`: Xcode project you can open and run in the iOS Simulator.
+
+## MVP Features Included
+
+- Video URL input and end-to-end backend call.
+- Real source download via `yt-dlp`.
+- Real MP4 clip cutting via `ffmpeg`.
+- Live trend radar from Google Trends, Reddit, and Hacker News.
+- Hooks, captions, clip score, and clip format generation with heuristic or AI provider fallback.
+- Processing summary with plan name and remaining credits.
+- Saved run history stored locally on-device.
+- Copy and share actions for the latest clip pack.
+- Configurable API base URL for local or hosted backend use.
+- Configurable checkout URL so you can attach a real payment link.
+- Pricing/paywall screen to give beta users an upgrade path.
 
 ## Backend: Local Run
 
@@ -70,7 +92,27 @@ http://127.0.0.1:8000
 Useful endpoints:
 
 - `GET /health`
+- `GET /v1/status/health`
+- `GET /v1/trends`
 - `POST /process`
+- `POST /v1/generate`
+
+Useful environment variables:
+
+```bash
+export ENVIRONMENT="production"
+export LWA_APP_NAME="LWA Backend"
+export LWA_DEFAULT_PLAN_NAME="Starter Trial"
+export LWA_DEFAULT_CREDITS_REMAINING="2"
+export LWA_DEFAULT_TURNAROUND="45 seconds"
+export OPENAI_API_KEY="your_key_here"
+export FFMPEG_PATH="/usr/bin/ffmpeg"
+export YT_DLP_TEMP_DIR="/tmp"
+export LWA_GENERATED_ASSETS_DIR="/absolute/path/to/generated"
+export API_BASE_URL="https://your-render-service.onrender.com"
+export ALLOWED_ORIGINS="*"
+export LOG_LEVEL="info"
+```
 
 Example request:
 
@@ -90,6 +132,59 @@ docker build -t lwa-backend .
 docker run --rm -p 8000:8000 lwa-backend
 ```
 
+To test with production-like env vars:
+
+```bash
+cd lwa-backend
+docker build -t lwa-backend .
+docker run --rm -p 8000:8000 \
+  -e ENVIRONMENT=local \
+  -e OPENAI_API_KEY=test_key \
+  -e API_BASE_URL=http://127.0.0.1:8000 \
+  lwa-backend
+```
+
+## Render Deployment
+
+This repo is set up as a monorepo. In Render, the cleanest setup is:
+
+1. Create a new `Web Service`
+2. Connect this GitHub repository
+3. Set `Root Directory` to `lwa-backend`
+4. Set `Language` to `Docker`
+5. Leave the Docker command empty so Render uses the Dockerfile `CMD`
+6. Set `Health Check Path` to `/health`
+
+Required env vars in Render:
+
+```text
+ENVIRONMENT=production
+OPENAI_API_KEY=your_real_key
+API_BASE_URL=https://your-service.onrender.com
+ALLOWED_ORIGINS=*
+FFMPEG_PATH=/usr/bin/ffmpeg
+YT_DLP_TEMP_DIR=/tmp
+LWA_GENERATED_ASSETS_DIR=/tmp/lwa-generated
+LOG_LEVEL=info
+```
+
+Recommended checks after the first deploy:
+
+```text
+https://your-service.onrender.com/health
+https://your-service.onrender.com/docs
+```
+
+The health response now reports:
+
+- service name
+- environment
+- version
+- whether a working `ffmpeg` binary exists
+- whether `yt-dlp` exists
+- whether `OPENAI_API_KEY` is present
+- whether Whop, Google, TikTok, and Meta credentials are present
+
 ## iOS App Run
 
 1. Open the project:
@@ -101,17 +196,37 @@ open lwa-ios/LWA.xcodeproj
 2. In Xcode, choose the `LWA` scheme.
 3. Run the app in an iPhone Simulator.
 4. Paste a public video URL and tap `Generate Clips`.
+5. Open `Pricing` or `Settings` inside the app to change the checkout link or backend base URL.
 
-The app is already pointed at:
+Default local API target:
 
 ```text
-http://127.0.0.1:8000/process
+http://127.0.0.1:8000
+```
+
+Default production API target:
+
+```text
+https://lwa-backend.onrender.com
 ```
 
 Important note:
 
 - `127.0.0.1` is correct for the local backend flow when using the iOS Simulator on your Mac.
-- If you later run the app on a physical iPhone, update `lwa-ios/LWA/Services/APIClient.swift` to use your Mac's local network IP instead of `127.0.0.1`.
+- If you later run the app on a physical iPhone, change the API base URL inside the app settings to your Mac's LAN IP or your deployed backend URL.
+- The default checkout URL is a placeholder. Replace it in the app settings with a real Stripe Payment Link or your hosted checkout page.
+- Before shipping TestFlight or App Store builds, replace `LWAProductionAPIBaseURL` in `lwa-ios/LWA/Info.plist` with your real Render URL, or override it in the in-app settings.
+
+## What Still Blocks Real Revenue
+
+This repo is now a usable MVP, but it is not a finished SaaS business yet. Before charging real customers, add:
+
+- Transcript-aware clip picking instead of duration-based segment selection.
+- Authentication and user accounts.
+- Real billing with App Store subscriptions, Stripe, or both.
+- Hosted backend deployment with persistent storage.
+- Analytics, error monitoring, and support flows.
+- Social publishing and export delivery beyond direct clip asset URLs.
 
 ## Exact Commands To Run Next
 
@@ -138,3 +253,24 @@ Then in Xcode:
 2. Press Run.
 3. Paste a video URL.
 4. Tap `Generate Clips`.
+5. Open `Settings` and replace the checkout URL with your real payment link if you want to test a revenue path.
+
+## Render Commands You’ll Actually Use
+
+Local smoke test:
+
+```bash
+cd /Users/bdm/LWA/lwa-backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Container smoke test:
+
+```bash
+cd /Users/bdm/LWA/lwa-backend
+docker build -t lwa-backend .
+docker run --rm -p 8000:8000 -e OPENAI_API_KEY=test_key lwa-backend
+```

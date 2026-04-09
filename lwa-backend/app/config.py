@@ -1,0 +1,41 @@
+from functools import lru_cache
+import os
+
+
+class Settings:
+    def __init__(self) -> None:
+        origins = os.getenv("LWA_ALLOWED_ORIGINS") or os.getenv("ALLOWED_ORIGINS", "*")
+        self.allowed_origins = [origin.strip() for origin in origins.split(",") if origin.strip()]
+        self.environment = os.getenv("ENVIRONMENT", "development")
+        self.app_name = os.getenv("LWA_APP_NAME", "LWA Backend")
+        self.api_base_url = os.getenv("API_BASE_URL", "")
+        self.port = int(os.getenv("PORT", "8000"))
+        self.log_level = os.getenv("LOG_LEVEL", "info")
+        self.default_plan_name = os.getenv("LWA_DEFAULT_PLAN_NAME", "Starter Trial")
+        self.default_credits_remaining = int(os.getenv("LWA_DEFAULT_CREDITS_REMAINING", "2"))
+        self.default_turnaround = os.getenv("LWA_DEFAULT_TURNAROUND", "45 seconds")
+        self.ffmpeg_path = os.getenv("FFMPEG_PATH", "/usr/bin/ffmpeg")
+        self.yt_dlp_temp_dir = os.getenv("YT_DLP_TEMP_DIR", "/tmp")
+        self.generated_assets_dir = os.getenv("LWA_GENERATED_ASSETS_DIR", os.path.join(os.getcwd(), "generated"))
+        self.max_upload_mb = int(os.getenv("MAX_UPLOAD_MB", "500"))
+        self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+        self.ai_provider = os.getenv("LWA_AI_PROVIDER", "auto")
+        self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "")
+        self.ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2")
+        self.whop_api_key = os.getenv("WHOP_API_KEY", "")
+        self.whop_company_id = os.getenv("WHOP_COMPANY_ID", "")
+        self.google_api_key = os.getenv("GOOGLE_API_KEY", "")
+        self.youtube_api_key = os.getenv("YOUTUBE_API_KEY", "")
+        self.tiktok_client_key = os.getenv("TIKTOK_CLIENT_KEY", "")
+        self.tiktok_client_secret = os.getenv("TIKTOK_CLIENT_SECRET", "")
+        self.meta_app_id = os.getenv("META_APP_ID", "")
+        self.meta_app_secret = os.getenv("META_APP_SECRET", "")
+        self.facebook_page_access_token = os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN", "")
+        self.instagram_access_token = os.getenv("INSTAGRAM_ACCESS_TOKEN", "")
+        self.service_version = os.getenv("RENDER_GIT_COMMIT", "local")
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

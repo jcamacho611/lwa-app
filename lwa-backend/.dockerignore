@@ -1,4 +1,8 @@
 __pycache__/
 .venv/
 *.pyc
-
+.env
+.git
+.DS_Store
+venv/
+node_modules/
