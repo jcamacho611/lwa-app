@@ -59,6 +59,7 @@ enum APIConfig {
 enum AppConfiguration {
     static let apiBaseURLKey = "lwa.api_base_url"
     static let checkoutURLKey = "lwa.checkout_url"
+    static let apiKeyKey = "lwa.api_key"
     static let appStoreModeKey = "LWAAppStoreMode"
 
     static var defaultAPIBaseURL: String {
@@ -70,6 +71,14 @@ enum AppConfiguration {
             for: "LWACheckoutURL",
             fallback: "https://whop.com/lwa-app/lwa-ai-content-repurposer/"
         )
+    }
+
+    static var defaultAPIKey: String {
+        BundleConfiguration.string(for: "LWAAPIKey", fallback: "")
+    }
+
+    static var apiKeyHeaderName: String {
+        BundleConfiguration.string(for: "LWAAPIKeyHeaderName", fallback: "x-api-key")
     }
 
     static var isAppStoreMode: Bool {
@@ -85,9 +94,15 @@ enum AppConfiguration {
         return override?.isEmpty == false ? override! : defaultCheckoutURL
     }
 
-    static func save(apiBaseURL: String, checkoutURL: String) {
+    static var apiKey: String {
+        let override = UserDefaults.standard.string(forKey: apiKeyKey)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return override?.isEmpty == false ? override! : defaultAPIKey
+    }
+
+    static func save(apiBaseURL: String, checkoutURL: String, apiKey: String) {
         UserDefaults.standard.set(apiBaseURL.trimmingCharacters(in: .whitespacesAndNewlines), forKey: apiBaseURLKey)
         UserDefaults.standard.set(checkoutURL.trimmingCharacters(in: .whitespacesAndNewlines), forKey: checkoutURLKey)
+        UserDefaults.standard.set(apiKey.trimmingCharacters(in: .whitespacesAndNewlines), forKey: apiKeyKey)
     }
 }
 
@@ -102,6 +117,13 @@ struct APIClient {
 
     private var trendsEndpoint: URL {
         APIConfig.baseURL.appendingPathComponent("v1/trends")
+    }
+
+    private func applySharedHeaders(to request: inout URLRequest) {
+        let apiKey = AppConfiguration.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !apiKey.isEmpty {
+            request.setValue(apiKey, forHTTPHeaderField: AppConfiguration.apiKeyHeaderName)
+        }
     }
 
     func process(
@@ -123,6 +145,7 @@ struct APIClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30
+        applySharedHeaders(to: &request)
         request.httpBody = try JSONEncoder().encode(
             ProcessRequest(
                 videoURL: videoURL,
@@ -163,6 +186,7 @@ struct APIClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30
+        applySharedHeaders(to: &request)
         request.httpBody = try JSONEncoder().encode(
             ProcessRequest(
                 videoURL: videoURL,
@@ -193,6 +217,7 @@ struct APIClient {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "GET"
         request.timeoutInterval = 20
+        applySharedHeaders(to: &request)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -213,6 +238,7 @@ struct APIClient {
         var request = URLRequest(url: trendsEndpoint)
         request.httpMethod = "GET"
         request.timeoutInterval = 20
+        applySharedHeaders(to: &request)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 

@@ -234,6 +234,8 @@ ALLOWED_ORIGINS=*
 LOG_LEVEL=info
 OPENAI_API_KEY=your_real_key
 OPENAI_MODEL=gpt-4.1-mini
+LWA_API_KEY_HEADER_NAME=x-api-key
+LWA_API_KEY_SECRET=your_optional_secret
 ```
 
 Optional but useful:
@@ -260,6 +262,7 @@ railway up
 Use this file for the last manual platform steps:
 
 - [docs/final-launch-checklist.md](/Users/bdm/LWA/docs/final-launch-checklist.md)
+- [docs/whop-railway-connection.md](/Users/bdm/LWA/docs/whop-railway-connection.md)
 
 Required env vars in Render:
 

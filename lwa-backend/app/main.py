@@ -54,6 +54,7 @@ async def root() -> dict[str, object]:
         "health_url": f"{base_url}/health",
         "jobs_url": f"{base_url}/v1/jobs",
         "trends_url": f"{base_url}/v1/trends",
+        "api_key_header": settings.api_key_header_name if settings.api_key_secret else None,
     }
 
 
@@ -71,6 +72,15 @@ def dependency_health() -> dict[str, bool]:
             or settings.instagram_access_token
         ),
     }
+
+
+def enforce_api_key(request: Request) -> None:
+    if not settings.api_key_secret:
+        return
+
+    provided_key = request.headers.get(settings.api_key_header_name)
+    if provided_key != settings.api_key_secret:
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
 
 @app.get("/health")
@@ -104,7 +114,8 @@ def detect_platform(video_url: str) -> str:
 
 
 @app.get("/v1/trends", response_model=TrendsResponse)
-async def get_trends() -> TrendsResponse:
+async def get_trends(http_request: Request) -> TrendsResponse:
+    enforce_api_key(http_request)
     trends = await fetch_public_trends()
     return TrendsResponse(
         status="success",
@@ -200,6 +211,7 @@ async def run_job(job_id: str, request: ProcessRequest, public_base_url: str) ->
 
 @app.post("/v1/jobs", response_model=JobCreatedResponse)
 async def create_processing_job(request: ProcessRequest, http_request: Request) -> JobCreatedResponse:
+    enforce_api_key(http_request)
     job_id = f"job_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
     await job_store.create(job_id, "Job queued. Starting source analysis.")
@@ -213,7 +225,8 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
 
 
 @app.get("/v1/jobs/{job_id}", response_model=JobStatusResponse)
-async def get_processing_job(job_id: str) -> JobStatusResponse:
+async def get_processing_job(job_id: str, http_request: Request) -> JobStatusResponse:
+    enforce_api_key(http_request)
     record = await job_store.get(job_id)
     if not record:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -232,6 +245,7 @@ async def get_processing_job(job_id: str) -> JobStatusResponse:
 @app.post("/process", response_model=ClipBatchResponse)
 @app.post("/v1/generate", response_model=ClipBatchResponse)
 async def process_video(request: ProcessRequest, http_request: Request) -> ClipBatchResponse:
+    enforce_api_key(http_request)
     request_id = f"req_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
     return await build_clip_response(

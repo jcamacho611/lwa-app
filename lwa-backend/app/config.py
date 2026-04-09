@@ -13,6 +13,8 @@ class Settings:
         self.api_base_url = os.getenv("API_BASE_URL", "").strip() or derived_public_base_url
         self.port = int(os.getenv("PORT", "8000"))
         self.log_level = os.getenv("LOG_LEVEL", "info")
+        self.api_key_header_name = os.getenv("LWA_API_KEY_HEADER_NAME", "x-api-key").strip() or "x-api-key"
+        self.api_key_secret = os.getenv("LWA_API_KEY_SECRET", "").strip()
         self.default_plan_name = os.getenv("LWA_DEFAULT_PLAN_NAME", "Starter Trial")
         self.default_credits_remaining = int(os.getenv("LWA_DEFAULT_CREDITS_REMAINING", "2"))
         self.default_turnaround = os.getenv("LWA_DEFAULT_TURNAROUND", "45 seconds")

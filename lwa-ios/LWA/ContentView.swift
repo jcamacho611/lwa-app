@@ -657,6 +657,7 @@ private struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var apiBaseURL = AppConfiguration.apiBaseURL
     @State private var checkoutURL = AppConfiguration.checkoutURL
+    @State private var apiKey = AppConfiguration.apiKey
 
     var body: some View {
         NavigationStack {
@@ -667,6 +668,16 @@ private struct SettingsSheet: View {
                         .autocorrectionDisabled()
 
                     Text("Use `http://localhost:8000` for the simulator. Switch this to your hosted API when you launch.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Optional Auth") {
+                    TextField("API key", text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+
+                    Text("If your backend requires a custom header, the app will send this value as `x-api-key`.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -693,7 +704,11 @@ private struct SettingsSheet: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        AppConfiguration.save(apiBaseURL: apiBaseURL, checkoutURL: checkoutURL)
+                        AppConfiguration.save(
+                            apiBaseURL: apiBaseURL,
+                            checkoutURL: checkoutURL,
+                            apiKey: apiKey
+                        )
                         dismiss()
                     }
                 }

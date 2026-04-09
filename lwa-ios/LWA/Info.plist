@@ -24,6 +24,10 @@
 	<false/>
 	<key>LWAAPIBaseURL</key>
 	<string>http://localhost:8000</string>
+	<key>LWAAPIKey</key>
+	<string></string>
+	<key>LWAAPIKeyHeaderName</key>
+	<string>x-api-key</string>
 	<key>LWAAppStoreMode</key>
 	<true/>
 	<key>LWADebugAPIBaseURL</key>
