@@ -43,6 +43,20 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+async def root() -> dict[str, object]:
+    base_url = settings.api_base_url or "http://127.0.0.1:8000"
+    return {
+        "status": "ok",
+        "service": settings.app_name,
+        "environment": settings.environment,
+        "docs_url": f"{base_url}/docs",
+        "health_url": f"{base_url}/health",
+        "jobs_url": f"{base_url}/v1/jobs",
+        "trends_url": f"{base_url}/v1/trends",
+    }
+
+
 def dependency_health() -> dict[str, bool]:
     return {
         "ffmpeg": resolve_ffmpeg_path(settings) is not None,

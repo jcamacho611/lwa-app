@@ -10,8 +10,10 @@ LWA takes a video URL, sends it to a backend, and returns clip ideas with hooks 
 LWA/
 ├── README.md
 ├── .gitignore
+├── docs/
 ├── render.yaml
 ├── lwa-backend/
+│   ├── .env.example
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── config.py
@@ -51,10 +53,13 @@ LWA/
 - `lwa-backend/app/mock_data.py`: Fallback clip copy when real generation is unavailable.
 - `lwa-backend/app/processor.py`: Real `yt-dlp` plus `ffmpeg` pipeline that downloads a source video, reads captions when available, and cuts MP4 clips.
 - `lwa-backend/app/trends.py`: Public trend aggregation from Google Trends, Reddit, and Hacker News.
+- `lwa-backend/.env.example`: Copyable backend environment template for local, Railway, or Render deploys.
+- `lwa-backend/scripts/smoke_test.py`: End-to-end backend smoke test for local or deployed environments.
 - `lwa-backend/requirements.txt`: Python dependencies, including `yt-dlp` and deployment-ready HTTP and AI packages.
 - `lwa-backend/Dockerfile`: Render-friendly container image with `ffmpeg`, `curl`, and a Docker health check.
 - `lwa-backend/railway.toml`: Railway config-as-code file for Docker deploys from the backend subdirectory.
 - `render.yaml`: One-file Render blueprint for deploying the backend with a persistent disk and prompted secrets.
+- `docs/final-launch-checklist.md`: Final manual checklist for Railway, Whop, and iOS launch work.
 - `lwa-ios/LWA/LWAApp.swift`: SwiftUI app entry point.
 - `lwa-ios/LWA/ContentView.swift`: Main dark UI, pricing sheet, settings sheet, results, and saved history.
 - `lwa-ios/LWA/Models/ClipResult.swift`: Codable API and local persistence models.
@@ -91,6 +96,13 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+If you want a local env template first:
+
+```bash
+cd lwa-backend
+cp .env.example .env
+```
+
 The backend will start at:
 
 ```text
@@ -99,6 +111,7 @@ http://127.0.0.1:8000
 
 Useful endpoints:
 
+- `GET /`
 - `GET /health`
 - `GET /v1/status/health`
 - `GET /v1/trends`
@@ -241,6 +254,12 @@ railway login
 railway link
 railway up
 ```
+
+## Final Launch Checklist
+
+Use this file for the last manual platform steps:
+
+- [docs/final-launch-checklist.md](/Users/bdm/LWA/docs/final-launch-checklist.md)
 
 Required env vars in Render:
 
