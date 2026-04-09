@@ -1,5 +1,15 @@
 import Foundation
 
+private enum BundleConfiguration {
+    static func string(for key: String, fallback: String) -> String {
+        (Bundle.main.object(forInfoDictionaryKey: key) as? String) ?? fallback
+    }
+
+    static func bool(for key: String, fallback: Bool = false) -> Bool {
+        (Bundle.main.object(forInfoDictionaryKey: key) as? Bool) ?? fallback
+    }
+}
+
 enum APIError: LocalizedError {
     case invalidVideoURL
     case invalidBaseURL
@@ -23,10 +33,15 @@ enum APIError: LocalizedError {
 enum APIConfig {
     static var defaultBaseURL: URL {
         #if DEBUG
-        return URL(string: "http://127.0.0.1:8000")!
+        let configured = BundleConfiguration.string(for: "LWADebugAPIBaseURL", fallback: "http://localhost:8000")
         #else
-        return URL(string: "https://your-render-service.onrender.com")!
+        let configured = BundleConfiguration.string(
+            for: "LWAProductionAPIBaseURL",
+            fallback: "https://lwa-backend-production-c9cc.up.railway.app"
+        )
         #endif
+
+        return URL(string: configured) ?? URL(string: "https://lwa-backend-production-c9cc.up.railway.app")!
     }
 
     static var baseURL: URL {
@@ -44,13 +59,21 @@ enum APIConfig {
 enum AppConfiguration {
     static let apiBaseURLKey = "lwa.api_base_url"
     static let checkoutURLKey = "lwa.checkout_url"
+    static let appStoreModeKey = "LWAAppStoreMode"
 
     static var defaultAPIBaseURL: String {
         APIConfig.defaultBaseURL.absoluteString
     }
 
     static var defaultCheckoutURL: String {
-        (Bundle.main.object(forInfoDictionaryKey: "LWACheckoutURL") as? String) ?? "https://example.com/lwa-checkout"
+        BundleConfiguration.string(
+            for: "LWACheckoutURL",
+            fallback: "https://whop.com/lwa-app/lwa-ai-content-repurposer/"
+        )
+    }
+
+    static var isAppStoreMode: Bool {
+        BundleConfiguration.bool(for: appStoreModeKey, fallback: true)
     }
 
     static var apiBaseURL: String {

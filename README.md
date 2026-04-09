@@ -320,15 +320,16 @@ Important note:
 
 - `127.0.0.1` is correct for the local backend flow when using the iOS Simulator on your Mac.
 - If you later run the app on a physical iPhone, change the API base URL inside the app settings to your Mac's LAN IP or your deployed backend URL.
-- The default checkout URL is a placeholder. Replace it in the app settings with a real Stripe Payment Link or your hosted checkout page.
-- Before shipping TestFlight or App Store builds, replace `LWAProductionAPIBaseURL` in `lwa-ios/LWA/Info.plist` with your real Render URL, or override it in the in-app settings.
+- The Release iOS build now points at the live Railway backend by default.
+- The iOS app’s web storefront URL now points at the live Whop product by default.
+- App Store launch notes live in `docs/app-store-device-launch.md`.
 
 ## What Still Blocks Real Revenue
 
 This repo is now a usable MVP, but it is not a finished SaaS business yet. Before charging real customers, add:
 
 - Authentication and user accounts.
-- Real billing with App Store subscriptions, Stripe, or both.
+- Real App Store billing with StoreKit, or a strictly web-only monetization flow that avoids in-app purchase prompts.
 - Persistent job storage instead of in-memory job tracking.
 - Analytics, error monitoring, and support flows.
 - Social publishing and export delivery beyond direct clip asset URLs.
@@ -359,7 +360,7 @@ Then in Xcode:
 2. Press Run.
 3. Paste a video URL.
 4. Tap `Generate Clips`.
-5. Open `Settings` and replace the checkout URL with your real payment link if you want to test a revenue path.
+5. Open `Settings` and switch the API URL only if you want to test against a different backend.
 
 ## Render Commands You’ll Actually Use
 

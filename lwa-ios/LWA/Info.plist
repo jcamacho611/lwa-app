@@ -10,6 +10,8 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleDisplayName</key>
+	<string>LWA</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
@@ -18,19 +20,25 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LWAAPIBaseURL</key>
-	<string>http://127.0.0.1:8000</string>
+	<string>http://localhost:8000</string>
+	<key>LWAAppStoreMode</key>
+	<true/>
 	<key>LWADebugAPIBaseURL</key>
-	<string>http://127.0.0.1:8000</string>
+	<string>http://localhost:8000</string>
 	<key>LWAProductionAPIBaseURL</key>
-	<string>https://lwa-backend.onrender.com</string>
+	<string>https://lwa-backend-production-c9cc.up.railway.app</string>
 	<key>LWACheckoutURL</key>
-	<string>https://example.com/lwa-checkout</string>
+	<string>https://whop.com/lwa-app/lwa-ai-content-repurposer/</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>LWA can connect to a local development backend when you test the app against your Mac.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
+		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

@@ -22,7 +22,11 @@ struct ContentView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         headerSection
-                        monetizationCard
+                        if AppConfiguration.isAppStoreMode {
+                            launchReadinessCard
+                        } else {
+                            monetizationCard
+                        }
                         trendsSection
                         inputCard
                         resultsSection
@@ -63,8 +67,10 @@ struct ContentView: View {
                 Spacer()
 
                 HStack(spacing: 10) {
-                    smallActionButton(title: "Pricing") {
-                        viewModel.showPaywall = true
+                    if !AppConfiguration.isAppStoreMode {
+                        smallActionButton(title: "Pricing") {
+                            viewModel.showPaywall = true
+                        }
                     }
 
                     smallActionButton(title: "Settings") {
@@ -79,6 +85,30 @@ struct ContentView: View {
                 metricPill(viewModel.creditsRemainingLabel)
             }
         }
+    }
+
+    private var launchReadinessCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Production Build")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            Text("This App Store build points at the live LWA backend over HTTPS. You can still override the API base URL in Settings for local testing.")
+                .font(.subheadline)
+                .foregroundStyle(Color.white.opacity(0.72))
+
+            HStack(spacing: 12) {
+                badge(title: "Backend", detail: "Railway", tint: Color(red: 0.34, green: 0.89, blue: 0.82))
+                badge(title: "Mode", detail: "App Store", tint: Color(red: 0.96, green: 0.78, blue: 0.35))
+            }
+        }
+        .padding(18)
+        .background(Color.white.opacity(0.06))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private var monetizationCard: some View {
@@ -636,19 +666,21 @@ private struct SettingsSheet: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
 
-                    Text("Use `http://127.0.0.1:8000` for the simulator. Switch this to your hosted API when you launch.")
+                    Text("Use `http://localhost:8000` for the simulator. Switch this to your hosted API when you launch.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                Section("Checkout") {
-                    TextField("Checkout URL", text: $checkoutURL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                if !AppConfiguration.isAppStoreMode {
+                    Section("Checkout") {
+                        TextField("Checkout URL", text: $checkoutURL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
 
-                    Text("Replace the placeholder with a real Stripe Payment Link or your checkout page.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        Text("Replace the placeholder with a real Stripe Payment Link or your checkout page.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .navigationTitle("Settings")
@@ -688,11 +720,11 @@ private struct PaywallSheet: View {
                 .ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Turn LWA into a paid product")
+                    Text("Manage LWA on the web")
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
-                    Text("This screen is wired for a real checkout URL. Replace the placeholder in Settings and you have a direct upgrade path for beta customers.")
+                    Text("For App Store builds, payments and plan changes should be managed on the web. Keep the mobile app focused on clip generation and account usage.")
                         .font(.subheadline)
                         .foregroundStyle(Color.white.opacity(0.72))
 
@@ -714,32 +746,38 @@ private struct PaywallSheet: View {
                         bullets: "Client seats, branded exports, priority processing"
                     )
 
-                    Button {
-                        if let url = URL(string: AppConfiguration.checkoutURL) {
-                            openURL(url)
-                        }
-                    } label: {
-                        Text("Open Checkout")
-                            .font(.headline.weight(.semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(
-                                LinearGradient(
-                                    colors: [
-                                        Color(red: 0.34, green: 0.89, blue: 0.82),
-                                        Color(red: 0.18, green: 0.68, blue: 0.91),
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+                    if !AppConfiguration.isAppStoreMode {
+                        Button {
+                            if let url = URL(string: AppConfiguration.checkoutURL) {
+                                openURL(url)
+                            }
+                        } label: {
+                            Text("Open Checkout")
+                                .font(.headline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(red: 0.34, green: 0.89, blue: 0.82),
+                                            Color(red: 0.18, green: 0.68, blue: 0.91),
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
                                 )
-                            )
-                            .foregroundStyle(.black)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
+                                .foregroundStyle(.black)
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
 
-                    Text("Current checkout URL: \(AppConfiguration.checkoutURL)")
-                        .font(.caption)
-                        .foregroundStyle(Color.white.opacity(0.56))
+                        Text("Current checkout URL: \(AppConfiguration.checkoutURL)")
+                            .font(.caption)
+                            .foregroundStyle(Color.white.opacity(0.56))
+                    } else {
+                        Text("Web storefront: \(AppConfiguration.checkoutURL)")
+                            .font(.caption)
+                            .foregroundStyle(Color.white.opacity(0.56))
+                    }
 
                     Spacer()
                 }
