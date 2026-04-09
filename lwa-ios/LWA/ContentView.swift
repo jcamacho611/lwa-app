@@ -655,6 +655,7 @@ struct ContentView: View {
 
 private struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var apiBaseURL = AppConfiguration.apiBaseURL
     @State private var checkoutURL = AppConfiguration.checkoutURL
     @State private var apiKey = AppConfiguration.apiKey
@@ -680,6 +681,20 @@ private struct SettingsSheet: View {
                     Text("If your backend requires a custom header, the app will send this value as `x-api-key`.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                Section("Help") {
+                    Button("Open Privacy Policy") {
+                        if let url = URL(string: AppConfiguration.privacyPolicyURL) {
+                            openURL(url)
+                        }
+                    }
+
+                    Button("Open Support") {
+                        if let url = URL(string: AppConfiguration.supportURL) {
+                            openURL(url)
+                        }
+                    }
                 }
 
                 if !AppConfiguration.isAppStoreMode {
@@ -735,33 +750,47 @@ private struct PaywallSheet: View {
                 .ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Manage IWA on the web")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                    if AppConfiguration.isAppStoreMode {
+                        Text("IWA Usage")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
 
-                    Text("For App Store builds, payments and plan changes should be managed on the web. Keep the mobile app focused on clip generation and account usage.")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.white.opacity(0.72))
+                        Text("This build is focused on clip generation. Use Settings for privacy and support information.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.white.opacity(0.72))
 
-                    pricingCard(
-                        title: "Starter",
-                        price: "Free",
-                        bullets: "3 local generations, saved history, shareable bundles"
-                    )
+                        pricingCard(
+                            title: "Need Help?",
+                            price: "Support",
+                            bullets: "Open Settings to reach the privacy policy and support pages."
+                        )
+                    } else {
+                        Text("Manage IWA on the web")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
 
-                    pricingCard(
-                        title: "Creator",
-                        price: "$29/mo",
-                        bullets: "Unlimited clip packs, hosted API, export workflow"
-                    )
+                        Text("For App Store builds, payments and plan changes should be managed on the web. Keep the mobile app focused on clip generation and account usage.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.white.opacity(0.72))
 
-                    pricingCard(
-                        title: "Studio",
-                        price: "$99/mo",
-                        bullets: "Client seats, branded exports, priority processing"
-                    )
+                        pricingCard(
+                            title: "Starter",
+                            price: "Free",
+                            bullets: "3 local generations, saved history, shareable bundles"
+                        )
 
-                    if !AppConfiguration.isAppStoreMode {
+                        pricingCard(
+                            title: "Creator",
+                            price: "$29/mo",
+                            bullets: "Unlimited clip packs, hosted API, export workflow"
+                        )
+
+                        pricingCard(
+                            title: "Studio",
+                            price: "$99/mo",
+                            bullets: "Client seats, branded exports, priority processing"
+                        )
+
                         Button {
                             if let url = URL(string: AppConfiguration.checkoutURL) {
                                 openURL(url)
@@ -786,10 +815,6 @@ private struct PaywallSheet: View {
                         }
 
                         Text("Current checkout URL: \(AppConfiguration.checkoutURL)")
-                            .font(.caption)
-                            .foregroundStyle(Color.white.opacity(0.56))
-                    } else {
-                        Text("Mobile purchases are not handled in this build. Use the website for support or account changes if needed.")
                             .font(.caption)
                             .foregroundStyle(Color.white.opacity(0.56))
                     }

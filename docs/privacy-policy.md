@@ -1,8 +1,8 @@
-# LWA Privacy Policy
+# IWA Privacy Policy
 
 Last updated: April 9, 2026
 
-LWA is an AI content repurposing service that helps users generate clips, hooks, captions, and related metadata from video URLs.
+IWA is an AI content repurposing service that helps users generate clips, hooks, captions, and related metadata from video URLs.
 
 ## What We Collect
 
@@ -25,7 +25,7 @@ LWA is an AI content repurposing service that helps users generate clips, hooks,
 
 ## Third-Party Services
 
-LWA may use third-party infrastructure and AI providers to process requests, host the backend, and generate outputs.
+IWA may use third-party infrastructure and AI providers to process requests, host the backend, and generate outputs.
 
 ## Data Retention
 
@@ -37,8 +37,8 @@ We use reasonable administrative and technical safeguards to protect service dat
 
 ## Children
 
-LWA is not directed to children under 13.
+IWA is not directed to children under 13.
 
 ## Contact
 
-For privacy questions, contact the LWA team through your official support channel.
+For privacy questions, contact the IWA team through your official support channel.

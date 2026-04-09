@@ -1,6 +1,6 @@
-# LWA Support
+# IWA Support
 
-If you need help with LWA, use the official LWA support channel provided on your website, Whop product, or onboarding materials.
+If you need help with IWA, use the official IWA support channel provided on your website, Whop product, or onboarding materials.
 
 ## Common Issues
 
@@ -18,7 +18,7 @@ If you need help with LWA, use the official LWA support channel provided on your
 
 ### Billing and access questions
 
-- Manage your plan through the official LWA web storefront
+- Manage your plan through the official IWA web storefront
 - Contact support if your paid access is not reflected correctly
 
 ## What To Include In A Support Request

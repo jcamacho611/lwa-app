@@ -77,6 +77,20 @@ enum AppConfiguration {
         BundleConfiguration.string(for: "LWAAPIKey", fallback: "")
     }
 
+    static var privacyPolicyURL: String {
+        BundleConfiguration.string(
+            for: "LWAPrivacyPolicyURL",
+            fallback: "https://github.com/jcamacho611/lwa-app/blob/main/docs/privacy-policy.md"
+        )
+    }
+
+    static var supportURL: String {
+        BundleConfiguration.string(
+            for: "LWASupportURL",
+            fallback: "https://github.com/jcamacho611/lwa-app/blob/main/docs/support.md"
+        )
+    }
+
     static var apiKeyHeaderName: String {
         BundleConfiguration.string(for: "LWAAPIKeyHeaderName", fallback: "x-api-key")
     }

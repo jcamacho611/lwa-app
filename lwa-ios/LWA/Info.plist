@@ -30,6 +30,10 @@
 	<string>x-api-key</string>
 	<key>LWAAppStoreMode</key>
 	<true/>
+	<key>LWAPrivacyPolicyURL</key>
+	<string>https://github.com/jcamacho611/lwa-app/blob/main/docs/privacy-policy.md</string>
+	<key>LWASupportURL</key>
+	<string>https://github.com/jcamacho611/lwa-app/blob/main/docs/support.md</string>
 	<key>LWADebugAPIBaseURL</key>
 	<string>http://localhost:8000</string>
 	<key>LWAProductionAPIBaseURL</key>
