@@ -117,13 +117,13 @@ From the repository root:
 
 ```bash
 cd lwa-backend
-/opt/homebrew/bin/python3.14 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+kill -9 $(lsof -ti:8000) 2>/dev/null || true
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-If `python3.14` is on your `PATH`, `python3 -m venv .venv` is also fine. The backend has been verified locally on Python `3.14.4`.
+This keeps local port `8000` predictable when `uvicorn --reload` leaves an older watcher process behind.
 
 If you want a local env template first:
 
@@ -181,6 +181,14 @@ Synchronous `/generate` example:
 curl -X POST http://127.0.0.1:8000/generate \
   -H "Content-Type: application/json" \
   -d '{"video_url":"https://www.youtube.com/watch?v=example","target_platform":"TikTok"}'
+```
+
+Lightweight local verification:
+
+```bash
+cd /Users/bdm/LWA/lwa-backend
+source .venv/bin/activate
+python scripts/smoke_test.py http://127.0.0.1:8000
 ```
 
 Async job example:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
-from pathlib import Path
+import logging
 from urllib.parse import urlparse
 
 from fastapi import HTTPException, Request
@@ -13,6 +13,8 @@ from ..models.schemas import ClipBatchResponse, ProcessRequest, ProcessingSummar
 from ..services.ai_service import generate_clip_copy
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
 from ..trends import fetch_public_trends, trends_timestamp
+
+logger = logging.getLogger("uvicorn.error")
 
 
 def enforce_api_key(request: Request, settings: Settings) -> None:
@@ -68,23 +70,65 @@ async def build_clip_response(
     request_id: str,
     request: ProcessRequest,
     public_base_url: str,
+    route_path: str,
 ) -> ClipBatchResponse:
     video_url = str(request.video_url)
     target_platform = request.target_platform or "TikTok"
     trend_context_response = await get_live_trends()
     trend_context: list[TrendItem] = trend_context_response.trends
     source_context = None
+    fallback_reason: str | None = None
+    yt_dlp_is_available = importlib.util.find_spec("yt_dlp") is not None
+    ffmpeg_is_available = ffmpeg_available(settings)
 
-    try:
-        source_context = await asyncio.to_thread(
-            build_source_context,
-            settings=settings,
-            request_id=request_id,
-            video_url=video_url,
-            public_base_url=public_base_url,
+    logger.info(
+        "clip_response_start request_id=%s route=%s ffmpeg=%s yt_dlp=%s base_url=%s",
+        request_id,
+        route_path,
+        ffmpeg_is_available,
+        yt_dlp_is_available,
+        public_base_url,
+    )
+
+    if ffmpeg_is_available and yt_dlp_is_available:
+        try:
+            source_context = await asyncio.to_thread(
+                build_source_context,
+                settings=settings,
+                request_id=request_id,
+                video_url=video_url,
+                public_base_url=public_base_url,
+            )
+            logger.info(
+                "source_context_ready request_id=%s route=%s built=%s clip_seeds=%s strategy=%s title=%s",
+                request_id,
+                route_path,
+                True,
+                len(source_context.clip_seeds),
+                source_context.selection_strategy,
+                source_context.title,
+            )
+        except Exception as error:
+            fallback_reason = str(error)
+            logger.warning(
+                "source_context_fallback request_id=%s route=%s built=%s reason=%s",
+                request_id,
+                route_path,
+                False,
+                fallback_reason,
+            )
+            source_context = None
+    else:
+        fallback_reason = "missing runtime dependencies"
+        logger.warning(
+            "source_context_skipped request_id=%s route=%s built=%s ffmpeg=%s yt_dlp=%s reason=%s",
+            request_id,
+            route_path,
+            False,
+            ffmpeg_is_available,
+            yt_dlp_is_available,
+            fallback_reason,
         )
-    except Exception:
-        source_context = None
 
     clips, provider_used = await generate_clip_copy(
         settings=settings,
@@ -104,6 +148,20 @@ async def build_clip_response(
             clip_seeds=source_context.clip_seeds,
             request_id=request_id,
             public_base_url=public_base_url,
+        )
+        logger.info(
+            "clip_exports_complete request_id=%s route=%s clip_seeds=%s exports=%s",
+            request_id,
+            route_path,
+            len(source_context.clip_seeds),
+            edited_assets_created,
+        )
+    else:
+        logger.info(
+            "clip_mock_fallback request_id=%s route=%s reason=%s",
+            request_id,
+            route_path,
+            fallback_reason or "real pipeline unavailable",
         )
 
     processing_mode = source_context.processing_mode if source_context else "mock"
@@ -149,6 +207,7 @@ async def run_job(
     job_id: str,
     request: ProcessRequest,
     public_base_url: str,
+    route_path: str,
 ) -> None:
     await job_store.update(
         job_id,
@@ -162,8 +221,8 @@ async def run_job(
             request_id=job_id,
             request=request,
             public_base_url=public_base_url,
+            route_path=route_path,
         )
         await job_store.complete(job_id, response)
     except Exception as error:  # pragma: no cover
         await job_store.fail(job_id, str(error))
-

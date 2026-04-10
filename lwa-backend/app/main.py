@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,7 @@ from .api.routes.generate import router as generate_router
 from .core.config import get_settings
 
 settings = get_settings()
+logger = logging.getLogger("uvicorn.error")
 
 def create_app() -> FastAPI:
     Path(settings.generated_assets_dir).mkdir(parents=True, exist_ok=True)
@@ -25,6 +27,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(generate_router)
+    logger.info(
+        "app_ready generated_assets_dir=%s generated_mount=/generated log_level=%s",
+        settings.generated_assets_dir,
+        settings.log_level,
+    )
     return app
 
 

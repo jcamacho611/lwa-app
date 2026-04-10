@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
+import logging
 from uuid import uuid4
 
-from fastapi import APIRouter, FastAPI, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 
-from ...core.config import Settings, get_settings
+from ...core.config import get_settings
 from ...job_store import JobStore
 from ...models.schemas import (
     ClipBatchResponse,
@@ -25,6 +25,7 @@ from ...services.clip_service import (
 router = APIRouter()
 settings = get_settings()
 job_store = JobStore()
+logger = logging.getLogger("uvicorn.error")
 
 
 @router.get("/")
@@ -72,11 +73,19 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
     enforce_api_key(http_request, settings)
     request_id = f"req_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
+    logger.info(
+        "route_generate request_id=%s route=%s target_platform=%s video_url=%s",
+        request_id,
+        http_request.url.path,
+        request.target_platform or "TikTok",
+        request.video_url,
+    )
     return await build_clip_response(
         settings=settings,
         request_id=request_id,
         request=request,
         public_base_url=public_base_url,
+        route_path=http_request.url.path,
     )
 
 
@@ -85,6 +94,13 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
     enforce_api_key(http_request, settings)
     job_id = f"job_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
+    logger.info(
+        "route_job request_id=%s route=%s target_platform=%s video_url=%s",
+        job_id,
+        http_request.url.path,
+        request.target_platform or "TikTok",
+        request.video_url,
+    )
     await job_store.create(job_id, "Job queued. Starting source analysis.")
     import asyncio
 
@@ -95,6 +111,7 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
             job_id=job_id,
             request=request,
             public_base_url=public_base_url,
+            route_path=http_request.url.path,
         )
     )
     return JobCreatedResponse(
@@ -121,8 +138,3 @@ async def get_processing_job(job_id: str, http_request: Request) -> JobStatusRes
         result=record.result,
         error=record.error,
     )
-
-
-def configure_application(app: FastAPI) -> None:
-    Path(settings.generated_assets_dir).mkdir(parents=True, exist_ok=True)
-

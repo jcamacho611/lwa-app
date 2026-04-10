@@ -5,6 +5,7 @@ __pycache__/
 .env
 generated/
 lwa-backend/generated/
+lwa-backend/downloads/
 
 DerivedData/
 *.xcuserstate

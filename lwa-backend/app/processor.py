@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 import re
 from pathlib import Path
 import shutil
@@ -18,6 +19,8 @@ except Exception:  # pragma: no cover - optional dependency
 from yt_dlp import YoutubeDL
 
 from .config import Settings
+
+logger = logging.getLogger("uvicorn.error")
 
 
 @dataclass
@@ -52,6 +55,22 @@ class SourceContext:
     selection_strategy: str
 
 
+class YTDLPLogProxy:
+    def __init__(self, request_id: str) -> None:
+        self.request_id = request_id
+
+    def debug(self, message: str) -> None:
+        if message.startswith("[debug]"):
+            return
+        logger.debug("request_id=%s component=yt_dlp level=debug message=%s", self.request_id, message)
+
+    def warning(self, message: str) -> None:
+        logger.warning("request_id=%s component=yt_dlp level=warning message=%s", self.request_id, message)
+
+    def error(self, message: str) -> None:
+        logger.error("request_id=%s component=yt_dlp level=error message=%s", self.request_id, message)
+
+
 def resolve_ffmpeg_path(settings: Settings) -> Optional[str]:
     configured = Path(settings.ffmpeg_path)
     if configured.exists():
@@ -81,22 +100,47 @@ def process_video_source(
     if not ffmpeg_path:
         raise RuntimeError("ffmpeg is not available")
 
+    logger.info(
+        "source_processing_start request_id=%s ffmpeg_path=%s public_base_url=%s",
+        request_id,
+        ffmpeg_path,
+        public_base_url,
+    )
     generated_dir = Path(settings.generated_assets_dir) / request_id
     generated_dir.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory(prefix=f"{request_id}_", dir=settings.yt_dlp_temp_dir) as temp_dir:
         work_dir = Path(temp_dir)
-        info = download_source(video_url=video_url, work_dir=work_dir, ffmpeg_path=ffmpeg_path)
+        info = download_source(
+            video_url=video_url,
+            work_dir=work_dir,
+            ffmpeg_path=ffmpeg_path,
+            request_id=request_id,
+        )
         source_file = locate_source_file(work_dir)
         transcript_windows = load_transcript_windows(work_dir)
 
         duration_seconds = parse_duration_seconds(info.get("duration"))
         if duration_seconds is None:
             duration_seconds = probe_video_duration(source_file=source_file, ffmpeg_path=ffmpeg_path)
+            if duration_seconds is None:
+                logger.warning(
+                    "source_probe_warning request_id=%s source_file=%s reason=duration_unavailable",
+                    request_id,
+                    source_file,
+                )
         segments, selection_strategy = build_segment_plan(
             duration_seconds=duration_seconds,
             chapters=info.get("chapters") or [],
             transcript_windows=transcript_windows,
+        )
+        logger.info(
+            "segment_plan_ready request_id=%s strategy=%s segments=%s transcript_windows=%s duration_seconds=%s",
+            request_id,
+            selection_strategy,
+            len(segments),
+            len(transcript_windows),
+            duration_seconds,
         )
         clip_seeds = create_clips(
             source_file=source_file,
@@ -105,6 +149,14 @@ def process_video_source(
             segments=segments,
             public_base_url=public_base_url,
             ffmpeg_path=ffmpeg_path,
+        )
+        if not clip_seeds:
+            raise RuntimeError("real pipeline produced zero clip assets")
+        logger.info(
+            "clip_seeds_ready request_id=%s clip_seeds=%s generated_dir=%s",
+            request_id,
+            len(clip_seeds),
+            generated_dir,
         )
 
     return SourceContext(
@@ -119,24 +171,47 @@ def process_video_source(
     )
 
 
-def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str) -> dict[str, Any]:
+def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request_id: str) -> dict[str, Any]:
     options = {
         "quiet": True,
-        "no_warnings": True,
+        "no_warnings": False,
+        "noprogress": True,
         "noplaylist": True,
         "outtmpl": str(work_dir / "source.%(ext)s"),
         "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "merge_output_format": "mp4",
         "overwrites": True,
+        "retries": 2,
+        "fragment_retries": 2,
+        "extractor_retries": 2,
+        "file_access_retries": 2,
+        "socket_timeout": 20,
+        "concurrent_fragment_downloads": 1,
         "ffmpeg_location": str(Path(ffmpeg_path).parent),
         "writesubtitles": True,
         "writeautomaticsub": True,
         "subtitleslangs": ["en", "en-US", "en-GB", "en.*"],
         "subtitlesformat": "vtt/best",
+        "logger": YTDLPLogProxy(request_id),
     }
 
+    logger.info(
+        "source_download_start request_id=%s video_url=%s work_dir=%s format=%s",
+        request_id,
+        video_url,
+        work_dir,
+        options["format"],
+    )
     with YoutubeDL(options) as ydl:
-        return ydl.extract_info(video_url, download=True)
+        info = ydl.extract_info(video_url, download=True)
+    logger.info(
+        "source_download_complete request_id=%s title=%s duration=%s webpage_url=%s",
+        request_id,
+        info.get("title"),
+        info.get("duration"),
+        info.get("webpage_url") or video_url,
+    )
+    return info
 
 
 def locate_source_file(work_dir: Path) -> Path:
