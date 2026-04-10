@@ -310,6 +310,7 @@ railway up
 Use this file for the last manual platform steps:
 
 - [docs/final-launch-checklist.md](/Users/bdm/LWA/docs/final-launch-checklist.md)
+- [docs/final-handoff.md](/Users/bdm/LWA/docs/final-handoff.md)
 - [docs/whop-railway-connection.md](/Users/bdm/LWA/docs/whop-railway-connection.md)
 
 Required env vars in Render:
