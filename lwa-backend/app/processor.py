@@ -385,7 +385,7 @@ def create_social_exports(
         output_path = generated_dir / output_name
 
         try:
-            export_social_ready_clip(
+            edit_profile = export_social_ready_clip(
                 ffmpeg_path=ffmpeg_path,
                 input_path=seed.asset_path,
                 output_path=output_path,
@@ -401,7 +401,7 @@ def create_social_exports(
                         "clip_url": edited_url,
                         "raw_clip_url": raw_clip_url,
                         "edited_clip_url": edited_url,
-                        "edit_profile": "9:16 Smart Crop + Overlay Copy",
+                        "edit_profile": edit_profile,
                         "aspect_ratio": "9:16",
                     }
                 )
@@ -429,11 +429,11 @@ def export_social_ready_clip(
     output_path: Path,
     title_text: str,
     subtitle_text: str,
-) -> None:
+) -> str:
     bold_font = resolve_drawtext_font(bold=True)
     regular_font = resolve_drawtext_font(bold=False)
 
-    filter_steps = [
+    base_filter_steps = [
         "scale=720:1280:force_original_aspect_ratio=increase",
         "crop=720:1280",
         "drawbox=x=0:y=0:w=iw:h=228:color=black@0.28:t=fill",
@@ -446,7 +446,8 @@ def export_social_ready_clip(
         title_path.write_text(title_text, encoding="utf-8")
         subtitle_path.write_text(subtitle_text, encoding="utf-8")
 
-        filter_steps.append(
+        overlay_filter_steps = list(base_filter_steps)
+        overlay_filter_steps.append(
             drawtext_filter(
                 textfile=title_path,
                 fontfile=bold_font,
@@ -457,7 +458,7 @@ def export_social_ready_clip(
                 line_spacing=10,
             )
         )
-        filter_steps.append(
+        overlay_filter_steps.append(
             drawtext_filter(
                 textfile=subtitle_path,
                 fontfile=regular_font,
@@ -472,33 +473,63 @@ def export_social_ready_clip(
             )
         )
 
-        command = [
-            ffmpeg_path,
-            "-y",
-            "-i",
-            str(input_path),
-            "-map",
-            "0:v:0",
-            "-map",
-            "0:a?",
-            "-vf",
-            ",".join(filter_steps),
-            "-c:v",
-            "libx264",
-            "-preset",
-            "veryfast",
-            "-crf",
-            "22",
-            "-pix_fmt",
-            "yuv420p",
-            "-c:a",
-            "aac",
-            "-movflags",
-            "+faststart",
-            str(output_path),
-        ]
+        overlay_command = build_social_export_command(
+            ffmpeg_path=ffmpeg_path,
+            input_path=input_path,
+            output_path=output_path,
+            filter_steps=overlay_filter_steps,
+        )
 
-        subprocess.run(command, check=True, capture_output=True, text=True)
+        try:
+            subprocess.run(overlay_command, check=True, capture_output=True, text=True)
+            return "9:16 Smart Crop + Overlay Copy"
+        except subprocess.CalledProcessError as error:
+            stderr = error.stderr or ""
+            if "No such filter: 'drawtext'" not in stderr:
+                raise
+
+        fallback_command = build_social_export_command(
+            ffmpeg_path=ffmpeg_path,
+            input_path=input_path,
+            output_path=output_path,
+            filter_steps=base_filter_steps,
+        )
+        subprocess.run(fallback_command, check=True, capture_output=True, text=True)
+        return "9:16 Smart Crop"
+
+
+def build_social_export_command(
+    *,
+    ffmpeg_path: str,
+    input_path: Path,
+    output_path: Path,
+    filter_steps: List[str],
+) -> List[str]:
+    return [
+        ffmpeg_path,
+        "-y",
+        "-i",
+        str(input_path),
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a?",
+        "-vf",
+        ",".join(filter_steps),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "22",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
 
 
 def drawtext_filter(

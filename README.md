@@ -16,14 +16,29 @@ LWA/
 │   ├── .env.example
 │   ├── app/
 │   │   ├── __init__.py
+│   │   ├── api/
+│   │   │   └── routes/
+│   │   │       └── generate.py
 │   │   ├── config.py
+│   │   ├── core/
+│   │   │   └── config.py
 │   │   ├── generation.py
 │   │   ├── job_store.py
 │   │   ├── main.py
+│   │   ├── models/
+│   │   │   └── schemas.py
 │   │   ├── mock_data.py
 │   │   ├── processor.py
 │   │   ├── schemas.py
+│   │   ├── services/
+│   │   │   ├── ai_service.py
+│   │   │   ├── caption_service.py
+│   │   │   ├── clip_service.py
+│   │   │   └── video_service.py
 │   │   └── trends.py
+│   │   └── utils/
+│   │       ├── downloader.py
+│   │       └── ffmpeg_utils.py
 │   ├── .dockerignore
 │   ├── Dockerfile
 │   ├── railway.toml
@@ -43,13 +58,25 @@ LWA/
             └── ContentViewModel.swift
 ```
 
+## Backend Layout
+
+- `lwa-backend/app/main.py`: FastAPI app factory that mounts static generated assets and attaches the API router.
+- `lwa-backend/app/api/routes/generate.py`: HTTP surface for `/generate`, `/process`, `/v1/generate`, async jobs, trends, and health.
+- `lwa-backend/app/core/config.py`: Canonical environment-based settings with Railway detection and Homebrew/local FFmpeg auto-detection.
+- `lwa-backend/app/models/schemas.py`: Canonical request and response models.
+- `lwa-backend/app/services/clip_service.py`: Orchestration layer that builds clip responses, runs jobs, and exposes dependency health.
+- `lwa-backend/app/services/video_service.py`: Source processing and social-export wrappers around the lower-level pipeline.
+- `lwa-backend/app/services/ai_service.py`: Hook/caption generation wrapper for OpenAI, Ollama, or heuristic fallback.
+- `lwa-backend/app/services/caption_service.py`: Fallback copy generation helpers.
+- `lwa-backend/app/utils/downloader.py`: Download wrapper for video ingestion.
+- `lwa-backend/app/utils/ffmpeg_utils.py`: FFmpeg-facing helpers for clip cutting and social export.
+
 ## What Each Part Does
 
-- `lwa-backend/app/main.py`: FastAPI app with `POST /process` and `GET /health`.
-- `lwa-backend/app/config.py`: Lightweight environment-based backend configuration.
+- `lwa-backend/app/config.py`: Backward-compatible import shim for the canonical settings module.
 - `lwa-backend/app/generation.py`: Hook, caption, and angle generation with OpenAI, Ollama, or heuristic fallback.
 - `lwa-backend/app/job_store.py`: In-memory async job tracking for long-running clip generation.
-- `lwa-backend/app/schemas.py`: Request and response models.
+- `lwa-backend/app/schemas.py`: Backward-compatible import shim for the canonical schema module.
 - `lwa-backend/app/mock_data.py`: Fallback clip copy when real generation is unavailable.
 - `lwa-backend/app/processor.py`: Real `yt-dlp` plus `ffmpeg` pipeline that downloads a source video, reads captions when available, and cuts MP4 clips.
 - `lwa-backend/app/trends.py`: Public trend aggregation from Google Trends, Reddit, and Hacker News.
@@ -90,11 +117,13 @@ From the repository root:
 
 ```bash
 cd lwa-backend
-python3 -m venv .venv
+/opt/homebrew/bin/python3.14 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
+
+If `python3.14` is on your `PATH`, `python3 -m venv .venv` is also fine. The backend has been verified locally on Python `3.14.4`.
 
 If you want a local env template first:
 
@@ -115,6 +144,7 @@ Useful endpoints:
 - `GET /health`
 - `GET /v1/status/health`
 - `GET /v1/trends`
+- `POST /generate`
 - `POST /v1/jobs`
 - `GET /v1/jobs/{job_id}`
 - `POST /process`
@@ -129,7 +159,7 @@ export LWA_DEFAULT_PLAN_NAME="Starter Trial"
 export LWA_DEFAULT_CREDITS_REMAINING="2"
 export LWA_DEFAULT_TURNAROUND="45 seconds"
 export OPENAI_API_KEY="your_key_here"
-export FFMPEG_PATH="/usr/bin/ffmpeg"
+export FFMPEG_PATH="/opt/homebrew/bin/ffmpeg"
 export YT_DLP_TEMP_DIR="/tmp"
 export LWA_GENERATED_ASSETS_DIR="/absolute/path/to/generated"
 export API_BASE_URL="https://your-render-service.onrender.com"
@@ -143,6 +173,14 @@ Example request:
 curl -X POST http://127.0.0.1:8000/process \
   -H "Content-Type: application/json" \
   -d '{"video_url":"https://www.youtube.com/watch?v=example"}'
+```
+
+Synchronous `/generate` example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"video_url":"https://www.youtube.com/watch?v=example","target_platform":"TikTok"}'
 ```
 
 Async job example:
