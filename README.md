@@ -119,11 +119,10 @@ From the repository root:
 cd lwa-backend
 source .venv/bin/activate
 pip install -r requirements.txt
-kill -9 $(lsof -ti:8000) 2>/dev/null || true
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+./scripts/dev_local.sh
 ```
 
-This keeps local port `8000` predictable when `uvicorn --reload` leaves an older watcher process behind.
+This Mac-first launcher keeps local port `8000` predictable, excludes `.venv` and generated assets from reload watching, and uses the current backend package directly.
 
 If you want a local env template first:
 
@@ -160,6 +159,7 @@ export LWA_DEFAULT_CREDITS_REMAINING="2"
 export LWA_DEFAULT_TURNAROUND="45 seconds"
 export OPENAI_API_KEY="your_key_here"
 export FFMPEG_PATH="/opt/homebrew/bin/ffmpeg"
+export LWA_VIDEO_ENCODER="auto"
 export YT_DLP_TEMP_DIR="/tmp"
 export LWA_GENERATED_ASSETS_DIR="/absolute/path/to/generated"
 export API_BASE_URL="https://your-render-service.onrender.com"
@@ -190,6 +190,8 @@ cd /Users/bdm/LWA/lwa-backend
 source .venv/bin/activate
 python scripts/smoke_test.py http://127.0.0.1:8000
 ```
+
+On Apple Silicon Macs, `LWA_VIDEO_ENCODER=auto` will prefer `h264_videotoolbox` when the local FFmpeg build supports it and fall back to `libx264` everywhere else.
 
 Async job example:
 

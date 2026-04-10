@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from dataclasses import dataclass
 import logging
+import platform
 import re
 from pathlib import Path
 import shutil
@@ -89,6 +91,64 @@ def resolve_ffmpeg_path(settings: Settings) -> Optional[str]:
     return None
 
 
+@lru_cache(maxsize=8)
+def ffmpeg_supports_encoder(ffmpeg_path: str, encoder_name: str) -> bool:
+    try:
+        process = subprocess.run(
+            [ffmpeg_path, "-hide_banner", "-encoders"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return False
+
+    combined = f"{process.stdout}\n{process.stderr}"
+    return encoder_name in combined
+
+
+def resolve_video_encoder(*, settings: Settings, ffmpeg_path: str) -> str:
+    requested = settings.video_encoder
+    if requested and requested not in {"auto", "mac"}:
+        return requested
+
+    if platform.system() == "Darwin" and ffmpeg_supports_encoder(ffmpeg_path, "h264_videotoolbox"):
+        return "h264_videotoolbox"
+
+    return "libx264"
+
+
+def build_video_encoder_args(*, encoder_name: str, target: str) -> List[str]:
+    if encoder_name == "h264_videotoolbox":
+        bitrate = "4M" if target == "clip" else "5M"
+        maxrate = "6M" if target == "clip" else "8M"
+        return [
+            "-c:v",
+            "h264_videotoolbox",
+            "-allow_sw",
+            "1",
+            "-b:v",
+            bitrate,
+            "-maxrate",
+            maxrate,
+            "-bufsize",
+            "10M",
+            "-pix_fmt",
+            "yuv420p",
+        ]
+
+    return [
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "23" if target == "clip" else "22",
+        "-pix_fmt",
+        "yuv420p",
+    ]
+
+
 def process_video_source(
     *,
     settings: Settings,
@@ -99,11 +159,13 @@ def process_video_source(
     ffmpeg_path = resolve_ffmpeg_path(settings)
     if not ffmpeg_path:
         raise RuntimeError("ffmpeg is not available")
+    video_encoder = resolve_video_encoder(settings=settings, ffmpeg_path=ffmpeg_path)
 
     logger.info(
-        "source_processing_start request_id=%s ffmpeg_path=%s public_base_url=%s",
+        "source_processing_start request_id=%s ffmpeg_path=%s video_encoder=%s public_base_url=%s",
         request_id,
         ffmpeg_path,
+        video_encoder,
         public_base_url,
     )
     generated_dir = Path(settings.generated_assets_dir) / request_id
@@ -149,6 +211,7 @@ def process_video_source(
             segments=segments,
             public_base_url=public_base_url,
             ffmpeg_path=ffmpeg_path,
+            settings=settings,
         )
         if not clip_seeds:
             raise RuntimeError("real pipeline produced zero clip assets")
@@ -332,6 +395,7 @@ def create_clips(
     segments: List[dict[str, float]],
     public_base_url: str,
     ffmpeg_path: str,
+    settings: Settings,
 ) -> List[ClipSeed]:
     seeds: List[ClipSeed] = []
     for index, segment in enumerate(segments[:3], start=1):
@@ -339,6 +403,7 @@ def create_clips(
         output_path = generated_dir / output_name
         try:
             cut_clip(
+                settings=settings,
                 ffmpeg_path=ffmpeg_path,
                 source_file=source_file,
                 output_path=output_path,
@@ -367,12 +432,15 @@ def create_clips(
 
 def cut_clip(
     *,
+    settings: Settings,
     ffmpeg_path: str,
     source_file: Path,
     output_path: Path,
     start: float,
     duration: float,
 ) -> None:
+    encoder_name = resolve_video_encoder(settings=settings, ffmpeg_path=ffmpeg_path)
+    encoder_args = build_video_encoder_args(encoder_name=encoder_name, target="clip")
     command = [
         ffmpeg_path,
         "-y",
@@ -388,14 +456,7 @@ def cut_clip(
         "0:a?",
         "-vf",
         "scale='min(1080,iw)':-2",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-crf",
-        "23",
-        "-pix_fmt",
-        "yuv420p",
+        *encoder_args,
         "-c:a",
         "aac",
         "-movflags",
@@ -429,6 +490,7 @@ def ensure_clip_output(path: Path) -> None:
 
 def create_social_exports(
     *,
+    settings: Settings,
     clip_results: List[Any],
     clip_seeds: List[ClipSeed],
     generated_dir: Path,
@@ -461,6 +523,7 @@ def create_social_exports(
 
         try:
             edit_profile = export_social_ready_clip(
+                settings=settings,
                 ffmpeg_path=ffmpeg_path,
                 input_path=seed.asset_path,
                 output_path=output_path,
@@ -499,6 +562,7 @@ def create_social_exports(
 
 def export_social_ready_clip(
     *,
+    settings: Settings,
     ffmpeg_path: str,
     input_path: Path,
     output_path: Path,
@@ -549,6 +613,7 @@ def export_social_ready_clip(
         )
 
         overlay_command = build_social_export_command(
+            settings=settings,
             ffmpeg_path=ffmpeg_path,
             input_path=input_path,
             output_path=output_path,
@@ -564,6 +629,7 @@ def export_social_ready_clip(
                 raise
 
         fallback_command = build_social_export_command(
+            settings=settings,
             ffmpeg_path=ffmpeg_path,
             input_path=input_path,
             output_path=output_path,
@@ -575,11 +641,14 @@ def export_social_ready_clip(
 
 def build_social_export_command(
     *,
+    settings: Settings,
     ffmpeg_path: str,
     input_path: Path,
     output_path: Path,
     filter_steps: List[str],
 ) -> List[str]:
+    encoder_name = resolve_video_encoder(settings=settings, ffmpeg_path=ffmpeg_path)
+    encoder_args = build_video_encoder_args(encoder_name=encoder_name, target="social")
     return [
         ffmpeg_path,
         "-y",
@@ -591,14 +660,7 @@ def build_social_export_command(
         "0:a?",
         "-vf",
         ",".join(filter_steps),
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-crf",
-        "22",
-        "-pix_fmt",
-        "yuv420p",
+        *encoder_args,
         "-c:a",
         "aac",
         "-movflags",

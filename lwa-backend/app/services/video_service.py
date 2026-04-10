@@ -48,6 +48,7 @@ def export_social_ready_clips(
     generated_dir = Path(settings.generated_assets_dir) / request_id
     generated_dir.mkdir(parents=True, exist_ok=True)
     return create_social_exports(
+        settings=settings,
         clip_results=clip_results,
         clip_seeds=clip_seeds,
         generated_dir=generated_dir,

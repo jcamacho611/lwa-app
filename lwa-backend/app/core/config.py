@@ -34,6 +34,7 @@ class Settings:
         self.default_credits_remaining = int(os.getenv("LWA_DEFAULT_CREDITS_REMAINING", "2"))
         self.default_turnaround = os.getenv("LWA_DEFAULT_TURNAROUND", "45 seconds")
         self.ffmpeg_path = os.getenv("FFMPEG_PATH", _default_ffmpeg_path())
+        self.video_encoder = os.getenv("LWA_VIDEO_ENCODER", "auto").strip().lower() or "auto"
         self.yt_dlp_temp_dir = os.getenv("YT_DLP_TEMP_DIR", "/tmp")
         railway_volume_mount_path = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
         default_generated_dir = (
@@ -68,4 +69,3 @@ class Settings:
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
