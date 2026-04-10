@@ -1,8 +1,27 @@
 import Foundation
 
+struct GenerationTrackItem: Identifiable {
+    enum Status {
+        case pending
+        case active
+        case complete
+    }
+
+    let id: String
+    let title: String
+    let status: Status
+}
+
 @MainActor
 final class ContentViewModel: ObservableObject {
     private let historyKey = "lwa.saved_runs"
+    private let generationStages = [
+        "Queued",
+        "Ingesting",
+        "Scoring",
+        "Packaging",
+        "Delivered",
+    ]
     let supportedPlatforms = ["TikTok", "Instagram", "YouTube", "Facebook"]
 
     @Published var videoURL = ""
@@ -126,6 +145,73 @@ final class ContentViewModel: ObservableObject {
         return "\(credits) credits remaining"
     }
 
+    var generationStageTitle: String {
+        if let errorMessage, !errorMessage.isEmpty, latestResponse == nil {
+            return "Run blocked"
+        }
+
+        if isLoading {
+            switch activeGenerationStage {
+            case 0:
+                return "Queueing command"
+            case 1:
+                return "Pulling source context"
+            case 2:
+                return "Finding breakout moments"
+            case 3:
+                return "Rendering social exports"
+            default:
+                return "Finalizing clip pack"
+            }
+        }
+
+        if latestResponse != nil {
+            return "Clip pack ready"
+        }
+
+        return "Awaiting source"
+    }
+
+    var generationStageDetail: String {
+        if let errorMessage, !errorMessage.isEmpty, latestResponse == nil {
+            return errorMessage
+        }
+
+        if isLoading {
+            return jobStatusMessage
+        }
+
+        if let response = latestResponse {
+            return "\(response.clips.count) clips ready for \(response.processingSummary.targetPlatform). Edited exports: \(response.processingSummary.editedAssetsCreated)."
+        }
+
+        return "Paste a long-form source, choose the target platform, and launch the run."
+    }
+
+    var generationTrack: [GenerationTrackItem] {
+        let activeStage = activeGenerationStage
+
+        return generationStages.enumerated().map { index, title in
+            let status: GenerationTrackItem.Status
+
+            if latestResponse != nil && !isLoading {
+                status = .complete
+            } else if isLoading {
+                if index < activeStage {
+                    status = .complete
+                } else if index == activeStage {
+                    status = .active
+                } else {
+                    status = .pending
+                }
+            } else {
+                status = .pending
+            }
+
+            return GenerationTrackItem(id: title, title: title, status: status)
+        }
+    }
+
     var shareText: String {
         guard let response = latestResponse else { return "" }
 
@@ -202,5 +288,43 @@ final class ContentViewModel: ObservableObject {
         }
 
         UserDefaults.standard.set(data, forKey: historyKey)
+    }
+
+    private var activeGenerationStage: Int {
+        if latestResponse != nil && !isLoading {
+            return generationStages.count - 1
+        }
+
+        let message = jobStatusMessage.lowercased()
+
+        if message.contains("queue") || message.contains("pending") {
+            return 0
+        }
+
+        if message.contains("source")
+            || message.contains("download")
+            || message.contains("ingest")
+            || message.contains("probe") {
+            return 1
+        }
+
+        if message.contains("segment")
+            || message.contains("select")
+            || message.contains("score")
+            || message.contains("seed")
+            || message.contains("detect") {
+            return 2
+        }
+
+        if message.contains("render")
+            || message.contains("export")
+            || message.contains("encode")
+            || message.contains("ffmpeg")
+            || message.contains("package")
+            || message.contains("clip") {
+            return 3
+        }
+
+        return isLoading ? 1 : 0
     }
 }
