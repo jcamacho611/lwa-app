@@ -5,7 +5,7 @@ This is the shortest path to finish LWA/IWA from the current repo state.
 ## Current Repo State
 
 - Branch: `main`
-- Latest pushed commit: `77efeb9`
+- Latest pushed commit: run `git log --oneline -1`
 - Git remote: `origin`
 - Worktree state when this file was written: clean
 - iOS status:
@@ -203,7 +203,7 @@ Use this exact current state:
 
 - GitHub repo: jcamacho611/lwa-app
 - Branch: main
-- Latest commit: 77efeb9
+- Latest commit: run `git log --oneline -1`
 - Backend deploy target: Railway
 - Railway backend URL: https://lwa-backend-production-c9cc.up.railway.app
 - iOS app name: IWA
