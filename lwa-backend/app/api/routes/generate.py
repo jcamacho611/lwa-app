@@ -18,7 +18,6 @@ from ...models.schemas import (
 from ...models.user import UserRecord
 from ...services.clip_service import (
     build_clip_response,
-    dependency_health,
     enforce_api_key,
     get_live_trends,
     run_job,
@@ -35,35 +34,17 @@ logger = logging.getLogger("uvicorn.error")
 
 @router.get("/")
 async def root() -> dict[str, object]:
-    base_url = settings.api_base_url or "http://127.0.0.1:8000"
-    api_key_enabled = bool(settings.api_key_secret or settings.pro_api_keys or settings.scale_api_keys)
     return {
         "status": "ok",
         "service": settings.app_name,
-        "environment": settings.environment,
-        "docs_url": f"{base_url}/docs",
-        "health_url": f"{base_url}/health",
-        "generate_url": f"{base_url}/generate",
-        "jobs_url": f"{base_url}/v1/jobs",
-        "trends_url": f"{base_url}/v1/trends",
-        "api_key_header": settings.api_key_header_name if api_key_enabled else None,
-        "client_id_header": settings.client_id_header_name,
     }
 
 
 @router.get("/health")
 @router.get("/v1/status/health")
 async def health_check() -> dict[str, object]:
-    checks = dependency_health(settings)
-    required_checks = [checks["ffmpeg"], checks["yt_dlp"]]
-    overall_status = "ok" if all(required_checks) else "degraded"
     return {
-        "status": overall_status,
-        "service": settings.app_name,
-        "environment": settings.environment,
-        "version": settings.service_version,
-        "port": settings.port,
-        "dependencies": checks,
+        "status": "ok",
     }
 
 

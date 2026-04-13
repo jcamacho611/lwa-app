@@ -1,5 +1,5 @@
-import { ClipGeneratorApp } from "@/components/clip-generator-app";
+import { ClipStudio } from "../components/clip-studio";
 
 export default function HomePage() {
-  return <ClipGeneratorApp />;
+  return <ClipStudio />;
 }

@@ -1,42 +1,108 @@
-export type PlatformCode = "TikTok" | "Instagram" | "YouTube";
+export type PlatformOption = "TikTok" | "Instagram Reels" | "YouTube Shorts";
+
+export type UserProfile = {
+  id: string;
+  email: string;
+  display_name?: string | null;
+  plan_code?: string;
+  created_at?: string;
+};
+
+export type AuthResponse = {
+  access_token: string;
+  token_type: string;
+  user: UserProfile;
+};
+
+export type UploadAsset = {
+  id?: string;
+  file_id?: string;
+  filename?: string;
+  file_name?: string;
+  content_type?: string;
+  size_bytes?: number;
+  file_size?: number;
+  public_url?: string | null;
+  storage_path?: string;
+  created_at?: string;
+  source_ref?: {
+    source_kind: string;
+    upload_id?: string;
+  };
+};
+
+export type ClipPackSummary = {
+  request_id: string;
+  source_title?: string | null;
+  video_url?: string | null;
+  target_platform?: string | null;
+  clip_count?: number;
+  created_at?: string | null;
+};
+
+export type WalletSummary = {
+  pending_cents?: number;
+  available_cents?: number;
+  lifetime_cents?: number;
+  currency?: string;
+  recent_entries?: Array<{
+    id: string;
+    amount_cents: number;
+    description: string;
+    status: string;
+  }>;
+};
+
+export type BatchSummary = {
+  id: string;
+  title: string;
+  status: string;
+  total_sources: number;
+  completed_sources: number;
+};
+
+export type CampaignSummary = {
+  id: string;
+  name?: string;
+  title?: string;
+  status: string;
+  target_angle?: string | null;
+  payout_cents_per_1000_views?: number | null;
+};
 
 export type ClipResult = {
   id: string;
   title: string;
   hook: string;
   caption: string;
-  score: number;
-  confidence?: number | null;
-  reason?: string | null;
   start_time: string;
   end_time: string;
+  score: number;
+  confidence?: number | null;
+  rank?: number | null;
+  reason?: string | null;
   cta_suggestion?: string | null;
-  platform_fit?: string | null;
-  packaging_angle?: string | null;
   thumbnail_text?: string | null;
+  packaging_angle?: string | null;
+  platform_fit?: string | null;
+  best_post_order?: number | null;
+  hook_variants?: string[];
   clip_url?: string | null;
   edited_clip_url?: string | null;
+  raw_clip_url?: string | null;
   preview_image_url?: string | null;
 };
 
-export type ClipResponse = {
+export type GenerateResponse = {
   request_id: string;
   video_url: string;
   status: string;
   source_platform: string;
-  clips: ClipResult[];
   processing_summary?: {
-    plan_name: string;
-    ai_provider: string;
-    target_platform: string;
-    estimated_turnaround: string;
-    recommended_next_step: string;
-    edited_assets_created: number;
+    target_platform?: string;
+    ai_provider?: string;
+    plan_name?: string;
+    estimated_turnaround?: string;
   };
+  clips: ClipResult[];
 };
-
-export type GenerateState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "success"; data: ClipResponse }
-  | { status: "error"; message: string };

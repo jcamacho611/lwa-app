@@ -1,78 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authorizationHeader, backendUrl, parseBackendResponse } from "../_lib/backend";
 
-const backendProcessUrl =
-  process.env.BACKEND_PROCESS_URL ??
-  "https://lwa-backend-production-c9cc.up.railway.app/process";
+type GenerateRequestBody = {
+  url?: string;
+  platform?: string;
+  uploadFileId?: string;
+};
 
 export async function POST(request: NextRequest) {
+  let payload: GenerateRequestBody;
+
   try {
-    const body = (await request.json()) as {
-      url?: string;
-      platform?: string;
-    };
+    payload = (await request.json()) as GenerateRequestBody;
+  } catch {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
 
-    const url = body.url?.trim();
-    const platform = body.platform?.trim();
+  const url = payload.url?.trim();
+  const platform = payload.platform?.trim() || "TikTok";
+  const uploadFileId = payload.uploadFileId?.trim();
+  const authorization = request.headers.get("authorization");
+  const token = authorization?.toLowerCase().startsWith("bearer ") ? authorization.split(" ", 2)[1] : null;
 
-    if (!url) {
-      return NextResponse.json(
-        { message: "Paste a video URL before generating clips." },
-        { status: 400 }
-      );
-    }
+  if (!url && !uploadFileId) {
+    return NextResponse.json({ error: "Paste a video URL or upload a file to continue." }, { status: 400 });
+  }
 
-    if (!platform) {
-      return NextResponse.json(
-        { message: "Choose a target platform first." },
-        { status: 400 }
-      );
-    }
-
-    const upstream = await fetch(backendProcessUrl, {
+  try {
+    const backendResponse = await fetch(backendUrl("/process"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...authorizationHeader(token),
       },
       body: JSON.stringify({
-        url,
-        platform,
-        video_url: url,
+        video_url: url || undefined,
+        upload_file_id: uploadFileId || undefined,
         target_platform: platform,
       }),
       cache: "no-store",
     });
 
-    const text = await upstream.text();
+    const parsed = await parseBackendResponse(backendResponse);
 
-    if (!upstream.ok) {
-      let message = "The clip generation request failed.";
-      try {
-        const parsed = JSON.parse(text) as { detail?: string; message?: string };
-        message = parsed.detail ?? parsed.message ?? message;
-      } catch {
-        if (text.trim()) {
-          message = text;
-        }
-      }
+    if (!backendResponse.ok) {
+      const detail =
+        parsed?.detail ||
+        parsed?.error ||
+        "The backend could not generate clips for that source right now.";
 
-      return NextResponse.json({ message }, { status: upstream.status });
+      return NextResponse.json({ error: detail }, { status: backendResponse.status });
     }
 
-    return new NextResponse(text, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-  } catch (error) {
+    return NextResponse.json(parsed, { status: 200 });
+  } catch {
     return NextResponse.json(
-      {
-        message:
-          error instanceof Error
-            ? error.message
-            : "Something went wrong while contacting the backend.",
-      },
-      { status: 500 }
+      { error: "Unable to reach the clipping backend right now. Try again in a moment." },
+      { status: 502 },
     );
   }
 }
