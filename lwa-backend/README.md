@@ -10,6 +10,8 @@ This directory is the only Railway deployment target in the repo.
 - Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - Builder: Nixpacks
 - `nixpacks.toml` installs `ffmpeg` for Railway runtime
+- Default video encoding is software `libx264` for higher-quality creator exports
+- Set `LWA_VIDEO_ENCODER=mac` only if you explicitly want `h264_videotoolbox` on macOS development machines
 
 ## Local Run
 

@@ -48,7 +48,7 @@ class Settings:
             if value.strip()
         }
         self.ffmpeg_path = os.getenv("FFMPEG_PATH", _default_ffmpeg_path())
-        self.video_encoder = os.getenv("LWA_VIDEO_ENCODER", "auto").strip().lower() or "auto"
+        self.video_encoder = os.getenv("LWA_VIDEO_ENCODER", "libx264").strip().lower() or "libx264"
         self.yt_dlp_temp_dir = os.getenv("YT_DLP_TEMP_DIR", "/tmp")
         railway_volume_mount_path = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
         default_generated_dir = (

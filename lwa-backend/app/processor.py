@@ -113,7 +113,7 @@ def resolve_video_encoder(*, settings: Settings, ffmpeg_path: str) -> str:
     if requested and requested not in {"auto", "mac"}:
         return requested
 
-    if platform.system() == "Darwin" and ffmpeg_supports_encoder(ffmpeg_path, "h264_videotoolbox"):
+    if requested == "mac" and platform.system() == "Darwin" and ffmpeg_supports_encoder(ffmpeg_path, "h264_videotoolbox"):
         return "h264_videotoolbox"
 
     return "libx264"
@@ -142,9 +142,9 @@ def build_video_encoder_args(*, encoder_name: str, target: str) -> List[str]:
         "-c:v",
         "libx264",
         "-preset",
-        "veryfast",
+        "medium" if target == "clip" else "slow",
         "-crf",
-        "23" if target == "clip" else "22",
+        "22" if target == "clip" else "21",
         "-pix_fmt",
         "yuv420p",
     ]
