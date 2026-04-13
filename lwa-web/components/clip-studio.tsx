@@ -4,9 +4,11 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { AccountWorkspace } from "./account-workspace";
 import { AuthPanel } from "./auth-panel";
 import { ClipCard } from "./clip-card";
+import { ClipPackEditor, ClipPatchPayload } from "./clip-pack-editor";
 import {
   BatchSummary,
   CampaignSummary,
+  ClipPackDetail,
   ClipPackSummary,
   GenerateResponse,
   PlatformOption,
@@ -18,11 +20,13 @@ import {
   generateClips,
   loadBatches,
   loadCampaigns,
+  loadClipPack,
   loadClipPacks,
   loadMe,
   loadUploads,
   loadWallet,
   logOut,
+  patchClip,
   uploadSource,
 } from "../lib/api";
 import { clearStoredToken, readStoredToken, storeToken } from "../lib/auth";
@@ -44,6 +48,9 @@ export function ClipStudio() {
   const [uploads, setUploads] = useState<UploadAsset[]>([]);
   const [batches, setBatches] = useState<BatchSummary[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
+  const [selectedClipPackId, setSelectedClipPackId] = useState<string | null>(null);
+  const [selectedClipPack, setSelectedClipPack] = useState<ClipPackDetail | null>(null);
+  const [isClipPackLoading, setIsClipPackLoading] = useState(false);
   const [isAccountLoading, setIsAccountLoading] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
@@ -107,6 +114,33 @@ export function ClipStudio() {
     }
   }
 
+  async function openClipPack(requestId: string) {
+    if (!token) {
+      return;
+    }
+    setSelectedClipPackId(requestId);
+    setIsClipPackLoading(true);
+    setAccountError(null);
+    try {
+      const payload = await loadClipPack(token, requestId);
+      setSelectedClipPack(payload);
+    } catch (loadError) {
+      setAccountError(loadError instanceof Error ? loadError.message : "Unable to load clip pack.");
+    } finally {
+      setIsClipPackLoading(false);
+    }
+  }
+
+  async function saveClipMetadata(clipId: string, updates: ClipPatchPayload) {
+    if (!token || !selectedClipPackId) {
+      return;
+    }
+    await patchClip(token, clipId, updates);
+    const refreshed = await loadClipPack(token, selectedClipPackId);
+    setSelectedClipPack(refreshed);
+    await refreshAccount(token);
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!videoUrl.trim() && !selectedUpload?.file_id && !selectedUpload?.source_ref?.upload_id) {
@@ -150,6 +184,8 @@ export function ClipStudio() {
     setToken(null);
     setUser(null);
     setSelectedUpload(null);
+    setSelectedClipPack(null);
+    setSelectedClipPackId(null);
   }
 
   async function onUploadSelected(event: ChangeEvent<HTMLInputElement>) {
@@ -448,6 +484,8 @@ export function ClipStudio() {
             batches={batches}
             campaigns={campaigns}
             onSignOut={onSignOut}
+            onOpenClipPack={openClipPack}
+            selectedClipPackId={selectedClipPackId}
           />
         ) : (
           <section className="mt-10">
@@ -487,10 +525,21 @@ export function ClipStudio() {
         {isAccountLoading ? (
           <div className="mt-6 text-sm text-ink/60">Loading account workspace…</div>
         ) : null}
+        {isClipPackLoading ? <div className="mt-4 text-sm text-ink/60">Loading clip pack editor…</div> : null}
         {accountError ? (
           <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/8 px-4 py-3 text-sm text-red-100">
             {accountError}
           </div>
+        ) : null}
+        {selectedClipPack ? (
+          <ClipPackEditor
+            clipPack={selectedClipPack}
+            onSave={saveClipMetadata}
+            onClose={() => {
+              setSelectedClipPack(null);
+              setSelectedClipPackId(null);
+            }}
+          />
         ) : null}
       </div>
     </main>

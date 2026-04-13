@@ -10,6 +10,8 @@ type AccountWorkspaceProps = {
   batches: BatchSummary[];
   campaigns: CampaignSummary[];
   onSignOut: () => void;
+  onOpenClipPack: (requestId: string) => void;
+  selectedClipPackId?: string | null;
 };
 
 function formatCents(value?: number | null) {
@@ -24,6 +26,8 @@ export function AccountWorkspace({
   batches,
   campaigns,
   onSignOut,
+  onOpenClipPack,
+  selectedClipPackId,
 }: AccountWorkspaceProps) {
   return (
     <section className="mt-10 space-y-6">
@@ -56,15 +60,42 @@ export function AccountWorkspace({
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <Panel
-          title="Saved Clip Packs"
-          subtitle="Recent runs tied to your account."
-          empty="Generate while signed in to build your history."
-          items={clipPacks.slice(0, 5).map((item) => ({
-            title: item.source_title || item.video_url || item.request_id,
-            detail: `${item.clip_count || 0} clips · ${item.target_platform || "TikTok"} · ${item.created_at || "recent"}`,
-          }))}
-        />
+        <div className="glass-panel rounded-[28px] p-5">
+          <p className="text-lg font-semibold text-ink">Saved Clip Packs</p>
+          <p className="mt-2 text-sm leading-7 text-ink/64">Recent runs tied to your account.</p>
+          <div className="mt-5 space-y-3">
+            {clipPacks.length ? (
+              clipPacks.slice(0, 5).map((item) => {
+                const selected = item.request_id === selectedClipPackId;
+                return (
+                  <div
+                    key={item.request_id}
+                    className={[
+                      "rounded-2xl border p-4 transition",
+                      selected ? "border-accent/30 bg-accent/10" : "border-white/8 bg-white/[0.03]",
+                    ].join(" ")}
+                  >
+                    <p className="text-sm font-medium text-ink">{item.source_title || item.video_url || item.request_id}</p>
+                    <p className="mt-2 text-sm text-ink/62">
+                      {item.clip_count || 0} clips · {item.target_platform || "TikTok"} · {item.created_at || "recent"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onOpenClipPack(item.request_id)}
+                      className="mt-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+                    >
+                      {selected ? "Open in editor" : "View clip pack"}
+                    </button>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 text-sm text-ink/62">
+                Generate while signed in to build your history.
+              </div>
+            )}
+          </div>
+        </div>
         <Panel
           title="Uploads"
           subtitle="Source files stored for reuse."

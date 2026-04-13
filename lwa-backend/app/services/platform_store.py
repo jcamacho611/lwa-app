@@ -111,6 +111,8 @@ class PlatformStore:
                     title TEXT NOT NULL,
                     hook TEXT NOT NULL,
                     caption TEXT NOT NULL,
+                    start_time TEXT,
+                    end_time TEXT,
                     score INTEGER NOT NULL,
                     confidence REAL,
                     rank_value INTEGER,
@@ -174,6 +176,8 @@ class PlatformStore:
             self._ensure_column(connection, "clips", "trim_start_seconds", "REAL")
             self._ensure_column(connection, "clips", "trim_end_seconds", "REAL")
             self._ensure_column(connection, "clips", "caption_style_override", "TEXT")
+            self._ensure_column(connection, "clips", "start_time", "TEXT")
+            self._ensure_column(connection, "clips", "end_time", "TEXT")
             self._ensure_column(connection, "campaigns", "description", "TEXT")
             self._ensure_column(connection, "campaigns", "allowed_platforms_json", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(connection, "campaigns", "target_angle", "TEXT")
@@ -623,12 +627,12 @@ class PlatformStore:
                 connection.execute(
                     """
                     INSERT OR REPLACE INTO clips (
-                        id, request_id, clip_key, user_id, campaign_id, title, hook, caption, score,
+                        id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score,
                         confidence, rank_value, reason, packaging_angle, platform_fit, best_post_order,
                         cta_suggestion, thumbnail_text, hook_variants_json, clip_url, raw_clip_url,
                         edited_clip_url, preview_image_url, local_asset_path, trim_start_seconds,
                         trim_end_seconds, caption_style_override, approved, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         record_id,
@@ -639,6 +643,8 @@ class PlatformStore:
                         clip.title,
                         clip.hook,
                         clip.caption,
+                        clip.start_time,
+                        clip.end_time,
                         clip.score,
                         clip.confidence,
                         clip.rank,
@@ -691,7 +697,7 @@ class PlatformStore:
 
     def get_clip(self, *, clip_id: str, user_id: str | None = None) -> Optional[dict[str, Any]]:
         query = """
-            SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, score, confidence,
+            SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                    rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
                    thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                    local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
@@ -758,7 +764,7 @@ class PlatformStore:
                 return None
             row = connection.execute(
                 """
-                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, score, confidence,
+                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                        rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
                        thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                        local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
@@ -773,7 +779,7 @@ class PlatformStore:
         with self._lock, self._connect() as connection:
             rows = connection.execute(
                 """
-                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, score, confidence,
+                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                        rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
                        thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                        local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
@@ -817,7 +823,7 @@ class PlatformStore:
                 return None
             row = connection.execute(
                 """
-                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, score, confidence,
+                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                        rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
                        thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                        local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
@@ -846,7 +852,7 @@ class PlatformStore:
         with self._lock, self._connect() as connection:
             clips = connection.execute(
                 """
-                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, score, confidence,
+                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                        rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
                        thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                        local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
@@ -1129,6 +1135,8 @@ class PlatformStore:
             "title": row["title"],
             "hook": row["hook"],
             "caption": row["caption"],
+            "start_time": row["start_time"],
+            "end_time": row["end_time"],
             "score": row["score"],
             "confidence": row["confidence"],
             "rank": row["rank_value"],

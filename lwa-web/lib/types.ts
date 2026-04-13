@@ -72,11 +72,14 @@ export type CampaignSummary = {
 
 export type ClipResult = {
   id: string;
+  record_id?: string | null;
+  request_id?: string | null;
+  clip_id?: string | null;
   title: string;
   hook: string;
   caption: string;
-  start_time: string;
-  end_time: string;
+  start_time?: string | null;
+  end_time?: string | null;
   score: number;
   confidence?: number | null;
   rank?: number | null;
@@ -91,6 +94,11 @@ export type ClipResult = {
   edited_clip_url?: string | null;
   raw_clip_url?: string | null;
   preview_image_url?: string | null;
+  trim_start_seconds?: number | null;
+  trim_end_seconds?: number | null;
+  caption_style_override?: string | null;
+  approved?: boolean;
+  created_at?: string | null;
 };
 
 export type GenerateResponse = {
@@ -105,4 +113,11 @@ export type GenerateResponse = {
     estimated_turnaround?: string;
   };
   clips: ClipResult[];
+};
+
+export type EditableClip = ClipResult;
+
+export type ClipPackDetail = {
+  request_id: string;
+  clips: EditableClip[];
 };

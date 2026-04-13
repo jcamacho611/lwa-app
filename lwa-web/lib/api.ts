@@ -2,6 +2,7 @@ import {
   AuthResponse,
   BatchSummary,
   CampaignSummary,
+  ClipPackDetail,
   ClipPackSummary,
   GenerateResponse,
   PlatformOption,
@@ -82,6 +83,37 @@ export async function loadClipPacks(token: string) {
     },
   });
   return payload.clip_packs || [];
+}
+
+export async function loadClipPack(token: string, requestId: string) {
+  return jsonRequest<ClipPackDetail>(`/api/me/clip-packs/${requestId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function patchClip(
+  token: string,
+  clipId: string,
+  updates: {
+    hook_override?: string;
+    caption_override?: string;
+    cta_override?: string;
+    thumbnail_text_override?: string;
+    packaging_angle_override?: string;
+    trim_start_seconds?: number;
+    trim_end_seconds?: number;
+  },
+) {
+  return jsonRequest(`/api/me/clips/${clipId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(updates),
+  });
 }
 
 export async function loadWallet(token: string) {
