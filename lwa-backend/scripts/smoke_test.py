@@ -2,20 +2,39 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 import urllib.error
 import urllib.request
+import uuid
 
 
-def read_json(url: str) -> dict:
-    with urllib.request.urlopen(url, timeout=20) as response:
+CLIENT_ID_HEADER = "x-lwa-client-id"
+API_KEY_HEADER = "x-api-key"
+
+
+def default_headers() -> dict[str, str]:
+    headers = {
+        CLIENT_ID_HEADER: os.getenv("LWA_SMOKE_CLIENT_ID", f"smoke-{uuid.uuid4().hex[:12]}"),
+    }
+    api_key = os.getenv("LWA_SMOKE_API_KEY", "").strip()
+    if api_key:
+        headers[API_KEY_HEADER] = api_key
+    return headers
+
+
+def read_json(url: str, headers: dict[str, str] | None = None) -> dict:
+    request = urllib.request.Request(url, headers=headers or {})
+    with urllib.request.urlopen(request, timeout=20) as response:
         return json.loads(response.read().decode())
 
 
-def post_json(url: str, payload: dict) -> dict:
+def post_json(url: str, payload: dict, headers: dict[str, str] | None = None) -> dict:
     body = json.dumps(payload).encode()
-    request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
+    request_headers = {"Content-Type": "application/json"}
+    request_headers.update(headers or {})
+    request = urllib.request.Request(url, data=body, headers=request_headers)
     with urllib.request.urlopen(request, timeout=30) as response:
         return json.loads(response.read().decode())
 
@@ -24,9 +43,10 @@ def main() -> int:
     base_url = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000"
     video_url = sys.argv[2] if len(sys.argv) > 2 else "https://www.w3schools.com/html/mov_bbb.mp4"
     base_url = base_url.rstrip("/")
+    headers = default_headers()
 
     try:
-        health = read_json(f"{base_url}/health")
+        health = read_json(f"{base_url}/health", headers=headers)
         print("health:", json.dumps(health, indent=2))
         if health.get("status") != "ok":
             print("health check did not return ok")
@@ -39,6 +59,7 @@ def main() -> int:
         generated = post_json(
             f"{base_url}/generate",
             {"video_url": video_url, "target_platform": "TikTok"},
+            headers=headers,
         )
         print("generate summary:", json.dumps(generated["processing_summary"], indent=2))
         if generated["processing_summary"].get("processing_mode") == "mock":
@@ -57,13 +78,14 @@ def main() -> int:
         created = post_json(
             f"{base_url}/v1/jobs",
             {"video_url": video_url, "target_platform": "TikTok"},
+            headers=headers,
         )
         print("job created:", json.dumps(created, indent=2))
 
         job_id = created["job_id"]
         deadline = time.time() + 180
         while time.time() < deadline:
-            status = read_json(f"{base_url}/v1/jobs/{job_id}")
+            status = read_json(f"{base_url}/v1/jobs/{job_id}", headers=headers)
             print("job status:", status["status"], "-", status["message"])
             if status["status"] == "completed":
                 result = status["result"]

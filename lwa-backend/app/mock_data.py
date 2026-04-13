@@ -39,6 +39,19 @@ def build_mock_clips(
             transcript_excerpt=transcript_excerpts[0],
             edit_profile="Source cut preview" if clip_urls[0] else None,
             aspect_ratio="source" if clip_urls[0] else None,
+            why_this_matters=(
+                f"Use this as the first post because it gets to the payoff fast and gives {platform_label} viewers "
+                f"a clear reason to keep watching."
+            ),
+            confidence_score=94,
+            thumbnail_text="Use This Angle",
+            cta_suggestion=f"Ask viewers if they would test this {lead_trend} angle themselves.",
+            post_rank=1,
+            hook_variants=[
+                f"The fastest way to use {lead_trend} before it gets crowded.",
+                f"Most creators are still underusing this {lead_trend} move.",
+            ],
+            caption_style=caption_style_for(platform_label),
         ),
         ClipResult(
             id="clip_002",
@@ -57,6 +70,16 @@ def build_mock_clips(
             transcript_excerpt=transcript_excerpts[1],
             edit_profile="Source cut preview" if clip_urls[1] else None,
             aspect_ratio="source" if clip_urls[1] else None,
+            why_this_matters="This is the tension clip. Post it second to deepen the angle after the opening hook lands.",
+            confidence_score=89,
+            thumbnail_text="Everyone Gets This Wrong",
+            cta_suggestion="Invite comments by asking whether the audience agrees or disagrees.",
+            post_rank=2,
+            hook_variants=[
+                "Why the obvious version of this clip will underperform.",
+                "The contrarian edit that makes this point hit harder.",
+            ],
+            caption_style=caption_style_for(platform_label),
         ),
         ClipResult(
             id="clip_003",
@@ -75,6 +98,16 @@ def build_mock_clips(
             transcript_excerpt=transcript_excerpts[2],
             edit_profile="Source cut preview" if clip_urls[2] else None,
             aspect_ratio="source" if clip_urls[2] else None,
+            why_this_matters="This is the conversion clip. Use it after the first two to turn attention into action.",
+            confidence_score=84,
+            thumbnail_text="This Is The Pivot",
+            cta_suggestion=f"Close by telling {platform_label} viewers what to save, follow, or test next.",
+            post_rank=3,
+            hook_variants=[
+                "The exact moment this angle starts converting.",
+                "If you only post one follow-up, make it this one.",
+            ],
+            caption_style=caption_style_for(platform_label),
         ),
     ]
 
@@ -93,3 +126,16 @@ def normalize_start_end_pairs(values: Optional[List[tuple[str, str]]]) -> List[t
 def normalize_transcript_excerpts(values: Optional[List[Optional[str]]]) -> List[Optional[str]]:
     normalized = list(values or [])
     return (normalized + [None, None, None])[:3]
+
+
+def caption_style_for(platform_label: str) -> str:
+    normalized = platform_label.lower()
+    if normalized == "tiktok":
+        return "Punchy proof-first"
+    if normalized == "instagram":
+        return "Polished emotional"
+    if normalized == "youtube":
+        return "Clarity-led payoff"
+    if normalized == "facebook":
+        return "Story-first social"
+    return "Short-form native"

@@ -1,6 +1,7 @@
 from .models.schemas import (
     ClipBatchResponse,
     ClipResult,
+    FeatureFlags,
     JobCreatedResponse,
     JobStatusResponse,
     ProcessRequest,
@@ -12,6 +13,7 @@ from .models.schemas import (
 __all__ = [
     "ClipBatchResponse",
     "ClipResult",
+    "FeatureFlags",
     "JobCreatedResponse",
     "JobStatusResponse",
     "ProcessRequest",

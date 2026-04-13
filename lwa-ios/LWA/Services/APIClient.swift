@@ -60,6 +60,7 @@ enum AppConfiguration {
     static let apiBaseURLKey = "lwa.api_base_url"
     static let checkoutURLKey = "lwa.checkout_url"
     static let apiKeyKey = "lwa.api_key"
+    static let clientIDKey = "lwa.client_id"
     static let appStoreModeKey = "LWAAppStoreMode"
 
     static var defaultAPIBaseURL: String {
@@ -93,6 +94,23 @@ enum AppConfiguration {
 
     static var apiKeyHeaderName: String {
         BundleConfiguration.string(for: "LWAAPIKeyHeaderName", fallback: "x-api-key")
+    }
+
+    static var clientIDHeaderName: String {
+        "x-lwa-client-id"
+    }
+
+    static var clientID: String {
+        let existing = UserDefaults.standard.string(forKey: clientIDKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let existing, !existing.isEmpty {
+            return existing
+        }
+
+        let generated = UUID().uuidString.lowercased()
+        UserDefaults.standard.set(generated, forKey: clientIDKey)
+        return generated
     }
 
     static var isAppStoreMode: Bool {
@@ -138,6 +156,7 @@ struct APIClient {
         if !apiKey.isEmpty {
             request.setValue(apiKey, forHTTPHeaderField: AppConfiguration.apiKeyHeaderName)
         }
+        request.setValue(AppConfiguration.clientID, forHTTPHeaderField: AppConfiguration.clientIDHeaderName)
     }
 
     func process(

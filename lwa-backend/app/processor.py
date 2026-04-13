@@ -33,6 +33,7 @@ class ClipSeed:
     asset_path: Path
     clip_url: Optional[str]
     raw_clip_url: Optional[str]
+    preview_image_url: Optional[str]
     format: str
     transcript_excerpt: Optional[str] = None
 
@@ -415,6 +416,16 @@ def create_clips(
             continue
 
         clip_url = f"{public_base_url}/generated/{request_id}/{quote(output_name)}"
+        preview_output_name = f"clip_{index:03d}_preview.jpg"
+        preview_output_path = generated_dir / preview_output_name
+        preview_image_url = create_preview_image_url(
+            ffmpeg_path=ffmpeg_path,
+            input_path=output_path,
+            output_path=preview_output_path,
+            public_base_url=public_base_url,
+            request_id=request_id,
+            public_name=preview_output_name,
+        )
         seeds.append(
             ClipSeed(
                 id=f"clip_{index:03d}",
@@ -423,6 +434,7 @@ def create_clips(
                 asset_path=output_path,
                 clip_url=clip_url,
                 raw_clip_url=clip_url,
+                preview_image_url=preview_image_url,
                 format=str(segment.get("format", segment_format(index))),
                 transcript_excerpt=string_or_none(segment.get("transcript_excerpt")),
             )
@@ -533,12 +545,23 @@ def create_social_exports(
                 ),
             )
             edited_url = f"{public_base_url}/generated/{request_id}/{quote(output_name)}"
+            preview_output_name = f"{seed.id}_preview.jpg"
+            preview_output_path = generated_dir / preview_output_name
+            preview_image_url = create_preview_image_url(
+                ffmpeg_path=ffmpeg_path,
+                input_path=output_path,
+                output_path=preview_output_path,
+                public_base_url=public_base_url,
+                request_id=request_id,
+                public_name=preview_output_name,
+            ) or seed.preview_image_url
             exported_results.append(
                 clip.model_copy(
                     update={
                         "clip_url": edited_url,
                         "raw_clip_url": raw_clip_url,
                         "edited_clip_url": edited_url,
+                        "preview_image_url": preview_image_url,
                         "edit_profile": edit_profile,
                         "aspect_ratio": "9:16",
                     }
@@ -551,6 +574,7 @@ def create_social_exports(
                     update={
                         "clip_url": raw_clip_url or getattr(clip, "clip_url", None),
                         "raw_clip_url": raw_clip_url,
+                        "preview_image_url": seed.preview_image_url,
                         "edit_profile": "Source cut fallback",
                         "aspect_ratio": "source",
                     }
@@ -667,6 +691,40 @@ def build_social_export_command(
         "+faststart",
         str(output_path),
     ]
+
+
+def create_preview_image_url(
+    *,
+    ffmpeg_path: str,
+    input_path: Path,
+    output_path: Path,
+    public_base_url: str,
+    request_id: str,
+    public_name: str,
+) -> Optional[str]:
+    command = [
+        ffmpeg_path,
+        "-y",
+        "-ss",
+        "00:00:01.000",
+        "-i",
+        str(input_path),
+        "-frames:v",
+        "1",
+        "-q:v",
+        "3",
+        str(output_path),
+    ]
+
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+    except Exception:
+        return None
+
+    if not output_path.exists() or output_path.stat().st_size <= 0:
+        return None
+
+    return f"{public_base_url}/generated/{request_id}/{quote(public_name)}"
 
 
 def drawtext_filter(

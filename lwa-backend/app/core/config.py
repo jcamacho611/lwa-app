@@ -30,9 +30,23 @@ class Settings:
         self.log_level = os.getenv("LOG_LEVEL", "info")
         self.api_key_header_name = os.getenv("LWA_API_KEY_HEADER_NAME", "x-api-key").strip() or "x-api-key"
         self.api_key_secret = os.getenv("LWA_API_KEY_SECRET", "").strip()
+        self.client_id_header_name = os.getenv("LWA_CLIENT_ID_HEADER_NAME", "x-lwa-client-id").strip() or "x-lwa-client-id"
         self.default_plan_name = os.getenv("LWA_DEFAULT_PLAN_NAME", "Starter Trial")
         self.default_credits_remaining = int(os.getenv("LWA_DEFAULT_CREDITS_REMAINING", "2"))
         self.default_turnaround = os.getenv("LWA_DEFAULT_TURNAROUND", "45 seconds")
+        self.free_daily_limit = int(os.getenv("LWA_FREE_DAILY_LIMIT", str(self.default_credits_remaining)))
+        self.pro_daily_limit = int(os.getenv("LWA_PRO_DAILY_LIMIT", "25"))
+        self.scale_daily_limit = int(os.getenv("LWA_SCALE_DAILY_LIMIT", "100"))
+        self.pro_api_keys = {
+            value.strip()
+            for value in os.getenv("LWA_PRO_API_KEYS", "").split(",")
+            if value.strip()
+        }
+        self.scale_api_keys = {
+            value.strip()
+            for value in os.getenv("LWA_SCALE_API_KEYS", "").split(",")
+            if value.strip()
+        }
         self.ffmpeg_path = os.getenv("FFMPEG_PATH", _default_ffmpeg_path())
         self.video_encoder = os.getenv("LWA_VIDEO_ENCODER", "auto").strip().lower() or "auto"
         self.yt_dlp_temp_dir = os.getenv("YT_DLP_TEMP_DIR", "/tmp")
@@ -43,6 +57,12 @@ class Settings:
             else os.path.join(os.getcwd(), "generated")
         )
         self.generated_assets_dir = os.getenv("LWA_GENERATED_ASSETS_DIR", default_generated_dir)
+        default_usage_store = (
+            os.path.join(railway_volume_mount_path, "lwa-usage.json")
+            if railway_volume_mount_path
+            else os.path.join(os.getcwd(), "generated", "lwa-usage.json")
+        )
+        self.usage_store_path = os.getenv("LWA_USAGE_STORE_PATH", default_usage_store)
         self.max_upload_mb = int(os.getenv("MAX_UPLOAD_MB", "500"))
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")

@@ -190,6 +190,10 @@ struct ContentView: View {
                     .font(.subheadline)
                     .foregroundStyle(Color.white.opacity(0.72))
 
+                ProgressView(value: viewModel.generationProgress)
+                    .tint(Color(red: 0.34, green: 0.89, blue: 0.82))
+                    .progressViewStyle(.linear)
+
                 HStack(spacing: 10) {
                     ForEach(viewModel.generationTrack) { stage in
                         VStack(alignment: .leading, spacing: 6) {
@@ -640,6 +644,12 @@ struct ContentView: View {
                         .foregroundStyle(Color.white.opacity(0.92))
 
                     HStack(spacing: 10) {
+                        if let postRank = clip.postRank {
+                            signalPill(label: "Post #\(postRank)")
+                        }
+                        if let confidenceScore = clip.confidenceScore {
+                            signalPill(label: "Confidence \(confidenceScore)")
+                        }
                         signalPill(label: "\(clip.startTime) - \(clip.endTime)")
                         signalPill(label: clip.format)
                         signalPill(label: clip.aspectRatio ?? "9:16")
@@ -696,6 +706,30 @@ struct ContentView: View {
                     .foregroundStyle(Color.white.opacity(0.78))
             }
 
+            if let whyThisMatters = clip.whyThisMatters, !whyThisMatters.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Why This Matters")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color(red: 0.72, green: 0.70, blue: 0.98))
+
+                    Text(whyThisMatters)
+                        .font(.body)
+                        .foregroundStyle(Color.white.opacity(0.82))
+                }
+            }
+
+            if let captionStyle = clip.captionStyle, !captionStyle.isEmpty {
+                HStack(spacing: 10) {
+                    if let postRank = clip.postRank {
+                        signalPill(label: "Post #\(postRank)")
+                    }
+                    if let confidenceScore = clip.confidenceScore {
+                        signalPill(label: "Confidence \(confidenceScore)")
+                    }
+                    signalPill(label: captionStyle)
+                }
+            }
+
             HStack(spacing: 12) {
                 Button {
                     copyToPasteboard(clip.hook, confirmation: "The hook is now on your clipboard.")
@@ -707,6 +741,100 @@ struct ContentView: View {
                     copyToPasteboard(clip.caption, confirmation: "The caption is now on your clipboard.")
                 } label: {
                     secondaryAction(title: "Copy Caption")
+                }
+            }
+
+            Button {
+                copyToPasteboard(clip.packagingBundle, confirmation: "The full packaging bundle is now on your clipboard.")
+            } label: {
+                secondaryAction(title: "Copy Package")
+            }
+
+            if let thumbnailText = clip.thumbnailText, !thumbnailText.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Thumbnail Text")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.white.opacity(0.62))
+
+                        Spacer()
+
+                        Button {
+                            copyToPasteboard(thumbnailText, confirmation: "The thumbnail text is now on your clipboard.")
+                        } label: {
+                            Text("Copy")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Text(thumbnailText)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                }
+            }
+
+            if let ctaSuggestion = clip.ctaSuggestion, !ctaSuggestion.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("CTA Suggestion")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.white.opacity(0.62))
+
+                        Spacer()
+
+                        Button {
+                            copyToPasteboard(ctaSuggestion, confirmation: "The CTA is now on your clipboard.")
+                        } label: {
+                            Text("Copy")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color(red: 0.96, green: 0.78, blue: 0.35))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Text(ctaSuggestion)
+                        .font(.body)
+                        .foregroundStyle(Color.white.opacity(0.78))
+                }
+            }
+
+            if !clip.hookVariants.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Alternate Hooks")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.white.opacity(0.62))
+
+                        Spacer()
+
+                        Button {
+                            copyToPasteboard(clip.hookVariants.joined(separator: "\n"), confirmation: "Alternate hooks are now on your clipboard.")
+                        } label: {
+                            Text("Copy All")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color(red: 0.72, green: 0.70, blue: 0.98))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    ForEach(Array(clip.hookVariants.enumerated()), id: \.offset) { index, hookVariant in
+                        HStack(alignment: .top, spacing: 12) {
+                            Text("\(index + 1)")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Color.black)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color(red: 0.34, green: 0.89, blue: 0.82))
+                                .clipShape(Capsule())
+
+                            Text(hookVariant)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.white.opacity(0.8))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
                 }
             }
 
@@ -806,6 +934,33 @@ struct ContentView: View {
                 Text(summary.sourcesConsidered.joined(separator: ", "))
                     .font(.subheadline)
                     .foregroundStyle(Color.white.opacity(0.72))
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Unlocked")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.white.opacity(0.62))
+
+                FlowLayout(spacing: 8) {
+                    featureFlagPill("Clip limit \(summary.featureFlags.clipLimit)")
+                    featureFlagPill("History \(summary.featureFlags.historyLimit)")
+
+                    if summary.featureFlags.altHooks {
+                        featureFlagPill("Alt hooks")
+                    }
+                    if summary.featureFlags.packagingProfiles {
+                        featureFlagPill("Packaging profiles")
+                    }
+                    if summary.featureFlags.premiumExports {
+                        featureFlagPill("Premium exports")
+                    }
+                    if summary.featureFlags.priorityProcessing {
+                        featureFlagPill("Priority queue")
+                    }
+                    if summary.featureFlags.campaignMode {
+                        featureFlagPill("Campaign mode")
+                    }
+                }
             }
         }
         .padding(18)
@@ -932,6 +1087,29 @@ struct ContentView: View {
             .clipShape(Capsule())
     }
 
+    private func featureFlagPill(_ label: String) -> some View {
+        Text(label)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Color.white.opacity(0.82))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.18, green: 0.68, blue: 0.91).opacity(0.22),
+                        Color(red: 0.72, green: 0.70, blue: 0.98).opacity(0.18),
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+    }
+
     private func smallActionButton(title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
@@ -1030,22 +1208,22 @@ private struct ClipPreviewCard: View {
             if let preferredAssetURL = clip.preferredAssetURL {
                 LoopingVideoPlayer(url: preferredAssetURL)
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            } else {
-                VStack(spacing: 14) {
-                    Image(systemName: "sparkles.tv.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
-
-                    Text("Asset ready for export")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-
-                    Text("Open the generated file below if the inline preview is unavailable.")
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(Color.white.opacity(0.62))
-                        .padding(.horizontal, 30)
+            } else if let previewImageAssetURL = clip.previewImageAssetURL {
+                AsyncImage(url: previewImageAssetURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure, .empty:
+                        previewFallback
+                    @unknown default:
+                        previewFallback
+                    }
                 }
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            } else {
+                previewFallback
             }
 
             LinearGradient(
@@ -1071,6 +1249,16 @@ private struct ClipPreviewCard: View {
 
                     Spacer()
 
+                    if let postRank = clip.postRank {
+                        Text("POST #\(postRank)")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Color.black)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color(red: 0.96, green: 0.78, blue: 0.35))
+                            .clipShape(Capsule())
+                    }
+
                     Text(clip.format)
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Color.white.opacity(0.74))
@@ -1090,6 +1278,9 @@ private struct ClipPreviewCard: View {
 
                 HStack(spacing: 10) {
                     clipMetric("\(clip.score)", label: "Score")
+                    if let confidenceScore = clip.confidenceScore {
+                        clipMetric("\(confidenceScore)", label: "Confidence")
+                    }
                     clipMetric(clip.startTime, label: "Start")
                     clipMetric(clip.endTime, label: "End")
                 }
@@ -1102,6 +1293,24 @@ private struct ClipPreviewCard: View {
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
+
+    private var previewFallback: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "sparkles.tv.fill")
+                .font(.system(size: 44))
+                .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
+
+            Text("Asset ready for export")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            Text("Open the generated file below if the inline preview is unavailable.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color.white.opacity(0.62))
+                .padding(.horizontal, 30)
+        }
     }
 
     private func clipMetric(_ value: String, label: String) -> some View {
@@ -1383,6 +1592,72 @@ private extension ClipResult {
     var rawAssetURL: URL? {
         guard let rawClipURL else { return nil }
         return URL(string: rawClipURL)
+    }
+
+    var previewImageAssetURL: URL? {
+        guard let previewImageURL else { return nil }
+        return URL(string: previewImageURL)
+    }
+
+    var packagingBundle: String {
+        let alternateHooks = hookVariants.isEmpty ? "not available" : hookVariants.joined(separator: "\n")
+        return """
+        Title: \(title)
+        Hook: \(hook)
+        Caption: \(caption)
+        Why this matters: \(whyThisMatters ?? "not available")
+        Thumbnail text: \(thumbnailText ?? "not available")
+        CTA: \(ctaSuggestion ?? "not available")
+        Alternate hooks:
+        \(alternateHooks)
+        """
+    }
+}
+
+private struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > maxWidth, currentX > 0 {
+                currentX = 0
+                currentY += rowHeight + spacing
+                rowHeight = 0
+            }
+
+            rowHeight = max(rowHeight, size.height)
+            currentX += size.width + spacing
+        }
+
+        return CGSize(width: maxWidth.isFinite ? maxWidth : currentX, height: currentY + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var currentX = bounds.minX
+        var currentY = bounds.minY
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > bounds.maxX, currentX > bounds.minX {
+                currentX = bounds.minX
+                currentY += rowHeight + spacing
+                rowHeight = 0
+            }
+
+            subview.place(
+                at: CGPoint(x: currentX, y: currentY),
+                proposal: ProposedViewSize(width: size.width, height: size.height)
+            )
+            currentX += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
     }
 }
 

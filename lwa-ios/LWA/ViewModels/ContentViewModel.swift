@@ -212,14 +212,27 @@ final class ContentViewModel: ObservableObject {
         }
     }
 
+    var generationProgress: Double {
+        if latestResponse != nil && !isLoading {
+            return 1.0
+        }
+
+        guard isLoading else { return 0.0 }
+        return min(max(Double(activeGenerationStage + 1) / Double(generationStages.count), 0.08), 0.94)
+    }
+
     var shareText: String {
         guard let response = latestResponse else { return "" }
 
         let clipLines = response.clips.enumerated().map { index, clip in
             """
-            \(index + 1). \(clip.title) [\(clip.startTime)-\(clip.endTime)] score \(clip.score)
+            \(clip.postRank ?? (index + 1)). \(clip.title) [\(clip.startTime)-\(clip.endTime)] score \(clip.score)
             Hook: \(clip.hook)
             Caption: \(clip.caption)
+            Why it matters: \(clip.whyThisMatters ?? "not available")
+            Thumbnail text: \(clip.thumbnailText ?? "not available")
+            CTA: \(clip.ctaSuggestion ?? "not available")
+            Alternate hooks: \(clip.hookVariants.isEmpty ? "not available" : clip.hookVariants.joined(separator: " | "))
             Edited asset: \(clip.editedClipURL ?? clip.clipURL ?? "not available")
             Raw cut: \(clip.rawClipURL ?? "not available")
             """
@@ -266,7 +279,7 @@ final class ContentViewModel: ObservableObject {
     private func saveRun(_ response: ClipResponse) {
         history.removeAll { $0.id == response.requestID }
         history.insert(SavedRun(response: response), at: 0)
-        history = Array(history.prefix(10))
+        history = Array(history.prefix(response.processingSummary.featureFlags.historyLimit))
         persistHistory()
     }
 
@@ -320,9 +333,14 @@ final class ContentViewModel: ObservableObject {
             || message.contains("export")
             || message.contains("encode")
             || message.contains("ffmpeg")
-            || message.contains("package")
-            || message.contains("clip") {
+            || message.contains("package") {
             return 3
+        }
+
+        if message.contains("final")
+            || message.contains("deliver")
+            || message.contains("ready") {
+            return 4
         }
 
         return isLoading ? 1 : 0

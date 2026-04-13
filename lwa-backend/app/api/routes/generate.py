@@ -21,16 +21,19 @@ from ...services.clip_service import (
     get_live_trends,
     run_job,
 )
+from ...services.entitlements import UsageStore, resolve_entitlement
 
 router = APIRouter()
 settings = get_settings()
 job_store = JobStore()
+usage_store = UsageStore(settings.usage_store_path)
 logger = logging.getLogger("uvicorn.error")
 
 
 @router.get("/")
 async def root() -> dict[str, object]:
     base_url = settings.api_base_url or "http://127.0.0.1:8000"
+    api_key_enabled = bool(settings.api_key_secret or settings.pro_api_keys or settings.scale_api_keys)
     return {
         "status": "ok",
         "service": settings.app_name,
@@ -40,7 +43,8 @@ async def root() -> dict[str, object]:
         "generate_url": f"{base_url}/generate",
         "jobs_url": f"{base_url}/v1/jobs",
         "trends_url": f"{base_url}/v1/trends",
-        "api_key_header": settings.api_key_header_name if settings.api_key_secret else None,
+        "api_key_header": settings.api_key_header_name if api_key_enabled else None,
+        "client_id_header": settings.client_id_header_name,
     }
 
 
@@ -71,35 +75,54 @@ async def get_trends(http_request: Request) -> TrendsResponse:
 @router.post("/v1/generate", response_model=ClipBatchResponse)
 async def generate_clips(request: ProcessRequest, http_request: Request) -> ClipBatchResponse:
     enforce_api_key(http_request, settings)
+    entitlement = resolve_entitlement(
+        request=http_request,
+        settings=settings,
+        usage_store=usage_store,
+    )
     request_id = f"req_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
     logger.info(
-        "route_generate request_id=%s route=%s target_platform=%s video_url=%s",
+        "route_generate request_id=%s route=%s target_platform=%s video_url=%s plan=%s subject_source=%s",
         request_id,
         http_request.url.path,
         request.target_platform or "TikTok",
         request.video_url,
+        entitlement.plan.code,
+        entitlement.subject_source,
     )
-    return await build_clip_response(
-        settings=settings,
-        request_id=request_id,
-        request=request,
-        public_base_url=public_base_url,
-        route_path=http_request.url.path,
-    )
+    try:
+        return await build_clip_response(
+            settings=settings,
+            request_id=request_id,
+            request=request,
+            public_base_url=public_base_url,
+            route_path=http_request.url.path,
+            entitlement=entitlement,
+        )
+    except Exception:
+        usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
+        raise
 
 
 @router.post("/v1/jobs", response_model=JobCreatedResponse)
 async def create_processing_job(request: ProcessRequest, http_request: Request) -> JobCreatedResponse:
     enforce_api_key(http_request, settings)
+    entitlement = resolve_entitlement(
+        request=http_request,
+        settings=settings,
+        usage_store=usage_store,
+    )
     job_id = f"job_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
     logger.info(
-        "route_job request_id=%s route=%s target_platform=%s video_url=%s",
+        "route_job request_id=%s route=%s target_platform=%s video_url=%s plan=%s subject_source=%s",
         job_id,
         http_request.url.path,
         request.target_platform or "TikTok",
         request.video_url,
+        entitlement.plan.code,
+        entitlement.subject_source,
     )
     await job_store.create(job_id, "Job queued. Starting source analysis.")
     import asyncio
@@ -108,10 +131,12 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
         run_job(
             settings=settings,
             job_store=job_store,
+            usage_store=usage_store,
             job_id=job_id,
             request=request,
             public_base_url=public_base_url,
             route_path=http_request.url.path,
+            entitlement=entitlement,
         )
     )
     return JobCreatedResponse(
