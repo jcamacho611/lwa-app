@@ -22,11 +22,14 @@ final class ContentViewModel: ObservableObject {
         "Packaging",
         "Delivered",
     ]
+
     let supportedPlatforms = ["TikTok", "Instagram", "YouTube", "Facebook"]
 
     @Published var videoURL = ""
+    @Published private(set) var selectedUpload: UploadedSource?
     @Published private(set) var clips: [ClipResult] = []
     @Published private(set) var isLoading = false
+    @Published private(set) var isUploading = false
     @Published var errorMessage: String?
     @Published private(set) var lastSubmittedURL = ""
     @Published private(set) var latestResponse: ClipResponse?
@@ -41,7 +44,8 @@ final class ContentViewModel: ObservableObject {
 
     init(apiClient: APIClient = APIClient()) {
         self.apiClient = apiClient
-        self.history = loadHistory()
+        history = loadHistory()
+
         Task {
             await refreshTrends()
         }
@@ -59,9 +63,9 @@ final class ContentViewModel: ObservableObject {
     func generateClips() async {
         let trimmedURL = videoURL.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard !trimmedURL.isEmpty else {
+        guard !trimmedURL.isEmpty || selectedUpload != nil else {
             clips = []
-            errorMessage = "Enter a video URL first."
+            errorMessage = "Paste a video URL or upload a video first."
             lastSubmittedURL = ""
             return
         }
@@ -73,6 +77,7 @@ final class ContentViewModel: ObservableObject {
         do {
             let job = try await apiClient.createJob(
                 videoURL: trimmedURL,
+                uploadFileID: selectedUpload?.id,
                 selectedTrend: selectedTrend,
                 targetPlatform: selectedPlatform
             )
@@ -90,6 +95,31 @@ final class ContentViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    func uploadVideo(fileURL: URL) async {
+        guard !AppConfiguration.authToken.isEmpty else {
+            errorMessage = "Uploads require an authenticated account on the current backend."
+            return
+        }
+
+        isUploading = true
+        errorMessage = nil
+        defer { isUploading = false }
+
+        do {
+            let upload = try await apiClient.uploadVideo(fileURL: fileURL)
+            selectedUpload = upload
+            if videoURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                videoURL = upload.publicURL ?? ""
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func clearSelectedUpload() {
+        selectedUpload = nil
     }
 
     func refreshTrends() async {
@@ -118,6 +148,7 @@ final class ContentViewModel: ObservableObject {
         clips = run.response.clips
         lastSubmittedURL = run.response.videoURL
         videoURL = run.response.videoURL
+        selectedUpload = nil
         selectedTrend = run.response.trendContext.first
         selectedPlatform = run.response.processingSummary.targetPlatform
         errorMessage = nil
@@ -145,9 +176,55 @@ final class ContentViewModel: ObservableObject {
         return "\(credits) credits remaining"
     }
 
+    var bestClip: ClipResult? {
+        clips.sorted { lhs, rhs in
+            let lhsRank = lhs.rank ?? lhs.postRank ?? Int.max
+            let rhsRank = rhs.rank ?? rhs.postRank ?? Int.max
+            if lhsRank != rhsRank {
+                return lhsRank < rhsRank
+            }
+            return lhs.score > rhs.score
+        }.first
+    }
+
+    var recentRuns: [SavedRun] {
+        Array(history.prefix(8))
+    }
+
+    var processingStatusLabel: String {
+        if isUploading {
+            return "Uploading source"
+        }
+        if isLoading {
+            return "\(max(clips.count, 1)) clips processing"
+        }
+        return "\(clips.count) clips ready"
+    }
+
+    var generatedTodayCount: Int {
+        let calendar = Calendar.current
+        return history
+            .filter { calendar.isDateInToday($0.createdAt) }
+            .reduce(0) { partial, run in
+                partial + run.response.clips.count
+            }
+    }
+
+    var sourceSummaryLabel: String {
+        if let selectedUpload {
+            return selectedUpload.filename
+        }
+        let trimmedURL = videoURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedURL.isEmpty ? "No source selected" : trimmedURL
+    }
+
     var generationStageTitle: String {
         if let errorMessage, !errorMessage.isEmpty, latestResponse == nil {
             return "Run blocked"
+        }
+
+        if isUploading {
+            return "Uploading source"
         }
 
         if isLoading {
@@ -175,6 +252,10 @@ final class ContentViewModel: ObservableObject {
     var generationStageDetail: String {
         if let errorMessage, !errorMessage.isEmpty, latestResponse == nil {
             return errorMessage
+        }
+
+        if isUploading {
+            return "Your source video is being validated and staged for processing."
         }
 
         if isLoading {
@@ -215,6 +296,10 @@ final class ContentViewModel: ObservableObject {
     var generationProgress: Double {
         if latestResponse != nil && !isLoading {
             return 1.0
+        }
+
+        if isUploading {
+            return 0.12
         }
 
         guard isLoading else { return 0.0 }

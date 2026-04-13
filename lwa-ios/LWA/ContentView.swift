@@ -1,61 +1,90 @@
 import AVKit
 import SwiftUI
+import UniformTypeIdentifiers
 import UIKit
 
 struct ContentView: View {
     @StateObject private var viewModel = ContentViewModel()
+    @State private var selectedTab: OmegaTab = .home
+    @State private var selectedClip: ClipResult?
     @State private var showSettings = false
+    @State private var showFileImporter = false
     @State private var showCopiedAlert = false
-    @State private var copiedMessage = "The latest clip pack is now on your clipboard."
-    @State private var selectedClipIndex = 0
-
-    private var selectedClip: ClipResult? {
-        guard !viewModel.clips.isEmpty else { return nil }
-        let safeIndex = min(max(selectedClipIndex, 0), viewModel.clips.count - 1)
-        return viewModel.clips[safeIndex]
-    }
+    @State private var copiedMessage = ""
 
     var body: some View {
         NavigationStack {
             ZStack {
-                cosmicBackground
+                OmegaBackground()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 24) {
-                        heroSection
-
-                        if AppConfiguration.isAppStoreMode {
-                            launchReadinessCard
-                        } else {
-                            monetizationCard
+                TabView(selection: $selectedTab) {
+                    OmegaHomeScreen(
+                        viewModel: viewModel,
+                        onOpenSettings: { showSettings = true },
+                        onOpenUpload: { showFileImporter = true },
+                        onOpenPaywall: { viewModel.showPaywall = true },
+                        onOpenClip: { selectedClip = $0 },
+                        onRestoreRun: {
+                            viewModel.restore(run: $0)
+                            selectedTab = .home
+                        },
+                        onCopyBundle: {
+                            copyToPasteboard(viewModel.shareText, confirmation: "The full clip pack is now on your clipboard.")
                         }
-
-                        trendsSection
-                        inputCard
-                        resultsSection
-                        historySection
+                    )
+                    .tag(OmegaTab.home)
+                    .tabItem {
+                        Label("Home", systemImage: "sparkles.tv")
                     }
-                    .padding(20)
+
+                    OmegaHistoryScreen(
+                        history: viewModel.history,
+                        onRestoreRun: {
+                            viewModel.restore(run: $0)
+                            selectedTab = .home
+                        },
+                        onClearHistory: viewModel.clearHistory
+                    )
+                    .tag(OmegaTab.history)
+                    .tabItem {
+                        Label("History", systemImage: "clock.arrow.circlepath")
+                    }
+                }
+                .tint(OmegaPalette.accent)
+                .toolbar(.hidden, for: .navigationBar)
+                .fileImporter(
+                    isPresented: $showFileImporter,
+                    allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie],
+                    allowsMultipleSelection: false,
+                    onCompletion: handleFileSelection
+                )
+
+                if viewModel.isLoading || viewModel.isUploading {
+                    OmegaProcessingOverlay(
+                        title: viewModel.generationStageTitle,
+                        detail: viewModel.generationStageDetail,
+                        progress: viewModel.generationProgress,
+                        steps: viewModel.generationTrack
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    .zIndex(10)
                 }
             }
-            .navigationBarHidden(true)
         }
         .preferredColorScheme(.dark)
+        .sheet(item: $selectedClip) { clip in
+            OmegaClipDetailView(
+                clip: clip,
+                onCopy: { value, message in
+                    copyToPasteboard(value, confirmation: message)
+                }
+            )
+        }
         .sheet(isPresented: $showSettings) {
             SettingsSheet()
         }
         .sheet(isPresented: $viewModel.showPaywall) {
             PaywallSheet()
-        }
-        .onChange(of: viewModel.latestResponse?.requestID ?? "") { _ in
-            selectedClipIndex = 0
-        }
-        .onChange(of: viewModel.clips.count) { count in
-            if count == 0 {
-                selectedClipIndex = 0
-            } else if selectedClipIndex >= count {
-                selectedClipIndex = count - 1
-            }
         }
         .alert("Copied", isPresented: $showCopiedAlert) {
             Button("OK", role: .cancel) { }
@@ -64,388 +93,248 @@ struct ContentView: View {
         }
     }
 
-    private var cosmicBackground: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.03, green: 0.04, blue: 0.08),
-                    Color(red: 0.03, green: 0.02, blue: 0.05),
-                    Color(red: 0.01, green: 0.01, blue: 0.02),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            RadialGradient(
-                colors: [
-                    Color(red: 0.23, green: 0.74, blue: 0.98).opacity(0.24),
-                    .clear,
-                ],
-                center: .topTrailing,
-                startRadius: 40,
-                endRadius: 420
-            )
-            .ignoresSafeArea()
-
-            RadialGradient(
-                colors: [
-                    Color(red: 0.94, green: 0.58, blue: 0.33).opacity(0.18),
-                    .clear,
-                ],
-                center: .bottomLeading,
-                startRadius: 30,
-                endRadius: 320
-            )
-            .ignoresSafeArea()
-
-            GeometryReader { geometry in
-                ZStack {
-                    Circle()
-                        .fill(Color(red: 0.18, green: 0.68, blue: 0.91).opacity(0.24))
-                        .frame(width: 240, height: 240)
-                        .blur(radius: 36)
-                        .offset(x: geometry.size.width * 0.32, y: -geometry.size.height * 0.26)
-
-                    Circle()
-                        .fill(Color(red: 0.96, green: 0.78, blue: 0.35).opacity(0.16))
-                        .frame(width: 200, height: 200)
-                        .blur(radius: 32)
-                        .offset(x: -geometry.size.width * 0.30, y: geometry.size.height * 0.14)
-
-                    ForEach(0 ..< 18, id: \.self) { index in
-                        Circle()
-                            .fill(Color.white.opacity(index.isMultiple(of: 3) ? 0.16 : 0.08))
-                            .frame(width: CGFloat((index % 3) + 2), height: CGFloat((index % 3) + 2))
-                            .offset(
-                                x: CGFloat((index * 43) % 280) - 140,
-                                y: CGFloat((index * 61) % 520) - 260
-                            )
-                    }
+    private func handleFileSelection(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            let canAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if canAccess {
+                    url.stopAccessingSecurityScopedResource()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+
+            Task {
+                await viewModel.uploadVideo(fileURL: url)
+            }
+        case .failure(let error):
+            copiedMessage = error.localizedDescription
+            showCopiedAlert = true
         }
     }
 
-    private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("IWA")
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+    private func copyToPasteboard(_ value: String, confirmation: String) {
+        UIPasteboard.general.string = value
+        copiedMessage = confirmation
+        showCopiedAlert = true
+    }
+}
 
-                    Text("Automated content engine")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
-                        .textCase(.uppercase)
+private enum OmegaTab: Hashable {
+    case home
+    case history
+}
 
-                    Text("Turn one long-form source into a vertical review deck, caption pack, and ready-to-share assets with a single run.")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.white.opacity(0.74))
-                }
+private struct OmegaHomeScreen: View {
+    @ObservedObject var viewModel: ContentViewModel
+    let onOpenSettings: () -> Void
+    let onOpenUpload: () -> Void
+    let onOpenPaywall: () -> Void
+    let onOpenClip: (ClipResult) -> Void
+    let onRestoreRun: (SavedRun) -> Void
+    let onCopyBundle: () -> Void
 
-                Spacer()
-
-                HStack(spacing: 10) {
-                    if !AppConfiguration.isAppStoreMode {
-                        smallActionButton(title: "Pricing") {
-                            viewModel.showPaywall = true
-                        }
-                    }
-
-                    smallActionButton(title: "Settings") {
-                        showSettings = true
-                    }
-                }
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+                hero
+                sourceCommandCard
+                recentRuns
+                trends
+                results
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+        }
+    }
 
-            HStack(spacing: 10) {
-                metricPill("Full-stack pipeline")
-                metricPill(viewModel.selectedPlatform)
-                metricPill(viewModel.creditsRemainingLabel)
-            }
+    private var hero: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("LWA Omega")
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
 
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text(viewModel.generationStageTitle)
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                        Text("Attention compiler for creator operators")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(OmegaPalette.accent)
+                            .textCase(.uppercase)
+
+                        Text("Paste a source, generate a ranked clip pack, and move straight into packaging, export, and distribution decisions.")
+                            .font(.subheadline)
+                            .foregroundStyle(OmegaPalette.secondaryText)
+                    }
 
                     Spacer()
 
-                    Text(viewModel.latestResponse?.processingSummary.processingMode.uppercased() ?? "READY")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Color.black)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color(red: 0.34, green: 0.89, blue: 0.82))
-                        .clipShape(Capsule())
-                }
-
-                Text(viewModel.generationStageDetail)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.white.opacity(0.72))
-
-                ProgressView(value: viewModel.generationProgress)
-                    .tint(Color(red: 0.34, green: 0.89, blue: 0.82))
-                    .progressViewStyle(.linear)
-
-                HStack(spacing: 10) {
-                    ForEach(viewModel.generationTrack) { stage in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Circle()
-                                .fill(color(for: stage.status))
-                                .frame(width: 10, height: 10)
-
-                            Text(stage.title)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(color(for: stage.status))
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack(spacing: 10) {
+                        OmegaGhostButton(title: "Pricing", action: onOpenPaywall)
+                        OmegaGhostButton(title: "Settings", action: onOpenSettings)
                     }
                 }
+
+                HStack(spacing: 10) {
+                    OmegaMetricPill(label: viewModel.processingStatusLabel)
+                    OmegaMetricPill(label: "\(viewModel.generatedTodayCount) clips generated today")
+                    OmegaMetricPill(label: viewModel.planName)
+                }
             }
-            .padding(16)
-            .background(Color.white.opacity(0.05))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
-        .padding(22)
-        .background(.ultraThinMaterial.opacity(0.22))
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.16),
-                            Color(red: 0.18, green: 0.68, blue: 0.91).opacity(0.28),
-                            Color(red: 0.96, green: 0.78, blue: 0.35).opacity(0.20),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1.2
+    }
+
+    private var sourceCommandCard: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                OmegaSectionHeader(
+                    title: "Source Command",
+                    subtitle: "Run from a URL or an uploaded file without leaving the app."
                 )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-    }
 
-    private var launchReadinessCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Production Build")
-                .font(.headline)
-                .foregroundStyle(.white)
-
-            Text("This mobile build is aimed at the live Railway stack over HTTPS. Use Settings only when you need to point the app back at your local backend.")
-                .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.72))
-
-            HStack(spacing: 12) {
-                badge(title: "Backend", detail: "Railway", tint: Color(red: 0.34, green: 0.89, blue: 0.82))
-                badge(title: "Mode", detail: "App Store", tint: Color(red: 0.96, green: 0.78, blue: 0.35))
-                badge(title: "Output", detail: "Vertical clips", tint: Color(red: 0.72, green: 0.70, blue: 0.98))
-            }
-        }
-        .padding(18)
-        .background(Color.white.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-
-    private var monetizationCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Revenue Setup")
-                .font(.headline)
-                .foregroundStyle(.white)
-
-            Text("Use the mobile app as the output console. Keep payment, plan upgrades, and client distribution on the web so the generation flow stays immediate.")
-                .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.72))
-
-            HStack(spacing: 12) {
-                badge(title: "Plan", detail: viewModel.planName, tint: Color(red: 0.34, green: 0.89, blue: 0.82))
-                badge(title: "Credits", detail: viewModel.creditsRemainingLabel, tint: Color(red: 0.96, green: 0.78, blue: 0.35))
-            }
-
-            Button {
-                viewModel.showPaywall = true
-            } label: {
-                Text("Open Revenue Setup")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.white.opacity(0.08))
+                TextField("Paste a video URL", text: $viewModel.videoURL, axis: .vertical)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(OmegaPalette.input)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                HStack(spacing: 12) {
+                    OmegaGhostButton(
+                        title: viewModel.isUploading ? "Uploading..." : "Upload Video",
+                        systemImage: "arrow.up.doc.fill",
+                        action: onOpenUpload
+                    )
+
+                    if viewModel.selectedUpload != nil {
+                        OmegaGhostButton(
+                            title: "Clear Upload",
+                            systemImage: "xmark.circle.fill",
+                            action: viewModel.clearSelectedUpload
+                        )
+                    }
+                }
+
+                if let upload = viewModel.selectedUpload {
+                    HStack(spacing: 10) {
+                        OmegaMetricPill(label: upload.filename)
+                        OmegaMetricPill(label: ByteCountFormatter.string(fromByteCount: Int64(upload.sizeBytes), countStyle: .file))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Target Platform")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(OmegaPalette.mutedText)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(viewModel.supportedPlatforms, id: \.self) { platform in
+                                Button {
+                                    viewModel.selectedPlatform = platform
+                                } label: {
+                                    Text(platform)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(viewModel.selectedPlatform == platform ? .black : .white)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            viewModel.selectedPlatform == platform
+                                                ? OmegaPalette.accent
+                                                : OmegaPalette.card
+                                        )
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+
+                HStack(spacing: 12) {
+                    OmegaMetricPill(label: viewModel.sourceSummaryLabel)
+                    OmegaMetricPill(label: viewModel.creditsRemainingLabel)
+                }
+
+                Button {
+                    Task {
+                        await viewModel.generateClips()
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "sparkles.rectangle.stack.fill")
+                            .font(.headline)
+                        Text(viewModel.isLoading ? "Generating Clip Pack" : "Generate Clip Pack")
+                            .font(.headline.weight(.semibold))
+                        Spacer()
+                        Text(viewModel.selectedPlatform)
+                            .font(.caption.weight(.bold))
+                    }
+                }
+                .buttonStyle(OmegaPrimaryButtonStyle())
+                .disabled(viewModel.isLoading || viewModel.isUploading)
             }
         }
-        .padding(18)
-        .background(Color.white.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
-    private var inputCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Source Command")
-                .font(.headline)
-                .foregroundStyle(.white)
+    @ViewBuilder
+    private var recentRuns: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            OmegaSectionHeader(
+                title: "Recent Clip Packs",
+                subtitle: "Jump back into prior runs or compare new sources against recent output."
+            )
 
-            TextField("https://www.youtube.com/watch?v=example", text: $viewModel.videoURL, axis: .vertical)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(14)
-                .background(Color.white.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .foregroundStyle(.white)
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Target Platform")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.white.opacity(0.68))
-
+            if viewModel.recentRuns.isEmpty {
+                OmegaEmptyStateCard(
+                    title: "No clip packs yet",
+                    message: "Your recent packs will appear here once the first source has been processed."
+                )
+            } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(viewModel.supportedPlatforms, id: \.self) { platform in
+                    HStack(spacing: 14) {
+                        ForEach(viewModel.recentRuns) { run in
                             Button {
-                                viewModel.selectedPlatform = platform
+                                onRestoreRun(run)
                             } label: {
-                                Text(platform)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(viewModel.selectedPlatform == platform ? .black : .white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 10)
-                                    .background(
-                                        viewModel.selectedPlatform == platform
-                                            ? Color(red: 0.34, green: 0.89, blue: 0.82)
-                                            : Color.white.opacity(0.08)
-                                    )
-                                    .clipShape(Capsule())
+                                OmegaRecentRunCard(run: run)
                             }
                             .buttonStyle(.plain)
                         }
                     }
+                    .padding(.vertical, 2)
                 }
             }
-
-            if let selectedTrend = viewModel.selectedTrend {
-                statusCard(
-                    title: "Trend angle locked",
-                    body: "\(selectedTrend.title) • \(selectedTrend.source)",
-                    tint: Color(red: 0.96, green: 0.78, blue: 0.35)
-                )
-            }
-
-            Button {
-                Task {
-                    await viewModel.generateClips()
-                }
-            } label: {
-                HStack(spacing: 12) {
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .tint(.black)
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(viewModel.isLoading ? "Generating Clip Pack" : "Generate Clips")
-                            .fontWeight(.semibold)
-
-                        Text(viewModel.isLoading ? "The review deck will refresh automatically." : "Launch the real backend pipeline.")
-                            .font(.caption)
-                            .foregroundStyle(Color.black.opacity(0.72))
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "sparkles.rectangle.stack.fill")
-                        .font(.headline)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .padding(.horizontal, 16)
-                .background(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.34, green: 0.89, blue: 0.82),
-                            Color(red: 0.18, green: 0.68, blue: 0.91),
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .foregroundStyle(.black)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            }
-            .disabled(viewModel.isLoading)
-            .opacity(viewModel.isLoading ? 0.84 : 1.0)
         }
-        .padding(18)
-        .background(Color.white.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     @ViewBuilder
-    private var trendsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Trend Radar")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-
-                Spacer()
-
-                Button("Refresh") {
-                    Task {
-                        await viewModel.refreshTrends()
-                    }
-                }
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color.white.opacity(0.68))
-            }
-
-            Text("Public signals from Google Trends, Reddit, and Hacker News shape the hook angle before the run starts.")
-                .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.68))
+    private var trends: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            OmegaSectionHeader(
+                title: "Trend Radar",
+                subtitle: "Layer a live public signal into the packaging angle before you generate."
+            )
 
             if viewModel.trends.isEmpty {
-                statusCard(
+                OmegaEmptyStateCard(
                     title: "Loading signals",
-                    body: "Fetching public trends you can turn into hooks, angles, and caption framing.",
-                    tint: Color(red: 0.34, green: 0.89, blue: 0.82)
+                    message: "Public trends from Google Trends, Reddit, and Hacker News will appear here."
                 )
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 12) {
+                    HStack(spacing: 12) {
                         ForEach(viewModel.trends) { trend in
                             Button {
                                 viewModel.toggleTrend(trend)
                             } label: {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text(trend.source)
+                                    Text(trend.source.uppercased())
                                         .font(.caption2.weight(.bold))
-                                        .foregroundStyle(
-                                            viewModel.selectedTrend == trend
-                                                ? Color.black.opacity(0.72)
-                                                : Color(red: 0.34, green: 0.89, blue: 0.82)
-                                        )
+                                        .foregroundStyle(viewModel.selectedTrend == trend ? .black.opacity(0.7) : OmegaPalette.accent)
 
                                     Text(trend.title)
                                         .font(.subheadline.weight(.semibold))
@@ -454,24 +343,12 @@ struct ContentView: View {
 
                                     Text(trend.detail)
                                         .font(.caption)
-                                        .foregroundStyle(
-                                            viewModel.selectedTrend == trend
-                                                ? Color.black.opacity(0.62)
-                                                : Color.white.opacity(0.58)
-                                        )
+                                        .foregroundStyle(viewModel.selectedTrend == trend ? .black.opacity(0.65) : OmegaPalette.secondaryText)
                                         .multilineTextAlignment(.leading)
                                 }
-                                .frame(width: 220, alignment: .leading)
                                 .padding(16)
-                                .background(
-                                    viewModel.selectedTrend == trend
-                                        ? Color(red: 0.34, green: 0.89, blue: 0.82)
-                                        : Color.white.opacity(0.06)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                                )
+                                .frame(width: 220, alignment: .leading)
+                                .background(viewModel.selectedTrend == trend ? OmegaPalette.accent : OmegaPalette.card)
                                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                             }
                             .buttonStyle(.plain)
@@ -483,613 +360,352 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private var resultsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Review Deck")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+    private var results: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            OmegaSectionHeader(
+                title: "Results",
+                subtitle: "Best clip first, then the full ranked pack."
+            )
 
-                Spacer()
-
-                if !viewModel.lastSubmittedURL.isEmpty {
-                    Text(viewModel.latestResponse?.sourcePlatform ?? "Ready")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.white.opacity(0.56))
-                }
-            }
-
-            if let errorMessage = viewModel.errorMessage {
-                statusCard(
-                    title: "Request failed",
-                    body: errorMessage,
-                    tint: Color(red: 1.0, green: 0.39, blue: 0.39)
-                )
-            } else if viewModel.isLoading {
-                generationConsoleCard
+            if let errorMessage = viewModel.errorMessage, !errorMessage.isEmpty {
+                OmegaEmptyStateCard(title: "Request failed", message: errorMessage)
             } else if viewModel.clips.isEmpty {
-                statusCard(
-                    title: "No review deck yet",
-                    body: "Launch a run and the first output will appear here as a vertical swipe deck with export links, copy controls, and saved history below.",
-                    tint: Color.white.opacity(0.8)
+                OmegaEmptyStateCard(
+                    title: "No results yet",
+                    message: "Run a source and the best clip will appear here with ranking, hook variants, and export actions."
                 )
             } else {
-                reviewDeck
-            }
-        }
-    }
+                if let bestClip = viewModel.bestClip {
+                    OmegaGlassCard {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack {
+                                Text("Best Clip")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                OmegaMetricPill(label: "Rank #\(bestClip.displayRank ?? 1)")
+                                OmegaMetricPill(label: bestClip.compilerConfidenceLabel ?? "Confidence pending")
+                            }
 
-    private var generationConsoleCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(viewModel.generationStageTitle)
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                            OmegaClipVisual(clip: bestClip, height: 260)
 
-                    Text(viewModel.generationStageDetail)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.white.opacity(0.72))
-                }
+                            Text(bestClip.hook)
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(.white)
 
-                Spacer()
+                            if let primaryReason = bestClip.primaryReason {
+                                Text(primaryReason)
+                                    .font(.subheadline)
+                                    .foregroundStyle(OmegaPalette.secondaryText)
+                            }
 
-                ProgressView()
-                    .tint(Color(red: 0.34, green: 0.89, blue: 0.82))
-                    .scaleEffect(1.2)
-            }
+                            HStack(spacing: 10) {
+                                OmegaMetricPill(label: bestClip.packagingAngleLabel ?? "Packaging pending")
+                                OmegaMetricPill(label: "Score \(bestClip.score)")
+                                if let bestPostOrder = bestClip.bestPostOrder {
+                                    OmegaMetricPill(label: "Post #\(bestPostOrder)")
+                                }
+                            }
 
-            HStack(spacing: 12) {
-                ForEach(viewModel.generationTrack) { stage in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Capsule()
-                            .fill(color(for: stage.status))
-                            .frame(height: 6)
-
-                        Text(stage.title)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(color(for: stage.status))
+                            Button {
+                                onOpenClip(bestClip)
+                            } label: {
+                                HStack {
+                                    Text("Open Clip Detail")
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right.circle.fill")
+                                }
+                            }
+                            .buttonStyle(OmegaPrimaryButtonStyle())
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        }
-        .padding(18)
-        .background(Color.white.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-    }
-
-    private var reviewDeck: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            if let summary = viewModel.latestResponse?.processingSummary {
-                reviewStageSummary(summary)
-            }
-
-            clipViewport
-
-            HStack(spacing: 12) {
-                Button {
-                    copyToPasteboard(viewModel.shareText, confirmation: "The latest clip bundle is on your clipboard.")
-                } label: {
-                    secondaryAction(title: "Copy Bundle")
-                }
-
-                ShareLink(item: viewModel.shareText) {
-                    secondaryAction(title: "Share")
-                }
-            }
-
-            if let clip = selectedClip {
-                clipInspector(clip)
-            }
-
-            if let summary = viewModel.latestResponse?.processingSummary {
-                summaryMatrix(summary)
-            }
-        }
-    }
-
-    private var clipViewport: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Swipe through outputs")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-
-                    Text("The first pass is already optimized for \(viewModel.selectedPlatform) review.")
-                        .font(.caption)
-                        .foregroundStyle(Color.white.opacity(0.62))
-                }
-
-                Spacer()
-
-                if !viewModel.clips.isEmpty {
-                    Text("\(selectedClipIndex + 1) / \(viewModel.clips.count)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.white.opacity(0.72))
-                }
-            }
-
-            TabView(selection: $selectedClipIndex) {
-                ForEach(Array(viewModel.clips.enumerated()), id: \.element.id) { index, clip in
-                    ClipPreviewCard(
-                        clip: clip,
-                        platform: viewModel.selectedPlatform
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(OmegaPalette.accent.opacity(0.45), lineWidth: 1.2)
                     )
-                    .tag(index)
+                    .shadow(color: OmegaPalette.accent.opacity(0.18), radius: 24, y: 16)
                 }
-            }
-            .frame(height: 540)
-            .tabViewStyle(.page(indexDisplayMode: .always))
 
-            if let clip = selectedClip {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text(clip.title)
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.white)
-
-                        Spacer()
-
-                        scoreBadge(clip.score)
+                HStack(spacing: 12) {
+                    Button(action: onCopyBundle) {
+                        Label("Copy Bundle", systemImage: "doc.on.doc")
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(OmegaSecondaryButtonStyle())
 
-                    Text(clip.hook)
-                        .font(.headline)
-                        .foregroundStyle(Color.white.opacity(0.92))
-
-                    HStack(spacing: 10) {
-                        if let displayRank = clip.displayRank {
-                            signalPill(label: "Rank #\(displayRank)")
-                        }
-                        if let confidenceLabel = clip.compilerConfidenceLabel {
-                            signalPill(label: confidenceLabel)
-                        }
-                        if let packagingAngleLabel = clip.packagingAngleLabel {
-                            signalPill(label: packagingAngleLabel)
-                        }
+                    ShareLink(item: viewModel.shareText) {
+                        Label("Share Pack", systemImage: "square.and.arrow.up")
+                            .frame(maxWidth: .infinity)
                     }
-
-                    if let thumbnailText = clip.thumbnailText, !thumbnailText.isEmpty {
-                        Text(thumbnailText)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color(red: 0.96, green: 0.78, blue: 0.35))
-                    }
-
-                    if let ctaSuggestion = clip.ctaSuggestion, !ctaSuggestion.isEmpty {
-                        Text(ctaSuggestion)
-                            .font(.subheadline)
-                            .foregroundStyle(Color.white.opacity(0.74))
-                            .lineLimit(2)
-                    }
-
-                    if let primaryReason = clip.primaryReason, !primaryReason.isEmpty {
-                        Text(primaryReason)
-                            .font(.caption)
-                            .foregroundStyle(Color.white.opacity(0.62))
-                            .lineLimit(3)
-                    }
-
-                    HStack(spacing: 10) {
-                        if let bestPostOrder = clip.bestPostOrder {
-                            signalPill(label: "Post Order #\(bestPostOrder)")
-                        } else if let postRank = clip.postRank {
-                            signalPill(label: "Post #\(postRank)")
-                        }
-                        signalPill(label: "\(clip.startTime) - \(clip.endTime)")
-                        signalPill(label: clip.format)
-                        signalPill(label: clip.aspectRatio ?? "9:16")
-                    }
-                }
-            }
-        }
-        .padding(18)
-        .background(Color.white.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-
-    private func clipInspector(_ clip: ClipResult) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Selected Clip")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-
-                Spacer()
-
-                if let editProfile = clip.editProfile, !editProfile.isEmpty {
-                    Text(editProfile)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.black)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color(red: 0.96, green: 0.78, blue: 0.35))
-                        .clipShape(Capsule())
-                }
-            }
-
-            HStack(spacing: 10) {
-                if let displayRank = clip.displayRank {
-                    signalPill(label: "Rank #\(displayRank)")
-                }
-                if let confidenceLabel = clip.compilerConfidenceLabel {
-                    signalPill(label: confidenceLabel)
-                }
-                if let packagingAngleLabel = clip.packagingAngleLabel {
-                    signalPill(label: packagingAngleLabel)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Hook")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
-
-                Text(clip.hook)
-                    .font(.body)
-                    .foregroundStyle(Color.white.opacity(0.9))
-            }
-
-            VStack(alignment: .leading, spacing: 14) {
-                if let thumbnailText = clip.thumbnailText, !thumbnailText.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("Thumbnail Text")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color(red: 0.96, green: 0.78, blue: 0.35))
-
-                            Spacer()
-
-                            Button {
-                                copyToPasteboard(thumbnailText, confirmation: "The thumbnail text is now on your clipboard.")
-                            } label: {
-                                Text("Copy")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        Text(thumbnailText)
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                    }
+                    .buttonStyle(OmegaSecondaryButtonStyle())
                 }
 
-                if let ctaSuggestion = clip.ctaSuggestion, !ctaSuggestion.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("CTA Suggestion")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color.white.opacity(0.62))
-
-                            Spacer()
-
-                            Button {
-                                copyToPasteboard(ctaSuggestion, confirmation: "The CTA is now on your clipboard.")
-                            } label: {
-                                Text("Copy")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color(red: 0.96, green: 0.78, blue: 0.35))
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        Text(ctaSuggestion)
-                            .font(.body)
-                            .foregroundStyle(Color.white.opacity(0.82))
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Caption")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
-
-                    Text(clip.caption)
-                        .font(.body)
-                        .foregroundStyle(Color.white.opacity(0.78))
-                }
-            }
-            .padding(16)
-            .background(Color.white.opacity(0.04))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.white.opacity(0.06), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-            if let bestPostOrder = clip.bestPostOrder {
-                HStack(spacing: 10) {
-                    signalPill(label: "Best Post Order #\(bestPostOrder)")
-                    if let captionStyle = clip.captionStyle, !captionStyle.isEmpty {
-                        signalPill(label: captionStyle)
-                    }
-                }
-            } else if let captionStyle = clip.captionStyle, !captionStyle.isEmpty {
-                HStack(spacing: 10) {
-                    signalPill(label: captionStyle)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                if let primaryReason = clip.primaryReason, !primaryReason.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Why This Works")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color(red: 0.72, green: 0.70, blue: 0.98))
-
-                        Text(primaryReason)
-                            .font(.body)
-                            .foregroundStyle(Color.white.opacity(0.84))
-                    }
-                }
-
-                if let platformFit = clip.platformFit, !platformFit.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Platform Fit")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.white.opacity(0.62))
-
-                        Text(platformFit)
-                            .font(.body)
-                            .foregroundStyle(Color.white.opacity(0.76))
-                    }
-                }
-            }
-
-            HStack(spacing: 12) {
-                Button {
-                    copyToPasteboard(clip.hook, confirmation: "The hook is now on your clipboard.")
-                } label: {
-                    secondaryAction(title: "Copy Hook")
-                }
-
-                Button {
-                    copyToPasteboard(clip.caption, confirmation: "The caption is now on your clipboard.")
-                } label: {
-                    secondaryAction(title: "Copy Caption")
-                }
-            }
-
-            Button {
-                copyToPasteboard(clip.packagingBundle, confirmation: "The full packaging bundle is now on your clipboard.")
-            } label: {
-                secondaryAction(title: "Copy Package")
-            }
-
-            if !clip.hookVariants.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("Alternate Hooks")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.white.opacity(0.62))
-
-                        Spacer()
-
+                VStack(spacing: 12) {
+                    ForEach(viewModel.clips) { clip in
                         Button {
-                            copyToPasteboard(clip.hookVariants.joined(separator: "\n"), confirmation: "Alternate hooks are now on your clipboard.")
+                            onOpenClip(clip)
                         } label: {
-                            Text("Copy All")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color(red: 0.72, green: 0.70, blue: 0.98))
+                            OmegaClipCard(clip: clip, isFeatured: clip.id == viewModel.bestClip?.id)
                         }
                         .buttonStyle(.plain)
                     }
+                }
+            }
+        }
+    }
+}
 
-                    ForEach(Array(clip.hookVariants.enumerated()), id: \.offset) { index, hookVariant in
+private struct OmegaHistoryScreen: View {
+    let history: [SavedRun]
+    let onRestoreRun: (SavedRun) -> Void
+    let onClearHistory: () -> Void
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                OmegaGlassCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("History")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                            Spacer()
+                            if !history.isEmpty {
+                                OmegaGhostButton(title: "Clear", action: onClearHistory)
+                            }
+                        }
+
+                        Text("Reopen past videos, compare clip packs, and rerun sources without losing the original output context.")
+                            .font(.subheadline)
+                            .foregroundStyle(OmegaPalette.secondaryText)
+                    }
+                }
+
+                if history.isEmpty {
+                    OmegaEmptyStateCard(
+                        title: "No saved runs",
+                        message: "Once you generate a clip pack, it will appear here with quick reopen access."
+                    )
+                } else {
+                    VStack(spacing: 12) {
+                        ForEach(history) { run in
+                            OmegaGlassCard {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text(run.response.videoURL)
+                                        .font(.headline)
+                                        .foregroundStyle(.white)
+                                        .lineLimit(2)
+
+                                    HStack(spacing: 10) {
+                                        OmegaMetricPill(label: "\(run.response.clips.count) clips")
+                                        OmegaMetricPill(label: run.response.processingSummary.targetPlatform)
+                                        OmegaMetricPill(label: run.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                    }
+
+                                    Button {
+                                        onRestoreRun(run)
+                                    } label: {
+                                        HStack {
+                                            Text("Re-open Run")
+                                            Spacer()
+                                            Image(systemName: "arrow.clockwise.circle.fill")
+                                        }
+                                    }
+                                    .buttonStyle(OmegaSecondaryButtonStyle())
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+        }
+    }
+}
+
+private struct OmegaClipCard: View {
+    let clip: ClipResult
+    let isFeatured: Bool
+
+    var body: some View {
+        OmegaGlassCard {
+            HStack(spacing: 14) {
+                OmegaClipVisual(clip: clip, height: 112, width: 94)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text(clip.title)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+
+                        Spacer()
+
+                        Text("\(clip.score)")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(isFeatured ? OmegaPalette.gold : OmegaPalette.accent)
+                            .clipShape(Capsule())
+                    }
+
+                    Text(clip.hook)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .lineLimit(2)
+
+                    HStack(spacing: 8) {
+                        if let displayRank = clip.displayRank {
+                            OmegaMetricPill(label: "Rank #\(displayRank)")
+                        }
+                        if let packagingAngleLabel = clip.packagingAngleLabel {
+                            OmegaMetricPill(label: packagingAngleLabel)
+                        }
+                        OmegaMetricPill(label: "\(clip.startTime)-\(clip.endTime)")
+                    }
+
+                    if let primaryReason = clip.primaryReason {
+                        Text(primaryReason)
+                            .font(.caption)
+                            .foregroundStyle(OmegaPalette.secondaryText)
+                            .lineLimit(2)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct OmegaClipDetailView: View {
+    let clip: ClipResult
+    let onCopy: (String, String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var trimStart: Double
+    @State private var trimEnd: Double
+    @State private var captionStyle = 0
+
+    init(clip: ClipResult, onCopy: @escaping (String, String) -> Void) {
+        self.clip = clip
+        self.onCopy = onCopy
+        let start = max(0, parseSeconds(clip.startTime))
+        let end = max(start + 1, parseSeconds(clip.endTime))
+        _trimStart = State(initialValue: start)
+        _trimEnd = State(initialValue: end)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                OmegaBackground()
+
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        playerCard
+                        whyItWorks
+                        hookSuggestions
+                        captionSection
+                        editingControls
+                        exportActions
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                    .foregroundStyle(.white)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var playerCard: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                if let assetURL = clip.preferredAssetURL {
+                    OmegaVideoPlayer(url: assetURL)
+                        .frame(height: 320)
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                } else {
+                    OmegaClipVisual(clip: clip, height: 320)
+                }
+
+                HStack {
+                    Text(clip.title)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                    OmegaMetricPill(label: clip.compilerConfidenceLabel ?? "Confidence pending")
+                }
+
+                HStack(spacing: 10) {
+                    if let displayRank = clip.displayRank {
+                        OmegaMetricPill(label: "Rank #\(displayRank)")
+                    }
+                    if let packagingAngleLabel = clip.packagingAngleLabel {
+                        OmegaMetricPill(label: packagingAngleLabel)
+                    }
+                    if let bestPostOrder = clip.bestPostOrder {
+                        OmegaMetricPill(label: "Post #\(bestPostOrder)")
+                    }
+                }
+            }
+        }
+    }
+
+    private var whyItWorks: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 10) {
+                OmegaSectionHeader(title: "Why This Works", subtitle: "Readable AI guidance for why this cut should win attention.")
+                Text(clip.primaryReason ?? "The compiler will explain why this clip matters once the metadata is available.")
+                    .font(.body)
+                    .foregroundStyle(.white.opacity(0.85))
+
+                if let platformFit = clip.platformFit {
+                    Text(platformFit)
+                        .font(.subheadline)
+                        .foregroundStyle(OmegaPalette.secondaryText)
+                }
+            }
+        }
+    }
+
+    private var hookSuggestions: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                OmegaSectionHeader(title: "Hook Suggestions", subtitle: "Tap any angle to copy it into your posting workflow.")
+
+                ForEach(Array(clip.hookVariants.enumerated()), id: \.offset) { index, variant in
+                    Button {
+                        onCopy(variant, "Hook \(index + 1) copied.")
+                    } label: {
                         HStack(alignment: .top, spacing: 12) {
                             Text("\(index + 1)")
                                 .font(.caption.weight(.bold))
-                                .foregroundStyle(Color.black)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color(red: 0.34, green: 0.89, blue: 0.82))
-                                .clipShape(Capsule())
+                                .foregroundStyle(.black)
+                                .frame(width: 26, height: 26)
+                                .background(OmegaPalette.accent)
+                                .clipShape(Circle())
 
-                            Text(hookVariant)
-                                .font(.subheadline)
-                                .foregroundStyle(Color.white.opacity(0.8))
+                            Text(variant)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                            Image(systemName: "doc.on.doc")
+                                .foregroundStyle(OmegaPalette.secondaryText)
                         }
-                    }
-                }
-            }
-
-            HStack(spacing: 12) {
-                if let preferredAssetURL = clip.preferredAssetURL {
-                    Link(destination: preferredAssetURL) {
-                        primaryLinkAction(title: clip.editedClipURL != nil ? "Open Edited Clip" : "Open Clip Asset")
-                    }
-                }
-
-                if let rawAssetURL = clip.rawAssetURL,
-                   rawAssetURL != clip.preferredAssetURL {
-                    Link(destination: rawAssetURL) {
-                        secondaryAction(title: "Open Raw Cut")
-                    }
-                }
-            }
-
-            if let transcriptExcerpt = clip.transcriptExcerpt, !transcriptExcerpt.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Transcript Excerpt")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.white.opacity(0.62))
-
-                    Text(transcriptExcerpt)
-                        .font(.caption)
-                        .foregroundStyle(Color.white.opacity(0.72))
-                }
-            }
-        }
-        .padding(18)
-        .background(Color.white.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-    }
-
-    private func reviewStageSummary(_ summary: ProcessingSummary) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Run Summary")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
-
-            HStack(spacing: 12) {
-                badge(title: "Mode", detail: summary.processingMode.capitalized, tint: Color(red: 0.34, green: 0.89, blue: 0.82))
-                badge(title: "Selection", detail: summary.selectionStrategy.capitalized, tint: Color(red: 0.96, green: 0.78, blue: 0.35))
-                badge(title: "AI", detail: summary.aiProvider, tint: Color(red: 0.72, green: 0.70, blue: 0.98))
-            }
-
-            Text(summary.recommendedNextStep)
-                .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.72))
-        }
-        .padding(18)
-        .background(Color.white.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-    }
-
-    private func summaryMatrix(_ summary: ProcessingSummary) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Run Intelligence")
-                .font(.headline)
-                .foregroundStyle(.white)
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                insightTile(title: "Plan", value: summary.planName)
-                insightTile(title: "Credits", value: "\(summary.creditsRemaining)")
-                insightTile(title: "Turnaround", value: summary.estimatedTurnaround)
-                insightTile(title: "Target", value: summary.targetPlatform)
-                insightTile(title: "Assets", value: "\(summary.assetsCreated)")
-                insightTile(title: "Edited", value: "\(summary.editedAssetsCreated)")
-
-                if let sourceTitle = summary.sourceTitle, !sourceTitle.isEmpty {
-                    insightTile(title: "Source Title", value: sourceTitle)
-                }
-
-                if let sourceDurationSeconds = summary.sourceDurationSeconds {
-                    insightTile(title: "Source Length", value: "\(sourceDurationSeconds)s")
-                }
-
-                if let trendUsed = summary.trendUsed, !trendUsed.isEmpty {
-                    insightTile(title: "Trend", value: trendUsed)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Sources Considered")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.white.opacity(0.62))
-
-                Text(summary.sourcesConsidered.joined(separator: ", "))
-                    .font(.subheadline)
-                    .foregroundStyle(Color.white.opacity(0.72))
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Unlocked")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.white.opacity(0.62))
-
-                FlowLayout(spacing: 8) {
-                    featureFlagPill("Clip limit \(summary.featureFlags.clipLimit)")
-                    featureFlagPill("History \(summary.featureFlags.historyLimit)")
-
-                    if summary.featureFlags.altHooks {
-                        featureFlagPill("Alt hooks")
-                    }
-                    if summary.featureFlags.packagingProfiles {
-                        featureFlagPill("Packaging profiles")
-                    }
-                    if summary.featureFlags.premiumExports {
-                        featureFlagPill("Premium exports")
-                    }
-                    if summary.featureFlags.priorityProcessing {
-                        featureFlagPill("Priority queue")
-                    }
-                    if summary.featureFlags.campaignMode {
-                        featureFlagPill("Campaign mode")
-                    }
-                }
-            }
-        }
-        .padding(18)
-        .background(Color.white.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-    }
-
-    @ViewBuilder
-    private var historySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Saved Runs")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-
-                Spacer()
-
-                if !viewModel.history.isEmpty {
-                    Button("Clear") {
-                        viewModel.clearHistory()
-                    }
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.white.opacity(0.62))
-                }
-            }
-
-            if viewModel.history.isEmpty {
-                statusCard(
-                    title: "No history yet",
-                    body: "Every successful generation is saved on this device so you can reopen, reshare, or compare clip packs later.",
-                    tint: Color.white.opacity(0.8)
-                )
-            } else {
-                ForEach(viewModel.history) { run in
-                    Button {
-                        viewModel.restore(run: run)
-                    } label: {
-                        HStack(alignment: .top, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(run.response.videoURL)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.white)
-                                    .multilineTextAlignment(.leading)
-
-                                Text("\(run.response.clips.count) clips • \(run.response.processingSummary.planName) • \(run.response.processingSummary.targetPlatform)")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.white.opacity(0.56))
-                            }
-
-                            Spacer()
-
-                            Text(run.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundStyle(Color.white.opacity(0.56))
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.white.opacity(0.05))
+                        .padding(14)
+                        .background(OmegaPalette.card)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
                     .buttonStyle(.plain)
@@ -1098,424 +714,555 @@ struct ContentView: View {
         }
     }
 
-    private func statusCard(title: String, body: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(tint)
+    private var captionSection: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                OmegaSectionHeader(title: "Caption Suggestions", subtitle: "Packaging copy and CTA ready for export.")
 
-            Text(body)
-                .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.72))
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
+                Text(clip.caption)
+                    .font(.body)
+                    .foregroundStyle(.white.opacity(0.85))
 
-    private func insightTile(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(Color.white.opacity(0.56))
+                if let thumbnailText = clip.thumbnailText {
+                    Text("Thumbnail: \(thumbnailText)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(OmegaPalette.gold)
+                }
 
-            Text(value)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
-        }
-        .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
-        .padding(14)
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
+                if let ctaSuggestion = clip.ctaSuggestion {
+                    Text("CTA: \(ctaSuggestion)")
+                        .font(.subheadline)
+                        .foregroundStyle(OmegaPalette.secondaryText)
+                }
 
-    private func scoreBadge(_ score: Int) -> some View {
-        Text("\(score)")
-            .font(.headline.weight(.bold))
-            .foregroundStyle(.black)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(red: 0.34, green: 0.89, blue: 0.82))
-            .clipShape(Capsule())
-    }
+                HStack(spacing: 12) {
+                    Button {
+                        onCopy(clip.caption, "Caption copied.")
+                    } label: {
+                        Label("Copy Caption", systemImage: "text.quote")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OmegaSecondaryButtonStyle())
 
-    private func signalPill(label: String) -> some View {
-        Text(label)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Color.white.opacity(0.78))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color.white.opacity(0.07))
-            .clipShape(Capsule())
-    }
-
-    private func featureFlagPill(_ label: String) -> some View {
-        Text(label)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(Color.white.opacity(0.82))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.18, green: 0.68, blue: 0.91).opacity(0.22),
-                        Color(red: 0.72, green: 0.70, blue: 0.98).opacity(0.18),
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-            )
-    }
-
-    private func smallActionButton(title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(Color.white.opacity(0.08))
-                .clipShape(Capsule())
+                    Button {
+                        onCopy(clip.packagingBundle, "Full package copied.")
+                    } label: {
+                        Label("Copy Package", systemImage: "doc.on.doc.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OmegaSecondaryButtonStyle())
+                }
+            }
         }
     }
 
-    private func metricPill(_ title: String) -> some View {
-        Text(title)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Color.white.opacity(0.76))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color.white.opacity(0.05))
-            .clipShape(Capsule())
-    }
+    private var editingControls: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                OmegaSectionHeader(title: "Editing Tools", subtitle: "Minimal control room for trim and caption presentation.")
 
-    private func badge(title: String, detail: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(tint)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Trim Start")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(OmegaPalette.mutedText)
+                    Slider(value: $trimStart, in: 0...max(trimEnd - 1, 1), step: 1)
+                        .tint(OmegaPalette.accent)
+                    Text(formatSeconds(trimStart))
+                        .font(.caption)
+                        .foregroundStyle(OmegaPalette.secondaryText)
+                }
 
-            Text(detail)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
-                .lineLimit(2)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Trim End")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(OmegaPalette.mutedText)
+                    Slider(value: $trimEnd, in: min(trimStart + 1, trimUpperBound)...trimUpperBound, step: 1)
+                        .tint(OmegaPalette.gold)
+                    Text(formatSeconds(trimEnd))
+                        .font(.caption)
+                        .foregroundStyle(OmegaPalette.secondaryText)
+                }
+
+                Picker("Caption Style", selection: $captionStyle) {
+                    Text("Auto").tag(0)
+                    Text("Minimal").tag(1)
+                    Text("Bold").tag(2)
+                }
+                .pickerStyle(.segmented)
+
+                Text("Preview trim: \(formatSeconds(trimStart)) – \(formatSeconds(trimEnd))")
+                    .font(.footnote)
+                    .foregroundStyle(OmegaPalette.secondaryText)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private func secondaryAction(title: String) -> some View {
-        Text(title)
-            .font(.subheadline.weight(.semibold))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Color.white.opacity(0.08))
-            .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    private var exportActions: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                OmegaSectionHeader(title: "Export", subtitle: "Open the rendered asset or share the package immediately.")
+
+                if let preferredAssetURL = clip.preferredAssetURL {
+                    Link(destination: preferredAssetURL) {
+                        Label("Open Export", systemImage: "arrow.up.right.square")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OmegaPrimaryButtonStyle())
+                }
+
+                if let rawAssetURL = clip.rawAssetURL, rawAssetURL != clip.preferredAssetURL {
+                    Link(destination: rawAssetURL) {
+                        Label("Open Raw Clip", systemImage: "film.stack")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OmegaSecondaryButtonStyle())
+                }
+            }
+        }
     }
 
-    private func primaryLinkAction(title: String) -> some View {
-        Text(title)
-            .font(.subheadline.weight(.semibold))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.34, green: 0.89, blue: 0.82),
-                        Color(red: 0.18, green: 0.68, blue: 0.91),
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .foregroundStyle(.black)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    private var trimUpperBound: Double {
+        let suggestedEnd = max(parseSeconds(clip.endTime), trimStart + 1)
+        return max(suggestedEnd, trimEnd, 15)
+    }
+}
+
+private struct OmegaProcessingOverlay: View {
+    let title: String
+    let detail: String
+    let progress: Double
+    let steps: [GenerationTrackItem]
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+
+            OmegaGlassCard {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(title)
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(.white)
+                            Text(detail)
+                                .font(.subheadline)
+                                .foregroundStyle(OmegaPalette.secondaryText)
+                        }
+
+                        Spacer()
+
+                        ProgressView()
+                            .tint(OmegaPalette.accent)
+                            .scaleEffect(1.2)
+                    }
+
+                    ProgressView(value: progress)
+                        .tint(OmegaPalette.accent)
+                        .progressViewStyle(.linear)
+
+                    VStack(spacing: 10) {
+                        ForEach(steps) { step in
+                            HStack(spacing: 12) {
+                                Circle()
+                                    .fill(color(for: step.status))
+                                    .frame(width: 10, height: 10)
+
+                                Text(step.title)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(color(for: step.status))
+
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: 420)
+            .padding(24)
+        }
     }
 
     private func color(for status: GenerationTrackItem.Status) -> Color {
         switch status {
         case .pending:
-            return Color.white.opacity(0.26)
+            return OmegaPalette.mutedText
         case .active:
-            return Color(red: 0.34, green: 0.89, blue: 0.82)
+            return OmegaPalette.accent
         case .complete:
-            return Color(red: 0.96, green: 0.78, blue: 0.35)
+            return OmegaPalette.gold
         }
-    }
-
-    private func copyToPasteboard(_ value: String, confirmation: String) {
-        UIPasteboard.general.string = value
-        copiedMessage = confirmation
-        showCopiedAlert = true
     }
 }
 
-private struct ClipPreviewCard: View {
+private struct OmegaRecentRunCard: View {
+    let run: SavedRun
+
+    var body: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(run.response.processingSummary.sourceTitle ?? run.response.videoURL)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+
+                Text(run.response.processingSummary.targetPlatform)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(OmegaPalette.accent)
+
+                HStack(spacing: 10) {
+                    OmegaMetricPill(label: "\(run.response.clips.count) clips")
+                    OmegaMetricPill(label: run.createdAt.formatted(date: .abbreviated, time: .shortened))
+                }
+            }
+            .frame(width: 240, alignment: .leading)
+        }
+    }
+}
+
+private struct OmegaClipVisual: View {
     let clip: ClipResult
-    let platform: String
+    var height: CGFloat
+    var width: CGFloat? = nil
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [OmegaPalette.card, OmegaPalette.card.opacity(0.65), OmegaPalette.surface],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
 
-            if let preferredAssetURL = clip.preferredAssetURL {
-                LoopingVideoPlayer(url: preferredAssetURL)
-                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            } else if let previewImageAssetURL = clip.previewImageAssetURL {
-                AsyncImage(url: previewImageAssetURL) { phase in
+            if let previewURL = clip.previewImageAssetURL {
+                AsyncImage(url: previewURL) { phase in
                     switch phase {
                     case .success(let image):
                         image
                             .resizable()
                             .scaledToFill()
-                    case .failure, .empty:
-                        previewFallback
-                    @unknown default:
-                        previewFallback
+                    default:
+                        placeholder
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             } else {
-                previewFallback
+                placeholder
             }
 
             LinearGradient(
-                colors: [
-                    .clear,
-                    Color.black.opacity(0.18),
-                    Color.black.opacity(0.78),
-                ],
-                startPoint: .top,
+                colors: [.clear, Color.black.opacity(0.76)],
+                startPoint: .center,
                 endPoint: .bottom
             )
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(platform)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Color.black)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color(red: 0.34, green: 0.89, blue: 0.82))
-                        .clipShape(Capsule())
-
-                    Spacer()
-
-                    if let displayRank = clip.displayRank {
-                        Text("RANK #\(displayRank)")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(Color.black)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Color(red: 0.96, green: 0.78, blue: 0.35))
-                            .clipShape(Capsule())
-                    }
-
-                    if let packagingAngleLabel = clip.packagingAngleLabel {
-                        Text(packagingAngleLabel.uppercased())
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(Color.white.opacity(0.74))
-                    } else {
-                        Text(clip.format)
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(Color.white.opacity(0.74))
-                    }
-                }
-
-                if let bestPostOrder = clip.bestPostOrder {
-                    Text("BEST POST ORDER #\(bestPostOrder)")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.white.opacity(0.74))
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(clip.title)
-                        .font(.title3.weight(.bold))
+            VStack(alignment: .leading, spacing: 8) {
+                if let thumbnailText = clip.thumbnailText {
+                    Text(thumbnailText)
+                        .font(.headline.weight(.bold))
                         .foregroundStyle(.white)
                         .lineLimit(2)
-
-                    Text(clip.hook)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.white.opacity(0.82))
-                        .lineLimit(3)
                 }
 
-                HStack(spacing: 10) {
-                    clipMetric("\(clip.score)", label: "Score")
-                    if let confidenceLabel = clip.compilerConfidenceValue {
-                        clipMetric(confidenceLabel, label: "Confidence")
-                    }
-                    clipMetric(clip.startTime, label: "Start")
-                    clipMetric(clip.endTime, label: "End")
-                }
+                Text(clip.startTime + " – " + clip.endTime)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.78))
             }
-            .padding(18)
+            .padding(16)
         }
-        .frame(maxWidth: .infinity)
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        .frame(width: width, height: height)
+        .overlay(alignment: .center) {
+            Image(systemName: "play.circle.fill")
+                .font(.system(size: 34))
+                .foregroundStyle(.white.opacity(0.88))
+                .shadow(color: .black.opacity(0.34), radius: 12, y: 8)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private var placeholder: some View {
+        LinearGradient(
+            colors: [OmegaPalette.accent.opacity(0.24), OmegaPalette.gold.opacity(0.14), OmegaPalette.surface],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
         )
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-    }
-
-    private var previewFallback: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "sparkles.tv.fill")
-                .font(.system(size: 44))
-                .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
-
-            Text("Asset ready for export")
-                .font(.headline)
-                .foregroundStyle(.white)
-
-            Text("Open the generated file below if the inline preview is unavailable.")
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Color.white.opacity(0.62))
-                .padding(.horizontal, 30)
-        }
-    }
-
-    private func clipMetric(_ value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased())
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(Color.white.opacity(0.52))
-
-            Text(value)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(Color.black.opacity(0.24))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
-private struct LoopingVideoPlayer: View {
+private struct OmegaVideoPlayer: View {
     let url: URL
-
-    @State private var player = AVQueuePlayer()
-    @State private var looper: AVPlayerLooper?
+    @State private var player: AVPlayer?
 
     var body: some View {
         VideoPlayer(player: player)
-            .id(url.absoluteString)
             .onAppear {
-                configurePlayerIfNeeded()
-                player.play()
+                player = AVPlayer(url: url)
             }
             .onDisappear {
-                player.pause()
-                looper?.disableLooping()
-                looper = nil
-                player.removeAllItems()
+                player?.pause()
             }
-            .allowsHitTesting(false)
     }
+}
 
-    private func configurePlayerIfNeeded() {
-        guard player.items().isEmpty else { return }
+private struct OmegaGlassCard<Content: View>: View {
+    @ViewBuilder var content: Content
 
-        player.isMuted = true
-        player.actionAtItemEnd = .none
-        let item = AVPlayerItem(url: url)
-        looper = AVPlayerLooper(player: player, templateItem: item)
+    var body: some View {
+        content
+            .padding(18)
+            .background(.ultraThinMaterial.opacity(0.18))
+            .background(OmegaPalette.card.opacity(0.78))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.12),
+                                OmegaPalette.accent.opacity(0.18),
+                                OmegaPalette.gold.opacity(0.12),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
+}
+
+private struct OmegaSectionHeader: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.white)
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundStyle(OmegaPalette.secondaryText)
+        }
+    }
+}
+
+private struct OmegaMetricPill: View {
+    let label: String
+
+    var body: some View {
+        Text(label)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.86))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(OmegaPalette.card)
+            .clipShape(Capsule())
+    }
+}
+
+private struct OmegaEmptyStateCard: View {
+    let title: String
+    let message: String
+
+    var body: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(OmegaPalette.secondaryText)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+private struct OmegaGhostButton: View {
+    let title: String
+    var systemImage: String? = nil
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                }
+                Text(title)
+            }
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(OmegaPalette.card)
+            .foregroundStyle(.white)
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct OmegaPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 18)
+            .padding(.vertical, 15)
+            .background(
+                LinearGradient(
+                    colors: [OmegaPalette.accent, OmegaPalette.accentSecondary],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .foregroundStyle(.black)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.88), value: configuration.isPressed)
+    }
+}
+
+private struct OmegaSecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(OmegaPalette.card)
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.88), value: configuration.isPressed)
+    }
+}
+
+private struct OmegaBackground: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [OmegaPalette.backgroundTop, OmegaPalette.backgroundMid, OmegaPalette.backgroundBottom],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            RadialGradient(
+                colors: [OmegaPalette.accent.opacity(0.22), .clear],
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 380
+            )
+            .ignoresSafeArea()
+
+            RadialGradient(
+                colors: [OmegaPalette.gold.opacity(0.16), .clear],
+                center: .bottomLeading,
+                startRadius: 20,
+                endRadius: 300
+            )
+            .ignoresSafeArea()
+        }
+    }
+}
+
+private enum OmegaPalette {
+    static let backgroundTop = Color(red: 0.04, green: 0.04, blue: 0.07)
+    static let backgroundMid = Color(red: 0.03, green: 0.03, blue: 0.05)
+    static let backgroundBottom = Color(red: 0.01, green: 0.01, blue: 0.02)
+    static let surface = Color(red: 0.08, green: 0.08, blue: 0.11)
+    static let card = Color.white.opacity(0.06)
+    static let input = Color.white.opacity(0.08)
+    static let accent = Color(red: 0.27, green: 0.73, blue: 0.98)
+    static let accentSecondary = Color(red: 0.42, green: 0.82, blue: 1.0)
+    static let gold = Color(red: 0.96, green: 0.80, blue: 0.42)
+    static let secondaryText = Color.white.opacity(0.72)
+    static let mutedText = Color.white.opacity(0.58)
 }
 
 private struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
     @State private var apiBaseURL = AppConfiguration.apiBaseURL
     @State private var checkoutURL = AppConfiguration.checkoutURL
     @State private var apiKey = AppConfiguration.apiKey
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Backend") {
-                    TextField("API base URL", text: $apiBaseURL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+            ZStack {
+                OmegaBackground()
 
-                    Text("Use `http://127.0.0.1:8000` for the simulator when you want to point the app at your local backend.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        OmegaGlassCard {
+                            VStack(alignment: .leading, spacing: 14) {
+                                OmegaSectionHeader(
+                                    title: "Settings",
+                                    subtitle: "Point the app at a different backend or update checkout preferences."
+                                )
 
-                Section("Optional Auth") {
-                    TextField("API key", text: $apiKey)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                                settingsField(title: "API Base URL", value: $apiBaseURL)
+                                settingsField(title: "Checkout URL", value: $checkoutURL)
+                                settingsField(title: "API Key", value: $apiKey)
 
-                    Text("If your backend requires a custom header, the app sends this value as `x-api-key`.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                                Button("Save") {
+                                    AppConfiguration.save(
+                                        apiBaseURL: apiBaseURL,
+                                        checkoutURL: checkoutURL,
+                                        apiKey: apiKey
+                                    )
+                                    dismiss()
+                                }
+                                .buttonStyle(OmegaPrimaryButtonStyle())
+                            }
+                        }
 
-                Section("Help") {
-                    Button("Open Privacy Policy") {
-                        if let url = URL(string: AppConfiguration.privacyPolicyURL) {
-                            openURL(url)
+                        OmegaGlassCard {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Support")
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+
+                                Link("Privacy Policy", destination: URL(string: AppConfiguration.privacyPolicyURL)!)
+                                    .foregroundStyle(OmegaPalette.accent)
+                                Link("Support", destination: URL(string: AppConfiguration.supportURL)!)
+                                    .foregroundStyle(OmegaPalette.accent)
+                            }
                         }
                     }
-
-                    Button("Open Support") {
-                        if let url = URL(string: AppConfiguration.supportURL) {
-                            openURL(url)
-                        }
-                    }
-                }
-
-                if !AppConfiguration.isAppStoreMode {
-                    Section("Checkout") {
-                        TextField("Checkout URL", text: $checkoutURL)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-
-                        Text("Replace the placeholder with a real Stripe Payment Link or hosted checkout page.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    .padding(20)
                 }
             }
-            .navigationTitle("Settings")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Close") {
                         dismiss()
                     }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        AppConfiguration.save(
-                            apiBaseURL: apiBaseURL,
-                            checkoutURL: checkoutURL,
-                            apiKey: apiKey
-                        )
-                        dismiss()
-                    }
+                    .foregroundStyle(.white)
                 }
             }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func settingsField(title: String, value: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(OmegaPalette.mutedText)
+            TextField(title, text: value, axis: .vertical)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(OmegaPalette.input)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .foregroundStyle(.white)
         }
     }
 }
@@ -1527,95 +1274,45 @@ private struct PaywallSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.08, green: 0.10, blue: 0.16),
-                        Color(red: 0.03, green: 0.04, blue: 0.07),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                OmegaBackground()
 
-                VStack(alignment: .leading, spacing: 20) {
-                    if AppConfiguration.isAppStoreMode {
-                        Text("IWA Usage")
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        OmegaGlassCard {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("LWA Omega Plans")
+                                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
 
-                        Text("This build stays focused on clip generation. Use Settings when you need privacy or support information.")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.white.opacity(0.72))
+                                Text("Unlock more clip volume, stronger packaging tools, and faster operator workflows without slowing the mobile experience down.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(OmegaPalette.secondaryText)
+                            }
+                        }
 
-                        pricingCard(
-                            title: "Need Help?",
-                            price: "Support",
-                            bullets: "Open Settings to reach the privacy policy and support pages."
-                        )
-                    } else {
-                        Text("Manage IWA on the web")
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-
-                        Text("Keep payments and plan changes on the web. Let the mobile app stay fast, focused, and operational.")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.white.opacity(0.72))
-
-                        pricingCard(
-                            title: "Starter",
-                            price: "Free",
-                            bullets: "3 local generations, saved history, shareable bundles"
-                        )
-
-                        pricingCard(
-                            title: "Creator",
-                            price: "$29/mo",
-                            bullets: "Unlimited clip packs, hosted API, export workflow"
-                        )
-
-                        pricingCard(
-                            title: "Studio",
-                            price: "$99/mo",
-                            bullets: "Client seats, branded exports, priority processing"
-                        )
+                        pricingCard(title: "Free", price: "Starter", bullets: "3 clips per run, local history, packaged exports")
+                        pricingCard(title: "Pro", price: "$29/mo", bullets: "20 clips, alternate hooks, premium exports, faster iteration")
+                        pricingCard(title: "Scale", price: "$99/mo", bullets: "40 clips, campaign mode, workflow leverage, queue-first execution")
 
                         Button {
                             if let url = URL(string: AppConfiguration.checkoutURL) {
                                 openURL(url)
                             }
                         } label: {
-                            Text("Open Checkout")
-                                .font(.headline.weight(.semibold))
+                            Label("Open Checkout", systemImage: "arrow.up.right.square")
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(
-                                    LinearGradient(
-                                        colors: [
-                                            Color(red: 0.34, green: 0.89, blue: 0.82),
-                                            Color(red: 0.18, green: 0.68, blue: 0.91),
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .foregroundStyle(.black)
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
-
-                        Text("Current checkout URL: \(AppConfiguration.checkoutURL)")
-                            .font(.caption)
-                            .foregroundStyle(Color.white.opacity(0.56))
+                        .buttonStyle(OmegaPrimaryButtonStyle())
                     }
-
-                    Spacer()
+                    .padding(20)
                 }
-                .padding(20)
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close") {
                         dismiss()
                     }
+                    .foregroundStyle(.white)
                 }
             }
         }
@@ -1623,31 +1320,23 @@ private struct PaywallSheet: View {
     }
 
     private func pricingCard(title: String, price: String, bullets: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.white)
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Text(price)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(OmegaPalette.accent)
+                }
 
-                Spacer()
-
-                Text(price)
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
+                Text(bullets)
+                    .font(.subheadline)
+                    .foregroundStyle(OmegaPalette.secondaryText)
             }
-
-            Text(bullets)
-                .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.72))
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -1656,15 +1345,12 @@ private extension ClipResult {
         if let editedClipURL, let url = URL(string: editedClipURL) {
             return url
         }
-
         if let clipURL, let url = URL(string: clipURL) {
             return url
         }
-
         if let rawClipURL, let url = URL(string: rawClipURL) {
             return url
         }
-
         return nil
     }
 
@@ -1731,51 +1417,23 @@ private extension ClipResult {
     }
 }
 
-private struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var currentX: CGFloat = 0
-        var currentY: CGFloat = 0
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if currentX + size.width > maxWidth, currentX > 0 {
-                currentX = 0
-                currentY += rowHeight + spacing
-                rowHeight = 0
-            }
-
-            rowHeight = max(rowHeight, size.height)
-            currentX += size.width + spacing
-        }
-
-        return CGSize(width: maxWidth.isFinite ? maxWidth : currentX, height: currentY + rowHeight)
+private func parseSeconds(_ timestamp: String) -> Double {
+    let parts = timestamp.split(separator: ":").compactMap { Double($0) }
+    switch parts.count {
+    case 2:
+        return (parts[0] * 60) + parts[1]
+    case 3:
+        return (parts[0] * 3600) + (parts[1] * 60) + parts[2]
+    default:
+        return 0
     }
+}
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var currentX = bounds.minX
-        var currentY = bounds.minY
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if currentX + size.width > bounds.maxX, currentX > bounds.minX {
-                currentX = bounds.minX
-                currentY += rowHeight + spacing
-                rowHeight = 0
-            }
-
-            subview.place(
-                at: CGPoint(x: currentX, y: currentY),
-                proposal: ProposedViewSize(width: size.width, height: size.height)
-            )
-            currentX += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-    }
+private func formatSeconds(_ seconds: Double) -> String {
+    let value = Int(seconds.rounded())
+    let minutes = value / 60
+    let remainder = value % 60
+    return String(format: "%02d:%02d", minutes, remainder)
 }
 
 #Preview {

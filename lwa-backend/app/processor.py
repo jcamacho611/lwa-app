@@ -113,7 +113,7 @@ def resolve_video_encoder(*, settings: Settings, ffmpeg_path: str) -> str:
     if requested and requested not in {"auto", "mac"}:
         return requested
 
-    if platform.system() == "Darwin" and ffmpeg_supports_encoder(ffmpeg_path, "h264_videotoolbox"):
+    if requested == "mac" and platform.system() == "Darwin" and ffmpeg_supports_encoder(ffmpeg_path, "h264_videotoolbox"):
         return "h264_videotoolbox"
 
     return "libx264"
@@ -142,9 +142,9 @@ def build_video_encoder_args(*, encoder_name: str, target: str) -> List[str]:
         "-c:v",
         "libx264",
         "-preset",
-        "veryfast",
+        "medium" if target == "clip" else "slow",
         "-crf",
-        "23" if target == "clip" else "22",
+        "22" if target == "clip" else "21",
         "-pix_fmt",
         "yuv420p",
     ]
@@ -156,6 +156,8 @@ def process_video_source(
     request_id: str,
     video_url: str,
     public_base_url: str,
+    source_path: str | None = None,
+    max_candidates: int = 20,
 ) -> SourceContext:
     ffmpeg_path = resolve_ffmpeg_path(settings)
     if not ffmpeg_path:
@@ -174,13 +176,23 @@ def process_video_source(
 
     with tempfile.TemporaryDirectory(prefix=f"{request_id}_", dir=settings.yt_dlp_temp_dir) as temp_dir:
         work_dir = Path(temp_dir)
-        info = download_source(
-            video_url=video_url,
-            work_dir=work_dir,
-            ffmpeg_path=ffmpeg_path,
-            request_id=request_id,
-        )
-        source_file = locate_source_file(work_dir)
+        if source_path:
+            source_file = stage_local_source(source_path=Path(source_path), work_dir=work_dir)
+            info = {
+                "title": source_file.stem,
+                "description": "",
+                "uploader": None,
+                "duration": None,
+                "webpage_url": video_url,
+            }
+        else:
+            info = download_source(
+                video_url=video_url,
+                work_dir=work_dir,
+                ffmpeg_path=ffmpeg_path,
+                request_id=request_id,
+            )
+            source_file = locate_source_file(work_dir)
         transcript_windows = load_transcript_windows(work_dir)
 
         duration_seconds = parse_duration_seconds(info.get("duration"))
@@ -196,6 +208,7 @@ def process_video_source(
             duration_seconds=duration_seconds,
             chapters=info.get("chapters") or [],
             transcript_windows=transcript_windows,
+            max_candidates=max_candidates,
         )
         logger.info(
             "segment_plan_ready request_id=%s strategy=%s segments=%s transcript_windows=%s duration_seconds=%s",
@@ -213,6 +226,7 @@ def process_video_source(
             public_base_url=public_base_url,
             ffmpeg_path=ffmpeg_path,
             settings=settings,
+            max_candidates=max_candidates,
         )
         if not clip_seeds:
             raise RuntimeError("real pipeline produced zero clip assets")
@@ -291,62 +305,80 @@ def locate_source_file(work_dir: Path) -> Path:
     return max(candidates, key=lambda path: path.stat().st_size)
 
 
+def stage_local_source(*, source_path: Path, work_dir: Path) -> Path:
+    if not source_path.exists():
+        raise FileNotFoundError(f"uploaded source not found: {source_path}")
+    target = work_dir / source_path.name
+    shutil.copy2(source_path, target)
+    return target
+
+
 def build_segment_plan(
     *,
     duration_seconds: Optional[int],
     chapters: List[dict[str, Any]],
     transcript_windows: List[TranscriptWindow],
+    max_candidates: int,
 ) -> tuple[List[dict[str, Any]], str]:
     clip_length = choose_clip_length(duration_seconds)
-    transcript_segments = build_transcript_segments(transcript_windows, clip_length)
+    transcript_segments = build_transcript_segments(transcript_windows, clip_length, max_candidates=max_candidates)
     if transcript_segments:
-        return transcript_segments[:3], "transcript"
+        return transcript_segments[:max_candidates], "transcript"
 
-    segments = build_chapter_segments(chapters=chapters, clip_length=clip_length)
+    segments = build_chapter_segments(chapters=chapters, clip_length=clip_length, max_candidates=max_candidates)
     if segments:
-        return segments[:3], "chapters"
+        return segments[:max_candidates], "chapters"
 
     if duration_seconds is None or duration_seconds <= 0:
-        return [
-            {"start": 0.0, "duration": float(clip_length)},
-            {"start": 15.0, "duration": float(clip_length)},
-            {"start": 30.0, "duration": float(clip_length)},
-        ], "timeline"
+        planned = []
+        for index in range(max_candidates):
+            planned.append({"start": float(index * max(clip_length // 2, 5)), "duration": float(clip_length)})
+        return planned, "timeline"
 
     latest_start = max(float(duration_seconds - clip_length), 0.0)
     if latest_start == 0:
         return [{"start": 0.0, "duration": float(clip_length)}], "timeline"
 
-    fractions = [0.12, 0.42, 0.72]
+    fractions = [
+        max(0.0, min(0.98, index / max(max_candidates, 1)))
+        for index in range(1, max_candidates + 1)
+    ]
     planned = []
     for fraction in fractions:
         start = min(latest_start, max(0.0, duration_seconds * fraction))
         planned.append({"start": round(start, 2), "duration": float(clip_length)})
 
-    return dedupe_segments(planned)[:3], "timeline"
+    return dedupe_segments(planned)[:max_candidates], "timeline"
 
 
-def build_chapter_segments(chapters: List[dict[str, Any]], clip_length: int) -> List[dict[str, float]]:
+def build_chapter_segments(chapters: List[dict[str, Any]], clip_length: int, *, max_candidates: int) -> List[dict[str, float]]:
     planned = []
-    for chapter in chapters[:6]:
+    for chapter in chapters[: max(max_candidates, 6)]:
         start = float(chapter.get("start_time") or 0.0)
         end = float(chapter.get("end_time") or 0.0)
         duration = float(min(clip_length, max(end - start, clip_length)))
         planned.append({"start": round(start, 2), "duration": duration})
+        if len(planned) >= max_candidates:
+            break
 
-    return dedupe_segments(planned)
+    return dedupe_segments(planned)[:max_candidates]
 
 
-def build_transcript_segments(transcript_windows: List[TranscriptWindow], clip_length: int) -> List[dict[str, Any]]:
+def build_transcript_segments(
+    transcript_windows: List[TranscriptWindow],
+    clip_length: int,
+    *,
+    max_candidates: int,
+) -> List[dict[str, Any]]:
     if not transcript_windows:
         return []
 
     selected: List[TranscriptWindow] = []
     for window in sorted(transcript_windows, key=lambda current: current.score, reverse=True):
-        if any(abs(window.start_seconds - existing.start_seconds) < 8 for existing in selected):
+        if any(abs(window.start_seconds - existing.start_seconds) < 6 for existing in selected):
             continue
         selected.append(window)
-        if len(selected) == 3:
+        if len(selected) == max_candidates:
             break
 
     planned = []
@@ -397,9 +429,10 @@ def create_clips(
     public_base_url: str,
     ffmpeg_path: str,
     settings: Settings,
+    max_candidates: int,
 ) -> List[ClipSeed]:
     seeds: List[ClipSeed] = []
-    for index, segment in enumerate(segments[:3], start=1):
+    for index, segment in enumerate(segments[:max_candidates], start=1):
         output_name = f"clip_{index:03d}_raw.mp4"
         output_path = generated_dir / output_name
         try:

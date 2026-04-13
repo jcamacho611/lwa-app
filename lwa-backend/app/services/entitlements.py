@@ -10,6 +10,7 @@ from fastapi import HTTPException, Request
 
 from ..core.config import Settings
 from ..models.schemas import FeatureFlags
+from ..models.user import UserRecord
 
 
 def usage_day_key() -> str:
@@ -35,6 +36,7 @@ class EntitlementContext:
     usage_day: str
     plan: PlanDefinition
     credits_remaining: int
+    user_id: str | None = None
 
 
 class UsageStore:
@@ -115,6 +117,7 @@ def resolve_entitlement(
     request: Request,
     settings: Settings,
     usage_store: UsageStore,
+    current_user: UserRecord | None = None,
 ) -> EntitlementContext:
     api_key = normalize_header_value(request.headers.get(settings.api_key_header_name))
     client_id = normalize_header_value(request.headers.get(settings.client_id_header_name))
@@ -127,6 +130,10 @@ def resolve_entitlement(
         plan = build_pro_plan(settings)
         subject = f"pro:{api_key}"
         subject_source = "pro_api_key"
+    elif current_user:
+        plan = build_plan_from_user(settings, current_user.plan)
+        subject = f"user:{current_user.id}"
+        subject_source = "user"
     else:
         plan = build_free_plan(settings)
         if client_id:
@@ -147,6 +154,7 @@ def resolve_entitlement(
         usage_day=usage_day,
         plan=plan,
         credits_remaining=credits_remaining,
+        user_id=current_user.id if current_user else None,
     )
 
 
@@ -161,6 +169,12 @@ def build_free_plan(settings: Settings) -> PlanDefinition:
             campaign_mode=False,
             packaging_profiles=False,
             history_limit=10,
+            caption_editor=False,
+            timeline_editor=False,
+            wallet_view=False,
+            posting_queue=False,
+            max_uploads_per_day=2,
+            max_generations_per_day=settings.free_daily_limit,
             premium_exports=False,
             priority_processing=False,
         ),
@@ -173,11 +187,17 @@ def build_pro_plan(settings: Settings) -> PlanDefinition:
         name="Pro",
         daily_limit=settings.pro_daily_limit,
         feature_flags=FeatureFlags(
-            clip_limit=3,
+            clip_limit=20,
             alt_hooks=True,
             campaign_mode=False,
             packaging_profiles=True,
             history_limit=25,
+            caption_editor=True,
+            timeline_editor=True,
+            wallet_view=True,
+            posting_queue=False,
+            max_uploads_per_day=25,
+            max_generations_per_day=settings.pro_daily_limit,
             premium_exports=True,
             priority_processing=True,
         ),
@@ -190,12 +210,27 @@ def build_scale_plan(settings: Settings) -> PlanDefinition:
         name="Scale",
         daily_limit=settings.scale_daily_limit,
         feature_flags=FeatureFlags(
-            clip_limit=3,
+            clip_limit=40,
             alt_hooks=True,
             campaign_mode=True,
             packaging_profiles=True,
             history_limit=100,
+            caption_editor=True,
+            timeline_editor=True,
+            wallet_view=True,
+            posting_queue=True,
+            max_uploads_per_day=100,
+            max_generations_per_day=settings.scale_daily_limit,
             premium_exports=True,
             priority_processing=True,
         ),
     )
+
+
+def build_plan_from_user(settings: Settings, plan_code: str) -> PlanDefinition:
+    normalized = (plan_code or "free").strip().lower()
+    if normalized == "scale":
+        return build_scale_plan(settings)
+    if normalized == "pro":
+        return build_pro_plan(settings)
+    return build_free_plan(settings)

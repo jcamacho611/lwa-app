@@ -61,6 +61,7 @@ enum AppConfiguration {
     static let checkoutURLKey = "lwa.checkout_url"
     static let apiKeyKey = "lwa.api_key"
     static let clientIDKey = "lwa.client_id"
+    static let authTokenKey = "lwa.auth_token"
     static let appStoreModeKey = "LWAAppStoreMode"
 
     static var defaultAPIBaseURL: String {
@@ -131,14 +132,26 @@ enum AppConfiguration {
         return override?.isEmpty == false ? override! : defaultAPIKey
     }
 
-    static func save(apiBaseURL: String, checkoutURL: String, apiKey: String) {
+    static var authToken: String {
+        UserDefaults.standard.string(forKey: authTokenKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    static func save(apiBaseURL: String, checkoutURL: String, apiKey: String, authToken: String? = nil) {
         UserDefaults.standard.set(apiBaseURL.trimmingCharacters(in: .whitespacesAndNewlines), forKey: apiBaseURLKey)
         UserDefaults.standard.set(checkoutURL.trimmingCharacters(in: .whitespacesAndNewlines), forKey: checkoutURLKey)
         UserDefaults.standard.set(apiKey.trimmingCharacters(in: .whitespacesAndNewlines), forKey: apiKeyKey)
+        if let authToken {
+            UserDefaults.standard.set(authToken.trimmingCharacters(in: .whitespacesAndNewlines), forKey: authTokenKey)
+        }
     }
 }
 
 struct APIClient {
+    private var uploadEndpoint: URL {
+        APIConfig.baseURL.appendingPathComponent("v1/uploads")
+    }
+
     private var jobsEndpoint: URL {
         APIConfig.baseURL.appendingPathComponent("v1/jobs")
     }
@@ -156,18 +169,25 @@ struct APIClient {
         if !apiKey.isEmpty {
             request.setValue(apiKey, forHTTPHeaderField: AppConfiguration.apiKeyHeaderName)
         }
+        let authToken = AppConfiguration.authToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !authToken.isEmpty {
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
         request.setValue(AppConfiguration.clientID, forHTTPHeaderField: AppConfiguration.clientIDHeaderName)
     }
 
     func process(
         videoURL: String,
+        uploadFileID: String? = nil,
         selectedTrend: TrendItem?,
         targetPlatform: String
     ) async throws -> ClipResponse {
-        guard let candidateURL = URL(string: videoURL),
-              let scheme = candidateURL.scheme?.lowercased(),
-              scheme == "http" || scheme == "https" else {
-            throw APIError.invalidVideoURL
+        if uploadFileID == nil {
+            guard let candidateURL = URL(string: videoURL),
+                  let scheme = candidateURL.scheme?.lowercased(),
+                  scheme == "http" || scheme == "https" else {
+                throw APIError.invalidVideoURL
+            }
         }
 
         guard let endpoint = processEndpoint else {
@@ -182,6 +202,7 @@ struct APIClient {
         request.httpBody = try JSONEncoder().encode(
             ProcessRequest(
                 videoURL: videoURL,
+                uploadFileID: uploadFileID,
                 selectedTrend: selectedTrend?.title,
                 trendSource: selectedTrend?.source,
                 targetPlatform: targetPlatform,
@@ -206,13 +227,16 @@ struct APIClient {
 
     func createJob(
         videoURL: String,
+        uploadFileID: String? = nil,
         selectedTrend: TrendItem?,
         targetPlatform: String
     ) async throws -> JobCreatedResponse {
-        guard let candidateURL = URL(string: videoURL),
-              let scheme = candidateURL.scheme?.lowercased(),
-              scheme == "http" || scheme == "https" else {
-            throw APIError.invalidVideoURL
+        if uploadFileID == nil {
+            guard let candidateURL = URL(string: videoURL),
+                  let scheme = candidateURL.scheme?.lowercased(),
+                  scheme == "http" || scheme == "https" else {
+                throw APIError.invalidVideoURL
+            }
         }
 
         var request = URLRequest(url: jobsEndpoint)
@@ -223,6 +247,7 @@ struct APIClient {
         request.httpBody = try JSONEncoder().encode(
             ProcessRequest(
                 videoURL: videoURL,
+                uploadFileID: uploadFileID,
                 selectedTrend: selectedTrend?.title,
                 trendSource: selectedTrend?.source,
                 targetPlatform: targetPlatform,
@@ -282,10 +307,63 @@ struct APIClient {
 
         return try JSONDecoder().decode(TrendsResponse.self, from: data).trends
     }
+
+    func uploadVideo(fileURL: URL) async throws -> UploadedSource {
+        let fileData = try Data(contentsOf: fileURL)
+        let boundary = "Boundary-\(UUID().uuidString)"
+        let filename = fileURL.lastPathComponent
+        let mimeType = mimeType(for: fileURL.pathExtension)
+
+        var request = URLRequest(url: uploadEndpoint)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 120
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        applySharedHeaders(to: &request)
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append(
+            "Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!
+        )
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        let (data, response) = try await URLSession.shared.upload(for: request, from: body)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard (200 ... 299).contains(httpResponse.statusCode) else {
+            let fallback = "Upload failed with status \(httpResponse.statusCode)"
+            let message = String(data: data, encoding: .utf8) ?? fallback
+            throw APIError.server(message)
+        }
+
+        return try JSONDecoder().decode(UploadedSource.self, from: data)
+    }
+}
+
+private func mimeType(for fileExtension: String) -> String {
+    switch fileExtension.lowercased() {
+    case "mp4":
+        return "video/mp4"
+    case "mov":
+        return "video/quicktime"
+    case "m4v":
+        return "video/x-m4v"
+    case "webm":
+        return "video/webm"
+    default:
+        return "application/octet-stream"
+    }
 }
 
 private struct ProcessRequest: Encodable {
     let videoURL: String
+    let uploadFileID: String?
     let selectedTrend: String?
     let trendSource: String?
     let targetPlatform: String
@@ -293,6 +371,7 @@ private struct ProcessRequest: Encodable {
 
     enum CodingKeys: String, CodingKey {
         case videoURL = "video_url"
+        case uploadFileID = "upload_file_id"
         case selectedTrend = "selected_trend"
         case trendSource = "trend_source"
         case targetPlatform = "target_platform"

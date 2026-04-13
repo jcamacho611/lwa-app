@@ -48,7 +48,7 @@ class Settings:
             if value.strip()
         }
         self.ffmpeg_path = os.getenv("FFMPEG_PATH", _default_ffmpeg_path())
-        self.video_encoder = os.getenv("LWA_VIDEO_ENCODER", "auto").strip().lower() or "auto"
+        self.video_encoder = os.getenv("LWA_VIDEO_ENCODER", "libx264").strip().lower() or "libx264"
         self.yt_dlp_temp_dir = os.getenv("YT_DLP_TEMP_DIR", "/tmp")
         railway_volume_mount_path = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
         default_generated_dir = (
@@ -57,13 +57,27 @@ class Settings:
             else os.path.join(os.getcwd(), "generated")
         )
         self.generated_assets_dir = os.getenv("LWA_GENERATED_ASSETS_DIR", default_generated_dir)
+        default_uploads_dir = (
+            os.path.join(railway_volume_mount_path, "lwa-uploads")
+            if railway_volume_mount_path
+            else os.path.join(os.getcwd(), "uploads")
+        )
+        self.uploads_dir = os.getenv("LWA_UPLOADS_DIR", default_uploads_dir)
         default_usage_store = (
             os.path.join(railway_volume_mount_path, "lwa-usage.json")
             if railway_volume_mount_path
             else os.path.join(os.getcwd(), "generated", "lwa-usage.json")
         )
         self.usage_store_path = os.getenv("LWA_USAGE_STORE_PATH", default_usage_store)
+        default_platform_db = (
+            os.path.join(railway_volume_mount_path, "lwa-platform.sqlite3")
+            if railway_volume_mount_path
+            else os.path.join(os.getcwd(), "generated", "lwa-platform.sqlite3")
+        )
+        self.platform_db_path = os.getenv("LWA_PLATFORM_DB_PATH", default_platform_db)
         self.max_upload_mb = int(os.getenv("MAX_UPLOAD_MB", "500"))
+        self.jwt_secret = os.getenv("LWA_JWT_SECRET", "dev-secret-change-me")
+        self.jwt_exp_minutes = int(os.getenv("LWA_JWT_EXP_MINUTES", "43200"))
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
         self.ai_provider = os.getenv("LWA_AI_PROVIDER", "auto")

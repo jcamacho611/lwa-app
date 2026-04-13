@@ -3,8 +3,14 @@ __pycache__/
 .pytest_cache/
 .venv/
 .env
+.env.local
+.env.*.local
+/package-lock.json
+node_modules/
+.next/
 generated/
 lwa-backend/generated/
+lwa-backend/uploads/
 lwa-backend/downloads/
 
 DerivedData/
