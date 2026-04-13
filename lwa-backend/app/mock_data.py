@@ -33,6 +33,12 @@ def build_mock_clips(
             start_time=start_end_pairs[0][0],
             end_time=start_end_pairs[0][1],
             score=92,
+            confidence=0.94,
+            rank=1,
+            reason=(
+                f"This is the strongest first impression because it reaches the payoff fast and makes the {lead_trend} angle "
+                f"clear without extra setup."
+            ),
             format="Hook First",
             clip_url=clip_urls[0],
             raw_clip_url=clip_urls[0],
@@ -47,11 +53,15 @@ def build_mock_clips(
             thumbnail_text="Use This Angle",
             cta_suggestion=f"Ask viewers if they would test this {lead_trend} angle themselves.",
             post_rank=1,
+            best_post_order=1,
             hook_variants=[
                 f"The fastest way to use {lead_trend} before it gets crowded.",
                 f"Most creators are still underusing this {lead_trend} move.",
+                f"Use this {lead_trend} hook before your competitors catch up.",
             ],
             caption_style=caption_style_for(platform_label),
+            platform_fit=platform_fit_for(platform_label, "Hook First"),
+            packaging_angle="educational",
         ),
         ClipResult(
             id="clip_002",
@@ -64,6 +74,9 @@ def build_mock_clips(
             start_time=start_end_pairs[1][0],
             end_time=start_end_pairs[1][1],
             score=88,
+            confidence=0.89,
+            rank=2,
+            reason="This clip creates tension and debate, which makes it strong as the second post in the pack.",
             format="Opinion",
             clip_url=clip_urls[1],
             raw_clip_url=clip_urls[1],
@@ -75,11 +88,15 @@ def build_mock_clips(
             thumbnail_text="Everyone Gets This Wrong",
             cta_suggestion="Invite comments by asking whether the audience agrees or disagrees.",
             post_rank=2,
+            best_post_order=2,
             hook_variants=[
                 "Why the obvious version of this clip will underperform.",
                 "The contrarian edit that makes this point hit harder.",
+                "Everyone is clipping this wrong and missing the real point.",
             ],
             caption_style=caption_style_for(platform_label),
+            platform_fit=platform_fit_for(platform_label, "Opinion"),
+            packaging_angle="contrarian",
         ),
         ClipResult(
             id="clip_003",
@@ -92,6 +109,9 @@ def build_mock_clips(
             start_time=start_end_pairs[2][0],
             end_time=start_end_pairs[2][1],
             score=85,
+            confidence=0.84,
+            rank=3,
+            reason="This clip works best after the stronger openers because it converts attention into a concrete next step.",
             format="Story CTA",
             clip_url=clip_urls[2],
             raw_clip_url=clip_urls[2],
@@ -103,11 +123,15 @@ def build_mock_clips(
             thumbnail_text="This Is The Pivot",
             cta_suggestion=f"Close by telling {platform_label} viewers what to save, follow, or test next.",
             post_rank=3,
+            best_post_order=3,
             hook_variants=[
                 "The exact moment this angle starts converting.",
                 "If you only post one follow-up, make it this one.",
+                f"The {platform_label} follow-up that turns attention into action.",
             ],
             caption_style=caption_style_for(platform_label),
+            platform_fit=platform_fit_for(platform_label, "Story CTA"),
+            packaging_angle="storytelling",
         ),
     ]
 
@@ -139,3 +163,16 @@ def caption_style_for(platform_label: str) -> str:
     if normalized == "facebook":
         return "Story-first social"
     return "Short-form native"
+
+
+def platform_fit_for(platform_label: str, clip_format: str) -> str:
+    normalized = platform_label.lower()
+    if normalized == "tiktok":
+        return "Fast hook and proof-first pacing for TikTok."
+    if normalized == "instagram":
+        return "Polished, emotional framing that suits Reels."
+    if normalized == "youtube":
+        return f"Context-light setup with clear payoff for Shorts via {clip_format.lower()} packaging."
+    if normalized == "facebook":
+        return "Comment-friendly social framing with broader audience clarity."
+    return f"Short-form native packaging for {platform_label}."

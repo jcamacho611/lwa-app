@@ -8,6 +8,10 @@ from ..models.schemas import ClipResult, TrendItem
 from ..processor import SourceContext
 
 
+def resolve_attention_mode(settings: Settings) -> str:
+    return "openai" if settings.openai_api_key else "fallback"
+
+
 async def generate_clip_copy(
     *,
     settings: Settings,
@@ -25,4 +29,3 @@ async def generate_clip_copy(
         trend_context=trend_context,
         source_context=source_context,
     )
-

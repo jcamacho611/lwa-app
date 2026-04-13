@@ -12,6 +12,7 @@ from ..core.config import Settings
 from ..job_store import JobStore
 from ..models.schemas import ClipBatchResponse, ProcessRequest, ProcessingSummary, TrendItem, TrendsResponse
 from ..services.ai_service import generate_clip_copy
+from ..services.attention_compiler import compile_attention
 from ..services.entitlements import EntitlementContext, UsageStore
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
 from ..trends import fetch_public_trends, trends_timestamp
@@ -147,6 +148,14 @@ async def build_clip_response(
         trend_context=trend_context,
         source_context=source_context,
     )
+    await emit_progress(progress_callback, "Compiling attention signals, ranking clips, and generating angles.")
+    clips, compiler_mode = await compile_attention(
+        settings=settings,
+        clips=clips,
+        target_platform=target_platform,
+        selected_trend=request.selected_trend,
+        source_context=source_context,
+    )
     clips = apply_plan_feature_flags(
         clips=clips,
         entitlement=entitlement,
@@ -199,7 +208,7 @@ async def build_clip_response(
                 if assets_created
                 else "No valid clips were produced. Try a different source video or a longer recording."
             ),
-            ai_provider=provider_used,
+            ai_provider=compiler_mode or provider_used,
             target_platform=target_platform,
             trend_used=request.selected_trend,
             sources_considered=sorted({item.source for item in trend_context}),
@@ -221,17 +230,7 @@ def apply_plan_feature_flags(
     clips: list,
     entitlement: EntitlementContext,
 ) -> list:
-    if entitlement.plan.feature_flags.alt_hooks:
-        return clips
-
-    return [
-        clip.model_copy(
-            update={
-                "hook_variants": [],
-            }
-        )
-        for clip in clips
-    ]
+    return clips
 
 
 async def emit_progress(

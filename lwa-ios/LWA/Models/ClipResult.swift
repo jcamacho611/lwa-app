@@ -176,6 +176,9 @@ struct ClipResult: Codable, Identifiable {
     let startTime: String
     let endTime: String
     let score: Int
+    let confidence: Double?
+    let rank: Int?
+    let reason: String?
     let format: String
     let clipURL: String?
     let rawClipURL: String?
@@ -189,8 +192,11 @@ struct ClipResult: Codable, Identifiable {
     let thumbnailText: String?
     let ctaSuggestion: String?
     let postRank: Int?
+    let bestPostOrder: Int?
     let hookVariants: [String]
     let captionStyle: String?
+    let platformFit: String?
+    let packagingAngle: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -200,6 +206,9 @@ struct ClipResult: Codable, Identifiable {
         case startTime = "start_time"
         case endTime = "end_time"
         case score
+        case confidence
+        case rank
+        case reason
         case format
         case clipURL = "clip_url"
         case rawClipURL = "raw_clip_url"
@@ -213,8 +222,11 @@ struct ClipResult: Codable, Identifiable {
         case thumbnailText = "thumbnail_text"
         case ctaSuggestion = "cta_suggestion"
         case postRank = "post_rank"
+        case bestPostOrder = "best_post_order"
         case hookVariants = "hook_variants"
         case captionStyle = "caption_style"
+        case platformFit = "platform_fit"
+        case packagingAngle = "packaging_angle"
     }
 
     init(from decoder: Decoder) throws {
@@ -226,6 +238,9 @@ struct ClipResult: Codable, Identifiable {
         startTime = try container.decode(String.self, forKey: .startTime)
         endTime = try container.decode(String.self, forKey: .endTime)
         score = try container.decode(Int.self, forKey: .score)
+        confidence = try container.decodeIfPresent(Double.self, forKey: .confidence)
+        rank = try container.decodeIfPresent(Int.self, forKey: .rank)
+        reason = try container.decodeIfPresent(String.self, forKey: .reason)
         format = try container.decode(String.self, forKey: .format)
         clipURL = try container.decodeIfPresent(String.self, forKey: .clipURL)
         rawClipURL = try container.decodeIfPresent(String.self, forKey: .rawClipURL)
@@ -239,8 +254,11 @@ struct ClipResult: Codable, Identifiable {
         thumbnailText = try container.decodeIfPresent(String.self, forKey: .thumbnailText)
         ctaSuggestion = try container.decodeIfPresent(String.self, forKey: .ctaSuggestion)
         postRank = try container.decodeIfPresent(Int.self, forKey: .postRank)
+        bestPostOrder = try container.decodeIfPresent(Int.self, forKey: .bestPostOrder)
         hookVariants = try container.decodeIfPresent([String].self, forKey: .hookVariants) ?? []
         captionStyle = try container.decodeIfPresent(String.self, forKey: .captionStyle)
+        platformFit = try container.decodeIfPresent(String.self, forKey: .platformFit)
+        packagingAngle = try container.decodeIfPresent(String.self, forKey: .packagingAngle)
     }
 }
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import List, Optional
 
@@ -12,15 +13,17 @@ from .mock_data import build_mock_clips
 from .processor import ClipSeed, SourceContext
 from .schemas import ClipResult, TrendItem
 
+logger = logging.getLogger("uvicorn.error")
+
 
 def determine_provider(settings: Settings) -> str:
     provider = settings.ai_provider.lower()
 
     if provider == "auto":
-        if settings.ollama_base_url:
-            return "ollama"
         if settings.openai_api_key:
             return "openai"
+        if settings.ollama_base_url:
+            return "ollama"
         return "heuristic"
 
     return provider
@@ -39,7 +42,7 @@ async def generate_clips(
 
     if provider == "openai" and settings.openai_api_key:
         try:
-            return await generate_with_openai(
+            clips, used_provider = await generate_with_openai(
                 settings=settings,
                 video_url=video_url,
                 target_platform=target_platform,
@@ -47,12 +50,14 @@ async def generate_clips(
                 trend_context=trend_context,
                 source_context=source_context,
             )
-        except Exception:
-            pass
+            logger.info("clip_intelligence_mode mode=%s clips_scored=%s", used_provider, len(clips))
+            return clips, used_provider
+        except Exception as error:
+            logger.warning("clip_intelligence_fallback mode=openai reason=%s", error)
 
     if provider == "ollama":
         try:
-            return await generate_with_ollama(
+            clips, used_provider = await generate_with_ollama(
                 settings=settings,
                 video_url=video_url,
                 target_platform=target_platform,
@@ -60,22 +65,24 @@ async def generate_clips(
                 trend_context=trend_context,
                 source_context=source_context,
             )
-        except Exception:
-            pass
+            logger.info("clip_intelligence_mode mode=%s clips_scored=%s", used_provider, len(clips))
+            return clips, used_provider
+        except Exception as error:
+            logger.warning("clip_intelligence_fallback mode=ollama reason=%s", error)
 
-    return (
-        build_mock_clips(
-            video_url=video_url,
-            target_platform=target_platform,
-            selected_trend=selected_trend,
-            trend_context=trend_context,
-            clip_urls=[seed.clip_url for seed in source_context.clip_seeds] if source_context else None,
-            start_end_pairs=[(seed.start_time, seed.end_time) for seed in source_context.clip_seeds] if source_context else None,
-            source_title=source_context.title if source_context else None,
-            transcript_excerpts=[seed.transcript_excerpt for seed in source_context.clip_seeds] if source_context else None,
-        ),
-        "heuristic",
+    clips = build_mock_clips(
+        video_url=video_url,
+        target_platform=target_platform,
+        selected_trend=selected_trend,
+        trend_context=trend_context,
+        clip_urls=[seed.clip_url for seed in source_context.clip_seeds] if source_context else None,
+        start_end_pairs=[(seed.start_time, seed.end_time) for seed in source_context.clip_seeds] if source_context else None,
+        source_title=source_context.title if source_context else None,
+        transcript_excerpts=[seed.transcript_excerpt for seed in source_context.clip_seeds] if source_context else None,
     )
+    logger.info("clip_intelligence_mode mode=fallback clips_scored=%s", len(clips))
+    logger.info("clip_ranking_complete mode=fallback ranked=%s", len(clips))
+    return clips, "fallback"
 
 
 async def generate_with_ollama(
@@ -150,10 +157,12 @@ def parse_generated_clips(
     try:
         payload = json.loads(raw)
         clips = payload.get("clips", [])
-    except Exception:
+    except Exception as error:
+        logger.warning("clip_intelligence_fallback mode=model_response reason=%s", error)
         clips = []
 
     if not clips:
+        logger.warning("clip_intelligence_fallback mode=model_response reason=empty_clip_payload")
         return build_mock_clips(
             video_url=video_url,
             target_platform=target_platform,
@@ -172,7 +181,28 @@ def parse_generated_clips(
         title = str(clip.get("title", f"{target_platform} Clip {index}"))
         caption = str(clip.get("caption", "Use a short value-focused caption."))
         score = clamp_score(clip.get("score"), fallback=max(70, 95 - (index * 4)))
-        post_rank = parse_int(clip.get("post_rank"), fallback=index)
+        confidence = clamp_confidence(
+            clip.get("confidence"),
+            fallback=max(min(score / 100.0, 0.99), 0.55),
+        )
+        packaging_angle = parse_packaging_angle(
+            clip.get("packaging_angle"),
+            title=title,
+            hook=hook,
+            transcript_excerpt=seed.transcript_excerpt if seed else clip.get("transcript_excerpt"),
+        )
+        platform_fit = str_or_fallback(
+            clip.get("platform_fit"),
+            default_platform_fit(target_platform=target_platform, packaging_angle=packaging_angle),
+        )
+        reason = str_or_fallback(
+            clip.get("reason"),
+            default_reason(
+                title=title,
+                target_platform=target_platform,
+                packaging_angle=packaging_angle,
+            ),
+        )
         normalized.append(
             ClipResult(
                 id=seed.id if seed else f"clip_{index:03d}",
@@ -182,6 +212,8 @@ def parse_generated_clips(
                 start_time=seed.start_time if seed else str(clip.get("start_time", "00:00")),
                 end_time=seed.end_time if seed else str(clip.get("end_time", "00:15")),
                 score=score,
+                confidence=confidence,
+                reason=reason,
                 format=str(clip.get("format", seed.format if seed else "Trend First")),
                 clip_url=seed.clip_url if seed else clip.get("clip_url"),
                 raw_clip_url=seed.raw_clip_url if seed else clip.get("raw_clip_url"),
@@ -191,15 +223,11 @@ def parse_generated_clips(
                 aspect_ratio=clip.get("aspect_ratio"),
                 why_this_matters=str_or_fallback(
                     clip.get("why_this_matters"),
-                    default_why_this_matters(
-                        title=title,
-                        target_platform=target_platform,
-                        post_rank=post_rank,
-                    ),
+                    reason,
                 ),
                 confidence_score=clamp_score(
                     clip.get("confidence_score"),
-                    fallback=max(score - 4, 65),
+                    fallback=max(int(round(confidence * 100)), 55),
                 ),
                 thumbnail_text=str_or_fallback(
                     clip.get("thumbnail_text"),
@@ -207,27 +235,50 @@ def parse_generated_clips(
                 ),
                 cta_suggestion=str_or_fallback(
                     clip.get("cta_suggestion"),
-                    default_cta_suggestion(target_platform=target_platform, post_rank=post_rank),
+                    default_cta_suggestion(target_platform=target_platform, post_rank=index),
                 ),
-                post_rank=post_rank,
                 hook_variants=parse_hook_variants(
                     clip.get("hook_variants"),
                     hook=hook,
                     title=title,
                     selected_trend=selected_trend,
                     target_platform=target_platform,
+                    packaging_angle=packaging_angle,
                 ),
                 caption_style=str_or_fallback(
                     clip.get("caption_style"),
                     default_caption_style(target_platform),
                 ),
+                platform_fit=platform_fit,
+                packaging_angle=packaging_angle,
             )
         )
 
-    return sorted(
+    ranked = sorted(
         normalized,
-        key=lambda current: (current.post_rank or 99, -(current.score or 0)),
+        key=lambda current: (-(current.score or 0), -(current.confidence or 0.0), current.start_time),
     )
+    finalized: list[ClipResult] = []
+    for rank, clip in enumerate(ranked, start=1):
+        finalized.append(
+            clip.model_copy(
+                update={
+                    "rank": rank,
+                    "post_rank": rank,
+                    "best_post_order": rank,
+                    "cta_suggestion": clip.cta_suggestion or default_cta_suggestion(target_platform=target_platform, post_rank=rank),
+                    "why_this_matters": clip.why_this_matters or default_why_this_matters(
+                        title=clip.title,
+                        target_platform=target_platform,
+                        post_rank=rank,
+                    ),
+                }
+            )
+        )
+
+    logger.info("clip_scoring_complete mode=ai clips_scored=%s", len(finalized))
+    logger.info("clip_ranking_complete ranked=%s", len(finalized))
+    return finalized
 
 
 def build_generation_prompt(
@@ -262,27 +313,28 @@ Return valid JSON in this shape:
     {{
       "title": "...",
       "hook": "...",
-      "hook_variants": ["...", "..."],
+      "hook_variants": ["...", "...", "..."],
       "caption": "...",
       "caption_style": "...",
-      "why_this_matters": "...",
+      "reason": "...",
       "thumbnail_text": "...",
       "cta_suggestion": "...",
       "score": 90,
-      "confidence_score": 86,
-      "post_rank": 1,
+      "confidence": 0.86,
+      "platform_fit": "...",
+      "packaging_angle": "educational",
       "format": "Hook First"
     }}
   ]
 }}
 
 Rules:
-- Rank the clips in posting order using post_rank 1, 2, and 3.
-- Clip 1 should be the best first post: lowest context needed, strongest scroll stop.
-- Each why_this_matters must explain why the clip earns attention or helps the posting sequence.
+- Evaluate each clip using the transcript excerpt, timing, and target platform.
+- reason must explain in one short sentence why the clip will work.
 - thumbnail_text must be 2 to 5 words and punchy.
-- cta_suggestion must fit the target platform and the clip's position in the sequence.
-- hook_variants must contain exactly 2 alternate hook options.
+- hook_variants must contain exactly 3 alternate hook options.
+- packaging_angle must be one of: shock, storytelling, educational, contrarian, emotional.
+- confidence must be a float between 0.0 and 1.0.
 """.strip()
 
 
@@ -328,16 +380,18 @@ def parse_hook_variants(
     title: str,
     selected_trend: Optional[str],
     target_platform: str,
+    packaging_angle: str,
 ) -> List[str]:
     if isinstance(value, list):
         variants = [str(item).strip() for item in value if str(item).strip()]
         if variants:
-            return variants[:2]
+            return variants[:3]
     return default_hook_variants(
         hook=hook,
         title=title,
         selected_trend=selected_trend,
         target_platform=target_platform,
+        packaging_angle=packaging_angle,
     )
 
 
@@ -347,12 +401,15 @@ def default_hook_variants(
     title: str,
     selected_trend: Optional[str],
     target_platform: str,
+    packaging_angle: str,
 ) -> List[str]:
     focus = selected_trend or compact_phrase(title or hook)
     platform_label = target_platform or "short-form"
+    angle = packaging_angle.replace("-", " ")
     return [
-        f"Why {focus} is the fastest {platform_label} angle in this clip.",
-        f"The {focus} moment most creators would skip is the one to post first.",
+        f"Why {focus} is the highest-upside {platform_label} {angle} angle right now.",
+        f"The {focus} moment most creators skip is the one driving this clip.",
+        f"If you post one {angle} clip for {platform_label}, start with this one.",
     ]
 
 
@@ -362,6 +419,10 @@ def default_why_this_matters(*, title: str, target_platform: str, post_rank: int
     if post_rank == 2:
         return f"This works as the second post because it deepens the angle once the opening concept has already earned attention on {target_platform}."
     return f"This is the closer clip: use it after the first two to convert attention into comments, saves, or follow-through on {target_platform}."
+
+
+def default_reason(*, title: str, target_platform: str, packaging_angle: str) -> str:
+    return f"{title} works for {target_platform} because the {packaging_angle} framing is easy to understand and fast to react to."
 
 
 def default_thumbnail_text(*, title: str, hook: str) -> str:
@@ -403,6 +464,61 @@ def default_caption_style(target_platform: str) -> str:
     if normalized == "facebook":
         return "Story-first social"
     return "Short-form native"
+
+
+def default_platform_fit(*, target_platform: str, packaging_angle: str) -> str:
+    normalized = target_platform.lower()
+    if normalized == "tiktok":
+        return f"TikTok-friendly pacing with a {packaging_angle} opening and fast payoff."
+    if normalized == "instagram":
+        return f"Reels-ready packaging with cleaner framing and a {packaging_angle} angle."
+    if normalized == "youtube":
+        return f"Shorts-ready structure with context-light setup and a {packaging_angle} hook."
+    if normalized == "facebook":
+        return f"Facebook-native framing that makes the {packaging_angle} point easier to comment on."
+    return f"Short-form native packaging built around a {packaging_angle} angle."
+
+
+def parse_packaging_angle(
+    value: object,
+    *,
+    title: str,
+    hook: str,
+    transcript_excerpt: object,
+) -> str:
+    allowed = {"shock", "storytelling", "educational", "contrarian", "emotional"}
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in allowed:
+            return normalized
+    return default_packaging_angle(title=title, hook=hook, transcript_excerpt=transcript_excerpt)
+
+
+def default_packaging_angle(*, title: str, hook: str, transcript_excerpt: object) -> str:
+    content = " ".join(
+        [
+            title.lower(),
+            hook.lower(),
+            str(transcript_excerpt or "").lower(),
+        ]
+    )
+    if any(keyword in content for keyword in {"wrong", "never", "nobody", "skip", "myth"}):
+        return "contrarian"
+    if any(keyword in content for keyword in {"story", "moment", "started", "then", "when"}):
+        return "storytelling"
+    if any(keyword in content for keyword in {"feel", "care", "pain", "afraid", "love", "hate"}):
+        return "emotional"
+    if any(keyword in content for keyword in {"stop", "crazy", "wild", "shocking", "secret"}):
+        return "shock"
+    return "educational"
+
+
+def clamp_confidence(value: object, fallback: float) -> float:
+    try:
+        parsed = float(value)
+    except Exception:
+        parsed = fallback
+    return max(0.0, min(parsed, 1.0))
 
 
 def compact_phrase(value: str) -> str:

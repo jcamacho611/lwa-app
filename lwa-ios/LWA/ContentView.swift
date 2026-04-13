@@ -644,11 +644,42 @@ struct ContentView: View {
                         .foregroundStyle(Color.white.opacity(0.92))
 
                     HStack(spacing: 10) {
-                        if let postRank = clip.postRank {
-                            signalPill(label: "Post #\(postRank)")
+                        if let displayRank = clip.displayRank {
+                            signalPill(label: "Rank #\(displayRank)")
                         }
-                        if let confidenceScore = clip.confidenceScore {
-                            signalPill(label: "Confidence \(confidenceScore)")
+                        if let confidenceLabel = clip.compilerConfidenceLabel {
+                            signalPill(label: confidenceLabel)
+                        }
+                        if let packagingAngleLabel = clip.packagingAngleLabel {
+                            signalPill(label: packagingAngleLabel)
+                        }
+                    }
+
+                    if let thumbnailText = clip.thumbnailText, !thumbnailText.isEmpty {
+                        Text(thumbnailText)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color(red: 0.96, green: 0.78, blue: 0.35))
+                    }
+
+                    if let ctaSuggestion = clip.ctaSuggestion, !ctaSuggestion.isEmpty {
+                        Text(ctaSuggestion)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.white.opacity(0.74))
+                            .lineLimit(2)
+                    }
+
+                    if let primaryReason = clip.primaryReason, !primaryReason.isEmpty {
+                        Text(primaryReason)
+                            .font(.caption)
+                            .foregroundStyle(Color.white.opacity(0.62))
+                            .lineLimit(3)
+                    }
+
+                    HStack(spacing: 10) {
+                        if let bestPostOrder = clip.bestPostOrder {
+                            signalPill(label: "Post Order #\(bestPostOrder)")
+                        } else if let postRank = clip.postRank {
+                            signalPill(label: "Post #\(postRank)")
                         }
                         signalPill(label: "\(clip.startTime) - \(clip.endTime)")
                         signalPill(label: clip.format)
@@ -686,6 +717,18 @@ struct ContentView: View {
                 }
             }
 
+            HStack(spacing: 10) {
+                if let displayRank = clip.displayRank {
+                    signalPill(label: "Rank #\(displayRank)")
+                }
+                if let confidenceLabel = clip.compilerConfidenceLabel {
+                    signalPill(label: confidenceLabel)
+                }
+                if let packagingAngleLabel = clip.packagingAngleLabel {
+                    signalPill(label: packagingAngleLabel)
+                }
+            }
+
             VStack(alignment: .leading, spacing: 6) {
                 Text("Hook")
                     .font(.caption.weight(.semibold))
@@ -696,37 +739,111 @@ struct ContentView: View {
                     .foregroundStyle(Color.white.opacity(0.9))
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Caption")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color(red: 0.96, green: 0.78, blue: 0.35))
+            VStack(alignment: .leading, spacing: 14) {
+                if let thumbnailText = clip.thumbnailText, !thumbnailText.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Thumbnail Text")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color(red: 0.96, green: 0.78, blue: 0.35))
 
-                Text(clip.caption)
-                    .font(.body)
-                    .foregroundStyle(Color.white.opacity(0.78))
-            }
+                            Spacer()
 
-            if let whyThisMatters = clip.whyThisMatters, !whyThisMatters.isEmpty {
+                            Button {
+                                copyToPasteboard(thumbnailText, confirmation: "The thumbnail text is now on your clipboard.")
+                            } label: {
+                                Text("Copy")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        Text(thumbnailText)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                if let ctaSuggestion = clip.ctaSuggestion, !ctaSuggestion.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("CTA Suggestion")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color.white.opacity(0.62))
+
+                            Spacer()
+
+                            Button {
+                                copyToPasteboard(ctaSuggestion, confirmation: "The CTA is now on your clipboard.")
+                            } label: {
+                                Text("Copy")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color(red: 0.96, green: 0.78, blue: 0.35))
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        Text(ctaSuggestion)
+                            .font(.body)
+                            .foregroundStyle(Color.white.opacity(0.82))
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Why This Matters")
+                    Text("Caption")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color(red: 0.72, green: 0.70, blue: 0.98))
+                        .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
 
-                    Text(whyThisMatters)
+                    Text(clip.caption)
                         .font(.body)
-                        .foregroundStyle(Color.white.opacity(0.82))
+                        .foregroundStyle(Color.white.opacity(0.78))
+                }
+            }
+            .padding(16)
+            .background(Color.white.opacity(0.04))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.white.opacity(0.06), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+            if let bestPostOrder = clip.bestPostOrder {
+                HStack(spacing: 10) {
+                    signalPill(label: "Best Post Order #\(bestPostOrder)")
+                    if let captionStyle = clip.captionStyle, !captionStyle.isEmpty {
+                        signalPill(label: captionStyle)
+                    }
+                }
+            } else if let captionStyle = clip.captionStyle, !captionStyle.isEmpty {
+                HStack(spacing: 10) {
+                    signalPill(label: captionStyle)
                 }
             }
 
-            if let captionStyle = clip.captionStyle, !captionStyle.isEmpty {
-                HStack(spacing: 10) {
-                    if let postRank = clip.postRank {
-                        signalPill(label: "Post #\(postRank)")
+            VStack(alignment: .leading, spacing: 12) {
+                if let primaryReason = clip.primaryReason, !primaryReason.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Why This Works")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color(red: 0.72, green: 0.70, blue: 0.98))
+
+                        Text(primaryReason)
+                            .font(.body)
+                            .foregroundStyle(Color.white.opacity(0.84))
                     }
-                    if let confidenceScore = clip.confidenceScore {
-                        signalPill(label: "Confidence \(confidenceScore)")
+                }
+
+                if let platformFit = clip.platformFit, !platformFit.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Platform Fit")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.white.opacity(0.62))
+
+                        Text(platformFit)
+                            .font(.body)
+                            .foregroundStyle(Color.white.opacity(0.76))
                     }
-                    signalPill(label: captionStyle)
                 }
             }
 
@@ -748,56 +865,6 @@ struct ContentView: View {
                 copyToPasteboard(clip.packagingBundle, confirmation: "The full packaging bundle is now on your clipboard.")
             } label: {
                 secondaryAction(title: "Copy Package")
-            }
-
-            if let thumbnailText = clip.thumbnailText, !thumbnailText.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("Thumbnail Text")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.white.opacity(0.62))
-
-                        Spacer()
-
-                        Button {
-                            copyToPasteboard(thumbnailText, confirmation: "The thumbnail text is now on your clipboard.")
-                        } label: {
-                            Text("Copy")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color(red: 0.34, green: 0.89, blue: 0.82))
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Text(thumbnailText)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                }
-            }
-
-            if let ctaSuggestion = clip.ctaSuggestion, !ctaSuggestion.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("CTA Suggestion")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.white.opacity(0.62))
-
-                        Spacer()
-
-                        Button {
-                            copyToPasteboard(ctaSuggestion, confirmation: "The CTA is now on your clipboard.")
-                        } label: {
-                            Text("Copy")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color(red: 0.96, green: 0.78, blue: 0.35))
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Text(ctaSuggestion)
-                        .font(.body)
-                        .foregroundStyle(Color.white.opacity(0.78))
-                }
             }
 
             if !clip.hookVariants.isEmpty {
@@ -1249,8 +1316,8 @@ private struct ClipPreviewCard: View {
 
                     Spacer()
 
-                    if let postRank = clip.postRank {
-                        Text("POST #\(postRank)")
+                    if let displayRank = clip.displayRank {
+                        Text("RANK #\(displayRank)")
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(Color.black)
                             .padding(.horizontal, 10)
@@ -1259,7 +1326,19 @@ private struct ClipPreviewCard: View {
                             .clipShape(Capsule())
                     }
 
-                    Text(clip.format)
+                    if let packagingAngleLabel = clip.packagingAngleLabel {
+                        Text(packagingAngleLabel.uppercased())
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Color.white.opacity(0.74))
+                    } else {
+                        Text(clip.format)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Color.white.opacity(0.74))
+                    }
+                }
+
+                if let bestPostOrder = clip.bestPostOrder {
+                    Text("BEST POST ORDER #\(bestPostOrder)")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Color.white.opacity(0.74))
                 }
@@ -1278,8 +1357,8 @@ private struct ClipPreviewCard: View {
 
                 HStack(spacing: 10) {
                     clipMetric("\(clip.score)", label: "Score")
-                    if let confidenceScore = clip.confidenceScore {
-                        clipMetric("\(confidenceScore)", label: "Confidence")
+                    if let confidenceLabel = clip.compilerConfidenceValue {
+                        clipMetric(confidenceLabel, label: "Confidence")
                     }
                     clipMetric(clip.startTime, label: "Start")
                     clipMetric(clip.endTime, label: "End")
@@ -1603,14 +1682,52 @@ private extension ClipResult {
         let alternateHooks = hookVariants.isEmpty ? "not available" : hookVariants.joined(separator: "\n")
         return """
         Title: \(title)
+        Rank: \(displayRank.map(String.init) ?? "not available")
+        Confidence: \(compilerConfidenceLabel ?? "not available")
+        Packaging angle: \(packagingAngleLabel ?? "not available")
         Hook: \(hook)
         Caption: \(caption)
-        Why this matters: \(whyThisMatters ?? "not available")
+        Why this works: \(primaryReason ?? "not available")
+        Platform fit: \(platformFit ?? "not available")
         Thumbnail text: \(thumbnailText ?? "not available")
         CTA: \(ctaSuggestion ?? "not available")
         Alternate hooks:
         \(alternateHooks)
         """
+    }
+
+    var displayRank: Int? {
+        rank ?? postRank
+    }
+
+    var compilerConfidenceValue: String? {
+        if let confidence {
+            return "\(Int((confidence * 100).rounded()))%"
+        }
+        if let confidenceScore {
+            return "\(confidenceScore)%"
+        }
+        return nil
+    }
+
+    var compilerConfidenceLabel: String? {
+        guard let compilerConfidenceValue else { return nil }
+        return "Confidence \(compilerConfidenceValue)"
+    }
+
+    var packagingAngleLabel: String? {
+        guard let packagingAngle, !packagingAngle.isEmpty else { return nil }
+        return packagingAngle.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+
+    var primaryReason: String? {
+        if let reason, !reason.isEmpty {
+            return reason
+        }
+        if let whyThisMatters, !whyThisMatters.isEmpty {
+            return whyThisMatters
+        }
+        return nil
     }
 }
 
