@@ -2,15 +2,22 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, model_validator
 
 
 class ProcessRequest(BaseModel):
-    video_url: HttpUrl = Field(..., description="Public URL for the source video")
+    video_url: Optional[str] = Field(default=None, description="Public URL for the source video")
+    upload_file_id: Optional[str] = None
     selected_trend: Optional[str] = None
     trend_source: Optional[str] = None
     target_platform: Optional[str] = None
     content_angle: Optional[str] = None
+
+    @model_validator(mode="after")
+    def ensure_source(self) -> "ProcessRequest":
+        if not self.video_url and not self.upload_file_id:
+            raise ValueError("Provide either video_url or upload_file_id")
+        return self
 
 
 class TrendItem(BaseModel):
@@ -22,6 +29,7 @@ class TrendItem(BaseModel):
 
 
 class ClipResult(BaseModel):
+    record_id: Optional[str] = None
     id: str
     title: str
     hook: str
@@ -58,6 +66,12 @@ class FeatureFlags(BaseModel):
     campaign_mode: bool = False
     packaging_profiles: bool = False
     history_limit: int = 10
+    caption_editor: bool = False
+    timeline_editor: bool = False
+    wallet_view: bool = False
+    posting_queue: bool = False
+    max_uploads_per_day: int = 0
+    max_generations_per_day: int = 0
     premium_exports: bool = False
     priority_processing: bool = False
 
@@ -82,7 +96,7 @@ class ProcessingSummary(BaseModel):
 
 class ClipBatchResponse(BaseModel):
     request_id: str
-    video_url: HttpUrl
+    video_url: str
     status: str
     source_platform: str
     processing_summary: ProcessingSummary
@@ -111,3 +125,78 @@ class JobStatusResponse(BaseModel):
     updated_at: str
     result: Optional[ClipBatchResponse] = None
     error: Optional[str] = None
+
+
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+    display_name: Optional[str] = None
+
+
+class UploadResponse(BaseModel):
+    file_id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    public_url: Optional[str] = None
+    storage_path: str
+    source_ref: dict[str, str]
+
+
+class ClipPatchRequest(BaseModel):
+    trim_start_seconds: Optional[float] = None
+    trim_end_seconds: Optional[float] = None
+    caption_override: Optional[str] = None
+    hook_override: Optional[str] = None
+    cta_override: Optional[str] = None
+    thumbnail_text_override: Optional[str] = None
+    caption_style_override: Optional[str] = None
+    packaging_angle_override: Optional[str] = None
+
+
+class CampaignCreateRequest(BaseModel):
+    title: str
+    description: Optional[str] = None
+    allowed_platforms: List[str] = Field(default_factory=list)
+    target_angle: Optional[str] = None
+    requirements: Optional[str] = None
+    payout_cents_per_1000_views: Optional[int] = None
+
+
+class CampaignPatchRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    allowed_platforms: Optional[List[str]] = None
+    target_angle: Optional[str] = None
+    requirements: Optional[str] = None
+    payout_cents_per_1000_views: Optional[int] = None
+    status: Optional[str] = None
+
+
+class PayoutRequestCreate(BaseModel):
+    amount_cents: int = Field(..., gt=0)
+
+
+class PostingConnectionCreate(BaseModel):
+    provider: str
+    account_label: Optional[str] = None
+
+
+class ScheduledPostCreate(BaseModel):
+    clip_id: str
+    provider: str
+    caption: Optional[str] = None
+    scheduled_for: Optional[str] = None
+
+
+class ScheduledPostPatch(BaseModel):
+    status: Optional[str] = None
+    caption: Optional[str] = None
+    scheduled_for: Optional[str] = None
+
+
+class EditClipRequest(BaseModel):
+    clip_id: str
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    caption_text: Optional[str] = None

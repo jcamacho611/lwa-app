@@ -3,6 +3,10 @@ __pycache__/
 .pytest_cache/
 .venv/
 .env
+node_modules/
+.next/
+lwa-web/node_modules/
+lwa-web/.next/
 generated/
 lwa-backend/generated/
 lwa-backend/downloads/

@@ -4,6 +4,7 @@ import asyncio
 import importlib.util
 import logging
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import HTTPException, Request
@@ -11,9 +12,11 @@ from fastapi import HTTPException, Request
 from ..core.config import Settings
 from ..job_store import JobStore
 from ..models.schemas import ClipBatchResponse, ProcessRequest, ProcessingSummary, TrendItem, TrendsResponse
+from ..models.user import UserRecord
 from ..services.ai_service import generate_clip_copy
 from ..services.attention_compiler import compile_attention
 from ..services.entitlements import EntitlementContext, UsageStore
+from ..services.platform_store import PlatformStore
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
 from ..trends import fetch_public_trends, trends_timestamp
 
@@ -75,10 +78,15 @@ async def build_clip_response(
     public_base_url: str,
     route_path: str,
     entitlement: EntitlementContext,
+    current_user: UserRecord | None = None,
+    platform_store: PlatformStore | None = None,
+    campaign_id: str | None = None,
+    source_path: str | None = None,
     progress_callback: Callable[[str], Awaitable[None]] | None = None,
 ) -> ClipBatchResponse:
     video_url = str(request.video_url)
     target_platform = request.target_platform or "TikTok"
+    candidate_limit = min(max(entitlement.plan.feature_flags.clip_limit, 20), 40)
     trend_context_response = await get_live_trends()
     trend_context: list[TrendItem] = trend_context_response.trends
     source_context = None
@@ -105,6 +113,8 @@ async def build_clip_response(
                 request_id=request_id,
                 video_url=video_url,
                 public_base_url=public_base_url,
+                source_path=source_path,
+                max_candidates=candidate_limit,
             )
             logger.info(
                 "source_context_ready request_id=%s route=%s built=%s clip_seeds=%s strategy=%s title=%s",
@@ -194,7 +204,7 @@ async def build_clip_response(
     assets_created = len([clip for clip in clips if clip.clip_url])
     selection_strategy = source_context.selection_strategy if source_context else "timeline"
 
-    return ClipBatchResponse(
+    response = ClipBatchResponse(
         request_id=request_id,
         video_url=request.video_url,
         status="success",
@@ -223,6 +233,15 @@ async def build_clip_response(
         trend_context=trend_context[:6],
         clips=clips,
     )
+    if platform_store is not None:
+        response = platform_store.persist_clip_batch(
+            request_id=request_id,
+            user_id=current_user.id if current_user else entitlement.user_id,
+            campaign_id=campaign_id,
+            response=response,
+            local_asset_paths=resolve_local_asset_paths(settings=settings, request_id=request_id, clips=clips),
+        )
+    return response
 
 
 def apply_plan_feature_flags(
@@ -230,7 +249,12 @@ def apply_plan_feature_flags(
     clips: list,
     entitlement: EntitlementContext,
 ) -> list:
-    return clips
+    clip_limit = max(entitlement.plan.feature_flags.clip_limit, 1)
+    ranked = sorted(
+        clips,
+        key=lambda clip: (clip.rank or 999, -(clip.score or 0)),
+    )
+    return ranked[:clip_limit]
 
 
 async def emit_progress(
@@ -252,6 +276,10 @@ async def run_job(
     public_base_url: str,
     route_path: str,
     entitlement: EntitlementContext,
+    current_user: UserRecord | None = None,
+    platform_store: PlatformStore | None = None,
+    campaign_id: str | None = None,
+    source_path: str | None = None,
 ) -> None:
     await job_store.update(
         job_id,
@@ -267,6 +295,10 @@ async def run_job(
             public_base_url=public_base_url,
             route_path=route_path,
             entitlement=entitlement,
+            current_user=current_user,
+            platform_store=platform_store,
+            campaign_id=campaign_id,
+            source_path=source_path,
             progress_callback=lambda message: job_store.update(
                 job_id,
                 status="processing",
@@ -274,6 +306,37 @@ async def run_job(
             ),
         )
         await job_store.complete(job_id, response)
+        if platform_store is not None:
+            platform_store.update_job(
+                job_id=job_id,
+                status="completed",
+                message="Clips ready.",
+                response_json=response.model_dump_json(),
+            )
     except Exception as error:  # pragma: no cover
         usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
         await job_store.fail(job_id, str(error))
+        if platform_store is not None:
+            platform_store.update_job(
+                job_id=job_id,
+                status="failed",
+                message=str(error),
+            )
+
+
+def resolve_local_asset_paths(*, settings: Settings, request_id: str, clips: list) -> dict[str, str]:
+    request_dir = Path(settings.generated_assets_dir) / request_id
+    mapping: dict[str, str] = {}
+    for clip in clips:
+        candidate_names = [
+            f"{clip.id}.mp4",
+            f"{clip.id}_raw.mp4",
+            f"{clip.id}.mov",
+            f"{clip.id}_raw.mov",
+        ]
+        for candidate_name in candidate_names:
+            candidate_path = request_dir / candidate_name
+            if candidate_path.exists():
+                mapping[clip.id] = str(candidate_path)
+                break
+    return mapping

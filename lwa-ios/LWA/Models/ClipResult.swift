@@ -27,6 +27,12 @@ struct ProcessingSummary: Codable {
         let campaignMode: Bool
         let packagingProfiles: Bool
         let historyLimit: Int
+        let captionEditor: Bool
+        let timelineEditor: Bool
+        let walletView: Bool
+        let postingQueue: Bool
+        let maxUploadsPerDay: Int
+        let maxGenerationsPerDay: Int
         let premiumExports: Bool
         let priorityProcessing: Bool
 
@@ -36,6 +42,12 @@ struct ProcessingSummary: Codable {
             case campaignMode = "campaign_mode"
             case packagingProfiles = "packaging_profiles"
             case historyLimit = "history_limit"
+            case captionEditor = "caption_editor"
+            case timelineEditor = "timeline_editor"
+            case walletView = "wallet_view"
+            case postingQueue = "posting_queue"
+            case maxUploadsPerDay = "max_uploads_per_day"
+            case maxGenerationsPerDay = "max_generations_per_day"
             case premiumExports = "premium_exports"
             case priorityProcessing = "priority_processing"
         }
@@ -47,6 +59,12 @@ struct ProcessingSummary: Codable {
             campaignMode = try container.decodeIfPresent(Bool.self, forKey: .campaignMode) ?? false
             packagingProfiles = try container.decodeIfPresent(Bool.self, forKey: .packagingProfiles) ?? false
             historyLimit = try container.decodeIfPresent(Int.self, forKey: .historyLimit) ?? 10
+            captionEditor = try container.decodeIfPresent(Bool.self, forKey: .captionEditor) ?? false
+            timelineEditor = try container.decodeIfPresent(Bool.self, forKey: .timelineEditor) ?? false
+            walletView = try container.decodeIfPresent(Bool.self, forKey: .walletView) ?? false
+            postingQueue = try container.decodeIfPresent(Bool.self, forKey: .postingQueue) ?? false
+            maxUploadsPerDay = try container.decodeIfPresent(Int.self, forKey: .maxUploadsPerDay) ?? 0
+            maxGenerationsPerDay = try container.decodeIfPresent(Int.self, forKey: .maxGenerationsPerDay) ?? 0
             premiumExports = try container.decodeIfPresent(Bool.self, forKey: .premiumExports) ?? false
             priorityProcessing = try container.decodeIfPresent(Bool.self, forKey: .priorityProcessing) ?? false
         }
@@ -108,6 +126,12 @@ struct ProcessingSummary: Codable {
             campaignMode: false,
             packagingProfiles: false,
             historyLimit: 10,
+            captionEditor: false,
+            timelineEditor: false,
+            walletView: false,
+            postingQueue: false,
+            maxUploadsPerDay: 0,
+            maxGenerationsPerDay: 0,
             premiumExports: false,
             priorityProcessing: false
         )
@@ -156,6 +180,36 @@ struct TrendItem: Codable, Identifiable, Hashable {
     let url: String?
 }
 
+struct UploadedSource: Codable, Identifiable, Hashable {
+    let id: String
+    let filename: String
+    let contentType: String
+    let sizeBytes: Int
+    let publicURL: String?
+    let storagePath: String
+    let sourceRef: UploadSourceRef
+
+    enum CodingKeys: String, CodingKey {
+        case id = "file_id"
+        case filename
+        case contentType = "content_type"
+        case sizeBytes = "size_bytes"
+        case publicURL = "public_url"
+        case storagePath = "storage_path"
+        case sourceRef = "source_ref"
+    }
+}
+
+struct UploadSourceRef: Codable, Hashable {
+    let sourceKind: String
+    let uploadID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case sourceKind = "source_kind"
+        case uploadID = "upload_id"
+    }
+}
+
 struct TrendsResponse: Codable {
     let status: String
     let updatedAt: String
@@ -169,6 +223,7 @@ struct TrendsResponse: Codable {
 }
 
 struct ClipResult: Codable, Identifiable {
+    let recordID: String?
     let id: String
     let title: String
     let hook: String
@@ -200,6 +255,7 @@ struct ClipResult: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id
+        case recordID = "record_id"
         case title
         case hook
         case caption
@@ -231,6 +287,7 @@ struct ClipResult: Codable, Identifiable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        recordID = try container.decodeIfPresent(String.self, forKey: .recordID)
         id = try container.decode(String.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
         hook = try container.decode(String.self, forKey: .hook)
@@ -281,6 +338,12 @@ private extension ProcessingSummary.FeatureFlags {
         campaignMode: Bool,
         packagingProfiles: Bool,
         historyLimit: Int,
+        captionEditor: Bool,
+        timelineEditor: Bool,
+        walletView: Bool,
+        postingQueue: Bool,
+        maxUploadsPerDay: Int,
+        maxGenerationsPerDay: Int,
         premiumExports: Bool,
         priorityProcessing: Bool
     ) {
@@ -289,6 +352,12 @@ private extension ProcessingSummary.FeatureFlags {
         self.campaignMode = campaignMode
         self.packagingProfiles = packagingProfiles
         self.historyLimit = historyLimit
+        self.captionEditor = captionEditor
+        self.timelineEditor = timelineEditor
+        self.walletView = walletView
+        self.postingQueue = postingQueue
+        self.maxUploadsPerDay = maxUploadsPerDay
+        self.maxGenerationsPerDay = maxGenerationsPerDay
         self.premiumExports = premiumExports
         self.priorityProcessing = priorityProcessing
     }

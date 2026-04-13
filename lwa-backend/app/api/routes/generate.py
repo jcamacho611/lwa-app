@@ -6,6 +6,7 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Request
 
 from ...core.config import get_settings
+from ...dependencies.auth import get_optional_user, get_platform_store
 from ...job_store import JobStore
 from ...models.schemas import (
     ClipBatchResponse,
@@ -14,6 +15,7 @@ from ...models.schemas import (
     ProcessRequest,
     TrendsResponse,
 )
+from ...models.user import UserRecord
 from ...services.clip_service import (
     build_clip_response,
     dependency_health,
@@ -27,6 +29,7 @@ router = APIRouter()
 settings = get_settings()
 job_store = JobStore()
 usage_store = UsageStore(settings.usage_store_path)
+platform_store = get_platform_store()
 logger = logging.getLogger("uvicorn.error")
 
 
@@ -75,10 +78,17 @@ async def get_trends(http_request: Request) -> TrendsResponse:
 @router.post("/v1/generate", response_model=ClipBatchResponse)
 async def generate_clips(request: ProcessRequest, http_request: Request) -> ClipBatchResponse:
     enforce_api_key(http_request, settings)
+    current_user = get_optional_user(http_request)
+    resolved_request, source_path = resolve_request_source(
+        request=request,
+        current_user=current_user,
+        base_url=(settings.api_base_url or str(http_request.base_url)).rstrip("/"),
+    )
     entitlement = resolve_entitlement(
         request=http_request,
         settings=settings,
         usage_store=usage_store,
+        current_user=current_user,
     )
     request_id = f"req_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
@@ -86,8 +96,8 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
         "route_generate request_id=%s route=%s target_platform=%s video_url=%s plan=%s subject_source=%s",
         request_id,
         http_request.url.path,
-        request.target_platform or "TikTok",
-        request.video_url,
+        resolved_request.target_platform or "TikTok",
+        resolved_request.video_url,
         entitlement.plan.code,
         entitlement.subject_source,
     )
@@ -95,10 +105,13 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
         return await build_clip_response(
             settings=settings,
             request_id=request_id,
-            request=request,
+            request=resolved_request,
             public_base_url=public_base_url,
             route_path=http_request.url.path,
             entitlement=entitlement,
+            current_user=current_user,
+            platform_store=platform_store,
+            source_path=source_path,
         )
     except Exception:
         usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
@@ -108,10 +121,17 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
 @router.post("/v1/jobs", response_model=JobCreatedResponse)
 async def create_processing_job(request: ProcessRequest, http_request: Request) -> JobCreatedResponse:
     enforce_api_key(http_request, settings)
+    current_user = get_optional_user(http_request)
+    resolved_request, source_path = resolve_request_source(
+        request=request,
+        current_user=current_user,
+        base_url=(settings.api_base_url or str(http_request.base_url)).rstrip("/"),
+    )
     entitlement = resolve_entitlement(
         request=http_request,
         settings=settings,
         usage_store=usage_store,
+        current_user=current_user,
     )
     job_id = f"job_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
@@ -119,12 +139,21 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
         "route_job request_id=%s route=%s target_platform=%s video_url=%s plan=%s subject_source=%s",
         job_id,
         http_request.url.path,
-        request.target_platform or "TikTok",
-        request.video_url,
+        resolved_request.target_platform or "TikTok",
+        resolved_request.video_url,
         entitlement.plan.code,
         entitlement.subject_source,
     )
     await job_store.create(job_id, "Job queued. Starting source analysis.")
+    platform_store.create_job(
+        job_id=job_id,
+        user_id=current_user.id if current_user else None,
+        campaign_id=None,
+        source_type="upload" if resolved_request.upload_file_id else "url",
+        source_value=resolved_request.video_url or "",
+        status="queued",
+        message="Job queued. Starting source analysis.",
+    )
     import asyncio
 
     asyncio.create_task(
@@ -133,10 +162,13 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
             job_store=job_store,
             usage_store=usage_store,
             job_id=job_id,
-            request=request,
+            request=resolved_request,
             public_base_url=public_base_url,
             route_path=http_request.url.path,
             entitlement=entitlement,
+            current_user=current_user,
+            platform_store=platform_store,
+            source_path=source_path,
         )
     )
     return JobCreatedResponse(
@@ -163,3 +195,28 @@ async def get_processing_job(job_id: str, http_request: Request) -> JobStatusRes
         result=record.result,
         error=record.error,
     )
+
+
+def resolve_request_source(
+    *,
+    request: ProcessRequest,
+    current_user: UserRecord | None,
+    base_url: str,
+) -> tuple[ProcessRequest, str | None]:
+    if request.upload_file_id:
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required for uploaded sources")
+        upload = platform_store.get_upload(request.upload_file_id, user_id=current_user.id)
+        if not upload:
+            raise HTTPException(status_code=404, detail="Upload not found")
+        resolved = request.model_copy(
+            update={
+                "video_url": upload["public_url"],
+            }
+        )
+        return resolved, upload["stored_path"]
+
+    if not request.video_url:
+        raise HTTPException(status_code=422, detail="Provide video_url or upload_file_id")
+
+    return request, None

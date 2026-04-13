@@ -20,12 +20,16 @@ def build_source_context(
     request_id: str,
     video_url: str,
     public_base_url: str,
+    source_path: str | None = None,
+    max_candidates: int = 20,
 ) -> SourceContext:
     return process_video_source(
         settings=settings,
         request_id=request_id,
         video_url=video_url,
         public_base_url=public_base_url,
+        source_path=source_path,
+        max_candidates=max_candidates,
     )
 
 
