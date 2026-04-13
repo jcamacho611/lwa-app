@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS custom properties ─────────────────────────────────────────────── */
+:root {
+  --color-surface-900: #0a0a0f;
+  --color-surface-800: #111118;
+  --color-surface-700: #18181f;
+  --color-surface-600: #1e1e28;
+}
+
+/* ─── Base resets ────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-surface-900);
+  color: #f1f5f9;
+  min-height: 100dvh;
+}
+
+/* ─── Selection ──────────────────────────────────────────────────────────── */
+::selection {
+  background-color: rgba(99, 102, 241, 0.35);
+  color: #fff;
+}
+
+/* ─── Scrollbar (Webkit) ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ─── Focus ring ─────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.7);
+  outline-offset: 2px;
+}
+
+/* ─── Gradient mesh background ───────────────────────────────────────────── */
+.bg-mesh {
+  background-color: var(--color-surface-900);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(139, 92, 246, 0.08) 0%, transparent 60%);
+}
+
+/* ─── Glow effect for hero ───────────────────────────────────────────────── */
+.glow-brand {
+  box-shadow: 0 0 60px -15px rgba(99, 102, 241, 0.4);
+}
+
+/* ─── Prose-like text for long copy ─────────────────────────────────────── */
+.text-balance {
+  text-wrap: balance;
+}

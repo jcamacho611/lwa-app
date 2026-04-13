@@ -1,28 +1,53 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
   content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./lib/**/*.{js,ts,jsx,tsx,mdx}",
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       colors: {
-        midnight: "#06070A",
-        panel: "#0F1218",
-        accent: "#5EA8FF",
-        accentSoft: "#7B61FF",
-        ink: "#E8EEF7",
-        muted: "#8A95A8",
-      },
-      boxShadow: {
-        glow: "0 0 0 1px rgba(94,168,255,0.24), 0 18px 50px rgba(14, 21, 35, 0.55)",
-        card: "0 24px 60px rgba(0, 0, 0, 0.35)",
+        brand: {
+          50:  '#f0f4ff',
+          100: '#e0e9ff',
+          200: '#c7d7fe',
+          300: '#a5b8fc',
+          400: '#818cf8',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca',
+          800: '#3730a3',
+          900: '#312e81',
+          950: '#1e1b4b',
+        },
+        surface: {
+          900: '#0a0a0f',
+          800: '#111118',
+          700: '#18181f',
+          600: '#1e1e28',
+          500: '#26263a',
+        },
       },
       backgroundImage: {
-        "hero-radial":
-          "radial-gradient(circle at top, rgba(94, 168, 255, 0.18), transparent 28%), radial-gradient(circle at 85% 10%, rgba(123, 97, 255, 0.18), transparent 24%)",
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-hero': 'linear-gradient(135deg, #0a0a0f 0%, #1a1040 50%, #0a0a0f 100%)',
+      },
+      animation: {
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in': 'fadeIn 0.4s ease-out',
+        'slide-up': 'slideUp 0.4s ease-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { opacity: '0', transform: 'translateY(16px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
     },
   },
