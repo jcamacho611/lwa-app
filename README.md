@@ -40,6 +40,20 @@ LWA/
 
 `lwa-web/` is a standalone browser frontend and can be linked from Whop, your own domain, Gumroad, Lemon Squeezy, and any other URL-based flow.
 
+Operational frontend routes now include:
+
+- `/`
+- `/login`
+- `/signup`
+- `/dashboard`
+- `/upload`
+- `/generate`
+- `/history`
+- `/batches`
+- `/campaigns`
+- `/wallet`
+- `/settings`
+
 ## Backend Notes
 
 The Railway service should deploy only the FastAPI backend from `lwa-backend/`.

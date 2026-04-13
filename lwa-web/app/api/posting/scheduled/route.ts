@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authorizationHeader, backendUrl, bearerTokenFromRequest, parseBackendResponse } from "../_lib/backend";
+import { authorizationHeader, backendUrl, bearerTokenFromRequest, parseBackendResponse } from "../../_lib/backend";
 
 export async function GET(request: NextRequest) {
   const token = bearerTokenFromRequest(request);
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(backendUrl("/v1/batches"), {
+    const response = await fetch(backendUrl("/v1/posting/scheduled"), {
       headers: {
         ...authorizationHeader(token),
       },
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const data = await parseBackendResponse(response);
     return NextResponse.json(data, { status: response.status });
   } catch {
-    return NextResponse.json({ detail: "Unable to load batches right now." }, { status: 502 });
+    return NextResponse.json({ detail: "Unable to load scheduled posts right now." }, { status: 502 });
   }
 }
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const payload = await request.json();
-    const response = await fetch(backendUrl("/v1/batches"), {
+    const response = await fetch(backendUrl("/v1/posting/scheduled"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -43,6 +43,6 @@ export async function POST(request: NextRequest) {
     const data = await parseBackendResponse(response);
     return NextResponse.json(data, { status: response.status });
   } catch {
-    return NextResponse.json({ detail: "Unable to create a batch right now." }, { status: 502 });
+    return NextResponse.json({ detail: "Unable to create a scheduled post right now." }, { status: 502 });
   }
 }

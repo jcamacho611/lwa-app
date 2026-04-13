@@ -2,6 +2,14 @@
 
 Standalone web frontend for LWA / IWA.
 
+## What It Includes
+
+- public generator flow from URL or upload-backed sources
+- login and signup surfaces
+- dashboard, history, batch, campaign, wallet, and settings pages
+- clip-pack history editor with lightweight metadata editing
+- posting connection and scheduling groundwork
+
 ## Railway
 
 - Root Directory: `lwa-web/`
@@ -21,3 +29,17 @@ npm install
 npm run build
 npm start
 ```
+
+## Routes
+
+- `/`
+- `/login`
+- `/signup`
+- `/dashboard`
+- `/upload`
+- `/generate`
+- `/history`
+- `/batches`
+- `/campaigns`
+- `/wallet`
+- `/settings`

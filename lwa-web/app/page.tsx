@@ -1,5 +1,5 @@
 import { ClipStudio } from "../components/clip-studio";
 
 export default function HomePage() {
-  return <ClipStudio />;
+  return <ClipStudio initialSection="home" />;
 }

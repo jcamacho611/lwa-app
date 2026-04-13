@@ -1,13 +1,18 @@
 import {
   AuthResponse,
+  BatchSourceRef,
   BatchSummary,
   CampaignSummary,
   ClipPackDetail,
   ClipPackSummary,
   GenerateResponse,
   PlatformOption,
+  PayoutRequest,
+  PostingConnection,
+  ScheduledPost,
   UploadAsset,
   UserProfile,
+  WalletLedgerEntry,
   WalletSummary,
 } from "./types";
 
@@ -15,6 +20,44 @@ type GeneratePayload = {
   url?: string;
   platform: PlatformOption;
   uploadFileId?: string;
+};
+
+type BatchCreatePayload = {
+  title: string;
+  target_platform: string;
+  selected_trend?: string;
+  sources: BatchSourceRef[];
+};
+
+type CampaignCreatePayload = {
+  title: string;
+  description?: string;
+  allowed_platforms: string[];
+  target_angle?: string;
+  requirements?: string;
+  payout_cents_per_1000_views?: number;
+};
+
+type CampaignUpdatePayload = Partial<CampaignCreatePayload> & {
+  status?: string;
+};
+
+type PostingConnectionPayload = {
+  provider: string;
+  account_label?: string;
+};
+
+type ScheduledPostPayload = {
+  clip_id: string;
+  provider: string;
+  caption?: string;
+  scheduled_for?: string;
+};
+
+type ScheduledPostPatchPayload = {
+  status?: string;
+  caption?: string;
+  scheduled_for?: string;
 };
 
 async function jsonRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -28,13 +71,17 @@ async function jsonRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
   return data;
 }
 
+function authHeaders(token?: string | null, contentType = true) {
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
 export async function generateClips(payload: GeneratePayload, token?: string | null): Promise<GenerateResponse> {
   return jsonRequest<GenerateResponse>("/api/generate", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: authHeaders(token),
     body: JSON.stringify(payload),
   });
 }
@@ -42,9 +89,7 @@ export async function generateClips(payload: GeneratePayload, token?: string | n
 export async function signUp(email: string, password: string) {
   return jsonRequest<AuthResponse>("/api/auth/signup", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: authHeaders(null),
     body: JSON.stringify({ email, password }),
   });
 }
@@ -52,44 +97,34 @@ export async function signUp(email: string, password: string) {
 export async function logIn(email: string, password: string) {
   return jsonRequest<AuthResponse>("/api/auth/login", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: authHeaders(null),
     body: JSON.stringify({ email, password }),
   });
 }
 
 export async function loadMe(token: string) {
   return jsonRequest<UserProfile>("/api/auth/me", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(token, false),
   });
 }
 
 export async function logOut(token: string) {
   return jsonRequest<{ status: string; message: string }>("/api/auth/logout", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(token, false),
   });
 }
 
 export async function loadClipPacks(token: string) {
   const payload = await jsonRequest<{ clip_packs: ClipPackSummary[] }>("/api/me/clip-packs", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(token, false),
   });
   return payload.clip_packs || [];
 }
 
 export async function loadClipPack(token: string, requestId: string) {
   return jsonRequest<ClipPackDetail>(`/api/me/clip-packs/${requestId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(token, false),
   });
 }
 
@@ -108,47 +143,37 @@ export async function patchClip(
 ) {
   return jsonRequest(`/api/me/clips/${clipId}`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(token),
     body: JSON.stringify(updates),
   });
 }
 
 export async function loadWallet(token: string) {
   return jsonRequest<WalletSummary>("/api/wallet", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function loadWalletLedger(token: string) {
+  const payload = await jsonRequest<{ entries: WalletLedgerEntry[] }>("/api/wallet/ledger", {
+    headers: authHeaders(token, false),
+  });
+  return payload.entries || [];
+}
+
+export async function createPayoutRequest(token: string, amountCents: number) {
+  return jsonRequest<PayoutRequest>("/api/wallet/payout-requests", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ amount_cents: amountCents }),
   });
 }
 
 export async function loadUploads(token: string) {
   const payload = await jsonRequest<{ uploads: UploadAsset[] }>("/api/uploads", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(token, false),
   });
   return payload.uploads || [];
-}
-
-export async function loadBatches(token: string) {
-  const payload = await jsonRequest<{ batches: BatchSummary[] }>("/api/batches", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return payload.batches || [];
-}
-
-export async function loadCampaigns(token: string) {
-  const payload = await jsonRequest<{ campaigns: CampaignSummary[] }>("/api/campaigns", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return payload.campaigns || [];
 }
 
 export async function uploadSource(file: File, token: string) {
@@ -156,9 +181,83 @@ export async function uploadSource(file: File, token: string) {
   formData.append("file", file);
   return jsonRequest<UploadAsset>("/api/uploads", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(token, false),
     body: formData,
+  });
+}
+
+export async function loadBatches(token: string) {
+  const payload = await jsonRequest<{ batches: BatchSummary[] }>("/api/batches", {
+    headers: authHeaders(token, false),
+  });
+  return payload.batches || [];
+}
+
+export async function createBatch(token: string, payload: BatchCreatePayload) {
+  return jsonRequest<BatchSummary>("/api/batches", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function loadCampaigns(token: string) {
+  const payload = await jsonRequest<{ campaigns: CampaignSummary[] }>("/api/campaigns", {
+    headers: authHeaders(token, false),
+  });
+  return payload.campaigns || [];
+}
+
+export async function createCampaign(token: string, payload: CampaignCreatePayload) {
+  return jsonRequest<CampaignSummary>("/api/campaigns", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateCampaign(token: string, campaignId: string, payload: CampaignUpdatePayload) {
+  return jsonRequest<CampaignSummary>(`/api/campaigns/${campaignId}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function loadPostingConnections(token: string) {
+  const payload = await jsonRequest<{ connections: PostingConnection[] }>("/api/posting/connections", {
+    headers: authHeaders(token, false),
+  });
+  return payload.connections || [];
+}
+
+export async function createPostingConnection(token: string, payload: PostingConnectionPayload) {
+  return jsonRequest<PostingConnection>("/api/posting/connections", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function loadScheduledPosts(token: string) {
+  const payload = await jsonRequest<{ scheduled_posts: ScheduledPost[] }>("/api/posting/scheduled", {
+    headers: authHeaders(token, false),
+  });
+  return payload.scheduled_posts || [];
+}
+
+export async function createScheduledPost(token: string, payload: ScheduledPostPayload) {
+  return jsonRequest<ScheduledPost>("/api/posting/scheduled", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateScheduledPost(token: string, postId: string, payload: ScheduledPostPatchPayload) {
+  return jsonRequest<ScheduledPost>(`/api/posting/scheduled/${postId}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
   });
 }

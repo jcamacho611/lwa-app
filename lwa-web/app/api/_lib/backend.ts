@@ -17,6 +17,14 @@ export function authorizationHeader(token: string | null | undefined): Record<st
   };
 }
 
+export function bearerTokenFromRequest(request: Request): string | null {
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.toLowerCase().startsWith("bearer ")) {
+    return null;
+  }
+  return authorization.split(" ", 2)[1] || null;
+}
+
 export async function parseBackendResponse(response: Response) {
   const text = await response.text();
   return text ? JSON.parse(text) : null;

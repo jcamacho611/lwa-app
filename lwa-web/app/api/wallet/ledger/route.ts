@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authorizationHeader, backendUrl, bearerTokenFromRequest, parseBackendResponse } from "../_lib/backend";
+import { authorizationHeader, backendUrl, bearerTokenFromRequest, parseBackendResponse } from "../../_lib/backend";
 
 export async function GET(request: NextRequest) {
   const token = bearerTokenFromRequest(request);
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(backendUrl("/v1/wallet"), {
+    const response = await fetch(backendUrl("/v1/wallet/ledger"), {
       headers: {
         ...authorizationHeader(token),
       },
@@ -18,6 +18,6 @@ export async function GET(request: NextRequest) {
     const data = await parseBackendResponse(response);
     return NextResponse.json(data, { status: response.status });
   } catch {
-    return NextResponse.json({ detail: "Unable to load wallet right now." }, { status: 502 });
+    return NextResponse.json({ detail: "Unable to load the wallet ledger right now." }, { status: 502 });
   }
 }

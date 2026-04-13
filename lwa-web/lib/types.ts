@@ -31,43 +31,105 @@ export type UploadAsset = {
   };
 };
 
+export type BatchSourceRef = {
+  source_kind: "url" | "upload";
+  video_url?: string;
+  upload_id?: string;
+};
+
 export type ClipPackSummary = {
   request_id: string;
   source_title?: string | null;
   video_url?: string | null;
   target_platform?: string | null;
   clip_count?: number;
+  top_score?: number | null;
   created_at?: string | null;
+};
+
+export type WalletLedgerEntry = {
+  id: string;
+  user_id?: string;
+  amount_cents: number;
+  kind?: string;
+  type?: string;
+  status?: string;
+  description?: string;
+  note?: string | null;
+  reference_type?: string | null;
+  reference_id?: string | null;
+  created_at?: string;
 };
 
 export type WalletSummary = {
   pending_cents?: number;
   available_cents?: number;
   lifetime_cents?: number;
+  pending_debits_cents?: number;
   currency?: string;
-  recent_entries?: Array<{
-    id: string;
-    amount_cents: number;
-    description: string;
-    status: string;
-  }>;
+  recent_entries?: WalletLedgerEntry[];
+};
+
+export type PayoutRequest = {
+  id: string;
+  user_id: string;
+  amount_cents: number;
+  status: string;
+  balance_cents?: number;
+  created_at?: string;
 };
 
 export type BatchSummary = {
   id: string;
   title: string;
+  target_platform?: string;
+  selected_trend?: string | null;
   status: string;
   total_sources: number;
   completed_sources: number;
+  failed_sources?: number;
+  created_at?: string;
+  sources?: Array<{
+    id: string;
+    source_kind: string;
+    source_value: string;
+    request_id?: string | null;
+    status: string;
+  }>;
 };
 
 export type CampaignSummary = {
   id: string;
+  owner_user_id?: string;
   name?: string;
   title?: string;
+  description?: string | null;
+  allowed_platforms?: string[];
   status: string;
   target_angle?: string | null;
+  requirements?: string | null;
   payout_cents_per_1000_views?: number | null;
+  created_at?: string;
+};
+
+export type PostingConnection = {
+  id: string;
+  user_id?: string;
+  provider: string;
+  account_label?: string | null;
+  is_active?: boolean;
+  created_at?: string;
+};
+
+export type ScheduledPost = {
+  id: string;
+  owner_user_id?: string;
+  provider: string;
+  status: string;
+  scheduled_for?: string | null;
+  clip_id: string;
+  caption?: string | null;
+  created_at?: string;
 };
 
 export type ClipResult = {

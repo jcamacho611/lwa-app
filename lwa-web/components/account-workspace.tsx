@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { BatchSummary, CampaignSummary, ClipPackSummary, UploadAsset, UserProfile, WalletSummary } from "../lib/types";
 
 type AccountWorkspaceProps = {
@@ -43,6 +44,18 @@ export function AccountWorkspace({
           <span className="rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-medium text-accent">
             Plan: {user.plan_code}
           </span>
+          <Link
+            href="/history"
+            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+          >
+            Full History
+          </Link>
+          <Link
+            href="/campaigns"
+            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+          >
+            Campaigns
+          </Link>
           <button
             type="button"
             onClick={onSignOut}
