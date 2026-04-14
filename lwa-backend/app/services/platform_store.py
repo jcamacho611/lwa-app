@@ -114,6 +114,7 @@ class PlatformStore:
                     start_time TEXT,
                     end_time TEXT,
                     score INTEGER NOT NULL,
+                    virality_score INTEGER,
                     confidence REAL,
                     rank_value INTEGER,
                     reason TEXT,
@@ -123,6 +124,7 @@ class PlatformStore:
                     cta_suggestion TEXT,
                     thumbnail_text TEXT,
                     hook_variants_json TEXT NOT NULL,
+                    caption_variants_json TEXT NOT NULL DEFAULT '{}',
                     clip_url TEXT,
                     raw_clip_url TEXT,
                     edited_clip_url TEXT,
@@ -178,6 +180,8 @@ class PlatformStore:
             self._ensure_column(connection, "clips", "caption_style_override", "TEXT")
             self._ensure_column(connection, "clips", "start_time", "TEXT")
             self._ensure_column(connection, "clips", "end_time", "TEXT")
+            self._ensure_column(connection, "clips", "virality_score", "INTEGER")
+            self._ensure_column(connection, "clips", "caption_variants_json", "TEXT NOT NULL DEFAULT '{}'")
             self._ensure_column(connection, "campaigns", "description", "TEXT")
             self._ensure_column(connection, "campaigns", "allowed_platforms_json", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(connection, "campaigns", "target_angle", "TEXT")
@@ -370,7 +374,7 @@ class PlatformStore:
                 """
                 SELECT id, request_id, clip_key, title, hook, caption, score, confidence, rank_value,
                        reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url,
+                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url,
                        preview_image_url, trim_start_seconds, trim_end_seconds, caption_style_override,
                        approved, created_at
                 FROM clips
@@ -629,10 +633,10 @@ class PlatformStore:
                     INSERT OR REPLACE INTO clips (
                         id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score,
                         confidence, rank_value, reason, packaging_angle, platform_fit, best_post_order,
-                        cta_suggestion, thumbnail_text, hook_variants_json, clip_url, raw_clip_url,
+                        cta_suggestion, thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url,
                         edited_clip_url, preview_image_url, local_asset_path, trim_start_seconds,
                         trim_end_seconds, caption_style_override, approved, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         record_id,
@@ -655,6 +659,8 @@ class PlatformStore:
                         clip.cta_suggestion,
                         clip.thumbnail_text,
                         json.dumps(clip.hook_variants),
+                        json.dumps(clip.caption_variants),
+                        clip.virality_score if clip.virality_score is not None else clip.score,
                         clip.clip_url,
                         clip.raw_clip_url,
                         clip.edited_clip_url,
@@ -699,7 +705,7 @@ class PlatformStore:
         query = """
             SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                    rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
-                   thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
+                   thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                    local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
                    approved, created_at
             FROM clips
@@ -766,7 +772,7 @@ class PlatformStore:
                 """
                 SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                        rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
+                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                        local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
                        approved, created_at
                 FROM clips WHERE id = ?
@@ -781,7 +787,7 @@ class PlatformStore:
                 """
                 SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                        rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
+                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                        local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
                        approved, created_at
                 FROM clips
@@ -825,7 +831,7 @@ class PlatformStore:
                 """
                 SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                        rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
+                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                        local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
                        approved, created_at
                 FROM clips WHERE id = ?
@@ -854,7 +860,7 @@ class PlatformStore:
                 """
                 SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                        rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
+                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                        local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
                        approved, created_at
                 FROM clips
@@ -1138,6 +1144,7 @@ class PlatformStore:
             "start_time": row["start_time"],
             "end_time": row["end_time"],
             "score": row["score"],
+            "virality_score": row["virality_score"],
             "confidence": row["confidence"],
             "rank": row["rank_value"],
             "reason": row["reason"],
@@ -1147,6 +1154,7 @@ class PlatformStore:
             "cta_suggestion": row["cta_suggestion"],
             "thumbnail_text": row["thumbnail_text"],
             "hook_variants": json.loads(row["hook_variants_json"] or "[]"),
+            "caption_variants": json.loads(row["caption_variants_json"] or "{}"),
             "clip_url": row["clip_url"],
             "raw_clip_url": row["raw_clip_url"],
             "edited_clip_url": row["edited_clip_url"],

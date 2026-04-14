@@ -37,6 +37,7 @@ class ClipResult(BaseModel):
     start_time: str
     end_time: str
     score: int
+    virality_score: Optional[int] = None
     confidence: Optional[float] = None
     rank: Optional[int] = None
     reason: Optional[str] = None
@@ -55,6 +56,7 @@ class ClipResult(BaseModel):
     post_rank: Optional[int] = None
     best_post_order: Optional[int] = None
     hook_variants: List[str] = Field(default_factory=list)
+    caption_variants: dict[str, str] = Field(default_factory=dict)
     caption_style: Optional[str] = None
     platform_fit: Optional[str] = None
     packaging_angle: Optional[str] = None

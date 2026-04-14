@@ -5,6 +5,7 @@ export type UserProfile = {
   email: string;
   display_name?: string | null;
   plan_code?: string;
+  role?: string;
   created_at?: string;
 };
 
@@ -68,6 +69,22 @@ export type WalletSummary = {
   pending_debits_cents?: number;
   currency?: string;
   recent_entries?: WalletLedgerEntry[];
+};
+
+export type FeatureFlags = {
+  clip_limit?: number;
+  alt_hooks?: boolean;
+  campaign_mode?: boolean;
+  packaging_profiles?: boolean;
+  history_limit?: number;
+  caption_editor?: boolean;
+  timeline_editor?: boolean;
+  wallet_view?: boolean;
+  posting_queue?: boolean;
+  max_uploads_per_day?: number;
+  max_generations_per_day?: number;
+  premium_exports?: boolean;
+  priority_processing?: boolean;
 };
 
 export type PayoutRequest = {
@@ -143,6 +160,7 @@ export type ClipResult = {
   start_time?: string | null;
   end_time?: string | null;
   score: number;
+  virality_score?: number | null;
   confidence?: number | null;
   rank?: number | null;
   reason?: string | null;
@@ -152,6 +170,7 @@ export type ClipResult = {
   platform_fit?: string | null;
   best_post_order?: number | null;
   hook_variants?: string[];
+  caption_variants?: Record<string, string>;
   clip_url?: string | null;
   edited_clip_url?: string | null;
   raw_clip_url?: string | null;
@@ -168,11 +187,15 @@ export type GenerateResponse = {
   video_url: string;
   status: string;
   source_platform: string;
+  selected_trend?: string | null;
   processing_summary?: {
     target_platform?: string;
     ai_provider?: string;
     plan_name?: string;
+    credits_remaining?: number;
     estimated_turnaround?: string;
+    recommended_next_step?: string;
+    feature_flags?: FeatureFlags;
   };
   clips: ClipResult[];
 };
@@ -181,5 +204,6 @@ export type EditableClip = ClipResult;
 
 export type ClipPackDetail = {
   request_id: string;
+  source_title?: string | null;
   clips: EditableClip[];
 };

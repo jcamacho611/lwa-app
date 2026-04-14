@@ -155,6 +155,7 @@ async def build_clip_response(
         video_url=video_url,
         target_platform=target_platform,
         selected_trend=request.selected_trend,
+        content_angle=request.content_angle,
         trend_context=trend_context,
         source_context=source_context,
     )
@@ -164,6 +165,7 @@ async def build_clip_response(
         clips=clips,
         target_platform=target_platform,
         selected_trend=request.selected_trend,
+        content_angle=request.content_angle,
         source_context=source_context,
     )
     clips = apply_plan_feature_flags(

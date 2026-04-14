@@ -3,7 +3,7 @@ import { ClipStudio } from "../../components/clip-studio";
 export default function SignupPage() {
   return (
     <ClipStudio
-      initialSection="dashboard"
+      initialSection="home"
       autoOpenAuth
       initialAuthMode="signup"
       pageLabel="Authentication"

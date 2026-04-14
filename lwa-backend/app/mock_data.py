@@ -7,6 +7,7 @@ def build_mock_clips(
     video_url: str,
     target_platform: str = "TikTok",
     selected_trend: Optional[str] = None,
+    content_angle: Optional[str] = None,
     trend_context: Optional[List[TrendItem]] = None,
     clip_urls: Optional[List[str]] = None,
     start_end_pairs: Optional[List[tuple[str, str]]] = None,
@@ -15,6 +16,7 @@ def build_mock_clips(
 ) -> List[ClipResult]:
     source_label = video_url.split("//")[-1].split("/")[0]
     lead_trend = selected_trend or (trend_context[0].title if trend_context else "creator growth")
+    preferred_angle = (content_angle or "").strip().lower()
     platform_label = target_platform or "TikTok"
     title_prefix = source_title or platform_label
     clip_urls = normalize_clip_urls(clip_urls)
@@ -33,6 +35,7 @@ def build_mock_clips(
             start_time=start_end_pairs[0][0],
             end_time=start_end_pairs[0][1],
             score=92,
+            virality_score=92,
             confidence=0.94,
             rank=1,
             reason=(
@@ -59,9 +62,15 @@ def build_mock_clips(
                 f"Most creators are still underusing this {lead_trend} move.",
                 f"Use this {lead_trend} hook before your competitors catch up.",
             ],
+            caption_variants={
+                "viral": f"Use this {lead_trend} angle before it gets saturated. Comment if you want part 2.",
+                "story": f"We pulled this from {source_label} because it gets to the payoff fast and earns the next swipe.",
+                "educational": f"Save this breakdown and test the {lead_trend} format in your next post.",
+                "controversial": f"Most creators are still framing {lead_trend} wrong. That is why this version wins.",
+            },
             caption_style=caption_style_for(platform_label),
             platform_fit=platform_fit_for(platform_label, "Hook First"),
-            packaging_angle="educational",
+            packaging_angle=preferred_angle if preferred_angle in {"shock", "story", "value", "curiosity", "controversy"} else "value",
         ),
         ClipResult(
             id="clip_002",
@@ -74,6 +83,7 @@ def build_mock_clips(
             start_time=start_end_pairs[1][0],
             end_time=start_end_pairs[1][1],
             score=88,
+            virality_score=88,
             confidence=0.89,
             rank=2,
             reason="This clip creates tension and debate, which makes it strong as the second post in the pack.",
@@ -94,9 +104,15 @@ def build_mock_clips(
                 "The contrarian edit that makes this point hit harder.",
                 "Everyone is clipping this wrong and missing the real point.",
             ],
+            caption_variants={
+                "viral": "Everyone clips this wrong. Test the sharper take first.",
+                "story": "This cut works because it starts with tension and lands the opinion before attention drops.",
+                "educational": "Use this structure when you want to turn one sharp point into a high-retention short.",
+                "controversial": "Most creators chase safe takes. This clip wins by leaning into the disagreement.",
+            },
             caption_style=caption_style_for(platform_label),
             platform_fit=platform_fit_for(platform_label, "Opinion"),
-            packaging_angle="contrarian",
+            packaging_angle=preferred_angle if preferred_angle in {"shock", "story", "value", "curiosity", "controversy"} else "controversy",
         ),
         ClipResult(
             id="clip_003",
@@ -109,6 +125,7 @@ def build_mock_clips(
             start_time=start_end_pairs[2][0],
             end_time=start_end_pairs[2][1],
             score=85,
+            virality_score=85,
             confidence=0.84,
             rank=3,
             reason="This clip works best after the stronger openers because it converts attention into a concrete next step.",
@@ -129,9 +146,15 @@ def build_mock_clips(
                 "If you only post one follow-up, make it this one.",
                 f"The {platform_label} follow-up that turns attention into action.",
             ],
+            caption_variants={
+                "viral": f"This is the follow-up that keeps the series moving on {platform_label}.",
+                "story": "The story lands here. Use it after the opener to turn curiosity into momentum.",
+                "educational": "Save this sequence if you want a clean example of payoff-first storytelling.",
+                "controversial": "Most people would post this first. It works better as the third clip in the run.",
+            },
             caption_style=caption_style_for(platform_label),
             platform_fit=platform_fit_for(platform_label, "Story CTA"),
-            packaging_angle="storytelling",
+            packaging_angle=preferred_angle if preferred_angle in {"shock", "story", "value", "curiosity", "controversy"} else "story",
         ),
     ]
 

@@ -16,10 +16,21 @@ import {
   WalletSummary,
 } from "./types";
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 type GeneratePayload = {
   url?: string;
   platform: PlatformOption;
   uploadFileId?: string;
+  contentAngle?: string;
 };
 
 type BatchCreatePayload = {
@@ -65,7 +76,7 @@ async function jsonRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
   const data = (await response.json()) as T & { detail?: string; error?: string };
 
   if (!response.ok) {
-    throw new Error(data.detail || data.error || "Request failed.");
+    throw new ApiError(data.detail || data.error || "Request failed.", response.status);
   }
 
   return data;

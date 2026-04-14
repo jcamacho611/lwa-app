@@ -76,7 +76,7 @@ export function BatchPanel({ batches, uploads, currentVideoUrl, selectedUpload, 
         <p className="text-xs uppercase tracking-[0.24em] text-muted">Batch Mode</p>
         <h3 className="mt-2 text-3xl font-semibold text-ink">Queue multi-source runs</h3>
         <p className="mt-4 text-sm leading-7 text-ink/64">
-          Build clip packs across uploads and pasted sources without leaving the same workspace.
+          Stack multiple sources into one repeatable workflow when a single run is not enough.
         </p>
 
         <div className="mt-6 space-y-5">
@@ -149,9 +149,9 @@ export function BatchPanel({ batches, uploads, currentVideoUrl, selectedUpload, 
                   );
                 })
               ) : (
-                <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm text-ink/62">
-                  Upload a file from the Generate or Upload page to make batch mode useful.
-                </div>
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm text-ink/62">
+                  Upload a file from Generate or Upload to start building a batch queue.
+              </div>
               )}
             </div>
           </div>
@@ -197,7 +197,7 @@ export function BatchPanel({ batches, uploads, currentVideoUrl, selectedUpload, 
             ))
           ) : (
             <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm text-ink/62">
-              No batches yet. Create one from current sources and saved uploads.
+              No batches yet. Combine a few links or uploads to create the first one.
             </div>
           )}
         </div>

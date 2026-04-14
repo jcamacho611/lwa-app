@@ -7,6 +7,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 PlanCode = Literal["free", "pro", "scale", "enterprise"]
+UserRole = Literal["creator", "clipper", "admin"]
 UploadStatus = Literal["uploaded", "ready", "processing", "failed"]
 BatchStatus = Literal["queued", "processing", "completed", "failed"]
 CampaignStatus = Literal["draft", "active", "paused", "completed", "archived"]
@@ -14,7 +15,7 @@ LedgerKind = Literal["credit", "debit", "hold", "release", "payout"]
 PayoutStatus = Literal["pending", "approved", "sent", "failed", "rejected"]
 PostStatus = Literal["draft", "queued", "scheduled", "published", "failed"]
 SourceKind = Literal["url", "upload"]
-PackagingAngle = Literal["shock", "storytelling", "educational", "contrarian", "emotional"]
+PackagingAngle = Literal["shock", "story", "value", "controversy", "curiosity"]
 
 
 class UserProfile(BaseModel):
@@ -22,6 +23,7 @@ class UserProfile(BaseModel):
     email: EmailStr
     display_name: Optional[str] = None
     plan_code: PlanCode = "free"
+    role: UserRole = "creator"
     created_at: datetime
 
 

@@ -5,6 +5,7 @@ type GenerateRequestBody = {
   url?: string;
   platform?: string;
   uploadFileId?: string;
+  contentAngle?: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
   const url = payload.url?.trim();
   const platform = payload.platform?.trim() || "TikTok";
   const uploadFileId = payload.uploadFileId?.trim();
+  const contentAngle = payload.contentAngle?.trim();
   const authorization = request.headers.get("authorization");
   const token = authorization?.toLowerCase().startsWith("bearer ") ? authorization.split(" ", 2)[1] : null;
 
@@ -37,6 +39,7 @@ export async function POST(request: NextRequest) {
         video_url: url || undefined,
         upload_file_id: uploadFileId || undefined,
         target_platform: platform,
+        content_angle: contentAngle || undefined,
       }),
       cache: "no-store",
     });

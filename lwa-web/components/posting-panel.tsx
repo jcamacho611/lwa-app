@@ -110,11 +110,11 @@ export function PostingPanel({
     <section className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[0.92fr,1.08fr]">
         <div className="glass-panel rounded-[32px] p-6 sm:p-8">
-          <p className="text-xs uppercase tracking-[0.24em] text-muted">Connections</p>
-          <h3 className="mt-2 text-3xl font-semibold text-ink">Build posting groundwork</h3>
-          <p className="mt-4 text-sm leading-7 text-ink/64">
-            This is queue and provider-connection structure only. Direct provider auth can land later without throwing away the workflow.
-          </p>
+        <p className="text-xs uppercase tracking-[0.24em] text-muted">Connections</p>
+        <h3 className="mt-2 text-3xl font-semibold text-ink">Build posting groundwork</h3>
+        <p className="mt-4 text-sm leading-7 text-ink/64">
+            Prepare the accounts and queue state you need so the best clips are ready to move.
+        </p>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <label className="block">
@@ -165,7 +165,7 @@ export function PostingPanel({
               ))
             ) : (
               <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm text-ink/62">
-                No provider connections yet.
+                No posting connections yet.
               </div>
             )}
           </div>
@@ -285,7 +285,7 @@ export function PostingPanel({
               ))
             ) : (
               <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm text-ink/62">
-                No scheduled posts yet.
+                No scheduled posts yet. Queue the first one from a saved clip pack.
               </div>
             )}
           </div>

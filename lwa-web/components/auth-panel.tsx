@@ -68,8 +68,11 @@ export function AuthPanel({ isOpen, mode, onClose, onSwitchMode, onAuthenticated
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-muted">Account</p>
             <h3 className="mt-2 text-2xl font-semibold text-ink">
-              {mode === "login" ? "Sign in to your workspace" : "Create your workspace"}
+              {mode === "login" ? "Sign in to your workspace" : "Create your account"}
             </h3>
+            <p className="mt-2 text-sm text-ink/60">
+              {mode === "login" ? "Open your saved runs, uploads, and workflow state." : "Start with a browser-native creator workspace."}
+            </p>
           </div>
           <button
             type="button"

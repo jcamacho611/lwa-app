@@ -48,11 +48,11 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
 
       <div className="grid gap-6 xl:grid-cols-[0.92fr,1.08fr]">
         <div className="glass-panel rounded-[32px] p-6 sm:p-8">
-          <p className="text-xs uppercase tracking-[0.24em] text-muted">Payout Request</p>
-          <h3 className="mt-2 text-3xl font-semibold text-ink">Request funds from the ledger</h3>
-          <p className="mt-4 text-sm leading-7 text-ink/64">
-            This is wallet groundwork only. The backend records payout requests and preserves a clean audit path without pretending to be a bank.
-          </p>
+        <p className="text-xs uppercase tracking-[0.24em] text-muted">Payout Request</p>
+        <h3 className="mt-2 text-3xl font-semibold text-ink">Request funds from the ledger</h3>
+        <p className="mt-4 text-sm leading-7 text-ink/64">
+            Review available balance and submit a payout request when you want to move value out of the system.
+        </p>
 
           <label className="mt-6 block">
             <span className="mb-2 block text-sm font-medium text-ink/80">Amount in USD</span>
@@ -107,7 +107,7 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
               ))
             ) : (
               <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm text-ink/62">
-                No ledger entries yet. Campaign earnings and payout actions will accumulate here.
+                No ledger entries yet. Earnings and payout activity will accumulate here over time.
               </div>
             )}
           </div>

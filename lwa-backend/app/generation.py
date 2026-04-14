@@ -35,6 +35,7 @@ async def generate_clips(
     video_url: str,
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     trend_context: List[TrendItem],
     source_context: Optional[SourceContext] = None,
 ) -> tuple[List[ClipResult], str]:
@@ -47,6 +48,7 @@ async def generate_clips(
                 video_url=video_url,
                 target_platform=target_platform,
                 selected_trend=selected_trend,
+                content_angle=content_angle,
                 trend_context=trend_context,
                 source_context=source_context,
             )
@@ -62,6 +64,7 @@ async def generate_clips(
                 video_url=video_url,
                 target_platform=target_platform,
                 selected_trend=selected_trend,
+                content_angle=content_angle,
                 trend_context=trend_context,
                 source_context=source_context,
             )
@@ -74,6 +77,7 @@ async def generate_clips(
         video_url=video_url,
         target_platform=target_platform,
         selected_trend=selected_trend,
+        content_angle=content_angle,
         trend_context=trend_context,
         clip_urls=[seed.clip_url for seed in source_context.clip_seeds] if source_context else None,
         start_end_pairs=[(seed.start_time, seed.end_time) for seed in source_context.clip_seeds] if source_context else None,
@@ -91,10 +95,11 @@ async def generate_with_ollama(
     video_url: str,
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     trend_context: List[TrendItem],
     source_context: Optional[SourceContext] = None,
 ) -> tuple[List[ClipResult], str]:
-    prompt = build_generation_prompt(video_url, target_platform, selected_trend, trend_context, source_context)
+    prompt = build_generation_prompt(video_url, target_platform, selected_trend, content_angle, trend_context, source_context)
 
     async with httpx.AsyncClient(timeout=20.0) as client:
         response = await client.post(
@@ -115,6 +120,7 @@ async def generate_with_ollama(
         video_url,
         target_platform,
         selected_trend,
+        content_angle,
         trend_context,
         source_context,
     ), "ollama"
@@ -126,10 +132,11 @@ async def generate_with_openai(
     video_url: str,
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     trend_context: List[TrendItem],
     source_context: Optional[SourceContext] = None,
 ) -> tuple[List[ClipResult], str]:
-    prompt = build_generation_prompt(video_url, target_platform, selected_trend, trend_context, source_context)
+    prompt = build_generation_prompt(video_url, target_platform, selected_trend, content_angle, trend_context, source_context)
     client = OpenAI(api_key=settings.openai_api_key)
     response = client.responses.create(
         model=settings.openai_model,
@@ -141,6 +148,7 @@ async def generate_with_openai(
         video_url,
         target_platform,
         selected_trend,
+        content_angle,
         trend_context,
         source_context,
     ), "openai"
@@ -151,6 +159,7 @@ def parse_generated_clips(
     video_url: str,
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     trend_context: List[TrendItem],
     source_context: Optional[SourceContext] = None,
 ) -> List[ClipResult]:
@@ -167,6 +176,7 @@ def parse_generated_clips(
             video_url=video_url,
             target_platform=target_platform,
             selected_trend=selected_trend,
+            content_angle=content_angle,
             trend_context=trend_context,
             clip_urls=[seed.clip_url for seed in source_context.clip_seeds] if source_context else None,
             start_end_pairs=[(seed.start_time, seed.end_time) for seed in source_context.clip_seeds] if source_context else None,
@@ -285,6 +295,7 @@ def build_generation_prompt(
     video_url: str,
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     trend_context: List[TrendItem],
     source_context: Optional[SourceContext] = None,
 ) -> str:
@@ -302,6 +313,7 @@ Source duration seconds: {source_duration}
 Source description: {source_description}
 Target platform: {target_platform}
 Selected trend: {selected_trend or "none"}
+Preferred packaging angle: {content_angle or "none"}
 Trend context:
 {trend_lines}
 Clip windows:
@@ -322,7 +334,7 @@ Return valid JSON in this shape:
       "score": 90,
       "confidence": 0.86,
       "platform_fit": "...",
-      "packaging_angle": "educational",
+      "packaging_angle": "value",
       "format": "Hook First"
     }}
   ]
@@ -330,10 +342,11 @@ Return valid JSON in this shape:
 
 Rules:
 - Evaluate each clip using the transcript excerpt, timing, and target platform.
+- If preferred packaging angle is present, bias the response toward it unless the clip clearly fits a stronger angle.
 - reason must explain in one short sentence why the clip will work.
 - thumbnail_text must be 2 to 5 words and punchy.
 - hook_variants must contain exactly 3 alternate hook options.
-- packaging_angle must be one of: shock, storytelling, educational, contrarian, emotional.
+- packaging_angle must be one of: shock, story, value, curiosity, controversy.
 - confidence must be a float between 0.0 and 1.0.
 """.strip()
 
@@ -486,9 +499,16 @@ def parse_packaging_angle(
     hook: str,
     transcript_excerpt: object,
 ) -> str:
-    allowed = {"shock", "storytelling", "educational", "contrarian", "emotional"}
+    aliases = {
+        "storytelling": "story",
+        "educational": "value",
+        "contrarian": "controversy",
+        "emotional": "story",
+    }
+    allowed = {"shock", "story", "value", "curiosity", "controversy"}
     if isinstance(value, str):
         normalized = value.strip().lower()
+        normalized = aliases.get(normalized, normalized)
         if normalized in allowed:
             return normalized
     return default_packaging_angle(title=title, hook=hook, transcript_excerpt=transcript_excerpt)
@@ -503,14 +523,16 @@ def default_packaging_angle(*, title: str, hook: str, transcript_excerpt: object
         ]
     )
     if any(keyword in content for keyword in {"wrong", "never", "nobody", "skip", "myth"}):
-        return "contrarian"
+        return "controversy"
     if any(keyword in content for keyword in {"story", "moment", "started", "then", "when"}):
-        return "storytelling"
+        return "story"
     if any(keyword in content for keyword in {"feel", "care", "pain", "afraid", "love", "hate"}):
-        return "emotional"
+        return "story"
     if any(keyword in content for keyword in {"stop", "crazy", "wild", "shocking", "secret"}):
         return "shock"
-    return "educational"
+    if any(keyword in content for keyword in {"why", "how", "before", "exact", "mistake"}):
+        return "curiosity"
+    return "value"
 
 
 def clamp_confidence(value: object, fallback: float) -> float:

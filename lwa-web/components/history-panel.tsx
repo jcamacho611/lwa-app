@@ -23,8 +23,7 @@ export function HistoryPanel({ clipPacks, selectedClipPackId, isLoading, onOpenC
       </div>
 
       <p className="mt-4 max-w-3xl text-sm leading-7 text-ink/64">
-        Reopen previous runs, inspect ranked outputs, and jump back into the browser editor without regenerating from
-        scratch.
+        Reopen past runs, inspect what won, and jump straight back into editing without regenerating from scratch.
       </p>
 
       {isLoading ? (
@@ -71,7 +70,7 @@ export function HistoryPanel({ clipPacks, selectedClipPackId, isLoading, onOpenC
           })
         ) : (
           <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5 text-sm text-ink/62">
-            Sign in and generate a clip pack to start building history.
+            Sign in and generate a clip pack to start building your library.
           </div>
         )}
       </div>

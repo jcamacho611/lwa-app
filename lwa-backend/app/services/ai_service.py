@@ -18,6 +18,7 @@ async def generate_clip_copy(
     video_url: str,
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     trend_context: List[TrendItem],
     source_context: Optional[SourceContext] = None,
 ) -> tuple[List[ClipResult], str]:
@@ -26,6 +27,7 @@ async def generate_clip_copy(
         video_url=video_url,
         target_platform=target_platform,
         selected_trend=selected_trend,
+        content_angle=content_angle,
         trend_context=trend_context,
         source_context=source_context,
     )

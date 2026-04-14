@@ -90,12 +90,12 @@ export function CampaignPanel({ campaigns, onCreate, onUpdateStatus }: CampaignP
         <p className="text-xs uppercase tracking-[0.24em] text-muted">Campaigns</p>
         <h3 className="mt-2 text-3xl font-semibold text-ink">Create a distribution brief</h3>
         <p className="mt-4 text-sm leading-7 text-ink/64">
-          Group clip packs into a campaign with target angle, payout scaffolding, and platform requirements.
+          Turn loose clips into a focused push with a target angle, platform list, and clear posting requirements.
         </p>
 
         <div className="mt-6 space-y-5">
           <Field label="Campaign title" value={title} onChange={setTitle} placeholder="Summer launch sprint" />
-          <Field label="Target angle" value={targetAngle} onChange={setTargetAngle} placeholder="educational, emotional, contrarian" />
+          <Field label="Target angle" value={targetAngle} onChange={setTargetAngle} placeholder="curiosity, value, story" />
           <Field
             label="Description"
             value={description}
@@ -205,7 +205,7 @@ export function CampaignPanel({ campaigns, onCreate, onUpdateStatus }: CampaignP
             ))
           ) : (
             <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm text-ink/62">
-              No campaigns yet. Create one to define publishing goals and payout structure.
+              No campaigns yet. Create one to turn scattered clip output into a real publishing brief.
             </div>
           )}
         </div>

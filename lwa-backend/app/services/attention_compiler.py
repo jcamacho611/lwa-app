@@ -15,7 +15,7 @@ from .ai_service import resolve_attention_mode
 
 logger = logging.getLogger("uvicorn.error")
 
-ALLOWED_PACKAGING_ANGLES = {"shock", "storytelling", "educational", "contrarian", "emotional"}
+ALLOWED_PACKAGING_ANGLES = {"shock", "story", "value", "controversy", "curiosity"}
 
 
 async def compile_attention(
@@ -24,6 +24,7 @@ async def compile_attention(
     clips: list[ClipResult],
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     source_context: Optional[SourceContext],
 ) -> tuple[list[ClipResult], str]:
     mode = resolve_attention_mode(settings)
@@ -41,6 +42,7 @@ async def compile_attention(
                 clips,
                 target_platform,
                 selected_trend,
+                content_angle,
                 source_context,
             )
             logger.info("attention_compiler_end mode=openai clips=%s", len(compiled))
@@ -52,6 +54,7 @@ async def compile_attention(
         clips=clips,
         target_platform=target_platform,
         selected_trend=selected_trend,
+        content_angle=content_angle,
         source_context=source_context,
     )
     logger.info("attention_compiler_end mode=fallback clips=%s", len(compiled))
@@ -63,6 +66,7 @@ def compile_with_openai(
     clips: list[ClipResult],
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     source_context: Optional[SourceContext],
 ) -> list[ClipResult]:
     client = OpenAI(api_key=settings.openai_api_key)
@@ -72,6 +76,7 @@ def compile_with_openai(
             clips=clips,
             target_platform=target_platform,
             selected_trend=selected_trend,
+            content_angle=content_angle,
             source_context=source_context,
         ),
     )
@@ -91,6 +96,7 @@ def compile_with_openai(
         entries=entries,
         target_platform=target_platform,
         selected_trend=selected_trend,
+        content_angle=content_angle,
         source_context=source_context,
     )
     return rank_compiled_clips(compiled)
@@ -101,6 +107,7 @@ def compile_with_fallback(
     clips: list[ClipResult],
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     source_context: Optional[SourceContext],
 ) -> list[ClipResult]:
     compiled: list[ClipResult] = []
@@ -109,6 +116,7 @@ def compile_with_fallback(
             clip=clip,
             target_platform=target_platform,
             selected_trend=selected_trend,
+            content_angle=content_angle,
             source_context=source_context,
             index=index,
         )
@@ -124,6 +132,7 @@ def merge_compiler_entries(
     entries: list[object],
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     source_context: Optional[SourceContext],
 ) -> list[ClipResult]:
     entry_map = {}
@@ -143,6 +152,7 @@ def merge_compiler_entries(
                     entry=entry,
                     target_platform=target_platform,
                     selected_trend=selected_trend,
+                    content_angle=content_angle,
                     source_context=source_context,
                     index=index + 1,
                 )
@@ -159,6 +169,7 @@ def normalize_compiler_update(
     entry: dict[object, object],
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     source_context: Optional[SourceContext],
     index: int,
 ) -> dict[str, object]:
@@ -166,6 +177,7 @@ def normalize_compiler_update(
         clip=clip,
         target_platform=target_platform,
         selected_trend=selected_trend,
+        content_angle=content_angle,
         source_context=source_context,
         index=index,
     )
@@ -180,11 +192,20 @@ def normalize_compiler_update(
 
     return {
         "score": score,
+        "virality_score": score,
         "confidence": confidence,
         "reason": reason,
         "why_this_matters": reason,
         "confidence_score": max(0, min(int(round(confidence * 100)), 100)),
         "hook_variants": hook_variants,
+        "caption_variants": normalize_caption_variants(
+            entry.get("caption_variants"),
+            fallback=caption_variants_for(
+                clip=clip,
+                target_platform=target_platform,
+                packaging_angle=packaging_angle,
+            ),
+        ),
         "packaging_angle": packaging_angle,
         "platform_fit": str_or_default(entry.get("platform_fit"), str(heuristic["platform_fit"])),
         "thumbnail_text": str_or_default(entry.get("thumbnail_text"), str(heuristic["thumbnail_text"])),
@@ -218,6 +239,7 @@ def heuristic_analysis(
     clip: ClipResult,
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     source_context: Optional[SourceContext],
     index: int,
 ) -> dict[str, object]:
@@ -242,6 +264,7 @@ def heuristic_analysis(
 
     packaging_angle = heuristic_packaging_angle(
         combined_text=combined_text,
+        preferred_angle=content_angle,
         emotional=emotional,
         story=story,
         curiosity=curiosity,
@@ -274,6 +297,7 @@ def heuristic_analysis(
 
     return {
         "score": score,
+        "virality_score": score,
         "confidence": confidence,
         "reason": (
             f"This clip is strong because the {packaging_angle} framing creates a fast hook and a clear payoff for {target_platform} viewers."
@@ -283,6 +307,11 @@ def heuristic_analysis(
             f"The {focus} moment worth posting first on {target_platform}.",
             f"If you test one {packaging_angle} hook from this source, make it this one.",
         ],
+        "caption_variants": caption_variants_for(
+            clip=clip,
+            target_platform=target_platform,
+            packaging_angle=packaging_angle,
+        ),
         "packaging_angle": packaging_angle,
         "platform_fit": platform_fit_for(target_platform, packaging_angle),
         "thumbnail_text": thumbnail_text_for(clip.title, clip.hook),
@@ -295,6 +324,7 @@ def build_attention_prompt(
     clips: list[ClipResult],
     target_platform: str,
     selected_trend: Optional[str],
+    content_angle: Optional[str],
     source_context: Optional[SourceContext],
 ) -> str:
     source_title = source_context.title if source_context else "Unknown source"
@@ -308,6 +338,7 @@ You are the Attention Compiler for a short-form video system.
 
 Score and enrich the candidate clips for {target_platform}.
 Selected trend: {selected_trend or "none"}
+Preferred packaging angle: {content_angle or "none"}
 Source title: {source_title}
 Source duration seconds: {source_duration}
 
@@ -323,7 +354,13 @@ Return valid JSON with this shape:
       "confidence": 0.87,
       "reason": "Short sentence on why the clip will work.",
       "hook_variants": ["...", "...", "..."],
-      "packaging_angle": "educational",
+      "caption_variants": {{
+        "viral": "...",
+        "story": "...",
+        "educational": "...",
+        "controversial": "..."
+      }},
+      "packaging_angle": "value",
       "platform_fit": "Short sentence tailored to the platform.",
       "cta_suggestion": "Short CTA suggestion.",
       "thumbnail_text": "2 to 5 words"
@@ -332,8 +369,9 @@ Return valid JSON with this shape:
 }}
 
 Rules:
-- Use only these packaging angles: shock, storytelling, educational, contrarian, emotional.
+- Use only these packaging angles: shock, story, value, controversy, curiosity.
 - hook_variants must contain 3 to 5 options.
+- caption_variants must contain these keys exactly: viral, story, educational, controversial.
 - confidence must be a float between 0.0 and 1.0.
 - Keep reason, platform_fit, and cta_suggestion concise.
 """.strip()
@@ -352,6 +390,18 @@ def normalize_packaging_angle(value: object, *, fallback: str) -> str:
         normalized = value.strip().lower()
         if normalized in ALLOWED_PACKAGING_ANGLES:
             return normalized
+    return fallback
+
+
+def normalize_caption_variants(value: object, *, fallback: dict[str, str]) -> dict[str, str]:
+    if isinstance(value, dict):
+        normalized: dict[str, str] = {}
+        for key in ("viral", "story", "educational", "controversial"):
+            raw = value.get(key)
+            if isinstance(raw, str) and raw.strip():
+                normalized[key] = raw.strip()
+        if normalized:
+            return {**fallback, **normalized}
     return fallback
 
 
@@ -390,21 +440,26 @@ def duration_score(start_time: str, end_time: str) -> int:
 def heuristic_packaging_angle(
     *,
     combined_text: str,
+    preferred_angle: Optional[str],
     emotional: int,
     story: int,
     curiosity: int,
     replay: int,
 ) -> str:
+    if isinstance(preferred_angle, str):
+        normalized_preference = preferred_angle.strip().lower()
+        if normalized_preference in ALLOWED_PACKAGING_ANGLES:
+            return normalized_preference
     lowered = combined_text.lower()
     if any(keyword in lowered for keyword in {"wrong", "never", "nobody", "myth", "mistake"}):
-        return "contrarian"
+        return "controversy"
     if story >= emotional and story >= curiosity and story >= replay:
-        return "storytelling"
-    if emotional >= curiosity and emotional >= replay:
-        return "emotional"
+        return "story"
     if any(keyword in lowered for keyword in {"secret", "crazy", "wild", "shocking"}):
         return "shock"
-    return "educational"
+    if curiosity >= emotional and curiosity >= replay:
+        return "curiosity"
+    return "value"
 
 
 def platform_fit_for(target_platform: str, packaging_angle: str) -> str:
@@ -437,6 +492,20 @@ def cta_for(target_platform: str, rank: int) -> str:
     if platform == "youtube":
         return "Ask viewers which angle they want broken down next."
     return "Ask viewers to comment with the point they agreed with most."
+
+
+def caption_variants_for(*, clip: ClipResult, target_platform: str, packaging_angle: str) -> dict[str, str]:
+    base = clip.caption.strip() or clip.hook.strip() or clip.title.strip()
+    hook = clip.hook.strip() or clip.title.strip() or "this clip"
+    platform = target_platform.lower()
+    platform_tag = "tiktok" if "tik" in platform else "reels" if "insta" in platform else "shorts"
+
+    return {
+        "viral": f"{hook} {clip.cta_suggestion or 'Comment if you want part 2.'}".strip(),
+        "story": f"{base} Start with the setup, then land the payoff in one clean beat.".strip(),
+        "educational": f"{base} Save this {platform_tag} breakdown and test the {packaging_angle} angle yourself.".strip(),
+        "controversial": f"{hook} Most people will disagree with this take, which is exactly why it spreads.".strip(),
+    }
 
 
 def parse_timestamp(value: str) -> int:

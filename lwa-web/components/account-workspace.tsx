@@ -10,6 +10,8 @@ type AccountWorkspaceProps = {
   uploads: UploadAsset[];
   batches: BatchSummary[];
   campaigns: CampaignSummary[];
+  readyQueueCount?: number;
+  planLabel?: string;
   onSignOut: () => void;
   onOpenClipPack: (requestId: string) => void;
   selectedClipPackId?: string | null;
@@ -26,6 +28,8 @@ export function AccountWorkspace({
   uploads,
   batches,
   campaigns,
+  readyQueueCount = 0,
+  planLabel,
   onSignOut,
   onOpenClipPack,
   selectedClipPackId,
@@ -35,14 +39,14 @@ export function AccountWorkspace({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-muted">Workspace</p>
-          <h3 className="mt-2 text-3xl font-semibold text-ink">Signed in as {user.email}</h3>
+          <h3 className="mt-2 text-3xl font-semibold text-ink">Welcome back, {user.email}</h3>
           <p className="mt-2 text-sm leading-7 text-ink/64">
-            Your web workspace now follows the same backend account state as the iOS app and Railway backend.
+            Your recent runs, uploads, campaigns, and ledger state are all here in one place.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <span className="rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-medium text-accent">
-            Plan: {user.plan_code}
+            Plan: {planLabel || user.plan_code}
           </span>
           <Link
             href="/history"
@@ -68,14 +72,14 @@ export function AccountWorkspace({
 
       <div className="grid gap-5 lg:grid-cols-3">
         <StatCard label="Saved clip packs" value={String(clipPacks.length)} detail="Stored against your account." />
-        <StatCard label="Uploads" value={String(uploads.length)} detail="Browser uploads ready for generation." />
-        <StatCard label="Wallet available" value={formatCents(wallet?.available_cents)} detail="Groundwork for payouts and earnings." />
+        <StatCard label="Uploads" value={String(uploads.length)} detail="Source files ready to reuse." />
+        <StatCard label="Ready queue" value={String(readyQueueCount)} detail="Clips staged for next posting passes." />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="glass-panel rounded-[28px] p-5">
           <p className="text-lg font-semibold text-ink">Saved Clip Packs</p>
-          <p className="mt-2 text-sm leading-7 text-ink/64">Recent runs tied to your account.</p>
+          <p className="mt-2 text-sm leading-7 text-ink/64">Your most recent ranked outputs.</p>
           <div className="mt-5 space-y-3">
             {clipPacks.length ? (
               clipPacks.slice(0, 5).map((item) => {
@@ -120,7 +124,7 @@ export function AccountWorkspace({
         />
         <Panel
           title="Batches"
-          subtitle="Queued and completed multi-source runs."
+          subtitle="Multi-source runs you can reopen and reuse."
           empty="No batches yet."
           items={batches.slice(0, 5).map((item) => ({
             title: item.title,
@@ -129,7 +133,7 @@ export function AccountWorkspace({
         />
         <Panel
           title="Campaigns"
-          subtitle="Creator or clipper workflow groundwork."
+          subtitle="Active briefs and content pushes."
           empty="No campaigns yet."
           items={campaigns.slice(0, 5).map((item) => ({
             title: item.name || item.title || "Campaign",
