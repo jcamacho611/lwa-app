@@ -3,6 +3,7 @@
 import { useClipGeneration } from '@/hooks/useClipGeneration';
 import { VideoInput } from '@/components/VideoInput';
 import { ResultsDisplay } from '@/components/ResultsDisplay';
+import { LogoMark, LogoWordmark } from '@/components/brand/Logo';
 
 export default function HomePage() {
   const { state, generate, reset } = useClipGeneration();
@@ -14,13 +15,13 @@ export default function HomePage() {
   return (
     <div className="min-h-dvh flex flex-col">
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-white/6 bg-surface-900/80 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2.5">
+      <header className="sticky top-0 z-50 border-b border-white/6 bg-surface-950/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-3">
             <LogoMark />
-            <span className="text-sm font-bold tracking-tight text-white">LWA</span>
-            <span className="hidden sm:inline-block rounded-full border border-brand-500/30 bg-brand-500/10 px-2 py-0.5 text-xs font-medium text-brand-400">
-              AI Clip Generator
+            <LogoWordmark />
+            <span className="hidden sm:inline-flex items-center rounded-full border border-neon-purple/30 bg-neon-purple/10 px-2.5 py-0.5 text-xs font-medium text-neon-violet">
+              AI Content OS
             </span>
           </div>
           <nav className="flex items-center gap-1">
@@ -28,9 +29,18 @@ export default function HomePage() {
               href="https://lwa-production-c9cc.up.railway.app/docs"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-white/5 hover:text-white transition-colors"
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-white/5 hover:text-text-primary transition-colors"
             >
               API Docs
+            </a>
+            <a
+              href="https://lwa-production-c9cc.up.railway.app/health"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-white/5 hover:text-text-primary transition-colors"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse-slow" />
+              Live
             </a>
           </nav>
         </div>
@@ -45,26 +55,29 @@ export default function HomePage() {
           /* ── Input view ───────────────────────────────────────────────── */
           <div className="flex flex-col items-center">
             {/* Hero */}
-            <div className="mb-10 text-center space-y-4 max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-500/30 bg-brand-500/10 px-4 py-1.5 text-xs font-medium text-brand-400">
+            <div className="mb-12 text-center space-y-5 max-w-2xl animate-fade-in">
+              <div className="inline-flex items-center gap-2 rounded-full border border-neon-purple/30 bg-neon-purple/10 px-4 py-1.5 text-xs font-semibold text-neon-violet tracking-widest uppercase">
                 <SparklesIcon className="h-3.5 w-3.5" />
-                Powered by AI
+                AI Content Repurposer
               </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white text-balance">
-                Turn any video into{' '}
-                <span className="bg-gradient-to-r from-brand-400 to-violet-400 bg-clip-text text-transparent">
-                  viral clips
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-text-primary text-balance leading-[1.1]">
+                Turn one long video into a{' '}
+                <span className="bg-gradient-neon-violet-cyan bg-clip-text text-transparent">
+                  ranked clip engine
                 </span>
               </h1>
-              <p className="text-base sm:text-lg text-slate-400 text-balance leading-relaxed">
-                Paste a video URL and get AI-generated hooks, captions, and timestamps
-                optimised for TikTok, Reels, Shorts, and more — in seconds.
+              <p className="text-base sm:text-lg text-text-secondary text-balance leading-relaxed max-w-xl mx-auto">
+                Generate hooks, captions, timestamps, packaging angles, and
+                workflow-ready short-form assets in one premium workspace.
+              </p>
+              <p className="text-xs text-text-muted tracking-wide">
+                Built for creators, clippers, operators, and growth teams
               </p>
             </div>
 
-            {/* Input card */}
-            <div className="w-full max-w-xl">
-              <div className="rounded-2xl border border-white/8 bg-surface-800 p-6 sm:p-8 glow-brand">
+            {/* Generate surface */}
+            <div className="w-full max-w-xl animate-slide-up">
+              <div className="rounded-2xl border border-neon-purple/25 bg-surface-800/60 backdrop-blur-xl p-6 sm:p-8 shadow-card-premium neon-glow">
                 <VideoInput
                   onSubmit={handleSubmit}
                   isLoading={state.status === 'loading'}
@@ -76,7 +89,9 @@ export default function HomePage() {
                 <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 flex items-start gap-3 animate-fade-in">
                   <AlertIcon className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-red-300">Generation failed</p>
+                    <p className="text-sm font-semibold text-red-300">
+                      Generation failed
+                    </p>
                     <p className="text-xs text-red-400/80">{state.error}</p>
                   </div>
                 </div>
@@ -90,16 +105,16 @@ export default function HomePage() {
               ))}
             </div>
 
-            {/* Platform logos row */}
+            {/* Platform row */}
             <div className="mt-12 text-center space-y-3">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <p className="text-xs font-semibold text-text-muted uppercase tracking-widest">
                 Optimised for
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 {PLATFORMS.map((p) => (
                   <span
                     key={p}
-                    className="rounded-full border border-white/8 bg-white/4 px-3 py-1 text-xs text-slate-400"
+                    className="rounded-full border border-white/8 bg-surface-800/50 px-3 py-1 text-xs text-text-secondary hover:border-neon-purple/30 hover:text-text-primary transition-colors"
                   >
                     {p}
                   </span>
@@ -112,16 +127,29 @@ export default function HomePage() {
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       <footer className="border-t border-white/6 py-6">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <span>© {new Date().getFullYear()} LWA. All rights reserved.</span>
-          <a
-            href="https://lwa-production-c9cc.up.railway.app/health"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-slate-300 transition-colors"
-          >
-            API Status
-          </a>
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-text-muted">
+          <div className="flex items-center gap-2">
+            <LogoMark />
+            <span>© {new Date().getFullYear()} LWA. All rights reserved.</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://lwa-production-c9cc.up.railway.app/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-text-secondary transition-colors"
+            >
+              API Docs
+            </a>
+            <a
+              href="https://lwa-production-c9cc.up.railway.app/health"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-text-secondary transition-colors"
+            >
+              API Status
+            </a>
+          </div>
         </div>
       </footer>
     </div>
@@ -130,45 +158,81 @@ export default function HomePage() {
 
 // ─── Static data ─────────────────────────────────────────────────────────────
 
-const PLATFORMS = ['TikTok', 'Instagram Reels', 'YouTube Shorts', 'X / Twitter', 'LinkedIn'];
+const PLATFORMS = [
+  'TikTok',
+  'Instagram Reels',
+  'YouTube Shorts',
+  'X / Twitter',
+  'LinkedIn',
+];
 
 const FEATURES = [
   {
     icon: <BoltIcon className="h-5 w-5" />,
     title: 'Instant analysis',
-    description: 'Hooks, captions, and timestamps generated in under a minute from any public video URL.',
+    description:
+      'Hooks, captions, and timestamps generated in under a minute from any public video URL.',
+    accent: 'purple' as const,
   },
   {
     icon: <TargetIcon className="h-5 w-5" />,
     title: 'Platform-native copy',
-    description: 'Each clip is scored and formatted for the platform you choose — not generic output.',
+    description:
+      'Each clip is scored and ranked for the platform you choose — not generic output.',
+    accent: 'blue' as const,
   },
   {
     icon: <LayersIcon className="h-5 w-5" />,
     title: 'Hook variants',
-    description: 'Multiple hook angles per clip so you can A/B test without writing a single word.',
+    description:
+      'Multiple hook angles per clip so you can A/B test without writing a single word.',
+    accent: 'cyan' as const,
   },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+const FEATURE_ACCENT = {
+  purple: {
+    icon: 'bg-neon-purple/15 text-neon-violet',
+    border: 'hover:border-neon-purple/30',
+  },
+  blue: {
+    icon: 'bg-neon-blue/15 text-neon-blue',
+    border: 'hover:border-neon-blue/30',
+  },
+  cyan: {
+    icon: 'bg-neon-cyan/15 text-neon-cyan',
+    border: 'hover:border-neon-cyan/30',
+  },
+};
+
 function FeatureCard({
   icon,
   title,
   description,
+  accent,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
+  accent: 'purple' | 'blue' | 'cyan';
 }) {
+  const colors = FEATURE_ACCENT[accent];
   return (
-    <div className="rounded-2xl border border-white/6 bg-surface-800/60 p-5 space-y-3">
-      <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600/20 text-brand-400">
+    <div
+      className={`rounded-2xl border border-white/6 bg-surface-800/40 backdrop-blur-sm p-5 space-y-3 transition-all duration-200 ${colors.border} hover:bg-surface-800/60 hover:shadow-card-hover`}
+    >
+      <div
+        className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${colors.icon}`}
+      >
         {icon}
       </div>
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
-        <p className="text-xs text-slate-400 leading-relaxed">{description}</p>
+        <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+        <p className="text-xs text-text-secondary leading-relaxed">
+          {description}
+        </p>
       </div>
     </div>
   );
@@ -176,52 +240,92 @@ function FeatureCard({
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
-function LogoMark() {
-  return (
-    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-violet-600">
-      <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-      </svg>
-    </div>
-  );
-}
-
 function SparklesIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+      />
     </svg>
   );
 }
 
 function AlertIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+      />
     </svg>
   );
 }
 
 function BoltIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"
+      />
     </svg>
   );
 }
 
 function TargetIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"
+      />
     </svg>
   );
 }
 
 function LayersIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3" />
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3"
+      />
     </svg>
   );
 }

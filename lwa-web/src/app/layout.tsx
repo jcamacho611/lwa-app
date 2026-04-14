@@ -9,27 +9,31 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'LWA — AI Clip Generator',
+  title: 'LWA — AI Content Operating System',
   description:
-    'Turn any video into viral short-form clips. AI-generated hooks, captions, and timestamps for TikTok, Instagram Reels, YouTube Shorts, and more.',
-  keywords: ['clip generator', 'AI video', 'short-form content', 'TikTok', 'Instagram Reels', 'YouTube Shorts'],
+    'Turn one long video into a ranked clip engine. AI-generated hooks, captions, timestamps, packaging angles, and workflow-ready short-form assets in one premium workspace.',
+  keywords: ['clip generator', 'AI video', 'short-form content', 'TikTok', 'Instagram Reels', 'YouTube Shorts', 'content repurposing', 'AI content'],
   authors: [{ name: 'LWA' }],
   robots: 'index, follow',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+  },
   openGraph: {
-    title: 'LWA — AI Clip Generator',
-    description: 'Turn any video into viral short-form clips in seconds.',
+    title: 'LWA — AI Content Operating System',
+    description: 'Turn one long video into a ranked clip engine.',
     type: 'website',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'LWA — AI Clip Generator',
-    description: 'Turn any video into viral short-form clips in seconds.',
+    title: 'LWA — AI Content Operating System',
+    description: 'Turn one long video into a ranked clip engine.',
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0a0a0f',
+  themeColor: '#050816',
   colorScheme: 'dark',
   width: 'device-width',
   initialScale: 1,

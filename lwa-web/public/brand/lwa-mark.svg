@@ -1,0 +1,21 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="markGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563FF;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Outer frame -->
+  <rect x="4" y="4" width="24" height="24" rx="6" fill="none" stroke="url(#markGrad)" stroke-width="1.5" filter="url(#glow)"/>
+  <!-- Inner clip mark (L shape) -->
+  <path d="M 10 10 L 10 22 M 10 10 L 18 10" stroke="url(#markGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#glow)"/>
+  <!-- Accent dot -->
+  <circle cx="22" cy="10" r="1.5" fill="url(#markGrad)" filter="url(#glow)"/>
+</svg>
