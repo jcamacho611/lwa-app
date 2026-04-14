@@ -43,7 +43,11 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
       <div className="grid gap-5 lg:grid-cols-3">
         <MetricCard label="Available" value={formatCents(wallet?.available_cents)} detail="Balance ready for manual payout review." />
         <MetricCard label="Pending" value={formatCents(wallet?.pending_cents)} detail="Pending payout holds and unsettled campaign earnings." />
-        <MetricCard label="Lifetime" value={formatCents(wallet?.lifetime_cents)} detail="Total credited value recorded by the backend ledger." />
+        <MetricCard
+          label="Payout ready"
+          value={formatCents(wallet?.eligible_payout_cents)}
+          detail="Approved submissions become payout-ready before any real payout rails are connected."
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.92fr,1.08fr]">
@@ -53,6 +57,19 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
         <p className="mt-4 text-sm leading-7 text-ink/64">
             Review available balance and submit a payout request when you want to move value out of the system.
         </p>
+
+          {wallet?.submission_summary ? (
+            <div className="mt-5 rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-sm font-medium text-ink">Submission readiness</p>
+              <p className="mt-2 text-sm leading-7 text-ink/64">
+                {wallet.submission_summary.status_counts.approved || 0} approved · {wallet.submission_summary.status_counts.submitted || 0} submitted ·{" "}
+                {wallet.submission_summary.status_counts.paid || 0} paid.
+              </p>
+              <p className="mt-2 text-sm text-accent">
+                Approval unlocks payout readiness. Real payment transfer stays manual until payout rails are wired.
+              </p>
+            </div>
+          ) : null}
 
           <label className="mt-6 block">
             <span className="mb-2 block text-sm font-medium text-ink/80">Amount in USD</span>

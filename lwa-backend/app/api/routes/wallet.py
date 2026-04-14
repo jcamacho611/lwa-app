@@ -16,6 +16,7 @@ logger = logging.getLogger("uvicorn.error")
 async def wallet_summary(request: Request) -> dict[str, object]:
     user = require_user(request)
     wallet = platform_store.get_wallet(user_id=user.id)
+    submission_summary = platform_store.get_user_submission_summary(user_id=user.id)
     credits = [entry["amount_cents"] for entry in wallet["transactions"] if entry["amount_cents"] > 0]
     debits = [abs(entry["amount_cents"]) for entry in wallet["transactions"] if entry["amount_cents"] < 0]
     pending = sum(payout["amount_cents"] for payout in wallet["payouts"] if payout["status"] == "pending")
@@ -26,6 +27,8 @@ async def wallet_summary(request: Request) -> dict[str, object]:
         "currency": "USD",
         "recent_entries": wallet["transactions"][:10],
         "pending_debits_cents": sum(debits),
+        "eligible_payout_cents": submission_summary["eligible_payout_cents"],
+        "submission_summary": submission_summary,
     }
 
 

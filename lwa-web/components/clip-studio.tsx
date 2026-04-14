@@ -16,6 +16,8 @@ import { SettingsPanel } from "./settings-panel";
 import { WalletPanel } from "./wallet-panel";
 import {
   BatchSummary,
+  CampaignAssignment,
+  CampaignDetail,
   CampaignSummary,
   ClipPackDetail,
   ClipResult,
@@ -29,16 +31,19 @@ import {
   UserProfile,
   WalletLedgerEntry,
   WalletSummary,
+  WorkspaceRole,
 } from "../lib/types";
 import {
   ApiError,
   createBatch,
+  createCampaignAssignments,
   createCampaign,
   createPayoutRequest,
   createPostingConnection,
   createScheduledPost,
   generateClips,
   loadBatches,
+  loadCampaign,
   loadCampaigns,
   loadClipPack,
   loadClipPacks,
@@ -51,6 +56,7 @@ import {
   logOut,
   patchClip,
   updateCampaign,
+  updateCampaignAssignment,
   updateScheduledPost,
   uploadSource,
 } from "../lib/api";
@@ -138,6 +144,9 @@ export function ClipStudio({
   const [uploads, setUploads] = useState<UploadAsset[]>([]);
   const [batches, setBatches] = useState<BatchSummary[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignDetail | null>(null);
+  const [isCampaignLoading, setIsCampaignLoading] = useState(false);
   const [postingConnections, setPostingConnections] = useState<PostingConnection[]>([]);
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
   const [selectedClipPackId, setSelectedClipPackId] = useState<string | null>(null);
@@ -264,12 +273,21 @@ export function ClipStudio({
       setUploads([]);
       setBatches([]);
       setCampaigns([]);
+      setSelectedCampaign(null);
+      setSelectedCampaignId(null);
       setPostingConnections([]);
       setScheduledPosts([]);
       return;
     }
     void refreshAccount(token);
   }, [token]);
+
+  useEffect(() => {
+    if (initialSection !== "campaigns" || !token || !campaigns.length || selectedCampaignId) {
+      return;
+    }
+    void openCampaign(campaigns[0].id);
+  }, [campaigns, initialSection, selectedCampaignId, token]);
 
   async function refreshAccount(authToken: string) {
     setIsAccountLoading(true);
@@ -377,6 +395,23 @@ export function ClipStudio({
       setAccountError(loadError instanceof Error ? loadError.message : "Unable to load clip pack.");
     } finally {
       setIsClipPackLoading(false);
+    }
+  }
+
+  async function openCampaign(campaignId: string) {
+    if (!token) {
+      return;
+    }
+    setSelectedCampaignId(campaignId);
+    setIsCampaignLoading(true);
+    setAccountError(null);
+    try {
+      const payload = await loadCampaign(token, campaignId);
+      setSelectedCampaign(payload);
+    } catch (loadError) {
+      setAccountError(loadError instanceof Error ? loadError.message : "Unable to load campaign detail.");
+    } finally {
+      setIsCampaignLoading(false);
     }
   }
 
@@ -497,8 +532,9 @@ export function ClipStudio({
       setAuthOpen(true);
       throw new Error("Sign in to create a campaign.");
     }
-    await createCampaign(token, payload);
+    const created = await createCampaign(token, payload);
     await refreshAccount(token);
+    await openCampaign(created.id);
   }
 
   async function handleCampaignStatusUpdate(campaignId: string, status: string) {
@@ -507,6 +543,44 @@ export function ClipStudio({
     }
     await updateCampaign(token, campaignId, { status });
     await refreshAccount(token);
+    await openCampaign(campaignId);
+  }
+
+  async function handleCampaignAssignmentCreate(campaignId: string, payload: {
+    request_id?: string;
+    clip_ids?: string[];
+    target_platform?: string;
+    packaging_angle?: string;
+    assignee_role?: string;
+    assignee_label?: string;
+    note?: string;
+    payout_amount_cents?: number;
+  }) {
+    if (!token) {
+      throw new Error("Authentication required.");
+    }
+    await createCampaignAssignments(token, campaignId, payload);
+    await refreshAccount(token);
+    await openCampaign(campaignId);
+  }
+
+  async function handleCampaignAssignmentUpdate(
+    campaignId: string,
+    assignmentId: string,
+    payload: {
+      status?: string;
+      assignee_role?: string;
+      assignee_label?: string;
+      note?: string;
+      payout_amount_cents?: number;
+    },
+  ) {
+    if (!token) {
+      throw new Error("Authentication required.");
+    }
+    await updateCampaignAssignment(token, campaignId, assignmentId, payload);
+    await refreshAccount(token);
+    await openCampaign(campaignId);
   }
 
   async function handlePayoutRequest(amountCents: number) {
@@ -1276,9 +1350,18 @@ export function ClipStudio({
 
                   {showCampaigns && user && campaignsUnlocked ? (
                     <CampaignPanel
+                      userRole={(user.role as WorkspaceRole) || "creator"}
                       campaigns={campaigns}
+                      clipPacks={clipPacks}
+                      selectedClipPack={selectedClipPack}
+                      selectedCampaign={selectedCampaign}
+                      selectedCampaignId={selectedCampaignId}
+                      isLoading={isCampaignLoading}
                       onCreate={handleCampaignCreate}
+                      onOpenCampaign={openCampaign}
                       onUpdateStatus={handleCampaignStatusUpdate}
+                      onAssign={handleCampaignAssignmentCreate}
+                      onUpdateAssignment={handleCampaignAssignmentUpdate}
                     />
                   ) : showCampaigns && user ? (
                     <FeatureGatePanel

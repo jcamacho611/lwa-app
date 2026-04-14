@@ -48,6 +48,9 @@ export function AccountWorkspace({
           <span className="rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-medium text-accent">
             Plan: {planLabel || user.plan_code}
           </span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80">
+            Role: {user.role || "creator"}
+          </span>
           <Link
             href="/history"
             className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
@@ -137,7 +140,7 @@ export function AccountWorkspace({
           empty="No campaigns yet."
           items={campaigns.slice(0, 5).map((item) => ({
             title: item.name || item.title || "Campaign",
-            detail: `${item.status} · ${item.target_angle || "no angle"} · ${formatCents(item.payout_cents_per_1000_views)} per 1k views`,
+            detail: `${item.status} · ${item.target_angle || "no angle"} · ${item.submission_summary?.total_assignments || 0} assignments · ${formatCents(item.payout_cents_per_1000_views)} per 1k views`,
           }))}
         />
       </div>

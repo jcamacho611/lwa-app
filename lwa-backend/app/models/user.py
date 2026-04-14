@@ -7,6 +7,7 @@ class UserRecord(BaseModel):
     id: str
     email: str
     plan: str
+    role: str = "creator"
     balance_cents: int = 0
     created_at: str
 

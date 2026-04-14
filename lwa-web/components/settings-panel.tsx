@@ -34,6 +34,7 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
         <div className="mt-6 space-y-4">
           <InfoRow label="Email" value={user.email} />
           <InfoRow label="Plan" value={planLabel} />
+          <InfoRow label="Role" value={user.role || "creator"} />
           <InfoRow label="Created" value={user.created_at || "recent"} />
           <InfoRow label="Wallet available" value={`$${((wallet?.available_cents || 0) / 100).toFixed(2)}`} />
           <InfoRow

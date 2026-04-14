@@ -67,8 +67,10 @@ export type WalletSummary = {
   available_cents?: number;
   lifetime_cents?: number;
   pending_debits_cents?: number;
+  eligible_payout_cents?: number;
   currency?: string;
   recent_entries?: WalletLedgerEntry[];
+  submission_summary?: SubmissionSummary;
 };
 
 export type FeatureFlags = {
@@ -127,6 +129,56 @@ export type CampaignSummary = {
   requirements?: string | null;
   payout_cents_per_1000_views?: number | null;
   created_at?: string;
+  submission_summary?: SubmissionSummary;
+};
+
+export type SubmissionStatus = "draft" | "ready" | "submitted" | "approved" | "rejected" | "paid";
+export type PayoutState = "locked" | "eligible" | "pending" | "paid";
+export type WorkspaceRole = "creator" | "clipper" | "admin" | "operator";
+
+export type SubmissionSummary = {
+  total_assignments: number;
+  status_counts: Record<string, number>;
+  role_counts: Record<string, number>;
+  assignment_counts: Record<string, number>;
+  eligible_payout_cents: number;
+  pending_payout_cents: number;
+  paid_payout_cents: number;
+};
+
+export type CampaignAssignment = {
+  id: string;
+  campaign_id: string;
+  owner_user_id?: string;
+  request_id?: string | null;
+  clip_id?: string | null;
+  assignment_kind: "clip" | "clip_pack";
+  title?: string | null;
+  hook?: string | null;
+  target_platform?: string | null;
+  packaging_angle?: string | null;
+  assignee_role: "creator" | "clipper" | "admin";
+  assignee_label?: string | null;
+  status: SubmissionStatus;
+  payout_state: PayoutState;
+  payout_amount_cents?: number | null;
+  note?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type CampaignDetail = {
+  campaign: CampaignSummary;
+  clips: ClipResult[];
+  jobs: Array<{
+    id: string;
+    status: string;
+    message: string;
+    created_at?: string;
+    updated_at?: string;
+  }>;
+  assignments: CampaignAssignment[];
+  submission_summary: SubmissionSummary;
 };
 
 export type PostingConnection = {

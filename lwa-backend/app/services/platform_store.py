@@ -37,6 +37,7 @@ class PlatformStore:
                     email TEXT NOT NULL UNIQUE,
                     password_hash TEXT NOT NULL,
                     plan TEXT NOT NULL DEFAULT 'free',
+                    role TEXT NOT NULL DEFAULT 'creator',
                     balance_cents INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL
                 );
@@ -173,8 +174,30 @@ class PlatformStore:
                     is_active INTEGER NOT NULL DEFAULT 1,
                     created_at TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS campaign_assignments (
+                    id TEXT PRIMARY KEY,
+                    campaign_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    request_id TEXT,
+                    clip_id TEXT,
+                    assignment_kind TEXT NOT NULL,
+                    title TEXT,
+                    hook TEXT,
+                    target_platform TEXT,
+                    packaging_angle TEXT,
+                    assignee_role TEXT NOT NULL DEFAULT 'creator',
+                    assignee_label TEXT,
+                    status TEXT NOT NULL DEFAULT 'draft',
+                    payout_state TEXT NOT NULL DEFAULT 'locked',
+                    payout_amount_cents INTEGER,
+                    note TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
+            self._ensure_column(connection, "users", "role", "TEXT NOT NULL DEFAULT 'creator'")
             self._ensure_column(connection, "clips", "trim_start_seconds", "REAL")
             self._ensure_column(connection, "clips", "trim_end_seconds", "REAL")
             self._ensure_column(connection, "clips", "caption_style_override", "TEXT")
@@ -189,6 +212,21 @@ class PlatformStore:
             self._ensure_column(connection, "campaigns", "payout_cents_per_1000_views", "INTEGER")
             self._ensure_column(connection, "publish_requests", "caption", "TEXT")
             self._ensure_column(connection, "publish_requests", "scheduled_for", "TEXT")
+            self._ensure_column(connection, "campaign_assignments", "request_id", "TEXT")
+            self._ensure_column(connection, "campaign_assignments", "clip_id", "TEXT")
+            self._ensure_column(connection, "campaign_assignments", "assignment_kind", "TEXT NOT NULL DEFAULT 'clip'")
+            self._ensure_column(connection, "campaign_assignments", "title", "TEXT")
+            self._ensure_column(connection, "campaign_assignments", "hook", "TEXT")
+            self._ensure_column(connection, "campaign_assignments", "target_platform", "TEXT")
+            self._ensure_column(connection, "campaign_assignments", "packaging_angle", "TEXT")
+            self._ensure_column(connection, "campaign_assignments", "assignee_role", "TEXT NOT NULL DEFAULT 'creator'")
+            self._ensure_column(connection, "campaign_assignments", "assignee_label", "TEXT")
+            self._ensure_column(connection, "campaign_assignments", "status", "TEXT NOT NULL DEFAULT 'draft'")
+            self._ensure_column(connection, "campaign_assignments", "payout_state", "TEXT NOT NULL DEFAULT 'locked'")
+            self._ensure_column(connection, "campaign_assignments", "payout_amount_cents", "INTEGER")
+            self._ensure_column(connection, "campaign_assignments", "note", "TEXT")
+            self._ensure_column(connection, "campaign_assignments", "created_at", "TEXT")
+            self._ensure_column(connection, "campaign_assignments", "updated_at", "TEXT")
 
     def _ensure_column(self, connection: sqlite3.Connection, table: str, column: str, column_type: str) -> None:
         rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
@@ -197,26 +235,26 @@ class PlatformStore:
             return
         connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
 
-    def create_user(self, *, email: str, password_hash: str, plan: str = "free") -> UserRecord:
+    def create_user(self, *, email: str, password_hash: str, plan: str = "free", role: str = "creator") -> UserRecord:
         user_id = f"user_{uuid4().hex[:12]}"
         created_at = utcnow()
         with self._lock, self._connect() as connection:
             try:
                 connection.execute(
                     """
-                    INSERT INTO users (id, email, password_hash, plan, balance_cents, created_at)
-                    VALUES (?, ?, ?, ?, 0, ?)
+                    INSERT INTO users (id, email, password_hash, plan, role, balance_cents, created_at)
+                    VALUES (?, ?, ?, ?, ?, 0, ?)
                     """,
-                    (user_id, email.lower(), password_hash, plan, created_at),
+                    (user_id, email.lower(), password_hash, plan, role, created_at),
                 )
             except sqlite3.IntegrityError as error:
                 raise ValueError("Email is already registered") from error
-        return UserRecord(id=user_id, email=email.lower(), plan=plan, balance_cents=0, created_at=created_at)
+        return UserRecord(id=user_id, email=email.lower(), plan=plan, role=role, balance_cents=0, created_at=created_at)
 
     def get_user_by_email(self, email: str) -> Optional[StoredUser]:
         with self._lock, self._connect() as connection:
             row = connection.execute(
-                "SELECT id, email, password_hash, plan, balance_cents, created_at FROM users WHERE email = ?",
+                "SELECT id, email, password_hash, plan, role, balance_cents, created_at FROM users WHERE email = ?",
                 (email.lower(),),
             ).fetchone()
         return self._user_from_row(row)
@@ -224,7 +262,7 @@ class PlatformStore:
     def get_user_by_id(self, user_id: str) -> Optional[UserRecord]:
         with self._lock, self._connect() as connection:
             row = connection.execute(
-                "SELECT id, email, password_hash, plan, balance_cents, created_at FROM users WHERE id = ?",
+                "SELECT id, email, password_hash, plan, role, balance_cents, created_at FROM users WHERE id = ?",
                 (user_id,),
             ).fetchone()
         stored = self._user_from_row(row)
@@ -234,6 +272,7 @@ class PlatformStore:
             id=stored.id,
             email=stored.email,
             plan=stored.plan,
+            role=stored.role,
             balance_cents=stored.balance_cents,
             created_at=stored.created_at,
         )
@@ -355,7 +394,18 @@ class PlatformStore:
                 """,
                 (user_id,),
             ).fetchall()
-        return [self._campaign_payload_from_row(row) for row in rows]
+            assignment_rows = connection.execute(
+                """
+                SELECT campaign_id, status, payout_state, payout_amount_cents, assignment_kind, assignee_role
+                FROM campaign_assignments
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            ).fetchall()
+        assignments_by_campaign: dict[str, list[sqlite3.Row]] = {}
+        for row in assignment_rows:
+            assignments_by_campaign.setdefault(row["campaign_id"], []).append(row)
+        return [self._campaign_payload_from_row(row, assignments_by_campaign.get(row["id"], [])) for row in rows]
 
     def get_campaign(self, *, campaign_id: str, user_id: str) -> Optional[dict[str, Any]]:
         with self._lock, self._connect() as connection:
@@ -392,10 +442,24 @@ class PlatformStore:
                 """,
                 (campaign_id,),
             ).fetchall()
+            assignments = connection.execute(
+                """
+                SELECT id, campaign_id, user_id, request_id, clip_id, assignment_kind, title, hook,
+                       target_platform, packaging_angle, assignee_role, assignee_label, status,
+                       payout_state, payout_amount_cents, note, created_at, updated_at
+                FROM campaign_assignments
+                WHERE campaign_id = ? AND user_id = ?
+                ORDER BY updated_at DESC, created_at DESC
+                """,
+                (campaign_id, user_id),
+            ).fetchall()
+        assignment_payloads = [self._assignment_payload_from_row(row) for row in assignments]
         return {
-            "campaign": self._campaign_payload_from_row(campaign),
+            "campaign": self._campaign_payload_from_row(campaign, assignments),
             "clips": [self._clip_payload_from_row(row) for row in clips],
             "jobs": [dict(row) for row in jobs],
+            "assignments": assignment_payloads,
+            "submission_summary": self._submission_summary_from_rows(assignments),
         }
 
     def update_campaign(self, *, campaign_id: str, user_id: str, updates: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -437,7 +501,263 @@ class PlatformStore:
                 """,
                 (campaign_id, user_id),
             ).fetchone()
-        return self._campaign_payload_from_row(row) if row else None
+            assignment_rows = connection.execute(
+                """
+                SELECT campaign_id, status, payout_state, payout_amount_cents, assignment_kind, assignee_role
+                FROM campaign_assignments
+                WHERE campaign_id = ? AND user_id = ?
+                """,
+                (campaign_id, user_id),
+            ).fetchall()
+        return self._campaign_payload_from_row(row, assignment_rows) if row else None
+
+    def create_campaign_assignments(
+        self,
+        *,
+        campaign_id: str,
+        user_id: str,
+        request_id: str | None,
+        clip_ids: list[str],
+        target_platform: str | None,
+        packaging_angle: str | None,
+        assignee_role: str = "creator",
+        assignee_label: str | None = None,
+        note: str | None = None,
+        payout_amount_cents: int | None = None,
+    ) -> list[dict[str, Any]]:
+        created_at = utcnow()
+        with self._lock, self._connect() as connection:
+            campaign = connection.execute(
+                """
+                SELECT id, target_angle, payout_cents_per_1000_views
+                FROM campaigns
+                WHERE id = ? AND user_id = ?
+                """,
+                (campaign_id, user_id),
+            ).fetchone()
+            if not campaign:
+                raise ValueError("Campaign not found")
+
+            assignments: list[dict[str, Any]] = []
+            effective_role = (assignee_role or "creator").strip().lower() or "creator"
+            effective_angle = packaging_angle or campaign["target_angle"]
+            effective_payout_amount = payout_amount_cents if payout_amount_cents is not None else campaign["payout_cents_per_1000_views"]
+
+            if clip_ids:
+                placeholders = ",".join("?" for _ in clip_ids)
+                rows = connection.execute(
+                    f"""
+                    SELECT id, request_id, title, hook, packaging_angle, platform_fit
+                    FROM clips
+                    WHERE user_id = ? AND id IN ({placeholders})
+                    ORDER BY created_at DESC
+                    """,
+                    (user_id, *clip_ids),
+                ).fetchall()
+                if not rows:
+                    raise ValueError("No clips found for assignment")
+
+                for row in rows:
+                    assignment_id = f"casg_{uuid4().hex[:12]}"
+                    resolved_request_id = request_id or row["request_id"]
+                    resolved_angle = effective_angle or row["packaging_angle"]
+                    resolved_platform = target_platform or row["platform_fit"]
+                    connection.execute(
+                        """
+                        INSERT INTO campaign_assignments (
+                            id, campaign_id, user_id, request_id, clip_id, assignment_kind, title, hook,
+                            target_platform, packaging_angle, assignee_role, assignee_label, status,
+                            payout_state, payout_amount_cents, note, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, 'clip', ?, ?, ?, ?, ?, ?, 'draft', 'locked', ?, ?, ?, ?)
+                        """,
+                        (
+                            assignment_id,
+                            campaign_id,
+                            user_id,
+                            resolved_request_id,
+                            row["id"],
+                            row["title"] or f"Clip {row['id']}",
+                            row["hook"],
+                            resolved_platform,
+                            resolved_angle,
+                            effective_role,
+                            assignee_label,
+                            effective_payout_amount,
+                            note,
+                            created_at,
+                            created_at,
+                        ),
+                    )
+                    assignments.append(
+                        {
+                            "id": assignment_id,
+                            "campaign_id": campaign_id,
+                            "request_id": resolved_request_id,
+                            "clip_id": row["id"],
+                            "assignment_kind": "clip",
+                            "title": row["title"] or f"Clip {row['id']}",
+                            "hook": row["hook"],
+                            "target_platform": resolved_platform,
+                            "packaging_angle": resolved_angle,
+                            "assignee_role": effective_role,
+                            "assignee_label": assignee_label,
+                            "status": "draft",
+                            "payout_state": "locked",
+                            "payout_amount_cents": effective_payout_amount,
+                            "note": note,
+                            "created_at": created_at,
+                            "updated_at": created_at,
+                        }
+                    )
+            elif request_id:
+                existing_row = connection.execute(
+                    """
+                    SELECT id, title, hook, platform_fit, packaging_angle
+                    FROM clips
+                    WHERE request_id = ? AND user_id = ?
+                    ORDER BY rank_value ASC, score DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (request_id, user_id),
+                ).fetchone()
+                title = existing_row["title"] if existing_row else f"Clip pack {request_id}"
+                hook = existing_row["hook"] if existing_row else None
+                resolved_angle = effective_angle or (existing_row["packaging_angle"] if existing_row else None)
+                resolved_platform = target_platform or (existing_row["platform_fit"] if existing_row else None)
+                assignment_id = f"casg_{uuid4().hex[:12]}"
+                connection.execute(
+                    """
+                    INSERT INTO campaign_assignments (
+                        id, campaign_id, user_id, request_id, clip_id, assignment_kind, title, hook,
+                        target_platform, packaging_angle, assignee_role, assignee_label, status,
+                        payout_state, payout_amount_cents, note, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, NULL, 'clip_pack', ?, ?, ?, ?, ?, ?, 'draft', 'locked', ?, ?, ?, ?)
+                    """,
+                    (
+                        assignment_id,
+                        campaign_id,
+                        user_id,
+                        request_id,
+                        title,
+                        hook,
+                        resolved_platform,
+                        resolved_angle,
+                        effective_role,
+                        assignee_label,
+                        effective_payout_amount,
+                        note,
+                        created_at,
+                        created_at,
+                    ),
+                )
+                assignments.append(
+                    {
+                        "id": assignment_id,
+                        "campaign_id": campaign_id,
+                        "request_id": request_id,
+                        "clip_id": None,
+                        "assignment_kind": "clip_pack",
+                        "title": title,
+                        "hook": hook,
+                        "target_platform": resolved_platform,
+                        "packaging_angle": resolved_angle,
+                        "assignee_role": effective_role,
+                        "assignee_label": assignee_label,
+                        "status": "draft",
+                        "payout_state": "locked",
+                        "payout_amount_cents": effective_payout_amount,
+                        "note": note,
+                        "created_at": created_at,
+                        "updated_at": created_at,
+                    }
+                )
+            else:
+                raise ValueError("Provide request_id or clip_ids")
+
+        return assignments
+
+    def list_campaign_assignments(self, *, campaign_id: str, user_id: str) -> list[dict[str, Any]]:
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT id, campaign_id, user_id, request_id, clip_id, assignment_kind, title, hook,
+                       target_platform, packaging_angle, assignee_role, assignee_label, status,
+                       payout_state, payout_amount_cents, note, created_at, updated_at
+                FROM campaign_assignments
+                WHERE campaign_id = ? AND user_id = ?
+                ORDER BY updated_at DESC, created_at DESC
+                """,
+                (campaign_id, user_id),
+            ).fetchall()
+        return [self._assignment_payload_from_row(row) for row in rows]
+
+    def update_campaign_assignment(
+        self,
+        *,
+        campaign_id: str,
+        assignment_id: str,
+        user_id: str,
+        updates: dict[str, Any],
+    ) -> Optional[dict[str, Any]]:
+        allowed = {
+            "status": "status",
+            "assignee_role": "assignee_role",
+            "assignee_label": "assignee_label",
+            "note": "note",
+            "payout_amount_cents": "payout_amount_cents",
+        }
+        assignments = []
+        values: list[Any] = []
+        status_value = updates.get("status")
+        for key, column in allowed.items():
+            if key not in updates:
+                continue
+            assignments.append(f"{column} = ?")
+            values.append(updates[key])
+
+        if status_value is not None:
+            assignments.append("payout_state = ?")
+            values.append(self._payout_state_for_status(str(status_value)))
+
+        assignments.append("updated_at = ?")
+        values.append(utcnow())
+        values.extend([assignment_id, campaign_id, user_id])
+
+        with self._lock, self._connect() as connection:
+            result = connection.execute(
+                f"""
+                UPDATE campaign_assignments
+                SET {', '.join(assignments)}
+                WHERE id = ? AND campaign_id = ? AND user_id = ?
+                """,
+                tuple(values),
+            )
+            if not result.rowcount:
+                return None
+            row = connection.execute(
+                """
+                SELECT id, campaign_id, user_id, request_id, clip_id, assignment_kind, title, hook,
+                       target_platform, packaging_angle, assignee_role, assignee_label, status,
+                       payout_state, payout_amount_cents, note, created_at, updated_at
+                FROM campaign_assignments
+                WHERE id = ? AND campaign_id = ? AND user_id = ?
+                """,
+                (assignment_id, campaign_id, user_id),
+            ).fetchone()
+
+        return self._assignment_payload_from_row(row) if row else None
+
+    def get_user_submission_summary(self, *, user_id: str) -> dict[str, Any]:
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT status, payout_state, payout_amount_cents, assignment_kind, assignee_role
+                FROM campaign_assignments
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            ).fetchall()
+        return self._submission_summary_from_rows(rows)
 
     def create_batch(
         self,
@@ -699,6 +1019,14 @@ class PlatformStore:
                 "UPDATE campaigns SET status = 'approved' WHERE id = ?",
                 (campaign_id,),
             )
+            connection.execute(
+                """
+                UPDATE campaign_assignments
+                SET status = 'approved', payout_state = 'eligible', updated_at = ?
+                WHERE campaign_id = ? AND user_id = ?
+                """,
+                (utcnow(), campaign_id, user_id),
+            )
         return int(result.rowcount or 0)
 
     def get_clip(self, *, clip_id: str, user_id: str | None = None) -> Optional[dict[str, Any]]:
@@ -844,7 +1172,12 @@ class PlatformStore:
         with self._lock, self._connect() as connection:
             rows = connection.execute(
                 """
-                SELECT request_id, COUNT(*) AS clip_count, MAX(score) AS top_score, MAX(created_at) AS created_at
+                SELECT request_id,
+                       COUNT(*) AS clip_count,
+                       MAX(score) AS top_score,
+                       MAX(created_at) AS created_at,
+                       MIN(title) AS source_title,
+                       MAX(platform_fit) AS target_platform
                 FROM clips
                 WHERE user_id = ?
                 GROUP BY request_id
@@ -869,8 +1202,10 @@ class PlatformStore:
                 """,
                 (user_id, request_id),
             ).fetchall()
+        source_title = clips[0]["title"] if clips else None
         return {
             "request_id": request_id,
+            "source_title": source_title,
             "clips": [self._clip_payload_from_row(row) for row in clips],
         }
 
@@ -1129,6 +1464,7 @@ class PlatformStore:
             email=row["email"],
             password_hash=row["password_hash"],
             plan=row["plan"],
+            role=row["role"] or "creator",
             balance_cents=int(row["balance_cents"]),
             created_at=row["created_at"],
         )
@@ -1166,7 +1502,60 @@ class PlatformStore:
             "created_at": row["created_at"],
         }
 
-    def _campaign_payload_from_row(self, row: sqlite3.Row) -> dict[str, Any]:
+    def _assignment_payload_from_row(self, row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "id": row["id"],
+            "campaign_id": row["campaign_id"],
+            "owner_user_id": row["user_id"],
+            "request_id": row["request_id"],
+            "clip_id": row["clip_id"],
+            "assignment_kind": row["assignment_kind"],
+            "title": row["title"],
+            "hook": row["hook"],
+            "target_platform": row["target_platform"],
+            "packaging_angle": row["packaging_angle"],
+            "assignee_role": row["assignee_role"],
+            "assignee_label": row["assignee_label"],
+            "status": row["status"],
+            "payout_state": row["payout_state"],
+            "payout_amount_cents": row["payout_amount_cents"],
+            "note": row["note"],
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
+        }
+
+    def _submission_summary_from_rows(self, rows: list[sqlite3.Row]) -> dict[str, Any]:
+        status_counts = {status: 0 for status in ["draft", "ready", "submitted", "approved", "rejected", "paid"]}
+        role_counts = {role: 0 for role in ["creator", "clipper", "admin"]}
+        assignment_counts = {"clip": 0, "clip_pack": 0}
+        eligible_cents = 0
+        pending_cents = 0
+        paid_cents = 0
+
+        for row in rows:
+            status_counts[row["status"]] = status_counts.get(row["status"], 0) + 1
+            role_counts[row["assignee_role"]] = role_counts.get(row["assignee_role"], 0) + 1
+            assignment_counts[row["assignment_kind"]] = assignment_counts.get(row["assignment_kind"], 0) + 1
+            amount = int(row["payout_amount_cents"] or 0)
+            if row["payout_state"] == "eligible":
+                eligible_cents += amount
+            elif row["payout_state"] == "pending":
+                pending_cents += amount
+            elif row["payout_state"] == "paid":
+                paid_cents += amount
+
+        return {
+            "total_assignments": len(rows),
+            "status_counts": status_counts,
+            "role_counts": role_counts,
+            "assignment_counts": assignment_counts,
+            "eligible_payout_cents": eligible_cents,
+            "pending_payout_cents": pending_cents,
+            "paid_payout_cents": paid_cents,
+        }
+
+    def _campaign_payload_from_row(self, row: sqlite3.Row, assignments: list[sqlite3.Row] | None = None) -> dict[str, Any]:
+        submission_summary = self._submission_summary_from_rows(assignments or [])
         return {
             "id": row["id"],
             "owner_user_id": row["user_id"],
@@ -1178,4 +1567,15 @@ class PlatformStore:
             "payout_cents_per_1000_views": row["payout_cents_per_1000_views"],
             "status": row["status"],
             "created_at": row["created_at"],
+            "submission_summary": submission_summary,
         }
+
+    def _payout_state_for_status(self, status: str) -> str:
+        normalized = (status or "draft").strip().lower()
+        if normalized == "approved":
+            return "eligible"
+        if normalized == "paid":
+            return "paid"
+        if normalized == "submitted":
+            return "pending"
+        return "locked"

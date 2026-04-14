@@ -5,6 +5,28 @@ type RouteContext = {
   params: Promise<{ campaignId: string }>;
 };
 
+export async function GET(request: NextRequest, context: RouteContext) {
+  const token = bearerTokenFromRequest(request);
+
+  if (!token) {
+    return NextResponse.json({ detail: "Authentication required" }, { status: 401 });
+  }
+
+  try {
+    const { campaignId } = await context.params;
+    const response = await fetch(backendUrl(`/v1/campaigns/${campaignId}`), {
+      headers: {
+        ...authorizationHeader(token),
+      },
+      cache: "no-store",
+    });
+    const data = await parseBackendResponse(response);
+    return NextResponse.json(data, { status: response.status });
+  } catch {
+    return NextResponse.json({ detail: "Unable to load campaign detail right now." }, { status: 502 });
+  }
+}
+
 export async function PATCH(request: NextRequest, context: RouteContext) {
   const token = bearerTokenFromRequest(request);
 

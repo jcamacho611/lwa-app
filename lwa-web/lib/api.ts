@@ -2,6 +2,8 @@ import {
   AuthResponse,
   BatchSourceRef,
   BatchSummary,
+  CampaignAssignment,
+  CampaignDetail,
   CampaignSummary,
   ClipPackDetail,
   ClipPackSummary,
@@ -219,6 +221,12 @@ export async function loadCampaigns(token: string) {
   return payload.campaigns || [];
 }
 
+export async function loadCampaign(token: string, campaignId: string) {
+  return jsonRequest<CampaignDetail>(`/api/campaigns/${campaignId}`, {
+    headers: authHeaders(token, false),
+  });
+}
+
 export async function createCampaign(token: string, payload: CampaignCreatePayload) {
   return jsonRequest<CampaignSummary>("/api/campaigns", {
     method: "POST",
@@ -229,6 +237,47 @@ export async function createCampaign(token: string, payload: CampaignCreatePaylo
 
 export async function updateCampaign(token: string, campaignId: string, payload: CampaignUpdatePayload) {
   return jsonRequest<CampaignSummary>(`/api/campaigns/${campaignId}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createCampaignAssignments(
+  token: string,
+  campaignId: string,
+  payload: {
+    request_id?: string;
+    clip_ids?: string[];
+    target_platform?: string;
+    packaging_angle?: string;
+    assignee_role?: string;
+    assignee_label?: string;
+    note?: string;
+    payout_amount_cents?: number;
+  },
+) {
+  const data = await jsonRequest<{ assignments: CampaignAssignment[] }>(`/api/campaigns/${campaignId}/assignments`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  return data.assignments || [];
+}
+
+export async function updateCampaignAssignment(
+  token: string,
+  campaignId: string,
+  assignmentId: string,
+  payload: {
+    status?: string;
+    assignee_role?: string;
+    assignee_label?: string;
+    note?: string;
+    payout_amount_cents?: number;
+  },
+) {
+  return jsonRequest<CampaignAssignment>(`/api/campaigns/${campaignId}/assignments/${assignmentId}`, {
     method: "PATCH",
     headers: authHeaders(token),
     body: JSON.stringify(payload),

@@ -16,6 +16,8 @@ PayoutStatus = Literal["pending", "approved", "sent", "failed", "rejected"]
 PostStatus = Literal["draft", "queued", "scheduled", "published", "failed"]
 SourceKind = Literal["url", "upload"]
 PackagingAngle = Literal["shock", "story", "value", "controversy", "curiosity"]
+SubmissionStatus = Literal["draft", "ready", "submitted", "approved", "rejected", "paid"]
+PayoutReadiness = Literal["locked", "eligible", "pending", "paid"]
 
 
 class UserProfile(BaseModel):

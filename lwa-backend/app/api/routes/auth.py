@@ -23,7 +23,7 @@ def to_user_profile(user: UserProfile | object) -> UserProfile:
         id=getattr(user, "id"),
         email=getattr(user, "email"),
         plan_code=getattr(user, "plan"),
-        role="creator",
+        role=getattr(user, "role", "creator"),
         created_at=getattr(user, "created_at"),
     )
 

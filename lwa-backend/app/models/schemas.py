@@ -175,6 +175,25 @@ class CampaignPatchRequest(BaseModel):
     status: Optional[str] = None
 
 
+class CampaignAssignmentCreateRequest(BaseModel):
+    request_id: Optional[str] = None
+    clip_ids: List[str] = Field(default_factory=list)
+    target_platform: Optional[str] = None
+    packaging_angle: Optional[str] = None
+    assignee_role: Optional[str] = "creator"
+    assignee_label: Optional[str] = None
+    note: Optional[str] = None
+    payout_amount_cents: Optional[int] = None
+
+
+class CampaignAssignmentPatchRequest(BaseModel):
+    status: Optional[str] = None
+    assignee_role: Optional[str] = None
+    assignee_label: Optional[str] = None
+    note: Optional[str] = None
+    payout_amount_cents: Optional[int] = None
+
+
 class PayoutRequestCreate(BaseModel):
     amount_cents: int = Field(..., gt=0)
 
