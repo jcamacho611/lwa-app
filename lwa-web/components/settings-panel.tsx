@@ -24,8 +24,8 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
 
   return (
     <section className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
-      <div className="glass-panel rounded-[32px] p-6 sm:p-8">
-        <p className="text-xs uppercase tracking-[0.24em] text-muted">Account</p>
+      <div className="hero-card rounded-[32px] p-6 sm:p-8">
+        <p className="section-kicker">Account</p>
         <h3 className="mt-2 text-3xl font-semibold text-ink">Workspace settings</h3>
         <p className="mt-4 text-sm leading-7 text-ink/64">
           Manage your account, plan, and creator workflow from one clean place.
@@ -47,14 +47,14 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
           {featureFlags.wallet_view ? (
             <Link
               href="/wallet"
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+              className="secondary-button rounded-full px-4 py-2 text-sm font-medium"
             >
               Open wallet
             </Link>
           ) : null}
           <Link
             href="/history"
-            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+            className="secondary-button rounded-full px-4 py-2 text-sm font-medium"
           >
             Open history
           </Link>
@@ -79,7 +79,7 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
             featureFlags.premium_exports ? "No watermark on exports" : "Watermark remains on free exports",
             unlockedFeatures.length ? `Unlocked: ${unlockedFeatures.join(", ")}` : "Upgrade to unlock editing, wallet, and campaign tools",
           ].map((item) => (
-            <div key={item} className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-ink/72">
+            <div key={item} className="metric-tile rounded-[24px] px-4 py-3 text-sm text-ink/72">
               {item}
             </div>
           ))}
@@ -95,7 +95,7 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-3">
+    <div className="metric-tile rounded-[24px] px-4 py-3">
       <p className="text-xs uppercase tracking-[0.18em] text-muted">{label}</p>
       <p className="mt-2 text-sm font-medium text-ink">{value}</p>
     </div>

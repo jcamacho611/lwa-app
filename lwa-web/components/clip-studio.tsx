@@ -10,6 +10,7 @@ import { ClipCard } from "./clip-card";
 import { ClipPackEditor, ClipPatchPayload } from "./clip-pack-editor";
 import { FeatureGatePanel } from "./feature-gate-panel";
 import { HistoryPanel } from "./history-panel";
+import Navbar from "./Navbar";
 import { PostingPanel } from "./posting-panel";
 import { ReadyQueuePanel } from "./ready-queue-panel";
 import { SettingsPanel } from "./settings-panel";
@@ -675,6 +676,15 @@ export function ClipStudio({
   const showWallet = initialSection === "wallet";
   const showSettings = initialSection === "settings";
   const showPostingOnDashboard = initialSection === "dashboard";
+  const topAngles = (preferenceProfile.preferredAngles.length
+    ? preferenceProfile.preferredAngles
+    : displayedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
+  const featureProof = [
+    "Ranked outputs",
+    "Caption-ready",
+    "Campaign workflow",
+    "Ready queue",
+  ];
 
   function handleFeedbackVote(clip: GenerateResponse["clips"][number], vote: "good" | "bad") {
     setFeedbackRecords((current) => upsertFeedbackRecord(current, createFeedbackRecord(clip, vote, platform)));
@@ -710,96 +720,287 @@ export function ClipStudio({
     setReadyQueue(clearReadyQueue());
   }
 
-  const generatorSection = (
-    <section className="glass-panel rounded-[32px] p-5 sm:p-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="max-w-2xl">
-          <p className="section-kicker">{initialSection === "upload" ? "Upload + Generate" : "Generate"}</p>
-          <h2 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-4xl">
-            {isHome ? "Turn one source into a ranked clip pack" : "Create clips that are ready to post"}
-          </h2>
-          <p className="mt-4 text-sm leading-7 text-ink/64 sm:text-base">
-            Hooks, captions, timestamps, reasons, and post order. Paste a source once, then move fast.
+  const homeGeneratorSection = (
+    <section className="hero-card rounded-[34px] p-6 sm:p-8">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="section-kicker">Generate first</p>
+          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Paste one source. Get the pack.</h2>
+          <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/90">
+            Paste a source and let LWA build a ranked clip pack.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <StatPill tone="neutral">{result?.processing_summary?.ai_provider || "ready"} mode</StatPill>
-          <StatPill tone="neutral">{platform}</StatPill>
-        </div>
+        <StatPill tone="accent">{platform}</StatPill>
       </div>
 
-      <form onSubmit={onSubmit} className="mt-8 space-y-5">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr),260px]">
-          <label className="block">
-            <span className="mb-3 block text-sm font-medium text-ink/84">Video URL</span>
-            <input
-              type="url"
-              value={videoUrl}
-              onChange={(event) => setVideoUrl(event.target.value)}
-              placeholder="https://www.youtube.com/watch?v=..."
-              className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
-            />
-          </label>
+      <form onSubmit={onSubmit} className="mt-7 space-y-5">
+        <label className="block">
+          <span className="mb-3 block text-sm font-medium text-ink/84">Source URL</span>
+          <input
+            type="url"
+            value={videoUrl}
+            onChange={(event) => setVideoUrl(event.target.value)}
+            placeholder="Paste YouTube, TikTok, Instagram, or any public video URL"
+            className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
+          />
+        </label>
 
-          <div>
-            <span className="mb-3 block text-sm font-medium text-ink/84">Target platform</span>
-            <div className="grid grid-cols-1 gap-2">
-              {platforms.map((item) => {
-                const active = item === platform;
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => setPlatform(item)}
-                    className={[
-                      "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
-                      active
-                        ? "border-accent/30 bg-accent/12 text-white shadow-glow"
-                        : "border-white/10 bg-white/5 text-ink/72 hover:border-white/20 hover:bg-white/[0.07] hover:text-ink",
-                    ].join(" ")}
-                  >
-                    {item}
-                  </button>
-                );
-              })}
-            </div>
+        <div>
+          <span className="mb-3 block text-sm font-medium text-ink/84">Platform target</span>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {platforms.map((item) => {
+              const active = item === platform;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setPlatform(item)}
+                  className={[
+                    "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
+                    active
+                      ? "border-neonPurple/30 bg-[linear-gradient(135deg,rgba(124,58,237,0.24),rgba(37,99,255,0.18))] text-white shadow-neon"
+                      : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
+                  ].join(" ")}
+                >
+                  {item}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-3">
-          <div className="panel-subtle rounded-[24px] p-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div>
-                <p className="text-sm font-medium text-ink">Improve my results</p>
-                <p className="mt-1 text-sm text-ink/60">
-                  Learn from your taste locally, then bias future runs toward the angles you keep.
-                </p>
-                {preferenceProfile.topPackagingAngle || preferenceProfile.topHookStyle ? (
-                  <p className="mt-3 text-sm text-accent">
-                    Favoring {preferenceProfile.topPackagingAngle || "strong"} packaging
-                    {preferenceProfile.topHookStyle ? ` and ${preferenceProfile.topHookStyle} hooks` : ""}.
-                  </p>
-                ) : (
-                  <p className="mt-3 text-sm text-ink/46">Mark clips good or bad to train your browser-side preferences.</p>
-                )}
+        <div className="metric-tile rounded-[24px] p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-ink">Improve my results</p>
+              <p className="mt-1 text-sm text-ink/60">
+                Use local feedback to bias future outputs toward the hooks and angles you keep.
+              </p>
+            </div>
+            <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={improveResults}
+                onChange={(event) => setImproveResults(event.target.checked)}
+                className="h-4 w-4 accent-cyan-400"
+              />
+              Improve future results
+            </label>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-ink/60">Analyzing source, extracting hooks, and packaging short-form outputs...</p>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="primary-button inline-flex min-w-[220px] items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLoading ? "Compiling clip pack..." : "Generate clips"}
+          </button>
+        </div>
+
+        {isLoading ? (
+          <InlineState
+            title="Compiling clip pack..."
+            description={`Ranking hooks and packaging angles${improveResults && preferenceProfile.topPackagingAngle ? ` around ${preferenceProfile.topPackagingAngle}` : ""}.`}
+          />
+        ) : null}
+
+        {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+        {paywallMessage ? (
+          <InlineAlert tone="violet" title="Out of credits">
+            <div className="space-y-3">
+              <p>{paywallMessage}</p>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/settings" className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold">
+                  Review plan
+                </Link>
+                <Link href="/wallet" className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
+                  Open wallet
+                </Link>
               </div>
-              <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-3 text-sm">
-                <input
-                  type="checkbox"
-                  checked={improveResults}
-                  onChange={(event) => setImproveResults(event.target.checked)}
-                  className="h-4 w-4 accent-cyan-400"
-                />
-                Improve future results
-              </label>
+            </div>
+          </InlineAlert>
+        ) : null}
+      </form>
+    </section>
+  );
+
+  const generatorSection = (
+    <section className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),320px]">
+        <section className="hero-card rounded-[34px] p-6 sm:p-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="section-kicker">{initialSection === "upload" ? "Upload + Generate" : "Generate"}</p>
+              <h2 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">
+                Build a ranked clip pack from one source
+              </h2>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">
+                Paste a source and let LWA build a ranked clip pack.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <StatPill tone="accent">{planSurface.name}</StatPill>
+              <StatPill tone="neutral">{result?.processing_summary?.ai_provider || "AI active"}</StatPill>
             </div>
           </div>
 
-          <div className="panel-subtle rounded-[24px] p-4">
-            <p className="text-sm font-medium text-ink">Upload a source</p>
-            <p className="mt-1 text-sm text-ink/60">Signed-in users can run the same pipeline from a local file.</p>
-            <p className="mt-3 text-sm text-accent">{uploadingFileName ? `Uploading ${uploadingFileName}...` : activeSourceLabel}</p>
-            <label className="secondary-button mt-4 inline-flex w-full cursor-pointer items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
+          <form onSubmit={onSubmit} className="mt-8 space-y-6">
+            <label className="block">
+              <span className="mb-3 block text-sm font-medium text-ink/84">Source URL</span>
+              <input
+                type="url"
+                value={videoUrl}
+                onChange={(event) => setVideoUrl(event.target.value)}
+                placeholder="Paste YouTube, TikTok, Instagram, Loom, or any public video URL"
+                className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
+              />
+            </label>
+
+            <div>
+              <span className="mb-3 block text-sm font-medium text-ink/84">Platform target</span>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {platforms.map((item) => {
+                  const active = item === platform;
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setPlatform(item)}
+                      className={[
+                        "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
+                        active
+                          ? "border-neonPurple/30 bg-[linear-gradient(135deg,rgba(124,58,237,0.24),rgba(37,99,255,0.18))] text-white shadow-neon"
+                          : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
+                      ].join(" ")}
+                    >
+                      {item}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="metric-tile rounded-[24px] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-ink">Improve my results</p>
+                    <p className="mt-1 text-sm text-ink/60">
+                      Learn from your taste locally, then bias future runs toward the angles you keep.
+                    </p>
+                    {preferenceProfile.topPackagingAngle || preferenceProfile.topHookStyle ? (
+                      <p className="mt-3 text-sm text-accent">
+                        Favoring {preferenceProfile.topPackagingAngle || "strong"} packaging
+                        {preferenceProfile.topHookStyle ? ` and ${preferenceProfile.topHookStyle} hooks` : ""}.
+                      </p>
+                    ) : (
+                      <p className="mt-3 text-sm text-ink/46">Mark clips good or bad to train your browser-side preferences.</p>
+                    )}
+                  </div>
+                  <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      checked={improveResults}
+                      onChange={(event) => setImproveResults(event.target.checked)}
+                      className="h-4 w-4 accent-cyan-400"
+                    />
+                    Improve future results
+                  </label>
+                </div>
+              </div>
+
+              <div className="metric-tile rounded-[24px] p-4">
+                <p className="text-sm font-medium text-ink">What generation returns</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {[
+                    "Ranked clips",
+                    "Hook variants",
+                    "Caption styles",
+                    "Post order",
+                  ].map((item) => (
+                    <div key={item} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm text-ink/60">
+                {result
+                  ? "Your clip pack is ready. Review top outputs, queue strong candidates, or move them into campaign workflow."
+                  : "Use a public video URL or an uploaded source file. The system will return ranked clips with packaging guidance."}
+              </p>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="primary-button inline-flex min-w-[240px] items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoading ? "Compiling clip pack..." : "Generate clips"}
+              </button>
+            </div>
+
+            {isLoading ? (
+              <InlineState
+                title="Compiling clip pack..."
+                description={`Analyzing source, extracting hooks, and packaging short-form outputs${improveResults && preferenceProfile.topPackagingAngle ? ` around ${preferenceProfile.topPackagingAngle}` : ""}.`}
+              />
+            ) : null}
+
+            {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+
+            {paywallMessage ? (
+              <InlineAlert tone="violet" title="Out of credits">
+                <div className="space-y-3">
+                  <p>{paywallMessage}</p>
+                  <div className="flex flex-wrap gap-3">
+                    <Link href="/settings" className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold">
+                      Review plan
+                    </Link>
+                    <Link href="/wallet" className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
+                      Open wallet
+                    </Link>
+                  </div>
+                </div>
+              </InlineAlert>
+            ) : null}
+          </form>
+        </section>
+
+        <aside className="space-y-4">
+          <div className="glass-panel rounded-[28px] p-5">
+            <p className="section-kicker">Plan + credits</p>
+            <h3 className="mt-3 text-2xl font-semibold text-ink">{planSurface.name}</h3>
+            <div className="mt-5 grid gap-3">
+              <MetricTile
+                label="Credits remaining"
+                value={typeof creditsRemaining === "number" ? String(creditsRemaining) : String(planLimits.generationsPerDay)}
+                detail={typeof creditsRemaining === "number" ? "Available today" : "Daily generation limit"}
+              />
+              <MetricTile label="Clip limit" value={String(planLimits.clipLimit)} detail="Ranked clips returned per run" />
+              <MetricTile label="Uploads" value={String(planLimits.uploadsPerDay)} detail="Source uploads available per day" />
+            </div>
+            <p className="mt-4 text-sm leading-7 text-ink/60">
+              {planSurface.watermark
+                ? "Free exports keep the watermark until you upgrade."
+                : "This plan unlocks clean exports without a watermark."}
+            </p>
+          </div>
+
+          <div className="glass-panel rounded-[28px] p-5">
+            <p className="section-kicker">Upload a source</p>
+            <h3 className="mt-3 text-xl font-semibold text-ink">Run the pipeline from a local file</h3>
+            <p className="mt-3 text-sm leading-7 text-ink/60">
+              {token
+                ? "Upload-backed generation keeps the same packaging and scoring flow while giving you better source control."
+                : "Sign in to unlock upload-backed generation and saved source reuse."}
+            </p>
+            <p className="mt-4 text-sm text-accent">{uploadingFileName ? `Uploading ${uploadingFileName}...` : activeSourceLabel}</p>
+            <label className="secondary-button mt-5 inline-flex w-full cursor-pointer items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
               {token ? "Upload video" : "Sign in to upload"}
               <input
                 type="file"
@@ -810,98 +1011,45 @@ export function ClipStudio({
             </label>
           </div>
 
-          <div className="panel-subtle rounded-[24px] p-4">
-            <p className="text-sm font-medium text-ink">Plan and limits</p>
-            <p className="mt-1 text-sm text-ink/60">See how much output the current tier unlocks before you run the next pack.</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <StatPill tone="accent">{planSurface.name}</StatPill>
-              <StatPill tone="neutral">{planLimits.clipLimit} clips per run</StatPill>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-3">
-                <p className="text-xs uppercase tracking-[0.22em] text-muted">Credits</p>
-                <p className="mt-2 text-base font-semibold text-ink">
-                  {typeof creditsRemaining === "number" ? `${creditsRemaining} remaining today` : `${planLimits.generationsPerDay} daily`}
-                </p>
-              </div>
-              <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-3">
-                <p className="text-xs uppercase tracking-[0.22em] text-muted">Uploads</p>
-                <p className="mt-2 text-base font-semibold text-ink">{planLimits.uploadsPerDay} per day</p>
-              </div>
-            </div>
-            <p className="mt-4 text-sm text-ink/60">
-              {planSurface.watermark
-                ? "Free exports keep the watermark until you upgrade."
-                : "This plan unlocks clean exports without a watermark."}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm text-ink/60">
-            Use a public video URL or an uploaded source file. The system will return ranked clips with packaging guidance.
-          </p>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="primary-button inline-flex min-w-[220px] items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isLoading ? "Analyzing video..." : "Generate clip pack"}
-          </button>
-        </div>
-
-        {isLoading ? (
-          <div className="panel-subtle rounded-[24px] px-5 py-8 text-center">
-            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
-            <p className="text-lg font-medium text-ink">Compiling the strongest moments...</p>
-            <p className="mt-2 text-sm text-ink/60">
-              Ranking clips, writing hooks, and shaping the pack
-              {improveResults && preferenceProfile.topPackagingAngle ? ` around ${preferenceProfile.topPackagingAngle}` : ""}.
-            </p>
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="rounded-[24px] border border-red-400/20 bg-red-400/8 px-5 py-4 text-sm text-red-100">{error}</div>
-        ) : null}
-
-        {paywallMessage ? (
-          <div className="rounded-[24px] border border-neonPurple/20 bg-neonPurple/10 p-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted">Out of credits</p>
-            <h4 className="mt-2 text-xl font-semibold text-ink">Your current plan has hit today’s limit</h4>
-            <p className="mt-3 text-sm leading-7 text-ink/70">{paywallMessage}</p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link href="/settings" className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold">
-                Review plan
-              </Link>
-              <Link href="/wallet" className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
-                Open wallet
-              </Link>
+          <div className="glass-panel rounded-[28px] p-5">
+            <p className="section-kicker">Why this works</p>
+            <div className="mt-4 space-y-3 text-sm leading-7 text-ink/68">
+              <p>1. One source becomes multiple ranked outputs.</p>
+              <p>2. Hooks, captions, timestamps, and packaging angles come back ready to test.</p>
+              <p>3. Queue, campaign, and payout scaffolding keep the workflow moving after generation.</p>
             </div>
           </div>
-        ) : null}
-      </form>
+        </aside>
+      </div>
     </section>
   );
 
   const resultsSection = result ? (
     <section className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="section-kicker">Results</p>
-          <h3 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-4xl">Your ranked clip pack</h3>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <StatPill tone="neutral">{displayedClips.length} clips</StatPill>
-          <StatPill tone="neutral">{result.source_platform}</StatPill>
+      <div className="hero-card rounded-[32px] p-6 sm:p-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="section-kicker">Clip pack ready</p>
+            <h3 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">Review top outputs and move the best clips forward</h3>
+            <p className="mt-4 text-sm leading-7 text-subtext">
+              Your clip pack is ready. Review top outputs, queue strong candidates, or move them into campaign workflow.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <StatPill tone="accent">{displayedClips.length} clips</StatPill>
+            <StatPill tone="neutral">{result.source_platform}</StatPill>
+            {result.processing_summary?.recommended_next_step ? (
+              <StatPill tone="neutral">{result.processing_summary.recommended_next_step}</StatPill>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr),320px]">
-        <div className="space-y-5">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),340px]">
+        <div className="space-y-6">
           {featuredClip ? (
             <div className="space-y-3">
-              <p className="section-kicker">Best first post</p>
+              <p className="section-kicker">Top output</p>
               <ClipCard
                 clip={featuredClip}
                 featured
@@ -914,17 +1062,25 @@ export function ClipStudio({
           ) : null}
 
           {remainingClips.length ? (
-            <div className="grid gap-5 lg:grid-cols-2">
-              {remainingClips.map((clip) => (
-                <ClipCard
-                  key={clip.id}
-                  clip={clip}
-                  feedbackVote={feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null}
-                  onVote={handleFeedbackVote}
-                  queued={isQueued(clip)}
-                  onToggleQueue={handleToggleQueue}
-                />
-              ))}
+            <div className="space-y-4">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="section-kicker">Remaining ranked clips</p>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">Strong candidates for the next posting run</h4>
+                </div>
+              </div>
+              <div className="grid gap-5 lg:grid-cols-2">
+                {remainingClips.map((clip) => (
+                  <ClipCard
+                    key={clip.id}
+                    clip={clip}
+                    feedbackVote={feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null}
+                    onVote={handleFeedbackVote}
+                    queued={isQueued(clip)}
+                    onToggleQueue={handleToggleQueue}
+                  />
+                ))}
+              </div>
             </div>
           ) : null}
         </div>
@@ -933,16 +1089,14 @@ export function ClipStudio({
           <ReadyQueuePanel items={readyQueue} onMove={handleMoveQueue} onRemove={handleRemoveQueue} onClear={handleClearQueue} />
 
           <div className="glass-panel rounded-[28px] p-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted">Top Performing Angles</p>
-            <h4 className="mt-3 text-xl font-semibold text-ink">What your taste is favoring</h4>
+            <p className="section-kicker">Top performing angles</p>
+            <h4 className="mt-3 text-xl font-semibold text-ink">What this workspace is learning</h4>
             <div className="mt-4 flex flex-wrap gap-2">
-              {(preferenceProfile.preferredAngles.length ? preferenceProfile.preferredAngles : ["value", "curiosity", "story"])
-                .slice(0, 3)
-                .map((angle) => (
-                  <span key={angle} className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-ink/82">
-                    {angle}
-                  </span>
-                ))}
+              {(topAngles.length ? topAngles : ["curiosity", "value", "story"]).slice(0, 4).map((angle) => (
+                <span key={angle} className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-ink/82">
+                  {angle}
+                </span>
+              ))}
             </div>
             <p className="mt-4 text-sm leading-7 text-ink/60">
               {preferenceProfile.preferredHookStyles.length
@@ -952,12 +1106,12 @@ export function ClipStudio({
           </div>
 
           <div className="glass-panel rounded-[28px] p-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted">Move faster</p>
-            <h4 className="mt-3 text-xl font-semibold text-ink">How to use this pack</h4>
+            <p className="section-kicker">Execution guide</p>
+            <h4 className="mt-3 text-xl font-semibold text-ink">How to move this pack</h4>
             <div className="mt-4 space-y-3 text-sm text-ink/72">
               <p>1. Post the top clip first.</p>
-              <p>2. Test multiple hooks before rewriting the edit.</p>
-              <p>3. Keep marking good and bad clips so the system gets sharper around your taste.</p>
+              <p>2. Try 3 variations of this clip before re-cutting the source.</p>
+              <p>3. Mark what works so future runs tighten around your taste.</p>
             </div>
             <p className="mt-4 text-sm text-accent">
               {improveResults ? "Preference learning is active." : "Turn on Improve my results to apply local learning."}
@@ -969,17 +1123,20 @@ export function ClipStudio({
   ) : null;
 
   const emptyGeneratorState = !result && !isLoading && showGenerator ? (
-    <section className="glass-panel rounded-[28px] p-6">
-      <p className="text-xs uppercase tracking-[0.24em] text-muted">Ready</p>
-      <h3 className="mt-3 text-2xl font-semibold text-ink">Your next clip pack will appear here</h3>
+    <section className="glass-panel rounded-[28px] p-6 sm:p-8">
+      <p className="section-kicker">Ready</p>
+      <h3 className="mt-3 text-2xl font-semibold text-ink sm:text-3xl">Your next clip pack will appear here</h3>
       <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-        Expect ranked clips, hook variants, caption styles, reasons, and post order once the source is processed.
+        Expect ranked clips, hook variants, caption styles, reasons, packaging angles, and post order once the source is processed.
       </p>
     </section>
   ) : null;
 
   return (
     <main className="app-shell-grid min-h-screen bg-hero-radial">
+      <div className="hero-orb hero-orb-purple left-[-8rem] top-[-4rem] h-80 w-80" />
+      <div className="hero-orb hero-orb-blue right-[-5rem] top-24 h-72 w-72" />
+      <div className="hero-orb hero-orb-cyan bottom-20 right-[14%] h-60 w-60" />
       <AuthPanel
         isOpen={authOpen}
         mode={authMode}
@@ -995,247 +1152,191 @@ export function ClipStudio({
 
       {isHome ? (
         <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-          <header className="flex items-center justify-between gap-4 rounded-full border border-white/10 bg-black/20 px-4 py-3 backdrop-blur-xl">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm font-semibold text-white shadow-glow">
-                IWA
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.28em] text-muted">LWA Omega</p>
-                <p className="text-sm font-medium text-ink">Creator operating system</p>
-              </div>
-            </Link>
-
-            <nav className="hidden items-center gap-2 md:flex">
-              {marketingNavItems.map((item) => (
-                <Link key={item.href} href={item.href} className="nav-pill rounded-full px-4 py-2 text-sm">
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-
-            <div className="flex items-center gap-2">
-              {user ? (
-                <>
-                  <Link href="/dashboard" className="secondary-button rounded-full px-4 py-2 text-sm font-medium">
-                    Open workspace
-                  </Link>
-                  <span className="hidden rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-ink/72 sm:inline-flex">
-                    {planSurface.name}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMode("login");
-                      setAuthOpen(true);
-                    }}
-                    className="secondary-button rounded-full px-4 py-2 text-sm font-medium"
-                  >
-                    Sign in
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMode("signup");
-                      setAuthOpen(true);
-                    }}
-                    className="primary-button rounded-full px-4 py-2 text-sm font-semibold"
-                  >
-                    Start now
-                  </button>
-                </>
-              )}
-            </div>
-          </header>
-
-          <section className="grid gap-10 pb-10 pt-14 lg:grid-cols-[1.06fr,0.94fr] lg:items-start">
-            <div className="space-y-7">
-              <div className="space-y-5">
-                <p className="section-kicker">Built for creators who move fast</p>
-                <h1 className="page-title max-w-4xl text-5xl font-semibold leading-[1.02] text-ink sm:text-6xl lg:text-7xl">
-                  Turn long videos into <span className="text-gradient">ranked, viral-ready clips.</span>
-                </h1>
-                <p className="max-w-2xl text-base leading-8 text-ink/64 sm:text-lg">
-                  Paste once. Get hooks, captions, timestamps, post order, and reasons back in one clean pack.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                <Link href="/generate" className="primary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold">
-                  Open generate workspace
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode(user ? "login" : "signup");
-                    setAuthOpen(true);
-                  }}
-                  className="secondary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-medium"
-                >
-                  {user ? "Switch account" : "Create account"}
-                </button>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <KpiCard label="Outputs" value="Hooks + captions" detail="Multiple variations per clip." />
-                <KpiCard label="Ranking" value="Post first" detail="Best clip is obvious." />
-                <KpiCard label="Workflow" value="Browser-first" detail="Works anywhere a URL opens." />
-              </div>
-            </div>
-
-            <div className="space-y-5">
-              {generatorSection}
-              {!result && !isLoading ? <MarketingPreview user={user} /> : null}
-            </div>
-          </section>
-
-          {resultsSection ? <div className="space-y-6">{resultsSection}</div> : null}
-        </div>
-      ) : (
-        <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8">
-          <div className="grid gap-6 lg:grid-cols-[250px,minmax(0,1fr)]">
-            <aside className="hidden lg:block">
-              <div className="sticky top-6 space-y-4">
-                <div className="glass-panel rounded-[28px] p-5">
-                  <Link href="/" className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm font-semibold text-white shadow-glow">
-                      IWA
-                    </div>
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.28em] text-muted">LWA Omega</p>
-                      <p className="text-sm font-medium text-ink">Creator workspace</p>
-                    </div>
-                  </Link>
-                  <p className="mt-4 text-sm leading-7 text-ink/60">
-                    Generate, review, queue, and refine without bouncing between tools.
-                  </p>
-                </div>
-
-                <nav className="glass-panel rounded-[28px] p-3">
-                  <div className="space-y-1.5">
-                    {visibleAppNavItems.map((item) => {
-                      const active = item.section === initialSection;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={[
-                            "block rounded-2xl px-4 py-3 text-sm font-medium transition",
-                            active ? "nav-pill-active" : "nav-pill",
-                          ].join(" ")}
-                        >
-                          {item.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </nav>
-
-                <div className="glass-panel rounded-[28px] p-5">
-                  <p className="text-xs uppercase tracking-[0.24em] text-muted">Account</p>
-                  {user ? (
-                    <>
-                      <p className="mt-3 text-base font-semibold text-ink">{user.email}</p>
-                      <p className="mt-1 text-sm text-ink/60">Plan {planSurface.name}</p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <StatPill tone="accent">{clipPacks.length} packs</StatPill>
-                        <StatPill tone="neutral">{uploads.length} uploads</StatPill>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={onSignOut}
-                        className="secondary-button mt-5 inline-flex w-full items-center justify-center rounded-full px-4 py-3 text-sm font-medium"
-                      >
-                        Sign out
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="mt-3 text-sm leading-7 text-ink/60">Sign in to unlock uploads, history, campaigns, wallet, and queue state.</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAuthMode("login");
-                          setAuthOpen(true);
-                        }}
-                        className="primary-button mt-5 inline-flex w-full items-center justify-center rounded-full px-4 py-3 text-sm font-semibold"
-                      >
-                        Sign in
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </aside>
-
-            <div className="space-y-6">
-              <div className="glass-panel rounded-[28px] p-4 lg:hidden">
-                <div className="flex items-center justify-between gap-3">
-                  <Link href="/" className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm font-semibold text-white shadow-glow">
-                      IWA
-                    </div>
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.28em] text-muted">LWA Omega</p>
-                      <p className="text-sm font-medium text-ink">Creator workspace</p>
-                    </div>
-                  </Link>
-                  {user ? (
-                    <button
-                      type="button"
-                      onClick={onSignOut}
-                      className="secondary-button rounded-full px-4 py-2 text-sm font-medium"
-                    >
-                      Sign out
-                    </button>
-                  ) : (
+          <Navbar
+            items={marketingNavItems.map((item) => ({ href: item.href, label: item.label }))}
+            showTagline
+            rightSlot={
+              <div className="flex items-center gap-2">
+                {user ? (
+                  <>
+                    <Link href="/dashboard" className="secondary-button inline-flex rounded-full px-4 py-2.5 text-sm font-medium">
+                      Open workspace
+                    </Link>
+                    <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-ink/72 sm:inline-flex">
+                      {planSurface.name}
+                    </span>
+                  </>
+                ) : (
+                  <>
                     <button
                       type="button"
                       onClick={() => {
                         setAuthMode("login");
                         setAuthOpen(true);
                       }}
-                      className="primary-button rounded-full px-4 py-2 text-sm font-semibold"
+                      className="secondary-button inline-flex rounded-full px-4 py-2.5 text-sm font-medium"
                     >
                       Sign in
                     </button>
-                  )}
-                </div>
-                <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-                  {visibleAppNavItems.map((item) => {
-                    const active = item.section === initialSection;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={[
-                          "whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition",
-                          active ? "nav-pill-active" : "nav-pill",
-                        ].join(" ")}
-                      >
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode("signup");
+                        setAuthOpen(true);
+                      }}
+                      className="primary-button inline-flex rounded-full px-4 py-2.5 text-sm font-semibold"
+                    >
+                      Start now
+                    </button>
+                  </>
+                )}
+              </div>
+            }
+          />
+
+          <section className="grid gap-12 pb-10 pt-16 lg:grid-cols-[1.06fr,0.94fr] lg:items-start">
+            <div className="space-y-7">
+              <div className="space-y-5">
+                <p className="section-kicker">AI content repurposer</p>
+                <h1 className="page-title max-w-5xl text-5xl font-semibold leading-[0.98] text-ink sm:text-6xl lg:text-7xl">
+                  Turn one long video into a <span className="text-gradient">ranked clip engine</span>
+                </h1>
+                <p className="max-w-3xl text-base leading-8 text-subtext sm:text-lg">
+                  Generate hooks, captions, timestamps, packaging angles, and workflow-ready short-form assets in one premium workspace.
+                </p>
               </div>
 
+              <div className="flex flex-wrap gap-3">
+                <Link href="/generate" className="primary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold">
+                  Generate clips
+                </Link>
+                <Link
+                  href={user ? "/dashboard" : "/signup"}
+                  className="secondary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-medium"
+                >
+                  Open workspace
+                </Link>
+              </div>
+
+              <p className="text-sm uppercase tracking-[0.24em] text-ink/56">
+                Built for creators, clippers, operators, and growth teams
+              </p>
+
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  { label: "Ranked outputs", detail: "Top clip is obvious fast." },
+                  { label: "Caption-ready", detail: "Hooks and styles come back packaged." },
+                  { label: "Campaign workflow", detail: "Move winning clips into managed ops." },
+                  { label: "Ready queue", detail: "Stack the next-to-post set in order." },
+                ].map((item) => (
+                  <div key={item.label} className="metric-tile rounded-[24px] p-4">
+                    <p className="text-sm font-semibold text-ink">{item.label}</p>
+                    <p className="mt-2 text-sm leading-6 text-ink/62">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {featureProof.map((item) => (
+                  <StatPill key={item} tone="neutral">
+                    {item}
+                  </StatPill>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              {homeGeneratorSection}
+              {!result && !isLoading ? <MarketingPreview user={user} /> : null}
+            </div>
+          </section>
+
+          {resultsSection ? <div className="space-y-6 pb-8">{resultsSection}</div> : null}
+        </div>
+      ) : (
+        <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+          <Navbar
+            items={visibleAppNavItems.map((item) => ({ href: item.href, label: item.label }))}
+            compactLogo
+            rightSlot={
+              user ? (
+                <div className="flex items-center gap-2">
+                  <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-ink/72 lg:inline-flex">
+                    {planSurface.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onSignOut}
+                    className="secondary-button inline-flex rounded-full px-4 py-2.5 text-sm font-medium"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("login");
+                    setAuthOpen(true);
+                  }}
+                  className="primary-button inline-flex rounded-full px-4 py-2.5 text-sm font-semibold"
+                >
+                  Sign in
+                </button>
+              )
+            }
+          />
+
+          <div className="mt-8 grid gap-6 xl:grid-cols-[280px,minmax(0,1fr)]">
+            <aside className="hidden xl:block">
+              <div className="sticky top-28 space-y-4">
+                <WorkspaceRailCard
+                  label="Studio pulse"
+                  title={user ? "Generation first. Operations second." : "Premium workspace"}
+                  description={
+                    user
+                      ? "Move from generation to queue, assignments, and payout readiness without leaving the workspace."
+                      : "Sign in to unlock saved runs, campaigns, wallet views, and queue state."
+                  }
+                >
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <StatPill tone="accent">{planSurface.name}</StatPill>
+                    <StatPill tone="neutral">{readyQueue.length} in queue</StatPill>
+                  </div>
+                </WorkspaceRailCard>
+
+                <WorkspaceRailCard label="Account" title={user ? user.email : "Guest mode"} description={user ? `Role ${user.role || "creator"}` : "Use account mode for uploads, history, campaigns, and wallet state."}>
+                  <div className="mt-5 grid gap-3">
+                    <MetricTile label="Clip packs" value={String(clipPacks.length)} detail="Saved history" />
+                    <MetricTile label="Uploads" value={String(uploads.length)} detail="Reusable sources" />
+                    <MetricTile label="Credits" value={typeof creditsRemaining === "number" ? String(creditsRemaining) : String(planLimits.generationsPerDay)} detail="Generation capacity" />
+                  </div>
+                </WorkspaceRailCard>
+
+                <WorkspaceRailCard
+                  label="Next move"
+                  title="Use the system in order"
+                  description="Generate first, queue strong candidates, then move finished work into campaign and payout workflow."
+                />
+              </div>
+            </aside>
+
+            <div className="space-y-6">
+
               {pageIntro ? (
-                <section className="glass-panel rounded-[32px] p-6 sm:p-8">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <section className="hero-card rounded-[34px] p-6 sm:p-8">
+                  <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                     <div className="max-w-3xl">
                       <p className="section-kicker">{pageIntro.label}</p>
                       <h1 className="page-title mt-3 text-4xl font-semibold text-ink sm:text-5xl">{pageIntro.title}</h1>
-                      <p className="mt-4 text-sm leading-7 text-ink/64 sm:text-base">{pageIntro.description}</p>
+                      <p className="mt-4 max-w-3xl text-sm leading-7 text-subtext sm:text-base">{pageIntro.description}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {user ? (
                         <>
                           <StatPill tone="accent">{planSurface.name}</StatPill>
                           <StatPill tone="neutral">{wallet ? `$${((wallet.available_cents || 0) / 100).toFixed(2)}` : "Wallet"}</StatPill>
+                          <StatPill tone="neutral">{readyQueue.length} queued</StatPill>
                         </>
                       ) : (
                         <StatPill tone="neutral">Guest mode</StatPill>
@@ -1252,7 +1353,7 @@ export function ClipStudio({
               ) : null}
 
               {requiresAccount && !user ? (
-                <section className="glass-panel rounded-[32px] p-6 sm:p-8">
+                <section className="hero-card rounded-[34px] p-6 sm:p-8">
                   <p className="section-kicker">Authentication required</p>
                   <h2 className="mt-3 text-3xl font-semibold text-ink">Sign in to open this workspace</h2>
                   <p className="mt-4 max-w-3xl text-sm leading-7 text-ink/60">
@@ -1432,7 +1533,7 @@ export function ClipStudio({
                   onSave={saveClipMetadata}
                   onClose={() => setSelectedClipPack(null)}
                   readOnly={!editorUnlocked}
-                  lockedMessage="Upgrade to Pro to edit hooks, captions, and trims directly from saved history."
+                  lockedMessage="Upgrade to Pro to edit hooks, captions, packaging, and trims directly from saved history."
                 />
               ) : null}
 
@@ -1453,8 +1554,10 @@ function StatPill({ children, tone = "neutral" }: { children: ReactNode; tone?: 
   return (
     <span
       className={[
-        "rounded-full border px-3 py-1.5 text-xs font-medium",
-        tone === "accent" ? "border-accent/20 bg-accent/10 text-accent" : "border-white/10 bg-white/5 text-ink/72",
+        "rounded-full border px-3 py-1.5 text-xs font-semibold",
+        tone === "accent"
+          ? "border-neonPurple/25 bg-[linear-gradient(135deg,rgba(124,58,237,0.18),rgba(37,99,255,0.14))] text-white"
+          : "border-white/10 bg-white/[0.05] text-ink/72",
       ].join(" ")}
     >
       {children}
@@ -1462,9 +1565,9 @@ function StatPill({ children, tone = "neutral" }: { children: ReactNode; tone?: 
   );
 }
 
-function KpiCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+function MetricTile({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="glass-panel rounded-[24px] p-5">
+    <div className="metric-tile rounded-[24px] p-4">
       <p className="text-xs uppercase tracking-[0.24em] text-muted">{label}</p>
       <p className="mt-3 text-2xl font-semibold text-ink">{value}</p>
       <p className="mt-2 text-sm leading-6 text-ink/60">{detail}</p>
@@ -1474,36 +1577,90 @@ function KpiCard({ label, value, detail }: { label: string; value: string; detai
 
 function MarketingPreview({ user }: { user: UserProfile | null }) {
   return (
-    <div className="glass-panel rounded-[28px] p-6">
+    <div className="grid gap-4 sm:grid-cols-2">
+      {[
+        {
+          title: "Ranked clip outputs",
+          detail: "Score, virality, platform fit, and best post order come back structured.",
+        },
+        {
+          title: "Caption-ready packaging",
+          detail: "Hooks, caption styles, CTA, and thumbnail text are built into the pack.",
+        },
+        {
+          title: "Campaign workflow",
+          detail: "Move strong assets into assignment, submission, and payout-readiness state.",
+        },
+        {
+          title: "Ready queue",
+          detail: "Build the next posting stack without leaving the workspace.",
+        },
+      ].map((item, index) => (
+        <div key={item.title} className={index === 0 ? "hero-card rounded-[26px] p-5" : "glass-panel rounded-[26px] p-5"}>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-ink">{item.title}</p>
+            {index === 0 ? <StatPill tone="accent">{user ? user.plan_code || "free" : "guest"}</StatPill> : null}
+          </div>
+          <p className="mt-3 text-sm leading-7 text-ink/62">{item.detail}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WorkspaceRailCard({
+  label,
+  title,
+  description,
+  children,
+}: {
+  label: string;
+  title: string;
+  description: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="glass-panel rounded-[28px] p-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-muted">What comes back</p>
-          <h3 className="mt-2 text-xl font-semibold text-ink">A pack you can act on fast</h3>
+          <p className="section-kicker">{label}</p>
+          <h3 className="mt-3 text-xl font-semibold text-ink">{title}</h3>
         </div>
-        <StatPill tone="accent">{user ? user.plan_code || "free" : "guest"}</StatPill>
       </div>
+      <p className="mt-3 text-sm leading-7 text-ink/60">{description}</p>
+      {children}
+    </div>
+  );
+}
 
-      <div className="mt-5 space-y-3">
-        {[
-          {
-            title: "Clip 01",
-            detail: "Score 92 · Curiosity angle · Post first",
-          },
-          {
-            title: "3 hook variants + 4 caption styles",
-            detail: "Viral, story, educational, controversial",
-          },
-          {
-            title: "Clear next step",
-            detail: "CTA, platform fit, and packaging reason included",
-          },
-        ].map((item) => (
-          <div key={item.title} className="panel-subtle rounded-[20px] p-4">
-            <p className="text-sm font-medium text-ink">{item.title}</p>
-            <p className="mt-1 text-sm text-ink/60">{item.detail}</p>
-          </div>
-        ))}
-      </div>
+function InlineState({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="panel-subtle rounded-[24px] px-5 py-8 text-center">
+      <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
+      <p className="text-lg font-medium text-ink">{title}</p>
+      <p className="mt-2 text-sm text-ink/60">{description}</p>
+    </div>
+  );
+}
+
+function InlineAlert({
+  children,
+  tone,
+  title,
+}: {
+  children: ReactNode;
+  tone: "error" | "violet";
+  title?: string;
+}) {
+  const toneClass =
+    tone === "error"
+      ? "border-red-400/20 bg-red-400/8 text-red-100"
+      : "border-neonPurple/20 bg-neonPurple/10 text-ink";
+
+  return (
+    <div className={["rounded-[24px] border px-5 py-4 text-sm", toneClass].join(" ")}>
+      {title ? <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">{title}</p> : null}
+      {children}
     </div>
   );
 }

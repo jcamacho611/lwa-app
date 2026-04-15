@@ -84,10 +84,10 @@ export function ClipPackEditor({ clipPack, onSave, onClose, readOnly = false, lo
   }
 
   return (
-    <section className="mt-10 glass-panel rounded-[32px] p-6 sm:p-8">
+    <section className="mt-10 hero-card rounded-[34px] p-6 sm:p-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-muted">Clip Pack Detail</p>
+          <p className="section-kicker">Clip pack detail</p>
           <h3 className="mt-2 text-3xl font-semibold text-ink">{clipPack.source_title || clipPack.request_id}</h3>
           <p className="mt-2 max-w-3xl text-sm leading-7 text-ink/64">
             Review the ranked pack, then adjust hooks, captions, CTA, and packaging without leaving the browser.
@@ -96,7 +96,7 @@ export function ClipPackEditor({ clipPack, onSave, onClose, readOnly = false, lo
         <button
           type="button"
           onClick={onClose}
-          className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+          className="secondary-button rounded-full px-4 py-2 text-sm font-medium"
         >
           Close Editor
         </button>
@@ -114,14 +114,14 @@ export function ClipPackEditor({ clipPack, onSave, onClose, readOnly = false, lo
                 onClick={() => setSelectedClipId(clipId)}
                 className={[
                   "w-full rounded-[24px] border p-4 text-left transition",
-                  selected ? "border-accent/30 bg-accent/10 shadow-glow" : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]",
+                  selected ? "hero-card shadow-glow" : "glass-panel hover:-translate-y-0.5 hover:border-white/16",
                 ].join(" ")}
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/75">
+                  <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/75">
                     #{clip.rank || clip.best_post_order || 1}
                   </span>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/75">
+                  <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/75">
                     {clip.start_time || "no start"} - {clip.end_time || "no end"}
                   </span>
                 </div>
@@ -139,16 +139,16 @@ export function ClipPackEditor({ clipPack, onSave, onClose, readOnly = false, lo
             </div>
           ) : null}
 
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5">
+          <div className="metric-tile rounded-[28px] p-5">
             <p className="text-sm font-medium text-ink">Selected clip</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+              <span className="status-chip status-approved">
                 Score {selectedClip.score}
               </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/75">
+              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/75">
                 {selectedClip.packaging_angle || "angle unset"}
               </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/75">
+              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/75">
                 {selectedClip.platform_fit || "platform fit pending"}
               </span>
             </div>
@@ -208,7 +208,7 @@ export function ClipPackEditor({ clipPack, onSave, onClose, readOnly = false, lo
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="rounded-full bg-gradient-to-r from-accent to-accentSoft px-5 py-3 text-sm font-semibold text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+              className="primary-button rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
               {readOnly ? "Upgrade to edit" : isSaving ? "Saving..." : "Save Clip Changes"}
             </button>
@@ -217,7 +217,7 @@ export function ClipPackEditor({ clipPack, onSave, onClose, readOnly = false, lo
                 href={selectedClip.edited_clip_url || selectedClip.clip_url || "#"}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+                className="secondary-button rounded-full px-5 py-3 text-sm font-medium"
               >
                 Open Clip Asset
               </a>
@@ -252,14 +252,14 @@ function EditorField({
           disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           rows={4}
-          className="min-h-[120px] w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted disabled:cursor-not-allowed disabled:opacity-60 focus:border-accent/40"
+          className="input-surface min-h-[120px] w-full rounded-[24px] px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
         />
       ) : (
         <input
           value={value}
           disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted disabled:cursor-not-allowed disabled:opacity-60 focus:border-accent/40"
+          className="input-surface w-full rounded-[24px] px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
         />
       )}
     </label>
@@ -286,7 +286,7 @@ function NumberField({
         value={typeof value === "number" ? value : ""}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value ? Number(event.target.value) : undefined)}
-        className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted disabled:cursor-not-allowed disabled:opacity-60 focus:border-accent/40"
+        className="input-surface w-full rounded-[24px] px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
       />
     </label>
   );

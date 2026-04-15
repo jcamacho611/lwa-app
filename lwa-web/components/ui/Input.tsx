@@ -7,7 +7,7 @@ export default function Input({ className = "", ...props }: InputProps) {
     <input
       {...props}
       className={[
-        "w-full rounded-xl border border-white/10 bg-black/70 p-4 text-white placeholder:text-white/35 focus:border-neonPurple focus:outline-none focus:ring-4 focus:ring-neonPurple/10",
+        "input-surface w-full rounded-[22px] px-4 py-3.5 text-sm text-ink placeholder:text-muted",
         className,
       ].join(" ")}
     />
@@ -19,7 +19,7 @@ export function Textarea({ className = "", ...props }: TextareaHTMLAttributes<HT
     <textarea
       {...props}
       className={[
-        "w-full rounded-xl border border-white/10 bg-black/70 p-4 text-white placeholder:text-white/35 focus:border-neonPurple focus:outline-none focus:ring-4 focus:ring-neonPurple/10",
+        "input-surface min-h-[120px] w-full rounded-[22px] px-4 py-3.5 text-sm text-ink placeholder:text-muted",
         className,
       ].join(" ")}
     />

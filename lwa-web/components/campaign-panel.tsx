@@ -257,8 +257,8 @@ export function CampaignPanel({
   return (
     <section className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[0.92fr,1.08fr]">
-        <div className="glass-panel rounded-[32px] p-6 sm:p-8">
-          <p className="text-xs uppercase tracking-[0.24em] text-muted">Campaigns</p>
+        <div className="hero-card rounded-[32px] p-6 sm:p-8">
+          <p className="section-kicker">Campaigns</p>
           <h3 className="mt-2 text-3xl font-semibold text-ink">Turn clip output into managed workflows</h3>
           <p className="mt-4 text-sm leading-7 text-ink/64">
             Build a brief, assign either full packs or selected clips, then move each asset through submission and payout-readiness state.
@@ -289,7 +289,7 @@ export function CampaignPanel({
                 min="0"
                 value={payout}
                 onChange={(event) => setPayout(event.target.value)}
-                className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-accent/40"
+                className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
               />
             </label>
 
@@ -305,7 +305,7 @@ export function CampaignPanel({
                       onClick={() => togglePlatform(platform)}
                       className={[
                         "rounded-full border px-4 py-2 text-sm transition",
-                        active ? "border-accent/30 bg-accent/10 text-accent" : "border-white/10 bg-white/5 text-ink/72",
+                        active ? "border-accent/30 bg-accent/10 text-accent" : "border-white/10 bg-white/[0.05] text-ink/72",
                       ].join(" ")}
                     >
                       {platform}
@@ -320,7 +320,7 @@ export function CampaignPanel({
                 type="button"
                 disabled={isSaving}
                 onClick={handleCreate}
-                className="rounded-full bg-gradient-to-r from-accent to-accentSoft px-5 py-3 text-sm font-semibold text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+                className="primary-button rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSaving ? "Creating..." : "Create campaign"}
               </button>
@@ -332,10 +332,10 @@ export function CampaignPanel({
         <div className="glass-panel rounded-[32px] p-6 sm:p-8">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-muted">Campaign Inventory</p>
+              <p className="section-kicker">Campaign inventory</p>
               <h3 className="mt-2 text-2xl font-semibold text-ink">Live workflow state</h3>
             </div>
-            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-ink/72">{campaigns.length} campaigns</span>
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-ink/72">{campaigns.length} campaigns</span>
           </div>
 
           <div className="mt-6 space-y-3">
@@ -350,13 +350,13 @@ export function CampaignPanel({
                     onClick={() => void onOpenCampaign(campaign.id)}
                     className={[
                       "w-full rounded-[24px] border p-5 text-left transition",
-                      selected ? "border-accent/30 bg-accent/10 shadow-glow" : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]",
+                      selected ? "hero-card shadow-glow" : "glass-panel hover:-translate-y-0.5 hover:border-white/16",
                     ].join(" ")}
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/72">{campaign.status}</span>
+                      <span className={["status-chip", campaignStatusClass(campaign.status)].join(" ")}>{campaign.status}</span>
                       {campaign.target_angle ? (
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/72">
+                        <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/72">
                           {campaign.target_angle}
                         </span>
                       ) : null}
@@ -405,7 +405,7 @@ export function CampaignPanel({
                     type="button"
                     disabled={updatingCampaignId === selectedCampaign.campaign.id || selectedCampaign.campaign.status === status}
                     onClick={() => updateStatus(selectedCampaign.campaign.id, status)}
-                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="secondary-button rounded-full px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {selectedCampaign.campaign.status === status ? `Current: ${status}` : `Set ${status}`}
                   </button>
@@ -426,7 +426,7 @@ export function CampaignPanel({
                   onClick={() => setAssignmentMode("clip_pack")}
                   className={[
                     "rounded-full border px-4 py-2 text-sm transition",
-                    assignmentMode === "clip_pack" ? "border-accent/30 bg-accent/10 text-accent" : "border-white/10 bg-white/5 text-ink/72",
+                    assignmentMode === "clip_pack" ? "border-accent/30 bg-accent/10 text-accent" : "border-white/10 bg-white/[0.05] text-ink/72",
                   ].join(" ")}
                 >
                   Assign clip pack
@@ -436,7 +436,7 @@ export function CampaignPanel({
                   onClick={() => setAssignmentMode("clip")}
                   className={[
                     "rounded-full border px-4 py-2 text-sm transition",
-                    assignmentMode === "clip" ? "border-accent/30 bg-accent/10 text-accent" : "border-white/10 bg-white/5 text-ink/72",
+                    assignmentMode === "clip" ? "border-accent/30 bg-accent/10 text-accent" : "border-white/10 bg-white/[0.05] text-ink/72",
                   ].join(" ")}
                 >
                   Assign selected clips
@@ -451,7 +451,7 @@ export function CampaignPanel({
                     setAssignmentRequestId(event.target.value);
                     setSelectedClipIds([]);
                   }}
-                  className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40"
+                  className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
                 >
                   <option value="" className="bg-slate-950">
                     Select a saved clip pack
@@ -510,9 +510,9 @@ export function CampaignPanel({
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-ink/80">Assign to</span>
                   <select
-                    value={assignmentRole}
-                    onChange={(event) => setAssignmentRole(event.target.value as "creator" | "clipper" | "admin")}
-                    className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40"
+                  value={assignmentRole}
+                  onChange={(event) => setAssignmentRole(event.target.value as "creator" | "clipper" | "admin")}
+                    className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
                   >
                     <option value="creator" className="bg-slate-950">Creator</option>
                     <option value="clipper" className="bg-slate-950">Clipper</option>
@@ -526,9 +526,9 @@ export function CampaignPanel({
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-ink/80">Target platform</span>
                   <select
-                    value={assignmentPlatform}
-                    onChange={(event) => setAssignmentPlatform(event.target.value)}
-                    className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40"
+                  value={assignmentPlatform}
+                  onChange={(event) => setAssignmentPlatform(event.target.value)}
+                    className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
                   >
                     {platforms.map((platform) => (
                       <option key={platform} value={platform} className="bg-slate-950">
@@ -545,7 +545,7 @@ export function CampaignPanel({
                     min="0"
                     value={assignmentPayout}
                     onChange={(event) => setAssignmentPayout(event.target.value)}
-                    className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-accent/40"
+                    className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
                   />
                 </label>
               </div>
@@ -563,7 +563,7 @@ export function CampaignPanel({
                   type="button"
                   disabled={isSaving}
                   onClick={handleAssign}
-                  className="rounded-full bg-gradient-to-r from-accent to-accentSoft px-5 py-3 text-sm font-semibold text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+                  className="primary-button rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSaving ? "Assigning..." : "Create assignment"}
                 </button>
@@ -588,7 +588,7 @@ export function CampaignPanel({
                     onClick={() => setViewMode(view.id)}
                     className={[
                       "rounded-full border px-4 py-2 text-sm transition",
-                      viewMode === view.id ? "border-accent/30 bg-accent/10 text-accent" : "border-white/10 bg-white/5 text-ink/72",
+                      viewMode === view.id ? "border-accent/30 bg-accent/10 text-accent" : "border-white/10 bg-white/[0.05] text-ink/72",
                     ].join(" ")}
                   >
                     {view.label}
@@ -623,7 +623,7 @@ export function CampaignPanel({
 
 function SummaryMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+    <div className="metric-tile rounded-[24px] p-4">
       <p className="text-xs uppercase tracking-[0.18em] text-muted">{label}</p>
       <p className="mt-3 text-2xl font-semibold text-ink">{value}</p>
     </div>
@@ -644,12 +644,12 @@ function AssignmentCard({
   const actions = availableActionsFor(assignment.status, viewMode);
 
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
+    <div className="metric-tile rounded-[24px] p-5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/72">{assignment.assignment_kind}</span>
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/72">{assignment.status}</span>
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/72">{assignment.payout_state}</span>
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/72">{assignment.assignee_role}</span>
+        <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/72">{assignment.assignment_kind}</span>
+        <span className={["status-chip", submissionStatusClass(assignment.status)].join(" ")}>{assignment.status}</span>
+        <span className={["status-chip", payoutStateClass(assignment.payout_state)].join(" ")}>{assignment.payout_state}</span>
+        <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/72">{assignment.assignee_role}</span>
       </div>
 
       <p className="mt-3 text-lg font-semibold text-ink">{assignment.title || assignment.hook || assignment.request_id || assignment.id}</p>
@@ -670,7 +670,7 @@ function AssignmentCard({
               type="button"
               disabled={isUpdating}
               onClick={() => onAdvance(status)}
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+              className="secondary-button rounded-full px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isUpdating ? "Updating..." : labelForStatusAction(status)}
             </button>
@@ -683,11 +683,54 @@ function AssignmentCard({
 
 function AssignmentDetail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[20px] border border-white/10 bg-white/[0.03] px-4 py-3">
+    <div className="metric-tile rounded-[20px] px-4 py-3">
       <p className="text-xs uppercase tracking-[0.18em] text-muted">{label}</p>
       <p className="mt-2 text-sm font-medium text-ink">{value}</p>
     </div>
   );
+}
+
+function campaignStatusClass(status: string) {
+  switch (status) {
+    case "active":
+      return "status-ready";
+    case "completed":
+      return "status-paid";
+    case "paused":
+      return "status-draft";
+    default:
+      return "status-draft";
+  }
+}
+
+function submissionStatusClass(status: SubmissionStatus) {
+  switch (status) {
+    case "ready":
+      return "status-ready";
+    case "submitted":
+      return "status-submitted";
+    case "approved":
+      return "status-approved";
+    case "rejected":
+      return "status-rejected";
+    case "paid":
+      return "status-paid";
+    default:
+      return "status-draft";
+  }
+}
+
+function payoutStateClass(state: string) {
+  switch (state) {
+    case "eligible":
+      return "status-approved";
+    case "pending":
+      return "status-submitted";
+    case "paid":
+      return "status-paid";
+    default:
+      return "status-draft";
+  }
 }
 
 function availableActionsFor(status: SubmissionStatus, viewMode: WorkspaceRole): SubmissionStatus[] {
@@ -748,14 +791,14 @@ function Field({
           onChange={(event) => onChange(event.target.value)}
           rows={4}
           placeholder={placeholder}
-          className="min-h-[110px] w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-accent/40"
+          className="input-surface min-h-[110px] w-full rounded-[24px] px-4 py-3 text-sm"
         />
       ) : (
         <input
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-accent/40"
+          className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
         />
       )}
     </label>

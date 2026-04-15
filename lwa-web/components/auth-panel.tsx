@@ -63,10 +63,10 @@ export function AuthPanel({ isOpen, mode, onClose, onSwitchMode, onAuthenticated
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-      <div className="glass-panel w-full max-w-md rounded-[32px] p-6 sm:p-7">
+      <div className="hero-card w-full max-w-md rounded-[32px] p-6 sm:p-7">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-muted">Account</p>
+            <p className="section-kicker">Account</p>
             <h3 className="mt-2 text-2xl font-semibold text-ink">
               {mode === "login" ? "Sign in to your workspace" : "Create your account"}
             </h3>
@@ -90,7 +90,7 @@ export function AuthPanel({ isOpen, mode, onClose, onSwitchMode, onAuthenticated
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40"
+              className="input-surface w-full rounded-2xl px-4 py-3 text-sm"
               placeholder="you@example.com"
               required
             />
@@ -101,7 +101,7 @@ export function AuthPanel({ isOpen, mode, onClose, onSwitchMode, onAuthenticated
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40"
+              className="input-surface w-full rounded-2xl px-4 py-3 text-sm"
               placeholder="At least 8 characters"
               minLength={8}
               required
@@ -117,7 +117,7 @@ export function AuthPanel({ isOpen, mode, onClose, onSwitchMode, onAuthenticated
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex w-full items-center justify-center rounded-full bg-gradient-to-r from-accent to-accentSoft px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition disabled:cursor-not-allowed disabled:opacity-60"
+            className="primary-button inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Working..." : mode === "login" ? "Sign In" : "Create Account"}
           </button>

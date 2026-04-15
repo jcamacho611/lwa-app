@@ -1,0 +1,24 @@
+<svg width="280" height="72" viewBox="0 0 280 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="4" y="4" width="64" height="64" rx="20" fill="url(#bg)" />
+  <rect x="4.5" y="4.5" width="63" height="63" rx="19.5" stroke="url(#stroke)" stroke-opacity="0.7" />
+  <path d="M22 16C22 14.3431 23.3431 13 25 13H33V44.5H50.5C52.1569 44.5 53.5 45.8431 53.5 47.5V55H25C23.3431 55 22 53.6569 22 52V16Z" fill="white"/>
+  <path d="M41.5 13H53.5V25H49C44.8579 25 41.5 28.3579 41.5 32.5V13Z" fill="url(#cut)"/>
+  <text x="88" y="31" fill="#EAF2FF" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="4">LWA</text>
+  <text x="88" y="54" fill="#98A7C7" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="500">Clip operating system</text>
+  <defs>
+    <linearGradient id="bg" x1="11" y1="9" x2="61" y2="63" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111A34"/>
+      <stop offset="0.52" stop-color="#0D1430"/>
+      <stop offset="1" stop-color="#091022"/>
+    </linearGradient>
+    <linearGradient id="stroke" x1="12" y1="8" x2="62" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A855F7"/>
+      <stop offset="0.48" stop-color="#2563FF"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="cut" x1="43" y1="15" x2="54" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A855F7"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+</svg>

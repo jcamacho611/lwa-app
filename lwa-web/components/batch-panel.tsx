@@ -72,8 +72,8 @@ export function BatchPanel({ batches, uploads, currentVideoUrl, selectedUpload, 
 
   return (
     <section className="grid gap-6 xl:grid-cols-[0.96fr,1.04fr]">
-      <div className="glass-panel rounded-[32px] p-6 sm:p-8">
-        <p className="text-xs uppercase tracking-[0.24em] text-muted">Batch Mode</p>
+      <div className="hero-card rounded-[32px] p-6 sm:p-8">
+        <p className="section-kicker">Batch mode</p>
         <h3 className="mt-2 text-3xl font-semibold text-ink">Queue multi-source runs</h3>
         <p className="mt-4 text-sm leading-7 text-ink/64">
           Stack multiple sources into one repeatable workflow when a single run is not enough.
@@ -86,7 +86,7 @@ export function BatchPanel({ batches, uploads, currentVideoUrl, selectedUpload, 
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Weekly Creator Pipeline"
-              className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-accent/40"
+              className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
             />
           </label>
 
@@ -96,7 +96,7 @@ export function BatchPanel({ batches, uploads, currentVideoUrl, selectedUpload, 
               value={selectedTrend}
               onChange={(event) => setSelectedTrend(event.target.value)}
               placeholder="Founder clips, product launch, educational"
-              className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-accent/40"
+              className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
             />
           </label>
 
@@ -161,7 +161,7 @@ export function BatchPanel({ batches, uploads, currentVideoUrl, selectedUpload, 
               type="button"
               disabled={isSaving}
               onClick={handleCreate}
-              className="rounded-full bg-gradient-to-r from-accent to-accentSoft px-5 py-3 text-sm font-semibold text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+              className="primary-button rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? "Creating batch..." : "Create Batch"}
             </button>
@@ -173,19 +173,19 @@ export function BatchPanel({ batches, uploads, currentVideoUrl, selectedUpload, 
       <div className="glass-panel rounded-[32px] p-6 sm:p-8">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-muted">Runs</p>
+            <p className="section-kicker">Runs</p>
             <h3 className="mt-2 text-2xl font-semibold text-ink">Recent batches</h3>
           </div>
-          <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-ink/72">{batches.length} total</span>
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-ink/72">{batches.length} total</span>
         </div>
 
         <div className="mt-6 space-y-3">
           {batches.length ? (
             batches.map((batch) => (
-              <div key={batch.id} className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+              <div key={batch.id} className="metric-tile rounded-[24px] p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/72">{batch.status}</span>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/72">
+                  <span className="status-chip status-ready">{batch.status}</span>
+                  <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/72">
                     {batch.target_platform || platform}
                   </span>
                 </div>

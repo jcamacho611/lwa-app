@@ -38,7 +38,7 @@ export function AccountWorkspace({
     <section className="mt-10 space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-muted">Workspace</p>
+          <p className="section-kicker">Workspace</p>
           <h3 className="mt-2 text-3xl font-semibold text-ink">Welcome back, {user.email}</h3>
           <p className="mt-2 text-sm leading-7 text-ink/64">
             Your recent runs, uploads, campaigns, and ledger state are all here in one place.
@@ -48,25 +48,25 @@ export function AccountWorkspace({
           <span className="rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-medium text-accent">
             Plan: {planLabel || user.plan_code}
           </span>
-          <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80">
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-ink/80">
             Role: {user.role || "creator"}
           </span>
           <Link
             href="/history"
-            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+            className="secondary-button rounded-full px-4 py-2 text-sm font-medium"
           >
             Full History
           </Link>
           <Link
             href="/campaigns"
-            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+            className="secondary-button rounded-full px-4 py-2 text-sm font-medium"
           >
             Campaigns
           </Link>
           <button
             type="button"
             onClick={onSignOut}
-            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+            className="secondary-button rounded-full px-4 py-2 text-sm font-medium"
           >
             Sign Out
           </button>
@@ -150,7 +150,7 @@ export function AccountWorkspace({
 
 function StatCard({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="glass-panel rounded-[28px] p-5">
+    <div className="hero-card rounded-[28px] p-5">
       <p className="text-sm text-ink/60">{label}</p>
       <p className="mt-3 text-3xl font-semibold text-ink">{value}</p>
       <p className="mt-3 text-sm leading-7 text-ink/64">{detail}</p>
@@ -176,7 +176,7 @@ function Panel({
       <div className="mt-5 space-y-3">
         {items.length ? (
           items.map((item) => (
-            <div key={`${item.title}-${item.detail}`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+            <div key={`${item.title}-${item.detail}`} className="metric-tile rounded-[22px] p-4">
               <p className="text-sm font-medium text-ink">{item.title}</p>
               <p className="mt-2 text-sm text-ink/62">{item.detail}</p>
             </div>

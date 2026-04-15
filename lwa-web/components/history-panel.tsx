@@ -14,10 +14,10 @@ export function HistoryPanel({ clipPacks, selectedClipPackId, isLoading, onOpenC
     <section className="glass-panel rounded-[32px] p-6 sm:p-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-muted">History</p>
+          <p className="section-kicker">History</p>
           <h3 className="mt-2 text-3xl font-semibold text-ink">Saved clip packs</h3>
         </div>
-        <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-ink/72">
+        <div className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-ink/72">
           {clipPacks.length} stored runs
         </div>
       </div>
@@ -40,16 +40,16 @@ export function HistoryPanel({ clipPacks, selectedClipPackId, isLoading, onOpenC
               <div
                 key={pack.request_id}
                 className={[
-                  "rounded-[24px] border p-5 transition",
-                  selected ? "border-accent/30 bg-accent/10 shadow-glow" : "border-white/10 bg-white/[0.03]",
+                  "rounded-[26px] border p-5 transition",
+                  selected ? "hero-card shadow-glow" : "glass-panel hover:-translate-y-0.5 hover:border-white/16",
                 ].join(" ")}
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/70">
+                  <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/70">
                     {pack.target_platform || "Clip pack"}
                   </span>
                   {pack.top_score ? (
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/70">
+                    <span className="status-chip status-approved">
                       Top score {pack.top_score}
                     </span>
                   ) : null}
@@ -61,7 +61,7 @@ export function HistoryPanel({ clipPacks, selectedClipPackId, isLoading, onOpenC
                 <button
                   type="button"
                   onClick={() => onOpenClipPack(pack.request_id)}
-                  className="mt-4 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
+                  className="mt-4 secondary-button rounded-full px-4 py-2 text-sm font-medium"
                 >
                   {selected ? "Open in editor" : "Review clip pack"}
                 </button>
@@ -70,7 +70,7 @@ export function HistoryPanel({ clipPacks, selectedClipPackId, isLoading, onOpenC
           })
         ) : (
           <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5 text-sm text-ink/62">
-            Sign in and generate a clip pack to start building your library.
+            Generate while signed in to turn your archive into a reusable library of ranked assets.
           </div>
         )}
       </div>

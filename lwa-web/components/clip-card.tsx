@@ -61,30 +61,32 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
   return (
     <article
       className={[
-        "glass-panel rounded-[28px] p-5 text-left transition-all duration-300",
-        featured ? "shadow-glow ring-1 ring-white/10" : "shadow-card",
+        "overflow-hidden rounded-[30px] border p-5 text-left transition-all duration-300",
+        featured
+          ? "hero-card shadow-glow"
+          : "glass-panel border-white/10 shadow-card hover:-translate-y-0.5 hover:border-white/16",
       ].join(" ")}
     >
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-ink/90">
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <span className={["status-chip", featured ? "status-approved" : "status-ready"].join(" ")}>
           Post #{clip.best_post_order || clip.rank || 1}
         </span>
-        <span className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+        <span className="status-chip status-submitted">
           Virality {viralityScore}
         </span>
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/75">
+        <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/75">
           Confidence {formatConfidence(clip.confidence)}
         </span>
         {clip.packaging_angle ? (
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/75">
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/75">
             {clip.packaging_angle}
           </span>
         ) : null}
       </div>
 
-      <div className="mb-4">
-        <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Hook</p>
-        <h3 className="text-lg font-semibold leading-tight text-ink">{clip.hook}</h3>
+      <div className="mb-5">
+        <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">{featured ? "Top hook" : "Hook"}</p>
+        <h3 className={["font-semibold leading-tight text-ink", featured ? "text-2xl sm:text-[2rem]" : "text-xl"].join(" ")}>{clip.hook}</h3>
         <p className="mt-3 text-sm text-accent">
           {clip.best_post_order === 1
             ? "Post this first."
@@ -92,11 +94,11 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[1.25fr,0.75fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.28fr,0.72fr]">
         <div className="space-y-4">
           <div>
             <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Caption</p>
-            <p className="text-sm leading-6 text-ink/82">{clip.caption}</p>
+            <p className="text-sm leading-7 text-ink/82">{clip.caption}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -113,11 +115,11 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
         </div>
 
         <div className="space-y-3">
-          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+          <div className="metric-tile rounded-[24px] p-4">
             <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Why This Works</p>
             <p className="text-sm leading-6 text-ink/82">{clip.reason || "Strong pacing, clear payoff, and creator-ready packaging."}</p>
           </div>
-          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+          <div className="metric-tile rounded-[24px] p-4">
             <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Platform Fit</p>
             <p className="text-sm leading-6 text-ink/82">{clip.platform_fit || "Optimized for fast short-form viewing."}</p>
           </div>
@@ -125,7 +127,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
       </div>
 
       {clip.hook_variants?.length ? (
-        <div className="mt-5 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+        <div className="mt-5 metric-tile rounded-[24px] p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-xs uppercase tracking-[0.24em] text-muted">Hook Variants</p>
             <span className="text-xs text-ink/50">Test 3 variations of this clip.</span>
@@ -136,7 +138,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
                 key={`${clip.id}-hook-${index}`}
                 type="button"
                 onClick={() => copyValue("Hook variant copied", variant)}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-ink/82 transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
+                className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-left text-xs text-ink/82 transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
               >
                 {variant}
               </button>
@@ -146,7 +148,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
       ) : null}
 
       {clip.caption_variants && Object.keys(clip.caption_variants).length ? (
-        <div className="mt-4 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+        <div className="mt-4 metric-tile rounded-[24px] p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-xs uppercase tracking-[0.24em] text-muted">Caption Styles</p>
             <span className="text-xs text-ink/50">Test different hooks and captions fast.</span>
@@ -157,7 +159,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
                 key={`${clip.id}-caption-${key}`}
                 type="button"
                 onClick={() => copyValue(`${captionVariantLabels[key] || key} caption copied`, value)}
-                className="rounded-2xl border border-white/10 bg-white/5 p-3 text-left transition hover:border-accent/30 hover:bg-accent/10"
+                className="rounded-[22px] border border-white/10 bg-white/[0.05] p-3 text-left transition hover:border-accent/30 hover:bg-accent/10"
               >
                 <p className="text-xs uppercase tracking-[0.22em] text-muted">{captionVariantLabels[key] || key}</p>
                 <p className="mt-2 text-sm leading-6 text-ink/82">{value}</p>
@@ -175,7 +177,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
             "inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium transition",
             feedbackVote === "good"
               ? "border-emerald-400/30 bg-emerald-400/12 text-emerald-200"
-              : "border-white/12 bg-white/6 text-ink hover:border-emerald-400/30 hover:bg-emerald-400/10 hover:text-emerald-200",
+              : "border-white/12 bg-white/[0.06] text-ink hover:border-emerald-400/30 hover:bg-emerald-400/10 hover:text-emerald-200",
           ].join(" ")}
         >
           Good Clip
@@ -187,7 +189,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
             "inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium transition",
             feedbackVote === "bad"
               ? "border-red-400/30 bg-red-400/10 text-red-100"
-              : "border-white/12 bg-white/6 text-ink hover:border-red-400/30 hover:bg-red-400/10 hover:text-red-100",
+              : "border-white/12 bg-white/[0.06] text-ink hover:border-red-400/30 hover:bg-red-400/10 hover:text-red-100",
           ].join(" ")}
         >
           Bad Clip
@@ -199,7 +201,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
             "inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium transition",
             queued
               ? "border-neonPurple/30 bg-neonPurple/15 text-white shadow-neon"
-              : "border-white/12 bg-white/6 text-ink hover:border-neonPurple/30 hover:bg-neonPurple/10 hover:text-white",
+              : "border-white/12 bg-white/[0.06] text-ink hover:border-neonPurple/30 hover:bg-neonPurple/10 hover:text-white",
           ].join(" ")}
         >
           {queued ? "Queued" : "Mark Ready"}
@@ -213,28 +215,28 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
             href={assetUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
+            className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
           >
             Open Clip Asset
           </a>
           <button
             type="button"
             onClick={() => copyValue("Hook copied", clip.hook)}
-            className="inline-flex items-center rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
+            className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
           >
             Copy Hook
           </button>
           <button
             type="button"
             onClick={() => copyValue("Caption copied", clip.caption)}
-            className="inline-flex items-center rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
+            className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
           >
             Copy Caption
           </button>
           <button
             type="button"
             onClick={() => copyValue("Clip pack copied", packageText)}
-            className="inline-flex items-center rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
+            className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
           >
             Copy Pack
           </button>
@@ -245,21 +247,21 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
           <button
             type="button"
             onClick={() => copyValue("Hook copied", clip.hook)}
-            className="inline-flex items-center rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
+            className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
           >
             Copy Hook
           </button>
           <button
             type="button"
             onClick={() => copyValue("Caption copied", clip.caption)}
-            className="inline-flex items-center rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
+            className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
           >
             Copy Caption
           </button>
           <button
             type="button"
             onClick={() => copyValue("Clip pack copied", packageText)}
-            className="inline-flex items-center rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
+            className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
           >
             Copy Pack
           </button>

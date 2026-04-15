@@ -110,7 +110,7 @@ export function PostingPanel({
     <section className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[0.92fr,1.08fr]">
         <div className="glass-panel rounded-[32px] p-6 sm:p-8">
-        <p className="text-xs uppercase tracking-[0.24em] text-muted">Connections</p>
+        <p className="section-kicker">Connections</p>
         <h3 className="mt-2 text-3xl font-semibold text-ink">Build posting groundwork</h3>
         <p className="mt-4 text-sm leading-7 text-ink/64">
             Prepare the accounts and queue state you need so the best clips are ready to move.
@@ -122,7 +122,7 @@ export function PostingPanel({
               <select
                 value={provider}
                 onChange={(event) => setProvider(event.target.value)}
-                className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40"
+                className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
               >
                 {providers.map((item) => (
                   <option key={item} value={item} className="bg-slate-950">
@@ -138,7 +138,7 @@ export function PostingPanel({
                 value={accountLabel}
                 onChange={(event) => setAccountLabel(event.target.value)}
                 placeholder="@creatorhandle"
-                className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-accent/40"
+                className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
               />
             </label>
           </div>
@@ -148,7 +148,7 @@ export function PostingPanel({
               type="button"
               disabled={isSavingConnection}
               onClick={handleCreateConnection}
-              className="rounded-full bg-gradient-to-r from-accent to-accentSoft px-5 py-3 text-sm font-semibold text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+              className="primary-button rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSavingConnection ? "Saving..." : "Add Connection"}
             </button>
@@ -158,7 +158,7 @@ export function PostingPanel({
           <div className="mt-6 space-y-3">
             {connections.length ? (
               connections.map((connection) => (
-                <div key={connection.id} className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+                <div key={connection.id} className="metric-tile rounded-[24px] p-4">
                   <p className="text-sm font-medium text-ink">{connection.provider}</p>
                   <p className="mt-1 text-sm text-ink/62">{connection.account_label || "Account label pending"}</p>
                 </div>
@@ -174,7 +174,7 @@ export function PostingPanel({
         <div className="glass-panel rounded-[32px] p-6 sm:p-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-muted">Queue</p>
+              <p className="section-kicker">Queue</p>
               <h3 className="mt-2 text-2xl font-semibold text-ink">Create scheduled posts</h3>
             </div>
             <Link href="/history" className="text-sm font-medium text-accent hover:text-accentSoft">
@@ -188,7 +188,7 @@ export function PostingPanel({
               <select
                 value={postProvider}
                 onChange={(event) => setPostProvider(event.target.value)}
-                className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40"
+                className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
               >
                 {providers.map((item) => (
                   <option key={item} value={item} className="bg-slate-950">
@@ -209,7 +209,7 @@ export function PostingPanel({
                     setCaption(selectedClip.caption || "");
                   }
                 }}
-                className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40"
+                className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
               >
                 <option value="" className="bg-slate-950">
                   {availableClips.length ? "Select a clip" : "Open a clip pack first"}
@@ -230,7 +230,7 @@ export function PostingPanel({
               onChange={(event) => setCaption(event.target.value)}
               rows={4}
               placeholder="Optional platform-ready caption"
-              className="min-h-[110px] w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-accent/40"
+              className="input-surface min-h-[110px] w-full rounded-[24px] px-4 py-3 text-sm"
             />
           </label>
 
@@ -240,7 +240,7 @@ export function PostingPanel({
               type="datetime-local"
               value={scheduledFor}
               onChange={(event) => setScheduledFor(event.target.value)}
-              className="w-full rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent/40"
+              className="input-surface w-full rounded-[24px] px-4 py-3 text-sm"
             />
           </label>
 
@@ -249,7 +249,7 @@ export function PostingPanel({
               type="button"
               disabled={isSavingPost}
               onClick={handleCreateScheduledPost}
-              className="rounded-full bg-gradient-to-r from-accent to-accentSoft px-5 py-3 text-sm font-semibold text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+              className="primary-button rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSavingPost ? "Queueing..." : "Queue Post"}
             </button>
@@ -259,13 +259,13 @@ export function PostingPanel({
           <div className="mt-6 space-y-3">
             {scheduledPosts.length ? (
               scheduledPosts.map((post) => (
-                <div key={post.id} className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+                <div key={post.id} className="metric-tile rounded-[24px] p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-ink">{post.provider}</p>
                       <p className="mt-1 text-xs text-muted">{post.scheduled_for || post.created_at || "queued now"}</p>
                     </div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-ink/72">{post.status}</span>
+                    <span className="status-chip status-submitted">{post.status}</span>
                   </div>
                   <p className="mt-3 text-sm text-ink/62">{post.caption || "Caption pending."}</p>
                   <div className="mt-4 flex flex-wrap gap-3">
@@ -275,7 +275,7 @@ export function PostingPanel({
                         type="button"
                         disabled={updatingPostId === post.id || post.status === status}
                         onClick={() => updateStatus(post.id, status)}
-                        className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="secondary-button rounded-full px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {post.status === status ? `Current: ${status}` : `Set ${status}`}
                       </button>
