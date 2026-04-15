@@ -216,6 +216,7 @@ export type ClipResult = {
   confidence?: number | null;
   rank?: number | null;
   reason?: string | null;
+  why_this_matters?: string | null;
   cta_suggestion?: string | null;
   thumbnail_text?: string | null;
   packaging_angle?: string | null;

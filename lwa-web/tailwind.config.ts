@@ -19,6 +19,8 @@ const config: Config = {
         neonGlow: "#A855F7",
         neonCyan: "#22D3EE",
         brightCyan: "#00E5FF",
+        accentCrimson: "#8F1D36",
+        accentWine: "#5C1325",
         bgDark: "#050816",
         bgCard: "#0A1023",
         bgPanel: "#10182E",
@@ -40,6 +42,7 @@ const config: Config = {
       },
       boxShadow: {
         neon: "0 0 22px rgba(124,58,237,0.32)",
+        crimson: "0 0 22px rgba(143,29,54,0.18)",
         glow: '0 0 0 1px rgba(124,58,237,0.14), 0 24px 70px rgba(5,8,22,0.54)',
         card: '0 28px 80px rgba(0,0,0,0.42)',
         panel: '0 22px 60px rgba(0,0,0,0.34)',

@@ -46,7 +46,7 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
         <MetricCard
           label="Payout ready"
           value={formatCents(wallet?.eligible_payout_cents)}
-          detail="Approved submissions become payout-ready before any real payout rails are connected."
+          detail="Approved submissions become payout-ready before transfer rails are connected."
         />
       </div>
 
@@ -54,9 +54,7 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
         <div className="glass-panel rounded-[32px] p-6 sm:p-8">
         <p className="section-kicker">Payout readiness</p>
         <h3 className="mt-2 text-3xl font-semibold text-ink">Request funds from the ledger</h3>
-        <p className="mt-4 text-sm leading-7 text-ink/64">
-            Review available balance and submit a payout request when you want to move value out of the system.
-        </p>
+        <p className="mt-4 text-sm leading-7 text-ink/64">Review available balance and request a payout when you are ready.</p>
 
           {wallet?.submission_summary ? (
             <div className="mt-5 metric-tile rounded-[24px] p-4">
@@ -66,7 +64,7 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
                 {wallet.submission_summary.status_counts.paid || 0} paid.
               </p>
               <p className="mt-2 text-sm text-accent">
-                Approval unlocks payout readiness. Real payment transfer stays manual until payout rails are wired.
+                Approval unlocks payout readiness. Transfers stay manual until payout rails are wired.
               </p>
             </div>
           ) : null}

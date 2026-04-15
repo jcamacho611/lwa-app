@@ -28,14 +28,14 @@ export function FeatureGatePanel({ label, title, description, requiredPlan, bull
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <span className="rounded-full border border-neonPurple/30 bg-[linear-gradient(135deg,rgba(124,58,237,0.18),rgba(37,99,255,0.12))] px-4 py-2 text-sm font-medium text-white">
-          Requires {requiredPlan}
+        <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(92,19,37,0.55),rgba(124,58,237,0.12))] px-4 py-2 text-sm font-medium text-white shadow-crimson">
+          Unlock on {requiredPlan}
         </span>
         <Link href="/settings" className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold">
-          Review plan
+          See plan
         </Link>
         <Link href="/generate" className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
-          Keep generating
+          Back to generate
         </Link>
       </div>
     </section>

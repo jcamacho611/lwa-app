@@ -27,9 +27,7 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
       <div className="hero-card rounded-[32px] p-6 sm:p-8">
         <p className="section-kicker">Account</p>
         <h3 className="mt-2 text-3xl font-semibold text-ink">Workspace settings</h3>
-        <p className="mt-4 text-sm leading-7 text-ink/64">
-          Manage your account, plan, and creator workflow from one clean place.
-        </p>
+        <p className="mt-4 text-sm leading-7 text-ink/64">Plan, credits, role, and workflow state in one place.</p>
 
         <div className="mt-6 space-y-4">
           <InfoRow label="Email" value={user.email} />
@@ -85,9 +83,7 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
           ))}
         </div>
 
-        <p className="mt-6 text-sm leading-7 text-ink/60">
-          This gives you a clear view of plan state, daily limits, and what unlocks next when you need more output.
-        </p>
+        <p className="mt-6 text-sm leading-7 text-ink/60">See your limits now and what unlocks next.</p>
       </div>
     </section>
   );

@@ -21,7 +21,7 @@ export default function Navbar({ items, rightSlot, showTagline = false, compactL
   const pathname = usePathname();
 
   return (
-    <header className="glass-panel sticky top-4 z-40 rounded-[28px] px-4 py-3 sm:px-5">
+    <header className="glass-panel sticky top-4 z-40 rounded-[30px] border-white/12 px-4 py-3 sm:px-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Logo compact={compactLogo} showTagline={showTagline} />
 
@@ -33,7 +33,7 @@ export default function Navbar({ items, rightSlot, showTagline = false, compactL
                 key={item.href}
                 href={item.href}
                 className={[
-                  "nav-pill whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-medium",
+                  "nav-pill whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium",
                   active ? "nav-pill-active" : "",
                 ].join(" ")}
               >
@@ -43,7 +43,7 @@ export default function Navbar({ items, rightSlot, showTagline = false, compactL
           })}
         </nav>
 
-        <div className="order-2 md:order-3">{rightSlot}</div>
+        <div className="order-2 flex items-center gap-2 md:order-3">{rightSlot}</div>
       </div>
     </header>
   );

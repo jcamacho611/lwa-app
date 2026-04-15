@@ -177,7 +177,7 @@ export function ClipStudio({
     if (pageTitle || pageDescription || pageLabel) {
       return {
         label: pageLabel || "Workspace",
-        title: pageTitle || "LWA Web Workspace",
+        title: pageTitle || "LWA workspace",
         description: pageDescription || "Run the product from any browser.",
       };
     }
@@ -186,50 +186,50 @@ export function ClipStudio({
       case "dashboard":
         return {
           label: "Dashboard",
-          title: "Your creator control room",
-          description: "See current output, saved runs, queue state, and the account surfaces that keep the system moving.",
+          title: "Your control room",
+          description: "Runs, queue, campaigns, and account state in one place.",
         };
       case "generate":
         return {
           label: "Generate",
-          title: "Create a ranked clip pack",
-          description: "Paste a source, target the platform, and get hooks, captions, timestamps, and posting order back fast.",
+          title: "Build a ranked clip pack",
+          description: "Paste a source. Get clips worth posting.",
         };
       case "upload":
         return {
           label: "Upload",
-          title: "Bring your own source file",
-          description: "Use the same pipeline against uploaded source files when you want more control than a public URL.",
+          title: "Bring your own file",
+          description: "Run the same flow with local video, audio, or images.",
         };
       case "history":
         return {
           label: "History",
           title: "Reopen saved work",
-          description: "Review past runs, inspect what won, and make lightweight packaging edits without starting over.",
+          description: "Review past packs and reopen what still hits.",
         };
       case "batches":
         return {
           label: "Batches",
           title: "Queue multiple sources",
-          description: "Combine uploads and links into repeatable runs when one video at a time is too slow.",
+          description: "Group links and uploads into one repeatable run.",
         };
       case "campaigns":
         return {
           label: "Campaigns",
-          title: "Build structured content pushes",
-          description: "Set the angle, platform targets, and requirements for a campaign before clips go live.",
+          title: "Run content pushes",
+          description: "Assign clips, track status, and keep ops moving.",
         };
       case "wallet":
         return {
           label: "Wallet",
           title: "Track value and payout state",
-          description: "Keep a clear view of credits, ledger movement, and payout requests from the same workspace.",
+          description: "See ledger movement, readiness, and payout requests.",
         };
       case "settings":
         return {
           label: "Settings",
           title: "Manage account and workflow",
-          description: "Review plan state, session status, and the connected surfaces that support your workflow.",
+          description: "Plan, credits, role, and unlocked workflow depth.",
         };
       default:
         return null;
@@ -693,19 +693,21 @@ export function ClipStudio({
   const topAngles = (preferenceProfile.preferredAngles.length
     ? preferenceProfile.preferredAngles
     : displayedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
-  const featureProof = [
-    "Ranked outputs",
-    "Caption-ready",
-    "Campaign workflow",
-    "Ready queue",
-  ];
+  const featureProof = ["Ranked", "Queue-ready", "Campaign flow"];
   const loadingStages = [
-    "Ingesting source",
-    "Extracting media",
-    "Transcribing or analyzing",
-    "Finding moments",
-    "Preparing results",
+    "Reading source",
+    "Pulling media",
+    "Understanding content",
+    "Finding clips",
+    "Packaging outputs",
   ];
+  const sourceTruthSummary = useMemo(() => {
+    const content = result?.transcript || result?.visual_summary || "This source was processed into ranked short-form outputs.";
+    if (!content) {
+      return null;
+    }
+    return content.length > 260 ? `${content.slice(0, 257).trimEnd()}...` : content;
+  }, [result?.transcript, result?.visual_summary]);
 
   function handleFeedbackVote(clip: GenerateResponse["clips"][number], vote: "good" | "bad") {
     setFeedbackRecords((current) => upsertFeedbackRecord(current, createFeedbackRecord(clip, vote, platform)));
@@ -746,10 +748,8 @@ export function ClipStudio({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="section-kicker">Generate first</p>
-          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Paste one source. Get the pack.</h2>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/90">
-            Paste a source and let LWA build a ranked clip pack.
-          </p>
+          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Paste once. Get the pack.</h2>
+          <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/90">Drop in a source. LWA handles the ranking.</p>
         </div>
         <StatPill tone="accent">{platform}</StatPill>
       </div>
@@ -794,9 +794,7 @@ export function ClipStudio({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium text-ink">Improve my results</p>
-              <p className="mt-1 text-sm text-ink/60">
-                Use local feedback to bias future outputs toward the hooks and angles you keep.
-              </p>
+              <p className="mt-1 text-sm text-ink/60">Bias future runs toward what you keep.</p>
             </div>
             <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
               <input
@@ -805,13 +803,13 @@ export function ClipStudio({
                 onChange={(event) => setImproveResults(event.target.checked)}
                 className="h-4 w-4 accent-cyan-400"
               />
-              Improve future results
+              Improve results
             </label>
           </div>
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-ink/60">{loadingStages[loadingStageIndex]}. Preparing short-form outputs...</p>
+          <p className="text-sm text-ink/60">{loadingStages[loadingStageIndex]}. Short-form outputs are on the way.</p>
           <button
             type="submit"
             disabled={isLoading}
@@ -824,7 +822,7 @@ export function ClipStudio({
         {isLoading ? (
           <InlineState
             title="Compiling clip pack..."
-            description={`${loadingStages[loadingStageIndex]}. ${loadingStageIndex >= 2 ? "Ranking hooks and packaging angles." : "Preparing short-form outputs."}${improveResults && preferenceProfile.topPackagingAngle ? ` Biasing toward ${preferenceProfile.topPackagingAngle}.` : ""}`}
+            description={`${loadingStages[loadingStageIndex]}. ${loadingStageIndex >= 2 ? "Ranking hooks and angles." : "Shaping the pack."}${improveResults && preferenceProfile.topPackagingAngle ? ` Leaning ${preferenceProfile.topPackagingAngle}.` : ""}`}
           />
         ) : null}
 
@@ -856,15 +854,13 @@ export function ClipStudio({
             <div className="max-w-2xl">
               <p className="section-kicker">{initialSection === "upload" ? "Upload + Generate" : "Generate"}</p>
               <h2 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">
-                Build a ranked clip pack from one source
+                Turn one source into ranked clips
               </h2>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">
-                Paste a source and let LWA build a ranked clip pack.
-              </p>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">Source in. Clips worth posting out.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <StatPill tone="accent">{planSurface.name}</StatPill>
-              <StatPill tone="neutral">{result?.processing_summary?.ai_provider || "AI active"}</StatPill>
+              <StatPill tone="signal">{result?.processing_summary?.ai_provider || "Live output"}</StatPill>
             </div>
           </div>
 
@@ -909,16 +905,14 @@ export function ClipStudio({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-sm font-medium text-ink">Improve my results</p>
-                    <p className="mt-1 text-sm text-ink/60">
-                      Learn from your taste locally, then bias future runs toward the angles you keep.
-                    </p>
+                    <p className="mt-1 text-sm text-ink/60">Bias future runs toward your taste.</p>
                     {preferenceProfile.topPackagingAngle || preferenceProfile.topHookStyle ? (
                       <p className="mt-3 text-sm text-accent">
                         Favoring {preferenceProfile.topPackagingAngle || "strong"} packaging
                         {preferenceProfile.topHookStyle ? ` and ${preferenceProfile.topHookStyle} hooks` : ""}.
                       </p>
                     ) : (
-                      <p className="mt-3 text-sm text-ink/46">Mark clips good or bad to train your browser-side preferences.</p>
+                      <p className="mt-3 text-sm text-ink/46">Mark what hits. The browser remembers.</p>
                     )}
                   </div>
                   <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
@@ -928,13 +922,13 @@ export function ClipStudio({
                       onChange={(event) => setImproveResults(event.target.checked)}
                       className="h-4 w-4 accent-cyan-400"
                     />
-                    Improve future results
+                    Improve results
                   </label>
                 </div>
               </div>
 
               <div className="metric-tile rounded-[24px] p-4">
-                <p className="text-sm font-medium text-ink">What generation returns</p>
+                <p className="text-sm font-medium text-ink">What comes back</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {[
                     "Ranked clips",
@@ -953,8 +947,8 @@ export function ClipStudio({
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <p className="text-sm text-ink/60">
                 {result
-                  ? "Your clip pack is ready. Review top outputs, queue strong candidates, or move them into campaign workflow."
-                  : "Use a public source URL or an uploaded video, audio, or image file. The system will return ranked clips with packaging guidance."}
+                  ? "Clip pack is ready. Pick the winners and move."
+                  : "Use a public link or upload a video, audio file, or image."}
               </p>
               <button
                 type="submit"
@@ -968,7 +962,7 @@ export function ClipStudio({
             {isLoading ? (
               <InlineState
                 title="Compiling clip pack..."
-                description={`${loadingStages[loadingStageIndex]}. ${loadingStageIndex >= 2 ? "Ranking hooks and packaging angles." : "Preparing short-form outputs."}${improveResults && preferenceProfile.topPackagingAngle ? ` Biasing toward ${preferenceProfile.topPackagingAngle}.` : ""}`}
+                description={`${loadingStages[loadingStageIndex]}. ${loadingStageIndex >= 2 ? "Ranking hooks and angles." : "Shaping the pack."}${improveResults && preferenceProfile.topPackagingAngle ? ` Leaning ${preferenceProfile.topPackagingAngle}.` : ""}`}
               />
             ) : null}
 
@@ -1005,21 +999,13 @@ export function ClipStudio({
               <MetricTile label="Clip limit" value={String(planLimits.clipLimit)} detail="Ranked clips returned per run" />
               <MetricTile label="Uploads" value={String(planLimits.uploadsPerDay)} detail="Source uploads available per day" />
             </div>
-            <p className="mt-4 text-sm leading-7 text-ink/60">
-              {planSurface.watermark
-                ? "Free exports keep the watermark until you upgrade."
-                : "This plan unlocks clean exports without a watermark."}
-            </p>
+            <p className="mt-4 text-sm leading-7 text-ink/60">{planSurface.watermark ? "Watermark stays on free exports." : "Clean exports are unlocked."}</p>
           </div>
 
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Upload a source</p>
-            <h3 className="mt-3 text-xl font-semibold text-ink">Run the pipeline from a local file</h3>
-            <p className="mt-3 text-sm leading-7 text-ink/60">
-              {token
-                ? "Upload-backed generation keeps the same packaging and scoring flow while giving you better source control for video, audio, and stills."
-                : "Sign in to unlock upload-backed generation and saved source reuse."}
-            </p>
+            <h3 className="mt-3 text-xl font-semibold text-ink">Run it from a local file</h3>
+            <p className="mt-3 text-sm leading-7 text-ink/60">{token ? "Same ranking flow. More source control." : "Sign in to unlock uploads and saved source reuse."}</p>
             <p className="mt-4 text-sm text-accent">{uploadingFileName ? `Uploading ${uploadingFileName}...` : activeSourceLabel}</p>
             <label className="secondary-button mt-5 inline-flex w-full cursor-pointer items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
               {token ? "Upload source file" : "Sign in to upload"}
@@ -1036,8 +1022,8 @@ export function ClipStudio({
             <p className="section-kicker">Why this works</p>
             <div className="mt-4 space-y-3 text-sm leading-7 text-ink/68">
               <p>1. One source becomes multiple ranked outputs.</p>
-              <p>2. Hooks, captions, timestamps, and packaging angles come back ready to test.</p>
-              <p>3. Queue, campaign, and payout scaffolding keep the workflow moving after generation.</p>
+              <p>2. Hooks, captions, and angles come back ready to test.</p>
+              <p>3. Queue and campaign flow keep the best clips moving.</p>
             </div>
           </div>
         </aside>
@@ -1051,18 +1037,14 @@ export function ClipStudio({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <p className="section-kicker">Clip pack ready</p>
-            <h3 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">Review top outputs and move the best clips forward</h3>
-            <p className="mt-4 text-sm leading-7 text-subtext">
-              Your clip pack is ready. Review top outputs, queue strong candidates, or move them into campaign workflow.
-            </p>
+            <h3 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">Your best clips are ranked</h3>
+            <p className="mt-4 text-sm leading-7 text-subtext">Pick the winners, queue them, or move them into campaign flow.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <StatPill tone="accent">{displayedClips.length} clips</StatPill>
             <StatPill tone="neutral">{result.source_platform || "Upload"}</StatPill>
             {result.source_type ? <StatPill tone="neutral">{result.source_type.replace("_", " ")}</StatPill> : null}
-            {result.processing_summary?.recommended_next_step ? (
-              <StatPill tone="neutral">{result.processing_summary.recommended_next_step}</StatPill>
-            ) : null}
+            {result.processing_summary?.recommended_next_step ? <StatPill tone="signal">{result.processing_summary.recommended_next_step}</StatPill> : null}
           </div>
         </div>
       </div>
@@ -1074,11 +1056,7 @@ export function ClipStudio({
               <div className="max-w-3xl">
                 <p className="section-kicker">Source truth</p>
                 <h4 className="mt-3 text-2xl font-semibold text-ink">{result.source_title || "Processed source"}</h4>
-                <p className="mt-3 text-sm leading-7 text-ink/70">
-                  {result.transcript
-                    ? result.transcript
-                    : result.visual_summary || "This source was processed into ranked short-form outputs."}
-                </p>
+                <p className="mt-3 text-sm leading-7 text-ink/70">{sourceTruthSummary}</p>
               </div>
               <div className="flex flex-wrap gap-3">
                 {result.preview_asset_url ? (
@@ -1097,11 +1075,11 @@ export function ClipStudio({
                     download
                     className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
                   >
-                    Download source asset
+                    Download source
                   </a>
                 ) : (
                   <span className="rounded-full border border-neonPurple/18 bg-neonPurple/10 px-4 py-2 text-sm text-white/78">
-                    Downloads unlock on Pro
+                    Pro unlocks download
                   </span>
                 )}
               </div>
@@ -1127,7 +1105,7 @@ export function ClipStudio({
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="section-kicker">Remaining ranked clips</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">Strong candidates for the next posting run</h4>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">More clips worth testing</h4>
                 </div>
               </div>
               <div className="grid gap-5 lg:grid-cols-2">
@@ -1151,7 +1129,7 @@ export function ClipStudio({
 
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Top performing angles</p>
-            <h4 className="mt-3 text-xl font-semibold text-ink">What this workspace is learning</h4>
+            <h4 className="mt-3 text-xl font-semibold text-ink">What the workspace is learning</h4>
             <div className="mt-4 flex flex-wrap gap-2">
               {(topAngles.length ? topAngles : ["curiosity", "value", "story"]).slice(0, 4).map((angle) => (
                 <span key={angle} className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-ink/82">
@@ -1162,20 +1140,20 @@ export function ClipStudio({
             <p className="mt-4 text-sm leading-7 text-ink/60">
               {preferenceProfile.preferredHookStyles.length
                 ? `Preferred hook styles: ${preferenceProfile.preferredHookStyles.join(", ")}.`
-                : "No strong hook preference yet. Mark clips good or bad to tighten future outputs."}
+                : "No strong hook signal yet. Mark what hits."}
             </p>
           </div>
 
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Execution guide</p>
-            <h4 className="mt-3 text-xl font-semibold text-ink">How to move this pack</h4>
+            <h4 className="mt-3 text-xl font-semibold text-ink">Move this pack fast</h4>
             <div className="mt-4 space-y-3 text-sm text-ink/72">
               <p>1. Post the top clip first.</p>
-              <p>2. Try 3 variations of this clip before re-cutting the source.</p>
+              <p>2. Test the variants before recutting the source.</p>
               <p>3. Mark what works so future runs tighten around your taste.</p>
             </div>
             <p className="mt-4 text-sm text-accent">
-              {improveResults ? "Preference learning is active." : "Turn on Improve my results to apply local learning."}
+              {improveResults ? "Preference learning is on." : "Turn on Improve results to apply local learning."}
             </p>
           </div>
         </div>
@@ -1186,10 +1164,8 @@ export function ClipStudio({
   const emptyGeneratorState = !result && !isLoading && showGenerator ? (
     <section className="glass-panel rounded-[28px] p-6 sm:p-8">
       <p className="section-kicker">Ready</p>
-      <h3 className="mt-3 text-2xl font-semibold text-ink sm:text-3xl">Your next clip pack will appear here</h3>
-      <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-        Expect ranked clips, hook variants, caption styles, reasons, packaging angles, and post order once the source is processed.
-      </p>
+      <h3 className="mt-3 text-2xl font-semibold text-ink sm:text-3xl">Your next pack lands here</h3>
+      <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">Expect ranked clips, hooks, captions, angles, and post order.</p>
     </section>
   ) : null;
 
@@ -1260,11 +1236,9 @@ export function ClipStudio({
               <div className="space-y-5">
                 <p className="section-kicker">AI content repurposer</p>
                 <h1 className="page-title max-w-5xl text-5xl font-semibold leading-[0.98] text-ink sm:text-6xl lg:text-7xl">
-                  Turn one long video into a <span className="text-gradient">ranked clip engine</span>
+                  Turn one source into <span className="text-gradient">ranked clips worth posting</span>
                 </h1>
-                <p className="max-w-3xl text-base leading-8 text-subtext sm:text-lg">
-                  Generate hooks, captions, timestamps, packaging angles, and workflow-ready short-form assets in one premium workspace.
-                </p>
+                <p className="max-w-3xl text-base leading-8 text-subtext sm:text-lg">Hooks, captions, timestamps, and ranked outputs in one premium workspace.</p>
               </div>
 
               <div className="flex flex-wrap gap-3">
@@ -1279,16 +1253,14 @@ export function ClipStudio({
                 </Link>
               </div>
 
-              <p className="text-sm uppercase tracking-[0.24em] text-ink/56">
-                Built for creators, clippers, operators, and growth teams
-              </p>
+              <p className="text-sm uppercase tracking-[0.24em] text-ink/56">Built for creators, clippers, and operators</p>
 
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {[
-                  { label: "Ranked outputs", detail: "Top clip is obvious fast." },
-                  { label: "Caption-ready", detail: "Hooks and styles come back packaged." },
-                  { label: "Campaign workflow", detail: "Move winning clips into managed ops." },
-                  { label: "Ready queue", detail: "Stack the next-to-post set in order." },
+                  { label: "Ranked outputs", detail: "See the winner fast." },
+                  { label: "Caption-ready", detail: "Hooks and styles come packaged." },
+                  { label: "Campaign flow", detail: "Move winners into ops." },
+                  { label: "Ready queue", detail: "Stack the next posts in order." },
                 ].map((item) => (
                   <div key={item.label} className="metric-tile rounded-[24px] p-4">
                     <p className="text-sm font-semibold text-ink">{item.label}</p>
@@ -1298,8 +1270,8 @@ export function ClipStudio({
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {featureProof.map((item) => (
-                  <StatPill key={item} tone="neutral">
+                {featureProof.map((item, index) => (
+                  <StatPill key={item} tone={index === 1 ? "signal" : "neutral"}>
                     {item}
                   </StatPill>
                 ))}
@@ -1353,7 +1325,7 @@ export function ClipStudio({
               <div className="sticky top-28 space-y-4">
                 <WorkspaceRailCard
                   label="Studio pulse"
-                  title={user ? "Generation first. Operations second." : "Premium workspace"}
+                  title={user ? "Generate first. Move fast after." : "Premium workspace"}
                   description={
                     user
                       ? "Move from generation to queue, assignments, and payout readiness without leaving the workspace."
@@ -1377,7 +1349,7 @@ export function ClipStudio({
                 <WorkspaceRailCard
                   label="Next move"
                   title="Use the system in order"
-                  description="Generate first, queue strong candidates, then move finished work into campaign and payout workflow."
+                  description="Generate first, queue the winners, then move them into campaign flow."
                 />
               </div>
             </aside>
@@ -1416,10 +1388,8 @@ export function ClipStudio({
               {requiresAccount && !user ? (
                 <section className="hero-card rounded-[34px] p-6 sm:p-8">
                   <p className="section-kicker">Authentication required</p>
-                  <h2 className="mt-3 text-3xl font-semibold text-ink">Sign in to open this workspace</h2>
-                  <p className="mt-4 max-w-3xl text-sm leading-7 text-ink/60">
-                    History, campaigns, wallet state, uploads, and posting queue all live inside your account.
-                  </p>
+                  <h2 className="mt-3 text-3xl font-semibold text-ink">Sign in to open the workspace</h2>
+                  <p className="mt-4 max-w-3xl text-sm leading-7 text-ink/60">History, campaigns, wallet state, uploads, and queue all live in your account.</p>
                   <div className="mt-6 flex flex-wrap gap-3">
                     <button
                       type="button"
@@ -1611,14 +1581,16 @@ export function ClipStudio({
   );
 }
 
-function StatPill({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "accent" }) {
+function StatPill({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "accent" | "signal" }) {
   return (
     <span
       className={[
         "rounded-full border px-3 py-1.5 text-xs font-semibold",
         tone === "accent"
           ? "border-neonPurple/25 bg-[linear-gradient(135deg,rgba(124,58,237,0.18),rgba(37,99,255,0.14))] text-white"
-          : "border-white/10 bg-white/[0.05] text-ink/72",
+          : tone === "signal"
+            ? "border-accentCrimson/28 bg-[linear-gradient(135deg,rgba(92,19,37,0.42),rgba(143,29,54,0.12))] text-white shadow-crimson"
+            : "border-white/10 bg-white/[0.05] text-ink/72",
       ].join(" ")}
     >
       {children}
@@ -1642,24 +1614,27 @@ function MarketingPreview({ user }: { user: UserProfile | null }) {
       {[
         {
           title: "Ranked clip outputs",
-          detail: "Score, virality, platform fit, and best post order come back structured.",
+          detail: "Score, fit, and post order come back structured.",
         },
         {
           title: "Caption-ready packaging",
-          detail: "Hooks, caption styles, CTA, and thumbnail text are built into the pack.",
+          detail: "Hooks, caption styles, CTA, and thumbnail text come built in.",
         },
         {
           title: "Campaign workflow",
-          detail: "Move strong assets into assignment, submission, and payout-readiness state.",
+          detail: "Move strong assets into assignment and payout-ready flow.",
         },
         {
           title: "Ready queue",
           detail: "Build the next posting stack without leaving the workspace.",
         },
       ].map((item, index) => (
-        <div key={item.title} className={index === 0 ? "hero-card rounded-[26px] p-5" : "glass-panel rounded-[26px] p-5"}>
+        <div key={item.title} className={index === 0 ? "hero-card rounded-[26px] p-5" : index === 2 ? "signal-card rounded-[26px] p-5" : "glass-panel rounded-[26px] p-5"}>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-ink">{item.title}</p>
+            <div className="flex items-center gap-3">
+              {index === 0 ? <img src="/brand/lwa-mark.svg" alt="LWA" className="h-7 w-7 opacity-90" /> : null}
+              <p className="text-sm font-semibold text-ink">{item.title}</p>
+            </div>
             {index === 0 ? <StatPill tone="accent">{user ? user.plan_code || "free" : "guest"}</StatPill> : null}
           </div>
           <p className="mt-3 text-sm leading-7 text-ink/62">{item.detail}</p>
@@ -1697,7 +1672,10 @@ function WorkspaceRailCard({
 function InlineState({ title, description }: { title: string; description: string }) {
   return (
     <div className="panel-subtle rounded-[24px] px-5 py-8 text-center">
-      <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
+      <div className="relative mx-auto mb-4 flex h-12 w-12 items-center justify-center">
+        <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
+        <img src="/brand/lwa-mark.svg" alt="LWA" className="relative h-7 w-7 opacity-90" />
+      </div>
       <p className="text-lg font-medium text-ink">{title}</p>
       <p className="mt-2 text-sm text-ink/60">{description}</p>
     </div>

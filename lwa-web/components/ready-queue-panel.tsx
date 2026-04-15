@@ -43,10 +43,8 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="section-kicker">Ready queue</p>
-          <h3 className="mt-3 text-2xl font-semibold text-ink">Your next-to-post stack</h3>
-          <p className="mt-2 text-sm leading-7 text-ink/60">
-            Reorder the next few assets, remove weak candidates, then export the queue as one clean package.
-          </p>
+          <h3 className="mt-3 text-2xl font-semibold text-ink">Next to post</h3>
+          <p className="mt-2 text-sm leading-7 text-ink/60">Reorder the stack, cut weak clips, then export the run.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-ink/72">
@@ -122,7 +120,7 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
                     <button
                       type="button"
                       onClick={() => onRemove(item.clipId)}
-                      className="rounded-full border border-red-400/20 bg-red-400/8 px-4 py-2 text-sm font-medium text-red-100 transition hover:bg-red-400/14"
+                      className="rounded-full border border-accentCrimson/24 bg-[rgba(92,19,37,0.28)] px-4 py-2 text-sm font-medium text-red-100 transition hover:bg-[rgba(92,19,37,0.42)]"
                     >
                       Remove
                     </button>
@@ -138,7 +136,7 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
               onClick={copyQueue}
               className="primary-button rounded-full px-5 py-3 text-sm font-semibold"
             >
-              Copy queue brief
+              Copy brief
             </button>
             <button
               type="button"
@@ -152,7 +150,7 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
         </>
       ) : (
         <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.03] p-5 text-sm text-ink/62">
-          Mark clips ready from Generate to build your next posting stack.
+          Mark clips ready from Generate to build the next stack.
         </div>
       )}
     </section>

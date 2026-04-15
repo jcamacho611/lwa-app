@@ -40,9 +40,7 @@ export function AccountWorkspace({
         <div>
           <p className="section-kicker">Workspace</p>
           <h3 className="mt-2 text-3xl font-semibold text-ink">Welcome back, {user.email}</h3>
-          <p className="mt-2 text-sm leading-7 text-ink/64">
-            Your recent runs, uploads, campaigns, and ledger state are all here in one place.
-          </p>
+          <p className="mt-2 text-sm leading-7 text-ink/64">Runs, uploads, campaigns, and ledger state in one place.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <span className="rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-medium text-accent">
@@ -82,7 +80,7 @@ export function AccountWorkspace({
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="glass-panel rounded-[28px] p-5">
           <p className="text-lg font-semibold text-ink">Saved Clip Packs</p>
-          <p className="mt-2 text-sm leading-7 text-ink/64">Your most recent ranked outputs.</p>
+          <p className="mt-2 text-sm leading-7 text-ink/64">Recent ranked outputs.</p>
           <div className="mt-5 space-y-3">
             {clipPacks.length ? (
               clipPacks.slice(0, 5).map((item) => {

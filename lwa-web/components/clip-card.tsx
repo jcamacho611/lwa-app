@@ -32,6 +32,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
   const downloadAssetUrl = clip.download_url;
   const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url;
   const viralityScore = clip.virality_score ?? clip.score;
+  const whyThisHits = clip.why_this_matters || clip.reason || "Strong pacing, clear payoff, and creator-ready packaging.";
 
   async function copyValue(label: string, value: string) {
     try {
@@ -74,11 +75,16 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
           Post #{clip.best_post_order || clip.rank || 1}
         </span>
         <span className="status-chip status-submitted">
-          Virality {viralityScore}
+          Score {viralityScore}
         </span>
         <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/75">
           Confidence {formatConfidence(clip.confidence)}
         </span>
+        {clip.platform_fit ? (
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/75">
+            {clip.platform_fit}
+          </span>
+        ) : null}
         {clip.packaging_angle ? (
           <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/75">
             {clip.packaging_angle}
@@ -92,7 +98,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
         <p className="mt-3 text-sm text-accent">
           {clip.best_post_order === 1
             ? "Post this first."
-            : `Queue this after clip ${Math.max((clip.best_post_order || clip.rank || 2) - 1, 1)}.`}
+            : `Run this after clip ${Math.max((clip.best_post_order || clip.rank || 2) - 1, 1)}.`}
         </p>
       </div>
 
@@ -140,9 +146,9 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
         </div>
 
         <div className="space-y-3">
-          <div className="metric-tile rounded-[24px] p-4">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Why This Works</p>
-            <p className="text-sm leading-6 text-ink/82">{clip.reason || "Strong pacing, clear payoff, and creator-ready packaging."}</p>
+          <div className="signal-card rounded-[24px] p-4">
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Why this hits</p>
+            <p className="text-sm leading-6 text-ink/82">{whyThisHits}</p>
           </div>
           <div className="metric-tile rounded-[24px] p-4">
             <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Platform Fit</p>
@@ -155,7 +161,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
         <div className="mt-5 metric-tile rounded-[24px] p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-xs uppercase tracking-[0.24em] text-muted">Hook Variants</p>
-            <span className="text-xs text-ink/50">Test 3 variations of this clip.</span>
+            <span className="text-xs text-ink/50">Tap to copy.</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {clip.hook_variants.map((variant, index) => (
@@ -176,7 +182,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
         <div className="mt-4 metric-tile rounded-[24px] p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-xs uppercase tracking-[0.24em] text-muted">Caption Styles</p>
-            <span className="text-xs text-ink/50">Test different hooks and captions fast.</span>
+            <span className="text-xs text-ink/50">Built to test fast.</span>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {Object.entries(clip.caption_variants).map(([key, value]) => (
@@ -231,7 +237,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
         >
           {queued ? "Queued" : "Mark Ready"}
         </button>
-        <span className="text-sm text-ink/56">Mark what works. Future runs will learn from it.</span>
+        <span className="text-sm text-ink/56">Mark what hits. Future runs learn from it.</span>
       </div>
 
       {previewAssetUrl || downloadAssetUrl ? (
@@ -243,7 +249,7 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
               rel="noreferrer"
               className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
             >
-              Preview clip
+              Preview
             </a>
           ) : null}
           {downloadAssetUrl ? (
@@ -252,11 +258,11 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
               download
               className="inline-flex items-center rounded-full border border-neonPurple/20 bg-neonPurple/12 px-4 py-2 text-sm font-medium text-white transition hover:bg-neonPurple/18"
             >
-              Download asset
+              Download
             </a>
           ) : (
             <span className="rounded-full border border-neonPurple/18 bg-neonPurple/10 px-4 py-2 text-sm text-white/78">
-              Download unlocks on Pro
+              Pro unlocks download
             </span>
           )}
           <button
