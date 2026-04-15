@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   const token = authorization?.toLowerCase().startsWith("bearer ") ? authorization.split(" ", 2)[1] : null;
 
   if (!url && !uploadFileId) {
-    return NextResponse.json({ error: "Paste a video URL or upload a file to continue." }, { status: 400 });
+    return NextResponse.json({ error: "Paste a public source URL or upload a file to continue." }, { status: 400 });
   }
 
   try {

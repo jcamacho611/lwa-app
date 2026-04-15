@@ -9,7 +9,7 @@ from ..processor import (
     ClipSeed,
     SourceContext,
     create_social_exports,
-    process_video_source,
+    process_source,
     resolve_ffmpeg_path,
 )
 
@@ -22,14 +22,18 @@ def build_source_context(
     public_base_url: str,
     source_path: str | None = None,
     max_candidates: int = 20,
+    source_type: str | None = None,
+    upload_content_type: str | None = None,
 ) -> SourceContext:
-    return process_video_source(
+    return process_source(
         settings=settings,
         request_id=request_id,
         video_url=video_url,
         public_base_url=public_base_url,
         source_path=source_path,
         max_candidates=max_candidates,
+        source_type=source_type,
+        upload_content_type=upload_content_type,
     )
 
 

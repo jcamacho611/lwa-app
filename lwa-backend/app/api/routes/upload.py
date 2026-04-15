@@ -13,7 +13,25 @@ from ...models.schemas import UploadResponse
 router = APIRouter(prefix="/v1/uploads", tags=["uploads"])
 settings = get_settings()
 platform_store = get_platform_store()
-ALLOWED_EXTENSIONS = {".mp4", ".mov", ".m4v", ".webm"}
+ALLOWED_EXTENSIONS = {
+    ".mp4",
+    ".mov",
+    ".m4v",
+    ".webm",
+    ".mp3",
+    ".wav",
+    ".m4a",
+    ".aac",
+    ".ogg",
+    ".oga",
+    ".flac",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".heic",
+    ".heif",
+}
 logger = logging.getLogger("uvicorn.error")
 
 

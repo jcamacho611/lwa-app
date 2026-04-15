@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import json
 from functools import lru_cache
 from dataclasses import dataclass
 import logging
@@ -24,6 +26,10 @@ from .config import Settings
 
 logger = logging.getLogger("uvicorn.error")
 
+VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".m4v"}
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".oga", ".flac"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
+
 
 @dataclass
 class ClipSeed:
@@ -36,6 +42,7 @@ class ClipSeed:
     preview_image_url: Optional[str]
     format: str
     transcript_excerpt: Optional[str] = None
+    duration: Optional[int] = None
 
 
 @dataclass
@@ -56,6 +63,13 @@ class SourceContext:
     clip_seeds: List[ClipSeed]
     processing_mode: str
     selection_strategy: str
+    source_type: str = "url"
+    source_platform: Optional[str] = None
+    transcript: Optional[str] = None
+    visual_summary: Optional[str] = None
+    preview_asset_url: Optional[str] = None
+    download_asset_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
 
 
 class YTDLPLogProxy:
@@ -88,6 +102,25 @@ def resolve_ffmpeg_path(settings: Settings) -> Optional[str]:
             return imageio_ffmpeg.get_ffmpeg_exe()
         except Exception:
             return None
+
+    return None
+
+
+def resolve_ffprobe_path(settings: Settings) -> Optional[str]:
+    configured = Path(settings.ffmpeg_path)
+    configured_probe = configured.with_name("ffprobe")
+    if configured_probe.exists():
+        return str(configured_probe)
+
+    discovered = shutil.which("ffprobe")
+    if discovered:
+        return discovered
+
+    ffmpeg_path = resolve_ffmpeg_path(settings)
+    if ffmpeg_path:
+        sibling = Path(ffmpeg_path).with_name("ffprobe")
+        if sibling.exists():
+            return str(sibling)
 
     return None
 
@@ -158,6 +191,7 @@ def process_video_source(
     public_base_url: str,
     source_path: str | None = None,
     max_candidates: int = 20,
+    source_type: str = "url",
 ) -> SourceContext:
     ffmpeg_path = resolve_ffmpeg_path(settings)
     if not ffmpeg_path:
@@ -194,6 +228,9 @@ def process_video_source(
             )
             source_file = locate_source_file(work_dir)
         transcript_windows = load_transcript_windows(work_dir)
+        transcript = flatten_transcript_windows(transcript_windows)
+        if not transcript:
+            transcript_windows, transcript = transcribe_audio_source(settings=settings, source_file=source_file)
 
         duration_seconds = parse_duration_seconds(info.get("duration"))
         if duration_seconds is None:
@@ -237,6 +274,9 @@ def process_video_source(
             generated_dir,
         )
 
+    preview_asset_url = clip_seeds[0].clip_url if clip_seeds else None
+    thumbnail_url = clip_seeds[0].preview_image_url if clip_seeds else None
+
     return SourceContext(
         title=str(info.get("title") or "Untitled source"),
         description=str(info.get("description") or ""),
@@ -246,6 +286,211 @@ def process_video_source(
         clip_seeds=clip_seeds,
         processing_mode="real",
         selection_strategy=selection_strategy,
+        source_type=source_type,
+        source_platform="Upload" if source_type != "url" else detect_source_platform(video_url),
+        transcript=transcript or None,
+        preview_asset_url=preview_asset_url,
+        download_asset_url=preview_asset_url,
+        thumbnail_url=thumbnail_url,
+    )
+
+
+def process_source(
+    *,
+    settings: Settings,
+    request_id: str,
+    video_url: str,
+    public_base_url: str,
+    source_path: str | None = None,
+    max_candidates: int = 20,
+    source_type: str | None = None,
+    upload_content_type: str | None = None,
+) -> SourceContext:
+    resolved_type = determine_source_type(
+        source_type=source_type,
+        source_path=source_path,
+        content_type=upload_content_type,
+    )
+    if resolved_type == "audio_upload":
+        return process_audio_source(
+            settings=settings,
+            request_id=request_id,
+            source_url=video_url,
+            public_base_url=public_base_url,
+            source_path=source_path,
+            max_candidates=max_candidates,
+        )
+    if resolved_type == "image_upload":
+        return process_image_source(
+            settings=settings,
+            request_id=request_id,
+            source_url=video_url,
+            public_base_url=public_base_url,
+            source_path=source_path,
+            max_candidates=max_candidates,
+        )
+    return process_video_source(
+        settings=settings,
+        request_id=request_id,
+        video_url=video_url,
+        public_base_url=public_base_url,
+        source_path=source_path,
+        max_candidates=max_candidates,
+        source_type=resolved_type,
+    )
+
+
+def determine_source_type(
+    *,
+    source_type: str | None,
+    source_path: str | None,
+    content_type: str | None,
+) -> str:
+    normalized_type = (source_type or "").strip().lower()
+    if normalized_type in {"url", "video_upload", "audio_upload", "image_upload"}:
+        return normalized_type
+
+    normalized_content_type = (content_type or "").lower()
+    suffix = Path(source_path or "").suffix.lower()
+
+    if normalized_content_type.startswith("audio/") or suffix in AUDIO_EXTENSIONS:
+        return "audio_upload"
+    if normalized_content_type.startswith("image/") or suffix in IMAGE_EXTENSIONS:
+        return "image_upload"
+    if normalized_content_type.startswith("video/") or suffix in VIDEO_EXTENSIONS:
+        return "video_upload" if source_path else "url"
+    return "video_upload" if source_path else "url"
+
+
+def process_audio_source(
+    *,
+    settings: Settings,
+    request_id: str,
+    source_url: str,
+    public_base_url: str,
+    source_path: str | None,
+    max_candidates: int = 20,
+) -> SourceContext:
+    if not source_path:
+        raise RuntimeError("audio uploads require a stored source path")
+
+    ffmpeg_path = resolve_ffmpeg_path(settings)
+    if not ffmpeg_path:
+        raise RuntimeError("ffmpeg is not available")
+
+    generated_dir = Path(settings.generated_assets_dir) / request_id
+    generated_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(prefix=f"{request_id}_", dir=settings.yt_dlp_temp_dir) as temp_dir:
+        work_dir = Path(temp_dir)
+        source_file = stage_local_source(source_path=Path(source_path), work_dir=work_dir)
+        duration_seconds = probe_media_duration(source_file=source_file, settings=settings)
+        transcript_windows = load_transcript_windows(work_dir)
+        transcript = flatten_transcript_windows(transcript_windows)
+        if not transcript:
+            transcript_windows, transcript = transcribe_audio_source(settings=settings, source_file=source_file)
+
+        segments, selection_strategy = build_segment_plan(
+            duration_seconds=duration_seconds,
+            chapters=[],
+            transcript_windows=transcript_windows,
+            max_candidates=max_candidates,
+        )
+        clip_seeds = create_audio_clips(
+            source_file=source_file,
+            generated_dir=generated_dir,
+            request_id=request_id,
+            segments=segments,
+            public_base_url=public_base_url,
+            ffmpeg_path=ffmpeg_path,
+            settings=settings,
+            max_candidates=max_candidates,
+        )
+
+    if not clip_seeds:
+        raise RuntimeError("audio pipeline produced zero clip assets")
+
+    preview_asset_url = clip_seeds[0].clip_url if clip_seeds else None
+    thumbnail_url = clip_seeds[0].preview_image_url if clip_seeds else None
+    return SourceContext(
+        title=Path(source_path).stem.replace("_", " ").replace("-", " "),
+        description="Audio source processed into short-form moments and waveform-ready previews.",
+        uploader=None,
+        duration_seconds=duration_seconds,
+        source_url=source_url,
+        clip_seeds=clip_seeds,
+        processing_mode="real",
+        selection_strategy=selection_strategy,
+        source_type="audio_upload",
+        source_platform="Upload",
+        transcript=transcript,
+        preview_asset_url=preview_asset_url,
+        download_asset_url=preview_asset_url,
+        thumbnail_url=thumbnail_url,
+    )
+
+
+def process_image_source(
+    *,
+    settings: Settings,
+    request_id: str,
+    source_url: str,
+    public_base_url: str,
+    source_path: str | None,
+    max_candidates: int = 20,
+) -> SourceContext:
+    if not source_path:
+        raise RuntimeError("image uploads require a stored source path")
+
+    ffmpeg_path = resolve_ffmpeg_path(settings)
+    if not ffmpeg_path:
+        raise RuntimeError("ffmpeg is not available")
+
+    generated_dir = Path(settings.generated_assets_dir) / request_id
+    generated_dir.mkdir(parents=True, exist_ok=True)
+
+    source_file = Path(source_path)
+    visual_summary = analyze_image_source(settings=settings, source_file=source_file)
+    width, height = probe_image_dimensions(source_file=source_file, settings=settings)
+    durations = [8, 11, 14]
+    segments = [
+        {
+            "start": 0.0,
+            "duration": durations[index],
+            "transcript_excerpt": visual_summary,
+            "format": segment_format(index + 1),
+        }
+        for index in range(min(max_candidates, len(durations)))
+    ]
+    clip_seeds = create_image_clips(
+        source_file=source_file,
+        generated_dir=generated_dir,
+        request_id=request_id,
+        segments=segments,
+        public_base_url=public_base_url,
+        ffmpeg_path=ffmpeg_path,
+        settings=settings,
+        max_candidates=max_candidates,
+    )
+    if not clip_seeds:
+        raise RuntimeError("image pipeline produced zero clip assets")
+
+    orientation = describe_orientation(width=width, height=height)
+    return SourceContext(
+        title=source_file.stem.replace("_", " ").replace("-", " "),
+        description=f"{orientation} still image processed into short-form motion previews.",
+        uploader=None,
+        duration_seconds=max(durations),
+        source_url=source_url,
+        clip_seeds=clip_seeds,
+        processing_mode="real",
+        selection_strategy="image-still",
+        source_type="image_upload",
+        source_platform="Upload",
+        visual_summary=visual_summary,
+        preview_asset_url=source_url,
+        download_asset_url=source_url,
+        thumbnail_url=source_url,
     )
 
 
@@ -296,7 +541,7 @@ def locate_source_file(work_dir: Path) -> Path:
     candidates = [
         path
         for path in work_dir.iterdir()
-        if path.is_file() and path.suffix.lower() in {".mp4", ".mov", ".mkv", ".webm", ".m4v"}
+        if path.is_file() and path.suffix.lower() in VIDEO_EXTENSIONS
     ]
 
     if not candidates:
@@ -470,9 +715,190 @@ def create_clips(
                 preview_image_url=preview_image_url,
                 format=str(segment.get("format", segment_format(index))),
                 transcript_excerpt=string_or_none(segment.get("transcript_excerpt")),
+                duration=max(int(round(float(segment["duration"]))), 1),
             )
         )
     return seeds
+
+
+def create_audio_clips(
+    *,
+    source_file: Path,
+    generated_dir: Path,
+    request_id: str,
+    segments: List[dict[str, float]],
+    public_base_url: str,
+    ffmpeg_path: str,
+    settings: Settings,
+    max_candidates: int,
+) -> List[ClipSeed]:
+    seeds: List[ClipSeed] = []
+    for index, segment in enumerate(segments[:max_candidates], start=1):
+        output_name = f"clip_{index:03d}_raw.mp4"
+        output_path = generated_dir / output_name
+        try:
+            create_audio_preview_clip(
+                settings=settings,
+                ffmpeg_path=ffmpeg_path,
+                source_file=source_file,
+                output_path=output_path,
+                start=float(segment["start"]),
+                duration=float(segment["duration"]),
+            )
+            ensure_clip_output(output_path)
+        except Exception:
+            continue
+
+        clip_url = f"{public_base_url}/generated/{request_id}/{quote(output_name)}"
+        preview_output_name = f"clip_{index:03d}_preview.jpg"
+        preview_output_path = generated_dir / preview_output_name
+        preview_image_url = create_preview_image_url(
+            ffmpeg_path=ffmpeg_path,
+            input_path=output_path,
+            output_path=preview_output_path,
+            public_base_url=public_base_url,
+            request_id=request_id,
+            public_name=preview_output_name,
+        )
+        seeds.append(
+            ClipSeed(
+                id=f"clip_{index:03d}",
+                start_time=format_timestamp(float(segment["start"])),
+                end_time=format_timestamp(float(segment["start"]) + float(segment["duration"])),
+                asset_path=output_path,
+                clip_url=clip_url,
+                raw_clip_url=clip_url,
+                preview_image_url=preview_image_url,
+                format=str(segment.get("format", segment_format(index))),
+                transcript_excerpt=string_or_none(segment.get("transcript_excerpt")),
+                duration=max(int(round(float(segment["duration"]))), 1),
+            )
+        )
+    return seeds
+
+
+def create_image_clips(
+    *,
+    source_file: Path,
+    generated_dir: Path,
+    request_id: str,
+    segments: List[dict[str, float]],
+    public_base_url: str,
+    ffmpeg_path: str,
+    settings: Settings,
+    max_candidates: int,
+) -> List[ClipSeed]:
+    seeds: List[ClipSeed] = []
+    for index, segment in enumerate(segments[:max_candidates], start=1):
+        output_name = f"clip_{index:03d}_raw.mp4"
+        output_path = generated_dir / output_name
+        try:
+            create_image_preview_clip(
+                settings=settings,
+                ffmpeg_path=ffmpeg_path,
+                source_file=source_file,
+                output_path=output_path,
+                duration=float(segment["duration"]),
+            )
+            ensure_clip_output(output_path)
+        except Exception:
+            continue
+
+        clip_url = f"{public_base_url}/generated/{request_id}/{quote(output_name)}"
+        preview_output_name = f"clip_{index:03d}_preview.jpg"
+        preview_output_path = generated_dir / preview_output_name
+        preview_image_url = create_preview_image_url(
+            ffmpeg_path=ffmpeg_path,
+            input_path=output_path,
+            output_path=preview_output_path,
+            public_base_url=public_base_url,
+            request_id=request_id,
+            public_name=preview_output_name,
+        )
+        seeds.append(
+            ClipSeed(
+                id=f"clip_{index:03d}",
+                start_time="00:00",
+                end_time=format_timestamp(float(segment["duration"])),
+                asset_path=output_path,
+                clip_url=clip_url,
+                raw_clip_url=clip_url,
+                preview_image_url=preview_image_url,
+                format=str(segment.get("format", segment_format(index))),
+                transcript_excerpt=string_or_none(segment.get("transcript_excerpt")),
+                duration=max(int(round(float(segment["duration"]))), 1),
+            )
+        )
+    return seeds
+
+
+def create_audio_preview_clip(
+    *,
+    settings: Settings,
+    ffmpeg_path: str,
+    source_file: Path,
+    output_path: Path,
+    start: float,
+    duration: float,
+) -> None:
+    encoder_name = resolve_video_encoder(settings=settings, ffmpeg_path=ffmpeg_path)
+    encoder_args = build_video_encoder_args(encoder_name=encoder_name, target="clip")
+    command = [
+        ffmpeg_path,
+        "-y",
+        "-ss",
+        f"{start}",
+        "-t",
+        f"{duration}",
+        "-i",
+        str(source_file),
+        "-filter_complex",
+        "[0:a]showwaves=s=720x1280:mode=line:colors=0x22D3EE,format=yuv420p[v]",
+        "-map",
+        "[v]",
+        "-map",
+        "0:a:0",
+        *encoder_args,
+        "-c:a",
+        "aac",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
+    subprocess.run(command, check=True, capture_output=True, text=True)
+
+
+def create_image_preview_clip(
+    *,
+    settings: Settings,
+    ffmpeg_path: str,
+    source_file: Path,
+    output_path: Path,
+    duration: float,
+) -> None:
+    encoder_name = resolve_video_encoder(settings=settings, ffmpeg_path=ffmpeg_path)
+    encoder_args = build_video_encoder_args(encoder_name=encoder_name, target="clip")
+    command = [
+        ffmpeg_path,
+        "-y",
+        "-loop",
+        "1",
+        "-i",
+        str(source_file),
+        "-t",
+        f"{duration}",
+        "-vf",
+        "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,format=yuv420p",
+        "-r",
+        "30",
+        *encoder_args,
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
+    subprocess.run(command, check=True, capture_output=True, text=True)
 
 
 def cut_clip(
@@ -867,6 +1293,235 @@ def string_or_none(value: Any) -> Optional[str]:
         return None
     text = str(value).strip()
     return text or None
+
+
+def detect_source_platform(source_url: str) -> str:
+    lower = source_url.lower()
+    if "youtube" in lower or "youtu.be" in lower:
+        return "YouTube"
+    if "tiktok" in lower:
+        return "TikTok"
+    if "instagram" in lower:
+        return "Instagram"
+    if "twitch" in lower:
+        return "Twitch"
+    return "Upload"
+
+
+def flatten_transcript_windows(windows: List[TranscriptWindow]) -> str:
+    if not windows:
+        return ""
+    ordered = sorted(windows, key=lambda window: window.start_seconds)
+    parts: list[str] = []
+    seen: set[str] = set()
+    for window in ordered:
+        excerpt = normalize_caption_text(window.excerpt)
+        if not excerpt:
+            continue
+        if excerpt in seen:
+            continue
+        seen.add(excerpt)
+        parts.append(excerpt)
+    return " ".join(parts).strip()
+
+
+def probe_media_duration(*, source_file: Path, settings: Settings) -> Optional[int]:
+    ffprobe_path = resolve_ffprobe_path(settings)
+    if ffprobe_path:
+        try:
+            process = subprocess.run(
+                [
+                    ffprobe_path,
+                    "-v",
+                    "error",
+                    "-show_entries",
+                    "format=duration",
+                    "-of",
+                    "default=noprint_wrappers=1:nokey=1",
+                    str(source_file),
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            value = (process.stdout or "").strip()
+            if value:
+                return int(float(value))
+        except Exception:
+            pass
+
+    ffmpeg_path = resolve_ffmpeg_path(settings)
+    if ffmpeg_path:
+        return probe_video_duration(source_file=source_file, ffmpeg_path=ffmpeg_path)
+    return None
+
+
+def transcribe_audio_source(*, settings: Settings, source_file: Path) -> tuple[List[TranscriptWindow], Optional[str]]:
+    if not settings.openai_api_key:
+        return [], None
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=settings.openai_api_key)
+        with source_file.open("rb") as handle:
+            response = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=handle,
+                response_format="verbose_json",
+                timestamp_granularities=["segment"],
+            )
+    except Exception as error:
+        logger.warning("audio_transcription_fallback source=%s reason=%s", source_file, error)
+        return [], None
+
+    transcript = str(getattr(response, "text", "") or "").strip() or None
+    segments = getattr(response, "segments", None) or []
+    windows = build_transcript_windows_from_segments(segments)
+    if not windows and transcript:
+        duration = probe_media_duration(source_file=source_file, settings=settings) or 15
+        windows = [
+            TranscriptWindow(
+                start_seconds=0.0,
+                end_seconds=float(min(duration, 18)),
+                excerpt=transcript,
+                score=score_excerpt(transcript),
+            )
+        ]
+    return windows, transcript
+
+
+def build_transcript_windows_from_segments(segments: list[object]) -> List[TranscriptWindow]:
+    windows: List[TranscriptWindow] = []
+    for segment in segments:
+        start = float(getattr(segment, "start", 0.0) or 0.0)
+        end = float(getattr(segment, "end", 0.0) or 0.0)
+        text = normalize_caption_text(str(getattr(segment, "text", "") or ""))
+        if not text or end <= start:
+            continue
+        windows.append(
+            TranscriptWindow(
+                start_seconds=start,
+                end_seconds=end,
+                excerpt=text,
+                score=score_excerpt(text),
+            )
+        )
+    return build_transcript_windows_from_cues(
+        [(window.start_seconds, window.end_seconds, window.excerpt) for window in windows]
+    )
+
+
+def analyze_image_source(*, settings: Settings, source_file: Path) -> str:
+    if settings.openai_api_key:
+        summary = analyze_image_with_openai(settings=settings, source_file=source_file)
+        if summary:
+            return summary
+    return describe_image_fallback(source_file=source_file, settings=settings)
+
+
+def analyze_image_with_openai(*, settings: Settings, source_file: Path) -> Optional[str]:
+    try:
+        from openai import OpenAI
+
+        mime_type = guess_image_mime_type(source_file.suffix.lower())
+        encoded = base64.b64encode(source_file.read_bytes()).decode("utf-8")
+        client = OpenAI(api_key=settings.openai_api_key)
+        response = client.responses.create(
+            model=settings.openai_model,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": (
+                                "Describe this uploaded image for a short-form content repurposing system. "
+                                "Return one concise paragraph that focuses on what is visibly happening, the likely framing, "
+                                "and what kind of hook or caption packaging would fit."
+                            ),
+                        },
+                        {
+                            "type": "input_image",
+                            "image_url": f"data:{mime_type};base64,{encoded}",
+                        },
+                    ],
+                }
+            ],
+        )
+        summary = str(getattr(response, "output_text", "") or "").strip()
+        return summary or None
+    except Exception as error:
+        logger.warning("image_analysis_fallback source=%s reason=%s", source_file, error)
+        return None
+
+
+def describe_image_fallback(*, source_file: Path, settings: Settings) -> str:
+    width, height = probe_image_dimensions(source_file=source_file, settings=settings)
+    orientation = describe_orientation(width=width, height=height)
+    filename_phrase = source_file.stem.replace("_", " ").replace("-", " ").strip()
+    if filename_phrase:
+        return (
+            f"{orientation.capitalize()} still image from {filename_phrase}. "
+            "Package it with a clean, punchy hook, clear subject framing, and fast caption payoff."
+        )
+    return (
+        f"{orientation.capitalize()} still image with a strong single-frame composition. "
+        "Package it with a punchy hook and a caption that makes the subject obvious fast."
+    )
+
+
+def probe_image_dimensions(*, source_file: Path, settings: Settings) -> tuple[int | None, int | None]:
+    ffprobe_path = resolve_ffprobe_path(settings)
+    if not ffprobe_path:
+        return None, None
+    try:
+        process = subprocess.run(
+            [
+                ffprobe_path,
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height",
+                "-of",
+                "json",
+                str(source_file),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        payload = json.loads(process.stdout or "{}")
+        streams = payload.get("streams") or []
+        if not streams:
+            return None, None
+        stream = streams[0]
+        return int(stream.get("width") or 0) or None, int(stream.get("height") or 0) or None
+    except Exception:
+        return None, None
+
+
+def describe_orientation(*, width: int | None, height: int | None) -> str:
+    if width and height:
+        if height > width:
+            return "portrait"
+        if width > height:
+            return "landscape"
+    return "square"
+
+
+def guess_image_mime_type(suffix: str) -> str:
+    if suffix in {".jpg", ".jpeg"}:
+        return "image/jpeg"
+    if suffix == ".png":
+        return "image/png"
+    if suffix == ".webp":
+        return "image/webp"
+    if suffix in {".heic", ".heif"}:
+        return "image/heic"
+    return "image/png"
 
 
 def load_transcript_windows(work_dir: Path) -> List[TranscriptWindow]:

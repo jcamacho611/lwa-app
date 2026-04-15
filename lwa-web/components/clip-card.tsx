@@ -28,7 +28,9 @@ const captionVariantLabels: Record<string, string> = {
 
 export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, queued = false, onToggleQueue }: ClipCardProps) {
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
-  const assetUrl = clip.edited_clip_url || clip.clip_url || clip.raw_clip_url;
+  const previewAssetUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url;
+  const downloadAssetUrl = clip.download_url;
+  const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url;
   const viralityScore = clip.virality_score ?? clip.score;
 
   async function copyValue(label: string, value: string) {
@@ -94,6 +96,23 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
         </p>
       </div>
 
+      {previewAssetUrl || thumbnailUrl ? (
+        <div className="mb-5 overflow-hidden rounded-[24px] border border-white/10 bg-[#050816]">
+          {previewAssetUrl ? (
+            <video
+              className="aspect-[9/16] w-full bg-black object-cover"
+              src={previewAssetUrl}
+              poster={thumbnailUrl || undefined}
+              controls
+              playsInline
+              preload="metadata"
+            />
+          ) : thumbnailUrl ? (
+            <img src={thumbnailUrl} alt={clip.hook} className="aspect-[9/16] w-full bg-black object-cover" />
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="grid gap-4 xl:grid-cols-[1.28fr,0.72fr]">
         <div className="space-y-4">
           <div>
@@ -112,6 +131,12 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
               <p className="text-sm text-ink/82">{clip.cta_suggestion || "Prompt viewers to comment or follow."}</p>
             </div>
           </div>
+          {clip.transcript ? (
+            <div>
+              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Clip transcript</p>
+              <p className="text-sm leading-7 text-ink/74">{clip.transcript}</p>
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-3">
@@ -209,16 +234,31 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
         <span className="text-sm text-ink/56">Mark what works. Future runs will learn from it.</span>
       </div>
 
-      {assetUrl ? (
+      {previewAssetUrl || downloadAssetUrl ? (
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <a
-            href={assetUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
-          >
-            Open Clip Asset
-          </a>
+          {previewAssetUrl ? (
+            <a
+              href={previewAssetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/30 hover:bg-accent/10 hover:text-accent"
+            >
+              Preview clip
+            </a>
+          ) : null}
+          {downloadAssetUrl ? (
+            <a
+              href={downloadAssetUrl}
+              download
+              className="inline-flex items-center rounded-full border border-neonPurple/20 bg-neonPurple/12 px-4 py-2 text-sm font-medium text-white transition hover:bg-neonPurple/18"
+            >
+              Download asset
+            </a>
+          ) : (
+            <span className="rounded-full border border-neonPurple/18 bg-neonPurple/10 px-4 py-2 text-sm text-white/78">
+              Download unlocks on Pro
+            </span>
+          )}
           <button
             type="button"
             onClick={() => copyValue("Hook copied", clip.hook)}

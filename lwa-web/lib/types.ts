@@ -223,6 +223,14 @@ export type ClipResult = {
   best_post_order?: number | null;
   hook_variants?: string[];
   caption_variants?: Record<string, string>;
+  duration?: number | null;
+  timestamp_start?: string | null;
+  timestamp_end?: string | null;
+  transcript?: string | null;
+  cta?: string | null;
+  preview_url?: string | null;
+  download_url?: string | null;
+  thumbnail_url?: string | null;
   clip_url?: string | null;
   edited_clip_url?: string | null;
   raw_clip_url?: string | null;
@@ -238,7 +246,14 @@ export type GenerateResponse = {
   request_id: string;
   video_url: string;
   status: string;
-  source_platform: string;
+  source_type?: string;
+  source_title?: string | null;
+  source_platform?: string | null;
+  transcript?: string | null;
+  visual_summary?: string | null;
+  preview_asset_url?: string | null;
+  download_asset_url?: string | null;
+  thumbnail_url?: string | null;
   selected_trend?: string | null;
   processing_summary?: {
     target_platform?: string;
@@ -257,5 +272,12 @@ export type EditableClip = ClipResult;
 export type ClipPackDetail = {
   request_id: string;
   source_title?: string | null;
+  source_type?: string | null;
+  source_platform?: string | null;
+  transcript?: string | null;
+  visual_summary?: string | null;
+  preview_asset_url?: string | null;
+  download_asset_url?: string | null;
+  thumbnail_url?: string | null;
   clips: EditableClip[];
 };

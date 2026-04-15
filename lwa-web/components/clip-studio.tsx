@@ -161,6 +161,7 @@ export function ClipStudio({
   const [improveResults, setImproveResults] = useState(false);
   const [readyQueue, setReadyQueue] = useState<ReadyQueueItem[]>([]);
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null);
+  const [loadingStageIndex, setLoadingStageIndex] = useState(0);
 
   const activeSourceLabel = useMemo(() => {
     if (selectedUpload?.file_name || selectedUpload?.filename) {
@@ -282,6 +283,19 @@ export function ClipStudio({
     }
     void refreshAccount(token);
   }, [token]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingStageIndex(0);
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setLoadingStageIndex((current) => (current + 1) % 5);
+    }, 1400);
+
+    return () => window.clearInterval(interval);
+  }, [isLoading]);
 
   useEffect(() => {
     if (initialSection !== "campaigns" || !token || !campaigns.length || selectedCampaignId) {
@@ -429,7 +443,7 @@ export function ClipStudio({
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!videoUrl.trim() && !selectedUpload?.file_id && !selectedUpload?.source_ref?.upload_id) {
-      setError("Paste a public video URL or upload a file to generate your clip pack.");
+      setError("Paste a public source URL or upload a file to generate your clip pack.");
       return;
     }
 
@@ -685,6 +699,13 @@ export function ClipStudio({
     "Campaign workflow",
     "Ready queue",
   ];
+  const loadingStages = [
+    "Ingesting source",
+    "Extracting media",
+    "Transcribing or analyzing",
+    "Finding moments",
+    "Preparing results",
+  ];
 
   function handleFeedbackVote(clip: GenerateResponse["clips"][number], vote: "good" | "bad") {
     setFeedbackRecords((current) => upsertFeedbackRecord(current, createFeedbackRecord(clip, vote, platform)));
@@ -740,7 +761,7 @@ export function ClipStudio({
             type="url"
             value={videoUrl}
             onChange={(event) => setVideoUrl(event.target.value)}
-            placeholder="Paste YouTube, TikTok, Instagram, or any public video URL"
+            placeholder="Paste YouTube, TikTok, Instagram, or any public media URL"
             className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
           />
         </label>
@@ -790,7 +811,7 @@ export function ClipStudio({
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-ink/60">Analyzing source, extracting hooks, and packaging short-form outputs...</p>
+          <p className="text-sm text-ink/60">{loadingStages[loadingStageIndex]}. Preparing short-form outputs...</p>
           <button
             type="submit"
             disabled={isLoading}
@@ -803,7 +824,7 @@ export function ClipStudio({
         {isLoading ? (
           <InlineState
             title="Compiling clip pack..."
-            description={`Ranking hooks and packaging angles${improveResults && preferenceProfile.topPackagingAngle ? ` around ${preferenceProfile.topPackagingAngle}` : ""}.`}
+            description={`${loadingStages[loadingStageIndex]}. ${loadingStageIndex >= 2 ? "Ranking hooks and packaging angles." : "Preparing short-form outputs."}${improveResults && preferenceProfile.topPackagingAngle ? ` Biasing toward ${preferenceProfile.topPackagingAngle}.` : ""}`}
           />
         ) : null}
 
@@ -854,7 +875,7 @@ export function ClipStudio({
                 type="url"
                 value={videoUrl}
                 onChange={(event) => setVideoUrl(event.target.value)}
-                placeholder="Paste YouTube, TikTok, Instagram, Loom, or any public video URL"
+                placeholder="Paste YouTube, TikTok, Instagram, or any public media URL"
                 className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
               />
             </label>
@@ -933,7 +954,7 @@ export function ClipStudio({
               <p className="text-sm text-ink/60">
                 {result
                   ? "Your clip pack is ready. Review top outputs, queue strong candidates, or move them into campaign workflow."
-                  : "Use a public video URL or an uploaded source file. The system will return ranked clips with packaging guidance."}
+                  : "Use a public source URL or an uploaded video, audio, or image file. The system will return ranked clips with packaging guidance."}
               </p>
               <button
                 type="submit"
@@ -947,7 +968,7 @@ export function ClipStudio({
             {isLoading ? (
               <InlineState
                 title="Compiling clip pack..."
-                description={`Analyzing source, extracting hooks, and packaging short-form outputs${improveResults && preferenceProfile.topPackagingAngle ? ` around ${preferenceProfile.topPackagingAngle}` : ""}.`}
+                description={`${loadingStages[loadingStageIndex]}. ${loadingStageIndex >= 2 ? "Ranking hooks and packaging angles." : "Preparing short-form outputs."}${improveResults && preferenceProfile.topPackagingAngle ? ` Biasing toward ${preferenceProfile.topPackagingAngle}.` : ""}`}
               />
             ) : null}
 
@@ -996,15 +1017,15 @@ export function ClipStudio({
             <h3 className="mt-3 text-xl font-semibold text-ink">Run the pipeline from a local file</h3>
             <p className="mt-3 text-sm leading-7 text-ink/60">
               {token
-                ? "Upload-backed generation keeps the same packaging and scoring flow while giving you better source control."
+                ? "Upload-backed generation keeps the same packaging and scoring flow while giving you better source control for video, audio, and stills."
                 : "Sign in to unlock upload-backed generation and saved source reuse."}
             </p>
             <p className="mt-4 text-sm text-accent">{uploadingFileName ? `Uploading ${uploadingFileName}...` : activeSourceLabel}</p>
             <label className="secondary-button mt-5 inline-flex w-full cursor-pointer items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
-              {token ? "Upload video" : "Sign in to upload"}
+              {token ? "Upload source file" : "Sign in to upload"}
               <input
                 type="file"
-                accept=".mp4,.mov,.m4v,.webm,video/mp4,video/quicktime,video/webm"
+                accept=".mp4,.mov,.m4v,.webm,.mp3,.wav,.m4a,.aac,.ogg,.oga,.flac,.jpg,.jpeg,.png,.webp,.heic,.heif,video/*,audio/*,image/*"
                 className="hidden"
                 onChange={onUploadSelected}
               />
@@ -1037,7 +1058,8 @@ export function ClipStudio({
           </div>
           <div className="flex flex-wrap gap-2">
             <StatPill tone="accent">{displayedClips.length} clips</StatPill>
-            <StatPill tone="neutral">{result.source_platform}</StatPill>
+            <StatPill tone="neutral">{result.source_platform || "Upload"}</StatPill>
+            {result.source_type ? <StatPill tone="neutral">{result.source_type.replace("_", " ")}</StatPill> : null}
             {result.processing_summary?.recommended_next_step ? (
               <StatPill tone="neutral">{result.processing_summary.recommended_next_step}</StatPill>
             ) : null}
@@ -1047,6 +1069,45 @@ export function ClipStudio({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),340px]">
         <div className="space-y-6">
+          <div className="glass-panel rounded-[28px] p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-3xl">
+                <p className="section-kicker">Source truth</p>
+                <h4 className="mt-3 text-2xl font-semibold text-ink">{result.source_title || "Processed source"}</h4>
+                <p className="mt-3 text-sm leading-7 text-ink/70">
+                  {result.transcript
+                    ? result.transcript
+                    : result.visual_summary || "This source was processed into ranked short-form outputs."}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {result.preview_asset_url ? (
+                  <a
+                    href={result.preview_asset_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+                  >
+                    Preview source
+                  </a>
+                ) : null}
+                {result.download_asset_url ? (
+                  <a
+                    href={result.download_asset_url}
+                    download
+                    className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
+                  >
+                    Download source asset
+                  </a>
+                ) : (
+                  <span className="rounded-full border border-neonPurple/18 bg-neonPurple/10 px-4 py-2 text-sm text-white/78">
+                    Downloads unlock on Pro
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
           {featuredClip ? (
             <div className="space-y-3">
               <p className="section-kicker">Top output</p>

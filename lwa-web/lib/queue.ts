@@ -54,7 +54,7 @@ export function createReadyQueueItem(clip: ClipResult, targetPlatform: PlatformO
     platformFit: clip.platform_fit || null,
     bestPostOrder: clip.best_post_order || clip.rank || null,
     viralityScore: clip.virality_score ?? clip.score ?? null,
-    assetUrl: clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null,
+    assetUrl: clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null,
     targetPlatform,
     addedAt: new Date().toISOString(),
   };

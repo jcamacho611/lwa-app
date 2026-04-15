@@ -50,6 +50,8 @@ def dependency_health(settings: Settings) -> dict[str, bool]:
 
 def detect_platform(video_url: str) -> str:
     hostname = urlparse(video_url).netloc.lower()
+    if not hostname:
+        return "Upload"
     if "youtube" in hostname or "youtu.be" in hostname:
         return "YouTube"
     if "tiktok" in hostname:
@@ -105,7 +107,9 @@ async def build_clip_response(
 
     await emit_progress(progress_callback, "Ingesting source media, transcript windows, and candidate moments.")
 
-    if ffmpeg_is_available and yt_dlp_is_available:
+    can_process_source = ffmpeg_is_available and (bool(source_path) or yt_dlp_is_available)
+
+    if can_process_source:
         try:
             source_context = await asyncio.to_thread(
                 build_source_context,
@@ -115,6 +119,8 @@ async def build_clip_response(
                 public_base_url=public_base_url,
                 source_path=source_path,
                 max_candidates=candidate_limit,
+                source_type=request.source_type,
+                upload_content_type=request.upload_content_type,
             )
             logger.info(
                 "source_context_ready request_id=%s route=%s built=%s clip_seeds=%s strategy=%s title=%s",
@@ -168,11 +174,6 @@ async def build_clip_response(
         content_angle=request.content_angle,
         source_context=source_context,
     )
-    clips = apply_plan_feature_flags(
-        clips=clips,
-        entitlement=entitlement,
-    )
-
     edited_assets_created = 0
     if source_context:
         await emit_progress(progress_callback, "Rendering vertical exports, overlays, and preview assets.")
@@ -199,18 +200,35 @@ async def build_clip_response(
             fallback_reason or "real pipeline unavailable",
         )
 
+    clips = apply_plan_feature_flags(
+        clips=clips,
+        entitlement=entitlement,
+    )
+
     await emit_progress(progress_callback, "Finalizing ranked clip pack and delivery bundle.")
     processing_mode = source_context.processing_mode if source_context else "mock"
     source_title = source_context.title if source_context else None
     source_duration_seconds = source_context.duration_seconds if source_context else None
     assets_created = len([clip for clip in clips if clip.clip_url])
     selection_strategy = source_context.selection_strategy if source_context else "timeline"
+    source_type = source_context.source_type if source_context else (request.source_type or ("video_upload" if source_path else "url"))
+    source_platform = source_context.source_platform if source_context else detect_platform(video_url)
+    preview_asset_url = resolve_preview_asset_url(clips=clips, source_context=source_context)
+    download_asset_url = resolve_download_asset_url(clips=clips, source_context=source_context, entitlement=entitlement)
+    thumbnail_url = resolve_thumbnail_url(clips=clips, source_context=source_context)
 
     response = ClipBatchResponse(
         request_id=request_id,
         video_url=request.video_url,
         status="success",
-        source_platform=detect_platform(video_url),
+        source_type=source_type,
+        source_title=source_title,
+        source_platform=source_platform,
+        transcript=source_context.transcript if source_context else None,
+        visual_summary=source_context.visual_summary if source_context else None,
+        preview_asset_url=preview_asset_url,
+        download_asset_url=download_asset_url,
+        thumbnail_url=thumbnail_url,
         processing_summary=ProcessingSummary(
             plan_name=entitlement.plan.name,
             credits_remaining=entitlement.credits_remaining,
@@ -227,6 +245,7 @@ async def build_clip_response(
             processing_mode=processing_mode,
             selection_strategy=selection_strategy,
             source_title=source_title,
+            source_type=source_type,
             source_duration_seconds=source_duration_seconds,
             assets_created=assets_created,
             edited_assets_created=edited_assets_created,
@@ -252,11 +271,90 @@ def apply_plan_feature_flags(
     entitlement: EntitlementContext,
 ) -> list:
     clip_limit = max(entitlement.plan.feature_flags.clip_limit, 1)
+    alt_hooks_unlocked = bool(entitlement.plan.feature_flags.alt_hooks)
+    exports_unlocked = bool(entitlement.plan.feature_flags.premium_exports)
     ranked = sorted(
         clips,
         key=lambda clip: (clip.rank or 999, -(clip.score or 0)),
     )
-    return ranked[:clip_limit]
+    visible = ranked[:clip_limit]
+    gated = []
+    for clip in visible:
+        preview_url = clip.edited_clip_url or clip.clip_url or clip.raw_clip_url
+        download_url = preview_url if exports_unlocked else None
+        caption_variants = clip.caption_variants or {}
+        if not alt_hooks_unlocked:
+            caption_variants = {"viral": caption_variants.get("viral") or clip.caption}
+        gated.append(
+            clip.model_copy(
+                update={
+                    "hook_variants": clip.hook_variants if alt_hooks_unlocked else clip.hook_variants[:1],
+                    "caption_variants": caption_variants,
+                    "timestamp_start": clip.start_time,
+                    "timestamp_end": clip.end_time,
+                    "duration": derive_clip_duration_seconds(clip.start_time, clip.end_time),
+                    "transcript": clip.transcript_excerpt,
+                    "cta": clip.cta_suggestion,
+                    "preview_url": preview_url,
+                    "download_url": download_url,
+                    "thumbnail_url": clip.preview_image_url,
+                }
+            )
+        )
+    return gated
+
+
+def derive_clip_duration_seconds(start_time: str | None, end_time: str | None) -> int | None:
+    start = parse_timestamp(start_time)
+    end = parse_timestamp(end_time)
+    if start is None or end is None or end <= start:
+        return None
+    return max(int(end - start), 1)
+
+
+def parse_timestamp(value: str | None) -> int | None:
+    if not value:
+        return None
+    try:
+        parts = [int(float(part)) for part in value.split(":")]
+    except Exception:
+        return None
+    if len(parts) == 2:
+        minutes, seconds = parts
+        return (minutes * 60) + seconds
+    if len(parts) == 3:
+        hours, minutes, seconds = parts
+        return (hours * 3600) + (minutes * 60) + seconds
+    return None
+
+
+def resolve_preview_asset_url(*, clips: list, source_context) -> str | None:
+    if clips:
+        first = clips[0]
+        return first.preview_url or first.preview_image_url or first.clip_url or first.raw_clip_url
+    if source_context:
+        return source_context.preview_asset_url or source_context.thumbnail_url
+    return None
+
+
+def resolve_download_asset_url(*, clips: list, source_context, entitlement: EntitlementContext) -> str | None:
+    if not entitlement.plan.feature_flags.premium_exports:
+        return None
+    if clips:
+        first = clips[0]
+        return first.download_url or first.edited_clip_url or first.clip_url or first.raw_clip_url
+    if source_context:
+        return source_context.download_asset_url
+    return None
+
+
+def resolve_thumbnail_url(*, clips: list, source_context) -> str | None:
+    if clips:
+        first = clips[0]
+        return first.thumbnail_url or first.preview_image_url
+    if source_context:
+        return source_context.thumbnail_url
+    return None
 
 
 async def emit_progress(

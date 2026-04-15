@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field, model_validator
 class ProcessRequest(BaseModel):
     video_url: Optional[str] = Field(default=None, description="Public URL for the source video")
     upload_file_id: Optional[str] = None
+    source_type: Optional[str] = None
+    upload_content_type: Optional[str] = None
     selected_trend: Optional[str] = None
     trend_source: Optional[str] = None
     target_platform: Optional[str] = None
@@ -60,6 +62,14 @@ class ClipResult(BaseModel):
     caption_style: Optional[str] = None
     platform_fit: Optional[str] = None
     packaging_angle: Optional[str] = None
+    duration: Optional[int] = None
+    timestamp_start: Optional[str] = None
+    timestamp_end: Optional[str] = None
+    transcript: Optional[str] = None
+    cta: Optional[str] = None
+    preview_url: Optional[str] = None
+    download_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
 
 
 class FeatureFlags(BaseModel):
@@ -90,6 +100,7 @@ class ProcessingSummary(BaseModel):
     processing_mode: str
     selection_strategy: str
     source_title: Optional[str] = None
+    source_type: Optional[str] = None
     source_duration_seconds: Optional[int] = None
     assets_created: int = 0
     edited_assets_created: int = 0
@@ -100,7 +111,14 @@ class ClipBatchResponse(BaseModel):
     request_id: str
     video_url: str
     status: str
-    source_platform: str
+    source_type: str = "url"
+    source_title: Optional[str] = None
+    source_platform: Optional[str] = None
+    transcript: Optional[str] = None
+    visual_summary: Optional[str] = None
+    preview_asset_url: Optional[str] = None
+    download_asset_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     processing_summary: ProcessingSummary
     trend_context: List[TrendItem]
     clips: List[ClipResult]

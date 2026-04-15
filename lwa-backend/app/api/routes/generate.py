@@ -130,7 +130,7 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
         job_id=job_id,
         user_id=current_user.id if current_user else None,
         campaign_id=None,
-        source_type="upload" if resolved_request.upload_file_id else "url",
+        source_type=resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
         source_value=resolved_request.video_url or "",
         status="queued",
         message="Job queued. Starting source analysis.",
@@ -190,9 +190,12 @@ def resolve_request_source(
         upload = platform_store.get_upload(request.upload_file_id, user_id=current_user.id)
         if not upload:
             raise HTTPException(status_code=404, detail="Upload not found")
+        source_type = classify_upload_source(upload)
         resolved = request.model_copy(
             update={
                 "video_url": upload["public_url"],
+                "source_type": source_type,
+                "upload_content_type": upload.get("content_type"),
             }
         )
         return resolved, upload["stored_path"]
@@ -200,4 +203,16 @@ def resolve_request_source(
     if not request.video_url:
         raise HTTPException(status_code=422, detail="Provide video_url or upload_file_id")
 
-    return request, None
+    return request.model_copy(update={"source_type": request.source_type or "url"}), None
+
+
+def classify_upload_source(upload: dict[str, object]) -> str:
+    content_type = str(upload.get("content_type") or "").lower()
+    filename = str(upload.get("file_name") or "")
+    suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+
+    if content_type.startswith("audio/") or suffix in {"mp3", "wav", "m4a", "aac", "ogg", "oga", "flac"}:
+        return "audio_upload"
+    if content_type.startswith("image/") or suffix in {"jpg", "jpeg", "png", "webp", "heic", "heif"}:
+        return "image_upload"
+    return "video_upload"

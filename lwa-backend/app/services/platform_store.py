@@ -109,16 +109,27 @@ class PlatformStore:
                     clip_key TEXT NOT NULL,
                     user_id TEXT,
                     campaign_id TEXT,
+                    source_type TEXT,
+                    source_title TEXT,
+                    source_platform TEXT,
+                    source_transcript TEXT,
+                    source_visual_summary TEXT,
+                    source_preview_asset_url TEXT,
+                    source_download_asset_url TEXT,
+                    source_thumbnail_url TEXT,
                     title TEXT NOT NULL,
                     hook TEXT NOT NULL,
                     caption TEXT NOT NULL,
                     start_time TEXT,
                     end_time TEXT,
+                    duration_seconds INTEGER,
                     score INTEGER NOT NULL,
                     virality_score INTEGER,
                     confidence REAL,
                     rank_value INTEGER,
                     reason TEXT,
+                    clip_format TEXT,
+                    transcript_excerpt TEXT,
                     packaging_angle TEXT,
                     platform_fit TEXT,
                     best_post_order INTEGER,
@@ -127,6 +138,7 @@ class PlatformStore:
                     hook_variants_json TEXT NOT NULL,
                     caption_variants_json TEXT NOT NULL DEFAULT '{}',
                     clip_url TEXT,
+                    download_url TEXT,
                     raw_clip_url TEXT,
                     edited_clip_url TEXT,
                     preview_image_url TEXT,
@@ -201,10 +213,22 @@ class PlatformStore:
             self._ensure_column(connection, "clips", "trim_start_seconds", "REAL")
             self._ensure_column(connection, "clips", "trim_end_seconds", "REAL")
             self._ensure_column(connection, "clips", "caption_style_override", "TEXT")
+            self._ensure_column(connection, "clips", "source_type", "TEXT")
+            self._ensure_column(connection, "clips", "source_title", "TEXT")
+            self._ensure_column(connection, "clips", "source_platform", "TEXT")
+            self._ensure_column(connection, "clips", "source_transcript", "TEXT")
+            self._ensure_column(connection, "clips", "source_visual_summary", "TEXT")
+            self._ensure_column(connection, "clips", "source_preview_asset_url", "TEXT")
+            self._ensure_column(connection, "clips", "source_download_asset_url", "TEXT")
+            self._ensure_column(connection, "clips", "source_thumbnail_url", "TEXT")
             self._ensure_column(connection, "clips", "start_time", "TEXT")
             self._ensure_column(connection, "clips", "end_time", "TEXT")
+            self._ensure_column(connection, "clips", "duration_seconds", "INTEGER")
             self._ensure_column(connection, "clips", "virality_score", "INTEGER")
             self._ensure_column(connection, "clips", "caption_variants_json", "TEXT NOT NULL DEFAULT '{}'")
+            self._ensure_column(connection, "clips", "clip_format", "TEXT")
+            self._ensure_column(connection, "clips", "transcript_excerpt", "TEXT")
+            self._ensure_column(connection, "clips", "download_url", "TEXT")
             self._ensure_column(connection, "campaigns", "description", "TEXT")
             self._ensure_column(connection, "campaigns", "allowed_platforms_json", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(connection, "campaigns", "target_angle", "TEXT")
@@ -951,12 +975,14 @@ class PlatformStore:
                 connection.execute(
                     """
                     INSERT OR REPLACE INTO clips (
-                        id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score,
-                        confidence, rank_value, reason, packaging_angle, platform_fit, best_post_order,
-                        cta_suggestion, thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url,
+                        id, request_id, clip_key, user_id, campaign_id, source_type, source_title, source_platform,
+                        source_transcript, source_visual_summary, source_preview_asset_url, source_download_asset_url,
+                        source_thumbnail_url, title, hook, caption, start_time, end_time, duration_seconds, score,
+                        confidence, rank_value, reason, clip_format, transcript_excerpt, packaging_angle, platform_fit, best_post_order,
+                        cta_suggestion, thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, download_url, raw_clip_url,
                         edited_clip_url, preview_image_url, local_asset_path, trim_start_seconds,
                         trim_end_seconds, caption_style_override, approved, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         record_id,
@@ -964,15 +990,26 @@ class PlatformStore:
                         clip.id,
                         user_id,
                         campaign_id,
+                        response.source_type,
+                        response.source_title,
+                        response.source_platform,
+                        response.transcript,
+                        response.visual_summary,
+                        response.preview_asset_url,
+                        response.download_asset_url,
+                        response.thumbnail_url,
                         clip.title,
                         clip.hook,
                         clip.caption,
                         clip.start_time,
                         clip.end_time,
+                        clip.duration,
                         clip.score,
                         clip.confidence,
                         clip.rank,
                         clip.reason or clip.why_this_matters,
+                        clip.format,
+                        clip.transcript or clip.transcript_excerpt,
                         clip.packaging_angle,
                         clip.platform_fit,
                         clip.best_post_order or clip.post_rank,
@@ -982,6 +1019,7 @@ class PlatformStore:
                         json.dumps(clip.caption_variants),
                         clip.virality_score if clip.virality_score is not None else clip.score,
                         clip.clip_url,
+                        clip.download_url,
                         clip.raw_clip_url,
                         clip.edited_clip_url,
                         clip.preview_image_url,
@@ -1100,7 +1138,7 @@ class PlatformStore:
                 """
                 SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
                        rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
+                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, download_url, raw_clip_url, edited_clip_url, preview_image_url,
                        local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
                        approved, created_at
                 FROM clips WHERE id = ?
@@ -1176,8 +1214,8 @@ class PlatformStore:
                        COUNT(*) AS clip_count,
                        MAX(score) AS top_score,
                        MAX(created_at) AS created_at,
-                       MIN(title) AS source_title,
-                       MAX(platform_fit) AS target_platform
+                       MAX(source_title) AS source_title,
+                       MAX(source_platform) AS target_platform
                 FROM clips
                 WHERE user_id = ?
                 GROUP BY request_id
@@ -1191,8 +1229,10 @@ class PlatformStore:
         with self._lock, self._connect() as connection:
             clips = connection.execute(
                 """
-                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
-                       rank_value, reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
+                SELECT id, request_id, clip_key, user_id, campaign_id, source_type, source_title, source_platform,
+                       source_transcript, source_visual_summary, source_preview_asset_url, source_download_asset_url,
+                       source_thumbnail_url, title, hook, caption, start_time, end_time, duration_seconds, score, confidence,
+                       rank_value, reason, clip_format, transcript_excerpt, packaging_angle, platform_fit, best_post_order, cta_suggestion,
                        thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
                        local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
                        approved, created_at
@@ -1202,10 +1242,17 @@ class PlatformStore:
                 """,
                 (user_id, request_id),
             ).fetchall()
-        source_title = clips[0]["title"] if clips else None
+        first_clip = clips[0] if clips else None
         return {
             "request_id": request_id,
-            "source_title": source_title,
+            "source_title": first_clip["source_title"] if first_clip and "source_title" in first_clip.keys() else None,
+            "source_type": first_clip["source_type"] if first_clip and "source_type" in first_clip.keys() else None,
+            "source_platform": first_clip["source_platform"] if first_clip and "source_platform" in first_clip.keys() else None,
+            "transcript": first_clip["source_transcript"] if first_clip and "source_transcript" in first_clip.keys() else None,
+            "visual_summary": first_clip["source_visual_summary"] if first_clip and "source_visual_summary" in first_clip.keys() else None,
+            "preview_asset_url": first_clip["source_preview_asset_url"] if first_clip and "source_preview_asset_url" in first_clip.keys() else None,
+            "download_asset_url": first_clip["source_download_asset_url"] if first_clip and "source_download_asset_url" in first_clip.keys() else None,
+            "thumbnail_url": first_clip["source_thumbnail_url"] if first_clip and "source_thumbnail_url" in first_clip.keys() else None,
             "clips": [self._clip_payload_from_row(row) for row in clips],
         }
 
@@ -1470,6 +1517,8 @@ class PlatformStore:
         )
 
     def _clip_payload_from_row(self, row: sqlite3.Row) -> dict[str, Any]:
+        preview_url = self._row_value(row, "edited_clip_url") or self._row_value(row, "clip_url") or self._row_value(row, "raw_clip_url")
+        download_url = self._row_value(row, "download_url")
         return {
             "record_id": row["id"],
             "request_id": row["request_id"],
@@ -1479,15 +1528,22 @@ class PlatformStore:
             "caption": row["caption"],
             "start_time": row["start_time"],
             "end_time": row["end_time"],
+            "timestamp_start": row["start_time"],
+            "timestamp_end": row["end_time"],
+            "duration": self._row_value(row, "duration_seconds"),
             "score": row["score"],
             "virality_score": row["virality_score"],
             "confidence": row["confidence"],
             "rank": row["rank_value"],
             "reason": row["reason"],
+            "format": self._row_value(row, "clip_format") or "Short Form",
+            "transcript_excerpt": self._row_value(row, "transcript_excerpt"),
+            "transcript": self._row_value(row, "transcript_excerpt"),
             "packaging_angle": row["packaging_angle"],
             "platform_fit": row["platform_fit"],
             "best_post_order": row["best_post_order"],
             "cta_suggestion": row["cta_suggestion"],
+            "cta": row["cta_suggestion"],
             "thumbnail_text": row["thumbnail_text"],
             "hook_variants": json.loads(row["hook_variants_json"] or "[]"),
             "caption_variants": json.loads(row["caption_variants_json"] or "{}"),
@@ -1495,12 +1551,18 @@ class PlatformStore:
             "raw_clip_url": row["raw_clip_url"],
             "edited_clip_url": row["edited_clip_url"],
             "preview_image_url": row["preview_image_url"],
+            "preview_url": preview_url,
+            "download_url": download_url,
+            "thumbnail_url": row["preview_image_url"],
             "trim_start_seconds": row["trim_start_seconds"],
             "trim_end_seconds": row["trim_end_seconds"],
             "caption_style_override": row["caption_style_override"],
             "approved": bool(row["approved"]),
             "created_at": row["created_at"],
         }
+
+    def _row_value(self, row: sqlite3.Row, key: str) -> Any:
+        return row[key] if key in row.keys() else None
 
     def _assignment_payload_from_row(self, row: sqlite3.Row) -> dict[str, Any]:
         return {

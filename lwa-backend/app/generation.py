@@ -303,14 +303,20 @@ def build_generation_prompt(
     source_title = source_context.title if source_context else "Unknown source"
     source_description = source_context.description[:500] if source_context and source_context.description else "No description available."
     source_duration = source_context.duration_seconds if source_context and source_context.duration_seconds else "unknown"
+    source_type = source_context.source_type if source_context else "url"
+    transcript_text = (source_context.transcript[:1800] if source_context and source_context.transcript else "No transcript available.")
+    visual_summary = (source_context.visual_summary[:800] if source_context and source_context.visual_summary else "No visual summary available.")
     seed_lines = build_seed_lines(source_context.clip_seeds if source_context else None)
     return f"""
 Generate exactly 3 short-form video clip ideas as JSON.
 
 Video URL: {video_url}
+Source type: {source_type}
 Source title: {source_title}
 Source duration seconds: {source_duration}
 Source description: {source_description}
+Transcript: {transcript_text}
+Visual summary: {visual_summary}
 Target platform: {target_platform}
 Selected trend: {selected_trend or "none"}
 Preferred packaging angle: {content_angle or "none"}
@@ -341,7 +347,7 @@ Return valid JSON in this shape:
 }}
 
 Rules:
-- Evaluate each clip using the transcript excerpt, timing, and target platform.
+- Evaluate each clip using the actual transcript excerpt or visual summary, timing, and target platform.
 - If preferred packaging angle is present, bias the response toward it unless the clip clearly fits a stronger angle.
 - reason must explain in one short sentence why the clip will work.
 - thumbnail_text must be 2 to 5 words and punchy.
