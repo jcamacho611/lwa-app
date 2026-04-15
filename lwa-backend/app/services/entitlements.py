@@ -54,11 +54,16 @@ class UsageStore:
             day_bucket = payload.setdefault(usage_day, {})
             current = int(day_bucket.get(subject, 0))
             if daily_limit >= 0 and current >= daily_limit:
+                plan_hint = (
+                    "Upgrade to Pro for 20 clips per run and 25 daily generations, "
+                    "or Scale for 40 clips, campaign mode, and posting queue access."
+                )
                 raise HTTPException(
                     status_code=402,
                     detail=(
-                        "Daily generation limit reached for the current plan. "
-                        "Add a paid API key in Settings or upgrade on the web before running more jobs."
+                        f"Daily generation limit reached for the current plan. "
+                        f"Add a paid API key in Settings or upgrade on the web before running more jobs. "
+                        f"{plan_hint}"
                     ),
                 )
 

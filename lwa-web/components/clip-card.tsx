@@ -70,18 +70,26 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
           : "glass-panel border-white/10 shadow-card hover:-translate-y-0.5 hover:border-white/16",
       ].join(" ")}
     >
+      {/* Header row: rank badge + score + confidence + platform fit + packaging angle */}
       <div className="mb-5 flex flex-wrap items-center gap-2">
-        <span className={["status-chip", featured ? "status-approved" : "status-ready"].join(" ")}>
-          Post #{clip.best_post_order || clip.rank || 1}
-        </span>
-        <span className="status-chip status-submitted">
+        {featured ? (
+          <span className="status-chip status-approved flex items-center gap-1.5">
+            <span>🏆</span>
+            <span>Top clip · Post #{clip.best_post_order || clip.rank || 1}</span>
+          </span>
+        ) : (
+          <span className="status-chip status-ready">
+            Post #{clip.best_post_order || clip.rank || 1}
+          </span>
+        )}
+        <span className={["status-chip", featured ? "status-approved" : "status-submitted"].join(" ")}>
           Score {viralityScore}
         </span>
         <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/75">
-          Confidence {formatConfidence(clip.confidence)}
+          {formatConfidence(clip.confidence)} confidence
         </span>
         {clip.platform_fit ? (
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/75">
+          <span className="rounded-full border border-accent/20 bg-accent/[0.07] px-3 py-1.5 text-xs text-accent/90">
             {clip.platform_fit}
           </span>
         ) : null}
@@ -90,8 +98,14 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
             {clip.packaging_angle}
           </span>
         ) : null}
+        {clip.thumbnail_text ? (
+          <span className="rounded-full border border-neonPurple/20 bg-neonPurple/[0.08] px-3 py-1.5 text-xs text-white/80">
+            🖼 {clip.thumbnail_text}
+          </span>
+        ) : null}
       </div>
 
+      {/* Hook */}
       <div className="mb-5">
         <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">{featured ? "Top hook" : "Hook"}</p>
         <h3 className={["font-semibold leading-tight text-ink", featured ? "text-2xl sm:text-[2rem]" : "text-xl"].join(" ")}>{clip.hook}</h3>
@@ -146,12 +160,17 @@ export function ClipCard({ clip, featured = false, feedbackVote = null, onVote, 
         </div>
 
         <div className="space-y-3">
+          {/* Why this hits — prominent signal card */}
           <div className="signal-card rounded-[24px] p-4">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Why this hits</p>
-            <p className="text-sm leading-6 text-ink/82">{whyThisHits}</p>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-base">⚡</span>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[rgba(251,113,133,0.9)]">Why this hits</p>
+            </div>
+            <p className="text-sm leading-6 text-ink/90">{whyThisHits}</p>
           </div>
+          {/* Platform fit */}
           <div className="metric-tile rounded-[24px] p-4">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Platform Fit</p>
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Platform fit</p>
             <p className="text-sm leading-6 text-ink/82">{clip.platform_fit || "Optimized for fast short-form viewing."}</p>
           </div>
         </div>

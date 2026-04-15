@@ -94,6 +94,10 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
             platform_store=platform_store,
             source_path=source_path,
         )
+    except HTTPException:
+        # Re-raise HTTP exceptions (including 402 quota errors) without releasing usage,
+        # since the quota was already consumed by resolve_entitlement.
+        raise
     except Exception:
         usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
         raise

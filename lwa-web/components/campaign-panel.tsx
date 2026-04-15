@@ -335,7 +335,14 @@ export function CampaignPanel({
               <p className="section-kicker">Campaign inventory</p>
               <h3 className="mt-2 text-2xl font-semibold text-ink">Live workflow state</h3>
             </div>
-            <span className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-ink/72">{campaigns.length} campaigns</span>
+            <span className={[
+              "rounded-full border px-4 py-2 text-sm font-semibold",
+              campaigns.length > 0
+                ? "border-accent/22 bg-accent/[0.07] text-accent"
+                : "border-white/10 bg-white/[0.05] text-ink/72",
+            ].join(" ")}>
+              {campaigns.length} {campaigns.length === 1 ? "campaign" : "campaigns"}
+            </span>
           </div>
 
           <div className="mt-6 space-y-3">
@@ -349,8 +356,8 @@ export function CampaignPanel({
                     type="button"
                     onClick={() => void onOpenCampaign(campaign.id)}
                     className={[
-                      "w-full rounded-[24px] border p-5 text-left transition",
-                      selected ? "hero-card shadow-glow" : "glass-panel hover:-translate-y-0.5 hover:border-white/16",
+                      "w-full rounded-[24px] border p-5 text-left transition duration-200",
+                      selected ? "hero-card shadow-glow" : "glass-panel hover:-translate-y-0.5 hover:border-white/16 hover:shadow-card",
                     ].join(" ")}
                   >
                     <div className="flex flex-wrap items-center gap-2">
@@ -360,6 +367,7 @@ export function CampaignPanel({
                           {campaign.target_angle}
                         </span>
                       ) : null}
+                      {selected ? <span className="status-chip status-ready">Selected</span> : null}
                     </div>
                     <p className="mt-3 text-lg font-semibold text-ink">{campaign.title || campaign.name || "Campaign"}</p>
                     <p className="mt-2 text-sm leading-7 text-ink/62">
@@ -373,8 +381,11 @@ export function CampaignPanel({
                 );
               })
             ) : (
-              <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm text-ink/62">
-                No campaigns yet. Create one to turn clip output into a real operating workflow.
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-6">
+                <p className="text-sm font-medium text-ink/72">No campaigns yet</p>
+                <p className="mt-2 text-sm leading-7 text-ink/46">
+                  Create a campaign above to turn clip output into a real operating workflow with briefs, assignments, and payout tracking.
+                </p>
               </div>
             )}
           </div>
@@ -382,8 +393,11 @@ export function CampaignPanel({
       </div>
 
       {isLoading ? (
-        <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-6 text-sm text-ink/70">
-          Loading campaign detail...
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-6">
+          <div className="flex items-center gap-3">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
+            <span className="text-sm text-ink/70">Loading campaign detail...</span>
+          </div>
         </div>
       ) : null}
 

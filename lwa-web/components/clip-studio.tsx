@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { AIBackground } from "./AIBackground";
 import { AccountWorkspace } from "./account-workspace";
 import { AuthPanel } from "./auth-panel";
 import { BatchPanel } from "./batch-panel";
@@ -823,6 +824,7 @@ export function ClipStudio({
           <InlineState
             title="Compiling clip pack..."
             description={`${loadingStages[loadingStageIndex]}. ${loadingStageIndex >= 2 ? "Ranking hooks and angles." : "Shaping the pack."}${improveResults && preferenceProfile.topPackagingAngle ? ` Leaning ${preferenceProfile.topPackagingAngle}.` : ""}`}
+            stageIndex={loadingStageIndex}
           />
         ) : null}
 
@@ -963,6 +965,7 @@ export function ClipStudio({
               <InlineState
                 title="Compiling clip pack..."
                 description={`${loadingStages[loadingStageIndex]}. ${loadingStageIndex >= 2 ? "Ranking hooks and angles." : "Shaping the pack."}${improveResults && preferenceProfile.topPackagingAngle ? ` Leaning ${preferenceProfile.topPackagingAngle}.` : ""}`}
+                stageIndex={loadingStageIndex}
               />
             ) : null}
 
@@ -1170,10 +1173,8 @@ export function ClipStudio({
   ) : null;
 
   return (
-    <main className="app-shell-grid min-h-screen bg-hero-radial">
-      <div className="hero-orb hero-orb-purple left-[-8rem] top-[-4rem] h-80 w-80" />
-      <div className="hero-orb hero-orb-blue right-[-5rem] top-24 h-72 w-72" />
-      <div className="hero-orb hero-orb-cyan bottom-20 right-[14%] h-60 w-60" />
+    <main className="app-shell-grid min-h-screen">
+      <AIBackground />
       <AuthPanel
         isOpen={authOpen}
         mode={authMode}
@@ -1234,11 +1235,13 @@ export function ClipStudio({
           <section className="grid gap-12 pb-10 pt-16 lg:grid-cols-[1.06fr,0.94fr] lg:items-start">
             <div className="space-y-7">
               <div className="space-y-5">
-                <p className="section-kicker">AI content repurposer</p>
+                <p className="section-kicker">AI Clipping Engine</p>
                 <h1 className="page-title max-w-5xl text-5xl font-semibold leading-[0.98] text-ink sm:text-6xl lg:text-7xl">
-                  Turn one source into <span className="text-gradient">ranked clips worth posting</span>
+                  Turn one source into a <span className="text-gradient">ranked clip stack</span>
                 </h1>
-                <p className="max-w-3xl text-base leading-8 text-subtext sm:text-lg">Hooks, captions, timestamps, and ranked outputs in one premium workspace.</p>
+                <p className="max-w-3xl text-base leading-8 text-subtext sm:text-lg">
+                  Hooks, captions, timestamps, packaging angles, and short-form outputs built to move faster.
+                </p>
               </div>
 
               <div className="flex flex-wrap gap-3">
@@ -1255,18 +1258,40 @@ export function ClipStudio({
 
               <p className="text-sm uppercase tracking-[0.24em] text-ink/56">Built for creators, clippers, and operators</p>
 
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {[
-                  { label: "Ranked outputs", detail: "See the winner fast." },
-                  { label: "Caption-ready", detail: "Hooks and styles come packaged." },
-                  { label: "Campaign flow", detail: "Move winners into ops." },
-                  { label: "Ready queue", detail: "Stack the next posts in order." },
-                ].map((item) => (
-                  <div key={item.label} className="metric-tile rounded-[24px] p-4">
-                    <p className="text-sm font-semibold text-ink">{item.label}</p>
-                    <p className="mt-2 text-sm leading-6 text-ink/62">{item.detail}</p>
+              {/* Ranked output proof */}
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.22em] text-muted">Ranked outputs</p>
+                <div className="space-y-2">
+                  {/* Top clip — trophy */}
+                  <div className="hero-card rounded-[22px] p-4">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgba(124,58,237,0.22)] text-base">🏆</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-ink">Top clip · Score 92 · Post first</p>
+                        <p className="mt-0.5 truncate text-xs text-ink/56">Hook + caption + packaging angle ready</p>
+                      </div>
+                      <StatPill tone="accent">Ranked #1</StatPill>
+                    </div>
                   </div>
-                ))}
+                  {/* Secondary clips */}
+                  {[
+                    { rank: 2, score: 88, label: "Contrarian take · Post second" },
+                    { rank: 3, score: 85, label: "Story CTA · Conversion closer" },
+                  ].map((item) => (
+                    <div key={item.rank} className="glass-panel rounded-[22px] p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-sm font-bold text-ink/60">
+                          {item.rank}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-ink/82">{item.label}</p>
+                          <p className="mt-0.5 text-xs text-ink/46">Score {item.score}</p>
+                        </div>
+                        <StatPill tone="neutral">Queue-ready</StatPill>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -1669,15 +1694,38 @@ function WorkspaceRailCard({
   );
 }
 
-function InlineState({ title, description }: { title: string; description: string }) {
+function InlineState({ title, description, stageIndex = 0 }: { title: string; description: string; stageIndex?: number }) {
+  const totalStages = 5;
   return (
-    <div className="panel-subtle rounded-[24px] px-5 py-8 text-center">
-      <div className="relative mx-auto mb-4 flex h-12 w-12 items-center justify-center">
-        <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
-        <img src="/brand/lwa-mark.svg" alt="LWA" className="relative h-7 w-7 opacity-90" />
+    <div className="panel-subtle rounded-[24px] px-5 py-8">
+      <div className="flex items-center gap-4">
+        {/* Spinner */}
+        <div className="relative flex h-12 w-12 shrink-0 items-center justify-center">
+          <div className="absolute inset-0 animate-spin-arc rounded-full border-2 border-white/10 border-t-accent" />
+          <img src="/brand/lwa-mark.svg" alt="LWA" className="relative h-6 w-6 opacity-90" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-ink">{title}</p>
+          <p className="mt-1 text-sm text-ink/60">{description}</p>
+        </div>
       </div>
-      <p className="text-lg font-medium text-ink">{title}</p>
-      <p className="mt-2 text-sm text-ink/60">{description}</p>
+      {/* Stage progress dots */}
+      <div className="mt-5 flex items-center gap-2">
+        {Array.from({ length: totalStages }).map((_, i) => (
+          <div
+            key={i}
+            className={[
+              "stage-dot",
+              i === stageIndex ? "stage-dot-active" : i < stageIndex ? "stage-dot-done" : "",
+            ].join(" ")}
+          />
+        ))}
+        <span className="ml-2 text-xs text-ink/46">Stage {stageIndex + 1} of {totalStages}</span>
+      </div>
+      {/* Shimmer bar */}
+      <div className="mt-4 h-1 overflow-hidden rounded-full">
+        <div className="loading-shimmer h-full w-full rounded-full" />
+      </div>
     </div>
   );
 }

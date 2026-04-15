@@ -70,6 +70,9 @@ const config: Config = {
         'fade-in': 'fadeIn 0.4s ease-out',
         'slide-up': 'slideUp 0.4s ease-out',
         'float-soft': 'floatSoft 6s ease-in-out infinite',
+        'spin-arc': 'spinArc 1s linear infinite',
+        'shimmer': 'shimmer 2.2s linear infinite',
+        'fade-up': 'fadeUp 0.4s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -83,6 +86,18 @@ const config: Config = {
         floatSoft: {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-8px)' },
+        },
+        spinArc: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% center' },
+          '100%': { backgroundPosition: '200% center' },
+        },
+        fadeUp: {
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },
