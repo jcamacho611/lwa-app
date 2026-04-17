@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     default: "LWA",
     template: "%s · LWA",
   },
-  description: "Turn one long-form source into ranked short-form clips, hooks, captions, timestamps, packaging angles, and workflow-ready outputs.",
+  description: "AI clipping engine for ranked short-form outputs, hooks, captions, packaging, and creator workflow.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

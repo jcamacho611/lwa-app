@@ -54,7 +54,7 @@ struct ContentView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .fileImporter(
                     isPresented: $showFileImporter,
-                    allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie],
+                    allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie, .audio, .image],
                     allowsMultipleSelection: false,
                     onCompletion: handleFileSelection
                 )
@@ -154,16 +154,16 @@ private struct OmegaHomeScreen: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("LWA Omega")
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                        Text("LWA Ω")
+                            .font(.system(size: 36, weight: .bold, design: .serif))
+                            .foregroundStyle(OmegaPalette.goldSoft)
 
-                        Text("Attention compiler for creator operators")
+                        Text("AI clipping engine")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(OmegaPalette.accent)
+                            .foregroundStyle(OmegaPalette.goldSoft)
                             .textCase(.uppercase)
 
-                        Text("Paste a source, generate a ranked clip pack, and move straight into packaging, export, and distribution decisions.")
+                        Text("Turn one source into ranked clips, hooks, captions, timestamps, and export-ready outputs.")
                             .font(.subheadline)
                             .foregroundStyle(OmegaPalette.secondaryText)
                     }
@@ -178,7 +178,8 @@ private struct OmegaHomeScreen: View {
 
                 HStack(spacing: 10) {
                     OmegaMetricPill(label: viewModel.processingStatusLabel)
-                    OmegaMetricPill(label: "\(viewModel.generatedTodayCount) clips generated today")
+                    OmegaMetricPill(label: viewModel.creditsRemainingLabel)
+                    OmegaMetricPill(label: viewModel.premiumStatusLabel)
                     OmegaMetricPill(label: viewModel.planName)
                 }
             }
@@ -189,11 +190,11 @@ private struct OmegaHomeScreen: View {
         OmegaGlassCard {
             VStack(alignment: .leading, spacing: 16) {
                 OmegaSectionHeader(
-                    title: "Source Command",
-                    subtitle: "Run from a URL or an uploaded file without leaving the app."
+                    title: "Source command",
+                    subtitle: "Run from a URL or uploaded file without leaving the app."
                 )
 
-                TextField("Paste a video URL", text: $viewModel.videoURL, axis: .vertical)
+                TextField("Paste a source URL", text: $viewModel.videoURL, axis: .vertical)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .padding(.horizontal, 16)
@@ -204,7 +205,7 @@ private struct OmegaHomeScreen: View {
 
                 HStack(spacing: 12) {
                     OmegaGhostButton(
-                        title: viewModel.isUploading ? "Uploading..." : "Upload Video",
+                        title: viewModel.isUploading ? "Uploading..." : "Upload Source",
                         systemImage: "arrow.up.doc.fill",
                         action: onOpenUpload
                     )
@@ -256,7 +257,7 @@ private struct OmegaHomeScreen: View {
 
                 HStack(spacing: 12) {
                     OmegaMetricPill(label: viewModel.sourceSummaryLabel)
-                    OmegaMetricPill(label: viewModel.creditsRemainingLabel)
+                    OmegaMetricPill(label: viewModel.premiumStatusLabel)
                 }
 
                 Button {
@@ -267,7 +268,7 @@ private struct OmegaHomeScreen: View {
                     HStack(spacing: 12) {
                         Image(systemName: "sparkles.rectangle.stack.fill")
                             .font(.headline)
-                        Text(viewModel.isLoading ? "Generating Clip Pack" : "Generate Clip Pack")
+                        Text(viewModel.isLoading ? "Generating clip pack" : "Generate clip pack")
                             .font(.headline.weight(.semibold))
                         Spacer()
                         Text(viewModel.selectedPlatform)
@@ -284,7 +285,7 @@ private struct OmegaHomeScreen: View {
     private var recentRuns: some View {
         VStack(alignment: .leading, spacing: 14) {
             OmegaSectionHeader(
-                title: "Recent Clip Packs",
+                title: "Recent clip packs",
                 subtitle: "Jump back into prior runs or compare new sources against recent output."
             )
 
@@ -315,7 +316,7 @@ private struct OmegaHomeScreen: View {
     private var trends: some View {
         VStack(alignment: .leading, spacing: 14) {
             OmegaSectionHeader(
-                title: "Trend Radar",
+                title: "Trend radar",
                 subtitle: "Layer a live public signal into the packaging angle before you generate."
             )
 
@@ -364,7 +365,7 @@ private struct OmegaHomeScreen: View {
         VStack(alignment: .leading, spacing: 14) {
             OmegaSectionHeader(
                 title: "Results",
-                subtitle: "Best clip first, then the full ranked pack."
+                subtitle: "Lead clip first, then the ranked pack."
             )
 
             if let errorMessage = viewModel.errorMessage, !errorMessage.isEmpty {
@@ -372,14 +373,14 @@ private struct OmegaHomeScreen: View {
             } else if viewModel.clips.isEmpty {
                 OmegaEmptyStateCard(
                     title: "No results yet",
-                    message: "Run a source and the best clip will appear here with ranking, hook variants, and export actions."
+                    message: "Run a source and the lead clip will appear here with ranking, copy, and export actions."
                 )
             } else {
                 if let bestClip = viewModel.bestClip {
                     OmegaGlassCard {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack {
-                                Text("Best Clip")
+                                Text("Lead Clip")
                                     .font(.title3.weight(.bold))
                                     .foregroundStyle(.white)
                                 Spacer()
@@ -404,6 +405,9 @@ private struct OmegaHomeScreen: View {
                                 OmegaMetricPill(label: "Score \(bestClip.score)")
                                 if let bestPostOrder = bestClip.bestPostOrder {
                                     OmegaMetricPill(label: "Post #\(bestPostOrder)")
+                                }
+                                if bestClip.preferredAssetURL != nil {
+                                    OmegaMetricPill(label: "Preview ready")
                                 }
                             }
 
@@ -564,6 +568,9 @@ private struct OmegaClipCard: View {
                         if let packagingAngleLabel = clip.packagingAngleLabel {
                             OmegaMetricPill(label: packagingAngleLabel)
                         }
+                        if let bestPostOrder = clip.bestPostOrder {
+                            OmegaMetricPill(label: "Post #\(bestPostOrder)")
+                        }
                         OmegaMetricPill(label: "\(clip.startTime)-\(clip.endTime)")
                     }
 
@@ -665,7 +672,7 @@ private struct OmegaClipDetailView: View {
     private var whyItWorks: some View {
         OmegaGlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                OmegaSectionHeader(title: "Why This Works", subtitle: "AI signal for why this cut should win attention.")
+                OmegaSectionHeader(title: "Why this lands", subtitle: "AI signal for why this cut should win attention.")
 
                 Text(clip.primaryReason ?? "Strong pacing, clear payoff, and creator-ready packaging.")
                     .font(.body.weight(.medium))
@@ -711,7 +718,7 @@ private struct OmegaClipDetailView: View {
     private var hookSuggestions: some View {
         OmegaGlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                OmegaSectionHeader(title: "Hook Suggestions", subtitle: "Tap any angle to copy it into your posting workflow.")
+                OmegaSectionHeader(title: "Hook angles", subtitle: "Tap any angle to copy it into your posting workflow.")
 
                 ForEach(Array(clip.hookVariants.enumerated()), id: \.offset) { index, variant in
                     Button {
@@ -746,7 +753,7 @@ private struct OmegaClipDetailView: View {
     private var captionSection: some View {
         OmegaGlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                OmegaSectionHeader(title: "Caption Suggestions", subtitle: "Packaging copy and caption variants ready for export.")
+                OmegaSectionHeader(title: "Copy pack", subtitle: "Packaging copy and caption variants ready for export.")
 
                 Text(clip.caption)
                     .font(.body)
@@ -759,6 +766,12 @@ private struct OmegaClipDetailView: View {
                 Text("CTA: \(clip.resolvedCTA)")
                     .font(.subheadline)
                     .foregroundStyle(OmegaPalette.secondaryText)
+
+                if let captionStyle = clip.captionStyle {
+                    Text("Caption style: \(captionStyle)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(OmegaPalette.goldSoft)
+                }
 
                 // Caption variants
                 if !clip.resolvedCaptionVariants.isEmpty {
@@ -1228,15 +1241,16 @@ private struct OmegaBackground: View {
 }
 
 private enum OmegaPalette {
-    static let backgroundTop = Color(red: 0.04, green: 0.04, blue: 0.07)
-    static let backgroundMid = Color(red: 0.03, green: 0.03, blue: 0.05)
-    static let backgroundBottom = Color(red: 0.01, green: 0.01, blue: 0.02)
-    static let surface = Color(red: 0.08, green: 0.08, blue: 0.11)
-    static let card = Color.white.opacity(0.06)
+    static let backgroundTop = Color(red: 0.04, green: 0.03, blue: 0.02)
+    static let backgroundMid = Color(red: 0.02, green: 0.02, blue: 0.02)
+    static let backgroundBottom = Color(red: 0.01, green: 0.01, blue: 0.01)
+    static let surface = Color(red: 0.12, green: 0.09, blue: 0.06)
+    static let card = Color.white.opacity(0.055)
     static let input = Color.white.opacity(0.08)
-    static let accent = Color(red: 0.27, green: 0.73, blue: 0.98)
-    static let accentSecondary = Color(red: 0.42, green: 0.82, blue: 1.0)
+    static let accent = Color(red: 0.85, green: 0.71, blue: 0.43)
+    static let accentSecondary = Color(red: 0.67, green: 0.47, blue: 0.16)
     static let gold = Color(red: 0.96, green: 0.80, blue: 0.42)
+    static let goldSoft = Color(red: 0.98, green: 0.91, blue: 0.75)
     static let secondaryText = Color.white.opacity(0.72)
     static let mutedText = Color.white.opacity(0.58)
 }

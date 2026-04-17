@@ -43,9 +43,9 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="section-kicker">Ready queue</p>
-          <h3 className="mt-3 text-2xl font-semibold text-ink">Next to post</h3>
+          <h3 className="mt-3 text-2xl font-semibold text-ink">Next out</h3>
           <p className="mt-2 text-sm leading-7 text-ink/60">
-            Reorder the stack, cut what doesn't fit, then export the run brief.
+            Reorder the stack, cut what misses, then export the run brief.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -93,7 +93,7 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
                     <p className="mt-2 text-sm leading-7 text-ink/62">{item.caption}</p>
                     <p className="mt-2 text-xs text-muted">
                       Virality {item.viralityScore ?? "N/A"}
-                      {item.bestPostOrder ? ` · Suggested post order ${item.bestPostOrder}` : ""}
+                      {item.bestPostOrder ? ` · Post ${item.bestPostOrder}` : ""}
                     </p>
                   </div>
 
@@ -121,7 +121,7 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
                         rel="noreferrer"
                         className="secondary-button rounded-full px-4 py-2 text-sm font-medium"
                       >
-                        Open asset
+                        Open preview
                       </a>
                     ) : null}
                     <button

@@ -4,7 +4,7 @@ struct ClipResponse: Codable {
     let requestID: String
     let videoURL: String
     let status: String
-    let sourcePlatform: String
+    let sourcePlatform: String?
     let processingSummary: ProcessingSummary
     let trendContext: [TrendItem]
     let clips: [ClipResult]
@@ -17,6 +17,17 @@ struct ClipResponse: Codable {
         case processingSummary = "processing_summary"
         case trendContext = "trend_context"
         case clips
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        requestID = try container.decode(String.self, forKey: .requestID)
+        videoURL = try container.decode(String.self, forKey: .videoURL)
+        status = try container.decode(String.self, forKey: .status)
+        sourcePlatform = try container.decodeIfPresent(String.self, forKey: .sourcePlatform)
+        processingSummary = try container.decode(ProcessingSummary.self, forKey: .processingSummary)
+        trendContext = try container.decodeIfPresent([TrendItem].self, forKey: .trendContext) ?? []
+        clips = try container.decodeIfPresent([ClipResult].self, forKey: .clips) ?? []
     }
 }
 

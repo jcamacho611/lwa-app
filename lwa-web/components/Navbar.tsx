@@ -21,7 +21,7 @@ export default function Navbar({ items, rightSlot, showTagline = false, compactL
   const pathname = usePathname();
 
   return (
-    <header className="glass-panel sticky top-4 z-40 rounded-[30px] border-white/12 px-4 py-3 sm:px-5">
+    <header className="glass-panel sticky top-4 z-40 rounded-[30px] border-[rgba(217,181,109,0.12)] px-4 py-3 sm:px-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Logo compact={compactLogo} showTagline={showTagline} />
 

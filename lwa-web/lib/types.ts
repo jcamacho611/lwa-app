@@ -214,7 +214,9 @@ export type ClipResult = {
   score: number;
   virality_score?: number | null;
   confidence?: number | null;
+  confidence_score?: number | null;
   rank?: number | null;
+  post_rank?: number | null;
   reason?: string | null;
   why_this_matters?: string | null;
   cta_suggestion?: string | null;
@@ -224,6 +226,7 @@ export type ClipResult = {
   best_post_order?: number | null;
   hook_variants?: string[];
   caption_variants?: Record<string, string>;
+  caption_style?: string | null;
   duration?: number | null;
   timestamp_start?: string | null;
   timestamp_end?: string | null;

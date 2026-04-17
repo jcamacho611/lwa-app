@@ -19,7 +19,7 @@ enum APIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidVideoURL:
-            return "Enter a valid http or https video URL."
+            return "Enter a valid http or https source URL."
         case .invalidBaseURL:
             return "Set a valid backend base URL in Settings."
         case .invalidResponse:
@@ -37,11 +37,11 @@ enum APIConfig {
         #else
         let configured = BundleConfiguration.string(
             for: "LWAProductionAPIBaseURL",
-            fallback: "https://lwa-backend-production-c9cc.up.railway.app"
+            fallback: "https://lwa-production-c9cc.up.railway.app"
         )
         #endif
 
-        return URL(string: configured) ?? URL(string: "https://lwa-backend-production-c9cc.up.railway.app")!
+        return URL(string: configured) ?? URL(string: "https://lwa-production-c9cc.up.railway.app")!
     }
 
     static var baseURL: URL {
@@ -356,6 +356,26 @@ private func mimeType(for fileExtension: String) -> String {
         return "video/x-m4v"
     case "webm":
         return "video/webm"
+    case "mp3":
+        return "audio/mpeg"
+    case "wav":
+        return "audio/wav"
+    case "m4a":
+        return "audio/mp4"
+    case "aac":
+        return "audio/aac"
+    case "ogg", "oga":
+        return "audio/ogg"
+    case "jpg", "jpeg":
+        return "image/jpeg"
+    case "png":
+        return "image/png"
+    case "webp":
+        return "image/webp"
+    case "heic":
+        return "image/heic"
+    case "heif":
+        return "image/heif"
     default:
         return "application/octet-stream"
     }

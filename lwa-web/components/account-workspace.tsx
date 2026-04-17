@@ -39,8 +39,8 @@ export function AccountWorkspace({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="section-kicker">Workspace</p>
-          <h3 className="mt-2 text-3xl font-semibold text-ink">Welcome back, {user.email}</h3>
-          <p className="mt-2 text-sm leading-7 text-ink/64">Runs, uploads, campaigns, and ledger state in one place.</p>
+          <h3 className="mt-2 text-3xl font-semibold text-ink">Operator home</h3>
+          <p className="mt-2 text-sm leading-7 text-ink/64">{user.email} · Runs, uploads, campaigns, and ledger state in one place.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <span className="rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-medium text-accent">
@@ -102,7 +102,7 @@ export function AccountWorkspace({
                       onClick={() => onOpenClipPack(item.request_id)}
                       className="mt-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-ink/80 transition hover:bg-white/[0.08]"
                     >
-                      {selected ? "Open in editor" : "View clip pack"}
+                      {selected ? "Open in editor" : "Review clip pack"}
                     </button>
                   </div>
                 );

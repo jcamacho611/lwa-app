@@ -16,11 +16,11 @@ struct GenerationTrackItem: Identifiable {
 final class ContentViewModel: ObservableObject {
     private let historyKey = "lwa.saved_runs"
     private let generationStages = [
-        "Queued",
-        "Ingesting",
-        "Scoring",
-        "Packaging",
-        "Delivered",
+        "Analyzing source",
+        "Finding moments",
+        "Ranking clips",
+        "Packaging copy",
+        "Delivering assets",
     ]
 
     let supportedPlatforms = ["TikTok", "Instagram", "YouTube", "Facebook"]
@@ -65,7 +65,7 @@ final class ContentViewModel: ObservableObject {
 
         guard !trimmedURL.isEmpty || selectedUpload != nil else {
             clips = []
-            errorMessage = "Paste a video URL or upload a video first."
+            errorMessage = "Paste a source URL or upload a source first."
             lastSubmittedURL = ""
             return
         }
@@ -176,6 +176,13 @@ final class ContentViewModel: ObservableObject {
         return "\(credits) credits remaining"
     }
 
+    var premiumStatusLabel: String {
+        guard let response = latestResponse else {
+            return "Free preview"
+        }
+        return response.processingSummary.featureFlags.premiumExports ? "Premium exports live" : "Free exports locked"
+    }
+
     var bestClip: ClipResult? {
         clips.sorted { lhs, rhs in
             let lhsRank = lhs.rank ?? lhs.postRank ?? Int.max
@@ -230,15 +237,15 @@ final class ContentViewModel: ObservableObject {
         if isLoading {
             switch activeGenerationStage {
             case 0:
-                return "Queueing command"
+                return "Analyzing source"
             case 1:
-                return "Pulling source context"
+                return "Finding viral moments"
             case 2:
-                return "Finding breakout moments"
+                return "Ranking the stack"
             case 3:
-                return "Rendering social exports"
+                return "Packaging copy"
             default:
-                return "Finalizing clip pack"
+                return "Generating clips"
             }
         }
 
@@ -324,9 +331,9 @@ final class ContentViewModel: ObservableObject {
         }
 
         return """
-        IWA clip pack
+        LWA clip pack
         Source: \(response.videoURL)
-        Platform: \(response.sourcePlatform)
+        Platform: \(response.sourcePlatform ?? "not available")
         Target: \(response.processingSummary.targetPlatform)
         AI: \(response.processingSummary.aiProvider)
         Mode: \(response.processingSummary.processingMode)

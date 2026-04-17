@@ -42,7 +42,7 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
     <section className="space-y-6">
       <div className="grid gap-5 lg:grid-cols-3">
         <MetricCard label="Available" value={formatCents(wallet?.available_cents)} detail="Balance ready for manual payout review." />
-        <MetricCard label="Pending" value={formatCents(wallet?.pending_cents)} detail="Pending payout holds and unsettled campaign earnings." />
+        <MetricCard label="Pending" value={formatCents(wallet?.pending_cents)} detail="Pending holds and unsettled campaign earnings." />
         <MetricCard
           label="Payout ready"
           value={formatCents(wallet?.eligible_payout_cents)}
@@ -53,9 +53,9 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
       <div className="grid gap-6 xl:grid-cols-[0.92fr,1.08fr]">
         <div className="glass-panel rounded-[32px] p-6 sm:p-8">
         <p className="section-kicker">Payout readiness</p>
-        <h3 className="mt-2 text-3xl font-semibold text-ink">Request funds from the ledger</h3>
+        <h3 className="mt-2 text-3xl font-semibold text-ink">Request a payout</h3>
         <p className="mt-4 text-sm leading-7 text-ink/64">
-          Review your available balance. Approved submissions unlock payout readiness. Transfers stay manual until payout rails are wired.
+          Review the ledger. Approved submissions unlock payout readiness. Transfers stay manual until payout rails are wired.
         </p>
 
           {wallet?.submission_summary ? (

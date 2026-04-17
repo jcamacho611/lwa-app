@@ -74,7 +74,7 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
             `${featureFlags.clip_limit || 0} ranked clips returned per run`,
             `${featureFlags.max_generations_per_day || 0} generation credits available each day`,
             `${featureFlags.max_uploads_per_day || 0} uploads available each day`,
-            featureFlags.premium_exports ? "No watermark on exports" : "Watermark remains on free exports",
+            featureFlags.premium_exports ? "No watermark on exports" : "Free exports keep the watermark",
             unlockedFeatures.length ? `Unlocked: ${unlockedFeatures.join(", ")}` : "Upgrade to unlock editing, wallet, and campaign tools",
           ].map((item) => (
             <div key={item} className="metric-tile rounded-[24px] px-4 py-3 text-sm text-ink/72">

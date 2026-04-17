@@ -25,6 +25,10 @@ export default function VideoCard({
   const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url || null;
   const downloadUrl = clip.download_url || null;
   const scoreLabel = clip.virality_score ?? clip.score;
+  const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
+  const whyThisHits = clip.why_this_matters || clip.reason || null;
+  const captionStyle = clip.caption_style || clip.caption_style_override || null;
+  const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
 
   async function handleEnter() {
     setIsHovering(true);
@@ -100,12 +104,29 @@ export default function VideoCard({
               {clip.platform_fit}
             </span>
           ) : null}
-          {clip.best_post_order ? (
+          {postRank ? (
             <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-              Post #{clip.best_post_order}
+              Post #{postRank}
+            </span>
+          ) : null}
+          {confidenceScore ? (
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
+              {confidenceScore}% confidence
+            </span>
+          ) : null}
+          {captionStyle ? (
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
+              {captionStyle}
             </span>
           ) : null}
         </div>
+
+        {whyThisHits ? (
+          <div className="signal-card rounded-[20px] px-3 py-3">
+            <p className="mb-1 text-[10px] uppercase tracking-[0.22em] text-muted">Why this lands</p>
+            <p className="line-clamp-3 text-xs leading-6 text-ink/78">{whyThisHits}</p>
+          </div>
+        ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -116,7 +137,7 @@ export default function VideoCard({
               queued ? "border-neonPurple/30 bg-neonPurple/15 text-white shadow-neon" : "",
             ].join(" ")}
           >
-            {queued ? "Queued" : "Mark ready"}
+            {queued ? "Queued" : "Queue clip"}
           </button>
           {downloadUrl ? (
             <a
@@ -124,11 +145,11 @@ export default function VideoCard({
               download
               className="primary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold"
             >
-              Download
+              Export
             </a>
           ) : (
-            <span className="rounded-full border border-neonPurple/18 bg-neonPurple/10 px-4 py-2 text-sm text-white/78">
-              Pro unlocks download
+            <span className="rounded-full border border-neonPurple/18 bg-neonPurple/10 px-4 py-2 text-sm text-[#fff4d4]">
+              Pro export
             </span>
           )}
         </div>
