@@ -8,7 +8,12 @@
  * so it stays at 60 fps with zero layout thrash. Respects prefers-reduced-motion
  * via the CSS media query in globals.css.
  */
-export function AIBackground() {
+
+type AIBackgroundProps = {
+  variant?: "workspace" | "home";
+};
+
+export function AIBackground({ variant = "workspace" }: AIBackgroundProps) {
   return (
     <>
       {/* Animated gradient orbs */}
@@ -22,6 +27,17 @@ export function AIBackground() {
 
       {/* Scan line sweep */}
       <div className="ai-scan-line" aria-hidden="true" />
+
+      {variant === "home" ? (
+        <>
+          <div className="ai-stars" aria-hidden="true" />
+          <div className="ai-fog ai-fog-a" aria-hidden="true" />
+          <div className="ai-fog ai-fog-b" aria-hidden="true" />
+          <div className="ai-beam ai-beam-a" aria-hidden="true" />
+          <div className="ai-beam ai-beam-b" aria-hidden="true" />
+          <div className="ai-shimmer ai-shimmer-a" aria-hidden="true" />
+        </>
+      ) : null}
     </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AIBackground } from "./AIBackground";
 import { AccountWorkspace } from "./account-workspace";
 import { AuthPanel } from "./auth-panel";
@@ -164,6 +164,8 @@ export function ClipStudio({
   const [readyQueue, setReadyQueue] = useState<ReadyQueueItem[]>([]);
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null);
   const [loadingStageIndex, setLoadingStageIndex] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const homeStageRef = useRef<HTMLElement | null>(null);
 
   const activeSourceLabel = useMemo(() => {
     if (selectedUpload?.file_name || selectedUpload?.filename) {
@@ -298,6 +300,14 @@ export function ClipStudio({
 
     return () => window.clearInterval(interval);
   }, [isLoading]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     if (initialSection !== "campaigns" || !token || !campaigns.length || selectedCampaignId) {
@@ -679,10 +689,22 @@ export function ClipStudio({
   const campaignsUnlocked = Boolean(activeFeatureFlags.campaign_mode);
   const walletUnlocked = Boolean(activeFeatureFlags.wallet_view);
   const postingQueueUnlocked = Boolean(activeFeatureFlags.posting_queue);
+  const orderedClips = useMemo(() => {
+    return [...displayedClips].sort((left, right) => {
+      const leftOrder = left.post_rank || left.best_post_order || left.rank || Number.MAX_SAFE_INTEGER;
+      const rightOrder = right.post_rank || right.best_post_order || right.rank || Number.MAX_SAFE_INTEGER;
+
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return (right.virality_score ?? right.score ?? 0) - (left.virality_score ?? left.score ?? 0);
+    });
+  }, [displayedClips]);
 
   const isHome = initialSection === "home";
-  const featuredClip = displayedClips[0] ?? null;
-  const remainingClips = displayedClips.slice(1);
+  const featuredClip = orderedClips[0] ?? null;
+  const remainingClips = orderedClips.slice(1);
   const requiresAccount = !["home", "generate", "upload"].includes(initialSection);
   const showGenerator = ["home", "generate", "upload"].includes(initialSection);
   const showDashboard = ["dashboard"].includes(initialSection);
@@ -694,15 +716,15 @@ export function ClipStudio({
   const showPostingOnDashboard = initialSection === "dashboard";
   const topAngles = (preferenceProfile.preferredAngles.length
     ? preferenceProfile.preferredAngles
-    : displayedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
+    : orderedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
   const featureProof = ["Ranked", "Queue-ready", "Campaign flow"];
   const loadingStages = ["Analyzing video", "Finding viral moments", "Generating clips"];
   const previewReadyCount = useMemo(
     () =>
-      displayedClips.filter((clip) => clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url).length,
-    [displayedClips],
+      orderedClips.filter((clip) => clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url).length,
+    [orderedClips],
   );
-  const exportReadyCount = useMemo(() => displayedClips.filter((clip) => clip.download_url).length, [displayedClips]);
+  const exportReadyCount = useMemo(() => orderedClips.filter((clip) => clip.download_url).length, [orderedClips]);
   const sourceTruthSummary = useMemo(() => {
     const content = result?.transcript || result?.visual_summary || "This source was processed into ranked short-form outputs.";
     if (!content) {
@@ -743,6 +765,34 @@ export function ClipStudio({
 
   function handleClearQueue() {
     setReadyQueue(clearReadyQueue());
+  }
+
+  function handleHomePointerMove(event: ReactPointerEvent<HTMLElement>) {
+    if (reduceMotion || !homeStageRef.current) {
+      return;
+    }
+
+    const bounds = homeStageRef.current.getBoundingClientRect();
+    const offsetX = event.clientX - bounds.left;
+    const offsetY = event.clientY - bounds.top;
+    const normalizedX = (offsetX / bounds.width) * 2 - 1;
+    const normalizedY = (offsetY / bounds.height) * 2 - 1;
+
+    homeStageRef.current.style.setProperty("--home-pointer-x", `${offsetX}px`);
+    homeStageRef.current.style.setProperty("--home-pointer-y", `${offsetY}px`);
+    homeStageRef.current.style.setProperty("--home-tilt-x", `${normalizedX * 16}px`);
+    homeStageRef.current.style.setProperty("--home-tilt-y", `${normalizedY * 12}px`);
+  }
+
+  function handleHomePointerLeave() {
+    if (!homeStageRef.current) {
+      return;
+    }
+
+    homeStageRef.current.style.setProperty("--home-pointer-x", "50%");
+    homeStageRef.current.style.setProperty("--home-pointer-y", "36%");
+    homeStageRef.current.style.setProperty("--home-tilt-x", "0px");
+    homeStageRef.current.style.setProperty("--home-tilt-y", "0px");
   }
 
   const homeGeneratorSection = (
@@ -989,6 +1039,18 @@ export function ClipStudio({
               <MetricTile label="Clip access" value={String(planLimits.clipLimit)} detail="Visible ranked clips per run" />
               <MetricTile label="Uploads" value={String(planLimits.uploadsPerDay)} detail="Local source uploads today" />
             </div>
+            <div className="mt-4 space-y-3">
+              {!activeFeatureFlags.premium_exports ? (
+                <div className="metric-tile rounded-[24px] px-4 py-3 text-sm text-ink/72">
+                  Pro unlocks clean exports, 20 ranked clips, stronger hook coverage, and wallet visibility.
+                </div>
+              ) : null}
+              {!activeFeatureFlags.campaign_mode || !activeFeatureFlags.posting_queue ? (
+                <div className="signal-card rounded-[24px] px-4 py-3 text-sm text-ink/78">
+                  Scale adds campaign coordination, posting queue controls, and the deeper operator layer.
+                </div>
+              ) : null}
+            </div>
             <p className="mt-4 text-sm leading-7 text-ink/60">{planSurface.watermark ? "Free exports keep the watermark." : "Clean exports are unlocked."}</p>
           </div>
 
@@ -1116,6 +1178,8 @@ export function ClipStudio({
         <div className="space-y-5">
           <ReadyQueuePanel items={readyQueue} onMove={handleMoveQueue} onRemove={handleRemoveQueue} onClear={handleClearQueue} />
 
+          {orderedClips.length ? <ReviewOrderPanel clips={orderedClips} /> : null}
+
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Output trust</p>
             <h4 className="mt-3 text-xl font-semibold text-ink">What is ready now</h4>
@@ -1170,7 +1234,7 @@ export function ClipStudio({
 
   return (
     <main className="app-shell-grid min-h-screen">
-      <AIBackground />
+      <AIBackground variant={isHome ? "home" : "workspace"} />
       <AuthPanel
         isOpen={authOpen}
         mode={authMode}
@@ -1188,6 +1252,7 @@ export function ClipStudio({
         <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
           <Navbar
             items={marketingNavItems.map((item) => ({ href: item.href, label: item.label }))}
+            variant="home"
             showTagline
             rightSlot={
               <div className="flex items-center gap-2">
@@ -1228,11 +1293,22 @@ export function ClipStudio({
             }
           />
 
-          <section className="grid gap-12 pb-10 pt-16 lg:grid-cols-[1.06fr,0.94fr] lg:items-start">
+          <section
+            ref={homeStageRef}
+            onPointerMove={handleHomePointerMove}
+            onPointerLeave={handleHomePointerLeave}
+            className="home-stage grid gap-12 pb-10 pt-16 lg:grid-cols-[1.06fr,0.94fr] lg:items-start"
+          >
             <div className="space-y-7">
+              <div className="home-stage-grid" aria-hidden="true">
+                <div className="home-stage-sigil" />
+                <div className="home-stage-constellation" />
+                <div className="home-stage-fog" />
+              </div>
+
               <div className="space-y-5">
                 <div className="inline-flex items-center gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[rgba(217,181,109,0.16)] bg-[rgba(255,255,255,0.03)] shadow-neon">
+                  <span className="home-brand-mark flex h-11 w-11 items-center justify-center rounded-2xl border border-[rgba(217,181,109,0.16)] bg-[rgba(255,255,255,0.03)] shadow-neon">
                     <img src="/brand/lwa-mark.svg" alt="LWA omega mark" className="h-7 w-7" />
                   </span>
                   <p className="section-kicker">AI CLIPPING ENGINE</p>
@@ -1259,39 +1335,46 @@ export function ClipStudio({
 
               <p className="text-sm uppercase tracking-[0.24em] text-ink/56">Built for creators, clippers, and operators</p>
 
-              {/* Ranked output proof */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p className="text-xs uppercase tracking-[0.22em] text-muted">Ranked outputs</p>
-                <div className="space-y-2">
-                  {/* Top clip — trophy */}
-                  <div className="hero-card rounded-[22px] p-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgba(124,58,237,0.22)] text-base">🏆</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-ink">Lead clip · Score 92 · Post first</p>
-                        <p className="mt-0.5 truncate text-xs text-ink/56">Hook, caption, packaging, and preview ready</p>
+                <div className="grid gap-3">
+                  <div className="home-proof-card home-proof-card-lead rounded-[24px] p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-2">
+                        <p className="text-xs uppercase tracking-[0.24em] text-[#f3daa3]">Best clip first</p>
+                        <h3 className="text-lg font-semibold text-ink">Lead clip with hook, packaging, and export-ready preview.</h3>
+                        <p className="text-sm leading-6 text-ink/64">Confidence, post order, CTA, and thumbnail line stay attached to the output.</p>
                       </div>
-                      <StatPill tone="accent">Ranked #1</StatPill>
+                      <StatPill tone="accent">Post #1</StatPill>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <StatPill tone="signal">Why it matters</StatPill>
+                      <StatPill tone="neutral">Queue-ready</StatPill>
+                      <StatPill tone="neutral">Campaign-aware</StatPill>
                     </div>
                   </div>
-                  {/* Secondary clips */}
-                  {[
-                    { rank: 2, score: 88, label: "Contrarian take · Post second" },
-                    { rank: 3, score: 85, label: "Story CTA · Conversion closer" },
-                  ].map((item) => (
-                    <div key={item.rank} className="glass-panel rounded-[22px] p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-sm font-bold text-ink/60">
-                          {item.rank}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-ink/82">{item.label}</p>
-                          <p className="mt-0.5 text-xs text-ink/46">Score {item.score}</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[
+                      {
+                        title: "Next up",
+                        detail: "Second and third clips stay ranked with packaging and export state.",
+                        pill: "Post order",
+                      },
+                      {
+                        title: "Operator flow",
+                        detail: "Queue the winners, move them into campaign flow, and keep the stack moving.",
+                        pill: "Workflow",
+                      },
+                    ].map((item) => (
+                      <div key={item.title} className="glass-panel rounded-[22px] p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-ink">{item.title}</p>
+                          <StatPill tone="neutral">{item.pill}</StatPill>
                         </div>
-                        <StatPill tone="neutral">Queue-ready</StatPill>
+                        <p className="mt-3 text-sm leading-6 text-ink/60">{item.detail}</p>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -1316,6 +1399,7 @@ export function ClipStudio({
         <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
           <Navbar
             items={visibleAppNavItems.map((item) => ({ href: item.href, label: item.label }))}
+            variant="workspace"
             compactLogo
             rightSlot={
               user ? (
@@ -1666,6 +1750,53 @@ function MarketingPreview({ user }: { user: UserProfile | null }) {
           <p className="mt-3 text-sm leading-7 text-ink/62">{item.detail}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+function ReviewOrderPanel({ clips }: { clips: ClipResult[] }) {
+  const ordered = clips.slice(0, 4);
+
+  return (
+    <div className="glass-panel rounded-[28px] p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="section-kicker">Post order</p>
+          <h4 className="mt-3 text-xl font-semibold text-ink">Best clip first</h4>
+        </div>
+        <StatPill tone="accent">{ordered.length} ranked</StatPill>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {ordered.map((clip, index) => {
+          const order = clip.post_rank || clip.best_post_order || clip.rank || index + 1;
+          const detail = clip.thumbnail_text || clip.cta_suggestion || clip.packaging_angle || "Ready for review";
+          const active = index === 0;
+
+          return (
+            <div
+              key={clip.record_id || clip.clip_id || clip.id}
+              className={[
+                "review-order-card rounded-[22px] p-4",
+                active ? "review-order-card-active" : "panel-subtle",
+              ].join(" ")}
+            >
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-sm font-semibold text-ink/84">
+                  {order}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="line-clamp-1 text-sm font-semibold text-ink">{clip.hook}</p>
+                    {active ? <StatPill tone="signal">Lead</StatPill> : null}
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-xs leading-6 text-ink/62">{detail}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -21,6 +21,11 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
     featureFlags.posting_queue ? "Posting queue controls" : null,
     featureFlags.premium_exports ? "Premium exports" : null,
   ].filter(Boolean) as string[];
+  const nextUnlock = !featureFlags.premium_exports
+    ? "Pro unlocks clean exports, alt hooks, editing controls, and wallet visibility."
+    : !featureFlags.campaign_mode || !featureFlags.posting_queue
+      ? "Scale unlocks campaign workflows and posting queue controls."
+      : "All premium workflow layers are already unlocked on this plan.";
 
   return (
     <section className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
@@ -83,7 +88,10 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
           ))}
         </div>
 
-        <p className="mt-6 text-sm leading-7 text-ink/60">See your limits now and what unlocks next.</p>
+        <div className="signal-card mt-6 rounded-[24px] px-4 py-4">
+          <p className="text-xs uppercase tracking-[0.22em] text-muted">Next unlock</p>
+          <p className="mt-2 text-sm leading-7 text-ink/78">{nextUnlock}</p>
+        </div>
       </div>
     </section>
   );

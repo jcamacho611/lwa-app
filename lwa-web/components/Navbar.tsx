@@ -15,15 +15,27 @@ type NavbarProps = {
   rightSlot?: ReactNode;
   showTagline?: boolean;
   compactLogo?: boolean;
+  variant?: "home" | "workspace";
 };
 
-export default function Navbar({ items, rightSlot, showTagline = false, compactLogo = false }: NavbarProps) {
+export default function Navbar({
+  items,
+  rightSlot,
+  showTagline = false,
+  compactLogo = false,
+  variant = "workspace",
+}: NavbarProps) {
   const pathname = usePathname();
 
   return (
-    <header className="glass-panel sticky top-4 z-40 rounded-[30px] border-[rgba(217,181,109,0.12)] px-4 py-3 sm:px-5">
+    <header
+      className={[
+        "glass-panel sticky top-4 z-40 rounded-[30px] border-[rgba(217,181,109,0.12)] px-4 py-3 sm:px-5",
+        variant === "home" ? "navbar-home" : "navbar-workspace",
+      ].join(" ")}
+    >
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Logo compact={compactLogo} showTagline={showTagline} />
+        <Logo compact={compactLogo} showTagline={showTagline} animated={variant === "home"} />
 
         <nav className="order-3 flex w-full gap-2 overflow-x-auto pb-1 md:order-2 md:w-auto md:flex-1 md:justify-center md:pb-0">
           {items.map((item) => {

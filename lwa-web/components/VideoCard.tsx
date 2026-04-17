@@ -20,6 +20,7 @@ export default function VideoCard({
 }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isHovering, setIsHovering] = useState(false);
+  const [copiedHook, setCopiedHook] = useState(false);
 
   const previewUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
   const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url || null;
@@ -27,7 +28,7 @@ export default function VideoCard({
   const scoreLabel = clip.virality_score ?? clip.score;
   const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
   const whyThisHits = clip.why_this_matters || clip.reason || null;
-  const captionStyle = clip.caption_style || clip.caption_style_override || null;
+  const captionStyle = clip.caption_style || null;
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
 
   async function handleEnter() {
@@ -56,6 +57,16 @@ export default function VideoCard({
     video.currentTime = 0;
   }
 
+  async function handleCopyHook() {
+    try {
+      await navigator.clipboard.writeText(clip.hook);
+      setCopiedHook(true);
+      window.setTimeout(() => setCopiedHook(false), 1600);
+    } catch {
+      setCopiedHook(false);
+    }
+  }
+
   return (
     <article
       className="video-card group rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015)),linear-gradient(180deg,rgba(16,24,46,0.88),rgba(10,16,35,0.94))] p-4 shadow-card transition duration-300 hover:-translate-y-1 hover:border-white/16"
@@ -77,7 +88,7 @@ export default function VideoCard({
         ) : thumbnailUrl ? (
           <img src={thumbnailUrl} alt={clip.hook} className="aspect-[9/16] w-full bg-black object-cover" />
         ) : (
-          <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.24),transparent_44%),linear-gradient(180deg,#030712,#050816)] text-sm text-ink/56">
+          <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(217,181,109,0.24),transparent_44%),radial-gradient(circle_at_80%_20%,rgba(122,22,44,0.18),transparent_38%),linear-gradient(180deg,#050403,#0b0806)] text-sm text-ink/56">
             Preview unavailable
           </div>
         )}
@@ -128,6 +139,23 @@ export default function VideoCard({
           </div>
         ) : null}
 
+        {clip.thumbnail_text || clip.cta_suggestion ? (
+          <div className="clip-quick-pack grid gap-2">
+            {clip.thumbnail_text ? (
+              <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Thumbnail</p>
+                <p className="mt-1 text-xs font-medium text-ink/82">{clip.thumbnail_text}</p>
+              </div>
+            ) : null}
+            {clip.cta_suggestion ? (
+              <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-muted">CTA</p>
+                <p className="mt-1 text-xs font-medium text-ink/82">{clip.cta_suggestion}</p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -152,6 +180,13 @@ export default function VideoCard({
               Pro export
             </span>
           )}
+          <button
+            type="button"
+            onClick={() => void handleCopyHook()}
+            className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium"
+          >
+            {copiedHook ? "Hook copied" : "Copy hook"}
+          </button>
         </div>
 
         <div className="flex gap-2">

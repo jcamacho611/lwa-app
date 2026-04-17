@@ -28,6 +28,7 @@ export default function HeroClip({
 }: HeroClipProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [copiedField, setCopiedField] = useState<"hook" | "caption" | null>(null);
 
   const previewUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
   const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url || null;
@@ -37,7 +38,7 @@ export default function HeroClip({
   const confidenceLabel = confidenceScore ? `${confidenceScore}% confidence` : formatConfidence(clip.confidence);
   const scoreLabel = useMemo(() => clip.virality_score ?? clip.score, [clip.score, clip.virality_score]);
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
-  const captionStyle = clip.caption_style || clip.caption_style_override || null;
+  const captionStyle = clip.caption_style || null;
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 2);
 
   useEffect(() => {
@@ -73,6 +74,17 @@ export default function HeroClip({
     setIsPlaying(false);
   }
 
+  async function copyField(field: "hook" | "caption") {
+    const value = field === "hook" ? clip.hook : clip.caption;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      window.setTimeout(() => setCopiedField((current) => (current === field ? null : current)), 1600);
+    } catch {
+      setCopiedField(null);
+    }
+  }
+
   return (
     <section className="hero-card rounded-[34px] p-5 sm:p-6 lg:p-7 animate-fade-in">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.68fr),minmax(320px,0.32fr)] xl:items-start">
@@ -93,7 +105,7 @@ export default function HeroClip({
             ) : thumbnailUrl ? (
               <img src={thumbnailUrl} alt={clip.hook} className="aspect-[9/16] w-full bg-black object-cover" />
             ) : (
-              <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.24),transparent_44%),linear-gradient(180deg,#030712,#050816)] text-sm text-ink/56">
+              <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(217,181,109,0.24),transparent_44%),radial-gradient(circle_at_80%_20%,rgba(122,22,44,0.18),transparent_38%),linear-gradient(180deg,#050403,#0b0806)] text-sm text-ink/56">
                 Preview unavailable
               </div>
             )}
@@ -204,6 +216,20 @@ export default function HeroClip({
               ].join(" ")}
             >
               {queued ? "Queued" : "Queue clip"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void copyField("hook")}
+              className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+            >
+              {copiedField === "hook" ? "Hook copied" : "Copy hook"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void copyField("caption")}
+              className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+            >
+              {copiedField === "caption" ? "Caption copied" : "Copy caption"}
             </button>
           </div>
 
