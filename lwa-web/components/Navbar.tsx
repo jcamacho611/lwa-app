@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 import { Logo } from "./brand/Logo";
+import { rewriteSurfaceLabel } from "../lib/brand-voice";
 
 type NavItem = {
   href: string;
@@ -30,7 +31,7 @@ export default function Navbar({
   return (
     <header
       className={[
-        "glass-panel sticky top-4 z-40 rounded-[30px] border-[rgba(217,181,109,0.12)] px-4 py-3 sm:px-5",
+        "glass-panel sticky top-4 z-40 rounded-[30px] border-white/8 px-4 py-3 sm:px-5",
         variant === "home" ? "navbar-home" : "navbar-workspace",
       ].join(" ")}
     >
@@ -49,7 +50,7 @@ export default function Navbar({
                   active ? "nav-pill-active" : "",
                 ].join(" ")}
               >
-                {item.label}
+                {rewriteSurfaceLabel(item.label)}
               </Link>
             );
           })}

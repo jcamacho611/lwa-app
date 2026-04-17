@@ -105,7 +105,7 @@ export default function HeroClip({
             ) : thumbnailUrl ? (
               <img src={thumbnailUrl} alt={clip.hook} className="aspect-[9/16] w-full bg-black object-cover" />
             ) : (
-              <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(217,181,109,0.24),transparent_44%),radial-gradient(circle_at_80%_20%,rgba(122,22,44,0.18),transparent_38%),linear-gradient(180deg,#050403,#0b0806)] text-sm text-ink/56">
+              <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,30,86,0.24),transparent_44%),radial-gradient(circle_at_80%_20%,rgba(0,231,255,0.14),transparent_38%),linear-gradient(180deg,#040405,#0d080b)] text-sm text-ink/56">
                 Preview unavailable
               </div>
             )}
@@ -203,7 +203,7 @@ export default function HeroClip({
                 Export clip
               </a>
             ) : (
-              <span className="rounded-full border border-neonPurple/20 bg-neonPurple/10 px-4 py-3 text-sm text-[#fff4d4]">
+              <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-3 text-sm text-[#ffe4eb]">
                 Pro export
               </span>
             )}
@@ -212,7 +212,7 @@ export default function HeroClip({
               onClick={() => onToggleQueue?.(clip)}
               className={[
                 "secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium",
-                queued ? "border-neonPurple/30 bg-neonPurple/15 text-white shadow-neon" : "",
+                queued ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.18),rgba(255,45,166,0.1))] text-white shadow-crimson" : "",
               ].join(" ")}
             >
               {queued ? "Queued" : "Queue clip"}
