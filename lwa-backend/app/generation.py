@@ -73,16 +73,13 @@ async def generate_clips(
         except Exception as error:
             logger.warning("clip_intelligence_fallback mode=ollama reason=%s", error)
 
-    clips = build_mock_clips(
+    clips = build_fallback_clips(
         video_url=video_url,
         target_platform=target_platform,
         selected_trend=selected_trend,
         content_angle=content_angle,
         trend_context=trend_context,
-        clip_urls=[seed.clip_url for seed in source_context.clip_seeds] if source_context else None,
-        start_end_pairs=[(seed.start_time, seed.end_time) for seed in source_context.clip_seeds] if source_context else None,
-        source_title=source_context.title if source_context else None,
-        transcript_excerpts=[seed.transcript_excerpt for seed in source_context.clip_seeds] if source_context else None,
+        source_context=source_context,
     )
     logger.info("clip_intelligence_mode mode=fallback clips_scored=%s", len(clips))
     logger.info("clip_ranking_complete mode=fallback ranked=%s", len(clips))
@@ -172,20 +169,17 @@ def parse_generated_clips(
 
     if not clips:
         logger.warning("clip_intelligence_fallback mode=model_response reason=empty_clip_payload")
-        return build_mock_clips(
+        return build_fallback_clips(
             video_url=video_url,
             target_platform=target_platform,
             selected_trend=selected_trend,
             content_angle=content_angle,
             trend_context=trend_context,
-            clip_urls=[seed.clip_url for seed in source_context.clip_seeds] if source_context else None,
-            start_end_pairs=[(seed.start_time, seed.end_time) for seed in source_context.clip_seeds] if source_context else None,
-            source_title=source_context.title if source_context else None,
-            transcript_excerpts=[seed.transcript_excerpt for seed in source_context.clip_seeds] if source_context else None,
+            source_context=source_context,
         )
 
     normalized: list[ClipResult] = []
-    for index, clip in enumerate(clips[:3], start=1):
+    for index, clip in enumerate(clips, start=1):
         seed = source_context.clip_seeds[index - 1] if source_context and len(source_context.clip_seeds) >= index else None
         hook = str(clip.get("hook", "Lead with a strong hook."))
         title = str(clip.get("title", f"{target_platform} Clip {index}"))
@@ -291,6 +285,134 @@ def parse_generated_clips(
     return finalized
 
 
+def build_fallback_clips(
+    *,
+    video_url: str,
+    target_platform: str,
+    selected_trend: Optional[str],
+    content_angle: Optional[str],
+    trend_context: List[TrendItem],
+    source_context: Optional[SourceContext] = None,
+) -> List[ClipResult]:
+    if source_context and source_context.clip_seeds:
+        return build_source_grounded_fallback_clips(
+            target_platform=target_platform,
+            selected_trend=selected_trend,
+            content_angle=content_angle,
+            trend_context=trend_context,
+            source_context=source_context,
+        )
+
+    return build_mock_clips(
+        video_url=video_url,
+        target_platform=target_platform,
+        selected_trend=selected_trend,
+        content_angle=content_angle,
+        trend_context=trend_context,
+        clip_urls=[seed.clip_url for seed in source_context.clip_seeds] if source_context else None,
+        start_end_pairs=[(seed.start_time, seed.end_time) for seed in source_context.clip_seeds] if source_context else None,
+        source_title=source_context.title if source_context else None,
+        transcript_excerpts=[seed.transcript_excerpt for seed in source_context.clip_seeds] if source_context else None,
+    )
+
+
+def build_source_grounded_fallback_clips(
+    *,
+    target_platform: str,
+    selected_trend: Optional[str],
+    content_angle: Optional[str],
+    trend_context: List[TrendItem],
+    source_context: SourceContext,
+) -> List[ClipResult]:
+    preferred_angle = (content_angle or "").strip().lower()
+    lead_trend = selected_trend or (trend_context[0].title if trend_context else None)
+    normalized: list[ClipResult] = []
+
+    for index, seed in enumerate(source_context.clip_seeds, start=1):
+        source_phrase = str_or_fallback(
+            seed.transcript_excerpt,
+            source_context.visual_summary or source_context.description or source_context.title,
+        )
+        title_focus = default_thumbnail_text(title=source_context.title or target_platform, hook=source_phrase)
+        title = f"{title_focus} Clip"
+        packaging_angle = preferred_angle if preferred_angle in {"shock", "story", "value", "curiosity", "controversy"} else default_packaging_angle(
+            title=title,
+            hook=source_phrase,
+            transcript_excerpt=source_phrase,
+        )
+        score = clamp_score(None, fallback=max(64, 95 - ((index - 1) * 3)))
+        confidence = clamp_confidence(None, fallback=max(min(score / 100.0, 0.96), 0.58))
+        hook = build_source_grounded_hook(
+            source_phrase=source_phrase,
+            packaging_angle=packaging_angle,
+            target_platform=target_platform,
+            lead_trend=lead_trend,
+            post_rank=index,
+        )
+        caption = build_source_grounded_caption(
+            source_phrase=source_phrase,
+            target_platform=target_platform,
+            source_context=source_context,
+        )
+        reason = build_source_grounded_reason(
+            source_phrase=source_phrase,
+            target_platform=target_platform,
+            packaging_angle=packaging_angle,
+            post_rank=index,
+        )
+
+        normalized.append(
+            ClipResult(
+                id=seed.id,
+                title=title,
+                hook=hook,
+                caption=caption,
+                start_time=seed.start_time,
+                end_time=seed.end_time,
+                score=score,
+                virality_score=score,
+                confidence=confidence,
+                rank=index,
+                reason=reason,
+                format=seed.format or "Ranked cut",
+                clip_url=seed.clip_url,
+                raw_clip_url=seed.raw_clip_url,
+                preview_image_url=seed.preview_image_url,
+                transcript_excerpt=seed.transcript_excerpt,
+                edit_profile="Source-grounded fallback",
+                aspect_ratio="source",
+                why_this_matters=default_why_this_matters(
+                    title=title_focus,
+                    target_platform=target_platform,
+                    post_rank=index,
+                ),
+                confidence_score=max(int(round(confidence * 100)), 58),
+                thumbnail_text=default_thumbnail_text(title=title, hook=hook),
+                cta_suggestion=default_cta_suggestion(target_platform=target_platform, post_rank=index),
+                post_rank=index,
+                best_post_order=index,
+                hook_variants=default_hook_variants(
+                    hook=hook,
+                    title=title,
+                    selected_trend=lead_trend,
+                    target_platform=target_platform,
+                    packaging_angle=packaging_angle,
+                ),
+                caption_variants={
+                    "viral": caption,
+                    "story": f"{source_context.title or 'This source'} lands because the payoff shows up fast and the framing stays tight.",
+                },
+                caption_style=default_caption_style(target_platform),
+                platform_fit=default_platform_fit(target_platform=target_platform, packaging_angle=packaging_angle),
+                packaging_angle=packaging_angle,
+                duration=seed.duration,
+            )
+        )
+
+    logger.info("clip_intelligence_mode mode=source_grounded_fallback clips_scored=%s", len(normalized))
+    return normalized
+
+
 def build_generation_prompt(
     video_url: str,
     target_platform: str,
@@ -367,6 +489,56 @@ def build_seed_lines(clip_seeds: Optional[List[ClipSeed]]) -> str:
         )
         for seed in clip_seeds
     )
+
+
+def build_source_grounded_hook(
+    *,
+    source_phrase: str,
+    packaging_angle: str,
+    target_platform: str,
+    lead_trend: Optional[str],
+    post_rank: int,
+) -> str:
+    focus = compact_phrase(source_phrase)
+    trend = lead_trend or focus
+
+    if packaging_angle == "controversy":
+        return f"Most creators still frame {trend} the wrong way. This cut gets to the point fast."
+    if packaging_angle == "story":
+        return f"This is the moment {trend} actually turns into a clip worth posting."
+    if packaging_angle == "shock":
+        return f"Stop scrolling. This {target_platform} cut gets the payoff on screen immediately."
+    if packaging_angle == "curiosity":
+        return f"Here is the {trend} moment most people skip before the payoff hits."
+    if post_rank == 1:
+        return f"If you post one {target_platform} clip first, make it the {trend} cut."
+    return f"This {target_platform} clip keeps the {trend} angle moving without extra setup."
+
+
+def build_source_grounded_caption(
+    *,
+    source_phrase: str,
+    target_platform: str,
+    source_context: SourceContext,
+) -> str:
+    source_label = source_context.title or source_context.source_platform or "the source"
+    summary = source_phrase.strip()
+    if len(summary) > 180:
+        summary = f"{summary[:177].rstrip()}..."
+    return f"Pulled from {source_label} for {target_platform}: {summary}"
+
+
+def build_source_grounded_reason(
+    *,
+    source_phrase: str,
+    target_platform: str,
+    packaging_angle: str,
+    post_rank: int,
+) -> str:
+    focus = compact_phrase(source_phrase)
+    if post_rank == 1:
+        return f"This is the strongest opener because the {focus} payoff lands quickly with a clear {packaging_angle} frame for {target_platform}."
+    return f"This works later in the stack because it keeps the {focus} angle moving with a cleaner {packaging_angle} follow-through for {target_platform}."
 
 
 def parse_int(value: object, fallback: int) -> int:
