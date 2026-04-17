@@ -183,6 +183,14 @@ async def get_processing_job(job_id: str, http_request: Request) -> JobStatusRes
     if not persisted:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    if persisted["status"] in {"queued", "processing"}:
+        recovery_message = "Generation was interrupted after a backend restart. Retry the run to continue."
+        persisted = platform_store.interrupt_job(
+            job_id=job_id,
+            message=recovery_message,
+            error_text="Job state was lost during a backend restart. Retry generation to continue.",
+        ) or persisted
+
     return JobStatusResponse(
         job_id=str(persisted["id"]),
         status=str(persisted["status"]),

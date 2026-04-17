@@ -520,8 +520,14 @@ export function ClipStudio({
           break;
         }
 
-        if (status.status === "failed") {
-          throw new ApiError(status.error || status.message || "Unable to generate clips right now.", 500);
+        if (status.status === "failed" || status.status === "interrupted") {
+          throw new Error(
+            status.error ||
+              status.message ||
+              (status.status === "interrupted"
+                ? "Generation was interrupted. Retry the run to continue."
+                : "Unable to generate clips right now."),
+          );
         }
 
         await waitForNextJobPoll(1500);

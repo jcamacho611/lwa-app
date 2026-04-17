@@ -122,6 +122,29 @@ class PersistedJobStatusTests(unittest.TestCase):
         self.assertEqual(payload["message"], "Processing failed.")
         self.assertEqual(payload["error"], "ffmpeg exited with code 1")
 
+    def test_processing_job_is_marked_interrupted_when_memory_is_gone(self) -> None:
+        self._store.create_job(
+            job_id="job_interrupted",
+            user_id=None,
+            campaign_id=None,
+            source_type="url",
+            source_value="https://example.com/source.mp4",
+            status="queued",
+            message="Job queued.",
+        )
+        self._store.update_job(
+            job_id="job_interrupted",
+            status="processing",
+            message="Rendering vertical exports, overlays, and preview assets.",
+        )
+
+        http_response = self.client.get("/v1/jobs/job_interrupted")
+        self.assertEqual(http_response.status_code, 200)
+        payload = http_response.json()
+        self.assertEqual(payload["status"], "interrupted")
+        self.assertIn("backend restart", payload["message"].lower())
+        self.assertIn("retry", payload["error"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()

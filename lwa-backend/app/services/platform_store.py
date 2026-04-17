@@ -993,6 +993,29 @@ class PlatformStore:
         payload["error"] = payload.get("error_text")
         return payload
 
+    def interrupt_job(
+        self,
+        *,
+        job_id: str,
+        message: str,
+        error_text: str,
+    ) -> Optional[dict[str, Any]]:
+        updated_at = utcnow()
+        with self._lock, self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE jobs
+                SET status = 'interrupted',
+                    message = ?,
+                    updated_at = ?,
+                    error_text = ?
+                WHERE id = ?
+                  AND status IN ('queued', 'processing')
+                """,
+                (message, updated_at, error_text, job_id),
+            )
+        return self.get_job(job_id)
+
     def persist_clip_batch(
         self,
         *,
