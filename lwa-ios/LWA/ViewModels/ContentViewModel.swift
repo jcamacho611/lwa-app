@@ -185,8 +185,8 @@ final class ContentViewModel: ObservableObject {
 
     var bestClip: ClipResult? {
         clips.sorted { lhs, rhs in
-            let lhsRank = lhs.rank ?? lhs.postRank ?? Int.max
-            let rhsRank = rhs.rank ?? rhs.postRank ?? Int.max
+            let lhsRank = lhs.postRank ?? lhs.bestPostOrder ?? lhs.rank ?? Int.max
+            let rhsRank = rhs.postRank ?? rhs.bestPostOrder ?? rhs.rank ?? Int.max
             if lhsRank != rhsRank {
                 return lhsRank < rhsRank
             }

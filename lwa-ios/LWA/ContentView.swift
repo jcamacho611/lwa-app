@@ -1458,7 +1458,7 @@ private extension ClipResult {
     }
 
     var displayRank: Int? {
-        rank ?? postRank
+        postRank ?? bestPostOrder ?? rank
     }
 
     var compilerConfidenceValue: String? {
@@ -1482,11 +1482,11 @@ private extension ClipResult {
     }
 
     var primaryReason: String? {
-        if let reason, !reason.isEmpty {
-            return reason
-        }
         if let whyThisMatters, !whyThisMatters.isEmpty {
             return whyThisMatters
+        }
+        if let reason, !reason.isEmpty {
+            return reason
         }
         return nil
     }
