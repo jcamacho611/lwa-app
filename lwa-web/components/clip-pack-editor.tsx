@@ -212,14 +212,14 @@ export function ClipPackEditor({ clipPack, onSave, onClose, readOnly = false, lo
             >
               {readOnly ? "Upgrade to edit" : isSaving ? "Saving..." : "Save Clip Changes"}
             </button>
-            {selectedClip.edited_clip_url || selectedClip.clip_url ? (
+            {selectedClip.preview_url || selectedClip.download_url || selectedClip.edited_clip_url || selectedClip.clip_url ? (
               <a
-                href={selectedClip.edited_clip_url || selectedClip.clip_url || "#"}
+                href={selectedClip.download_url || selectedClip.preview_url || selectedClip.edited_clip_url || selectedClip.clip_url || "#"}
                 target="_blank"
                 rel="noreferrer"
                 className="secondary-button rounded-full px-5 py-3 text-sm font-medium"
               >
-                Open Clip Asset
+                {selectedClip.download_url ? "Open export" : "Open preview"}
               </a>
             ) : null}
             {message ? <span className="text-sm text-accent">{message}</span> : null}

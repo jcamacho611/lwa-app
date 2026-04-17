@@ -815,6 +815,8 @@ export function ClipStudio({
     [orderedClips],
   );
   const exportReadyCount = useMemo(() => orderedClips.filter((clip) => clip.download_url).length, [orderedClips]);
+  const leadPreviewReady = Boolean(result?.preview_asset_url);
+  const leadExportReady = Boolean(result?.download_asset_url);
   const sourceTruthSummary = useMemo(() => {
     const content = result?.transcript || result?.visual_summary || "This source was processed into ranked short-form outputs.";
     if (!content) {
@@ -1262,37 +1264,43 @@ export function ClipStudio({
           <div className="glass-panel rounded-[28px] p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
-                <p className="section-kicker">Source truth</p>
+                <p className="section-kicker">Lead asset</p>
                 <h4 className="mt-3 text-2xl font-semibold text-ink">{result.source_title || "Processed source"}</h4>
                 <p className="mt-3 text-sm leading-7 text-ink/70">{sourceTruthSummary}</p>
               </div>
               <div className="flex flex-wrap gap-3">
-                {result.preview_asset_url ? (
+                {leadPreviewReady ? (
                   <a
-                    href={result.preview_asset_url}
+                    href={result.preview_asset_url || undefined}
                     target="_blank"
                     rel="noreferrer"
                     className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
                   >
-                    Open source
+                    Open lead preview
                   </a>
                 ) : null}
-                {result.download_asset_url ? (
+                {leadExportReady ? (
                   <a
-                    href={result.download_asset_url}
+                    href={result.download_asset_url || undefined}
                     download
                     className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
                   >
-                    Export source
+                    Export lead asset
                   </a>
                 ) : (
                   <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-2 text-sm text-[#ffe4eb]">
-                    Pro export
+                    Upgrade for export
                   </span>
                 )}
               </div>
             </div>
           </div>
+
+          {!previewReadyCount ? (
+            <InlineAlert tone="violet" title="Preview pending">
+              The intelligence pack is ready, but no playable preview asset came back from this source. Review the copy and ranking now, then retry with a longer or cleaner source if you need a rendered cut.
+            </InlineAlert>
+          ) : null}
 
           {featuredClip ? (
             <div className="space-y-3">
@@ -1340,9 +1348,27 @@ export function ClipStudio({
             <p className="section-kicker">{RESULTS_COPY.outputTrust}</p>
             <h4 className="mt-3 text-xl font-semibold text-ink">What is ready now</h4>
             <div className="mt-4 grid gap-3">
-              <MetricTile label="Playable clips" value={String(previewReadyCount)} detail="Preview-ready assets in this pack" />
-              <MetricTile label="Export unlocked" value={String(exportReadyCount)} detail={exportReadyCount ? "Clips ready to download now" : "Upgrade unlocks direct clip export"} />
-              <MetricTile label="Source preview" value={result.preview_asset_url ? "Yes" : "No"} detail="Open the processed source beside the ranked cuts" />
+              <MetricTile
+                label="Playable clips"
+                value={String(previewReadyCount)}
+                detail={previewReadyCount ? "Playable previews are live in this pack" : "No playable previews came back yet"}
+              />
+              <MetricTile
+                label="Export unlocked"
+                value={String(exportReadyCount)}
+                detail={
+                  exportReadyCount
+                    ? "Downloads are live now"
+                    : activeFeatureFlags.premium_exports
+                      ? "No clip export came back yet"
+                      : "Upgrade unlocks direct clip export"
+                }
+              />
+              <MetricTile
+                label="Lead preview"
+                value={leadPreviewReady ? "Yes" : "No"}
+                detail={leadPreviewReady ? "Open the lead asset beside the ranked cuts" : "No lead preview asset came back yet"}
+              />
             </div>
           </div>
 

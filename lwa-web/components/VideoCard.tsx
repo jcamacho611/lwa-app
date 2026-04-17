@@ -25,6 +25,9 @@ export default function VideoCard({
   const previewUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
   const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url || null;
   const downloadUrl = clip.download_url || null;
+  const hasPlayablePreview = Boolean(previewUrl);
+  const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
+  const previewStateLabel = hasPlayablePreview ? "Preview ready" : hasStillPreview ? "Still frame" : "Render pending";
   const scoreLabel = clip.virality_score ?? clip.score;
   const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
   const whyThisHits = clip.why_this_matters || clip.reason || null;
@@ -74,10 +77,10 @@ export default function VideoCard({
       onMouseLeave={handleLeave}
     >
       <div className="video-shell overflow-hidden rounded-[22px] border border-white/10 bg-black/60">
-        {previewUrl ? (
+        {hasPlayablePreview ? (
           <video
             ref={videoRef}
-            src={previewUrl}
+            src={previewUrl || undefined}
             poster={thumbnailUrl || undefined}
             className="aspect-[9/16] w-full bg-black object-cover transition duration-300 group-hover:scale-[1.01]"
             muted
@@ -97,7 +100,7 @@ export default function VideoCard({
           <div className="flex items-center justify-between gap-3">
             <span className="status-chip status-submitted">Score {scoreLabel}</span>
             <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/82 backdrop-blur">
-              {isHovering ? "Previewing" : "Hover to play"}
+              {hasPlayablePreview ? (isHovering ? "Previewing" : "Hover to play") : previewStateLabel}
             </span>
           </div>
         </div>
@@ -139,6 +142,17 @@ export default function VideoCard({
           </div>
         ) : null}
 
+        <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
+          <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Preview status</p>
+          <p className="mt-1 text-xs font-medium text-ink/82">
+            {hasPlayablePreview
+              ? "Playable preview is ready."
+              : hasStillPreview
+                ? "Still frame is ready. No playable clip came back for this cut."
+                : "Strategy is ready, but no preview asset came back."}
+          </p>
+        </div>
+
         {clip.thumbnail_text || clip.cta_suggestion ? (
           <div className="clip-quick-pack grid gap-2">
             {clip.thumbnail_text ? (
@@ -177,9 +191,19 @@ export default function VideoCard({
             </a>
           ) : (
             <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-2 text-sm text-[#ffe4eb]">
-              Pro export
+              Upgrade for export
             </span>
           )}
+          {hasPlayablePreview ? (
+            <a
+              href={previewUrl || undefined}
+              target="_blank"
+              rel="noreferrer"
+              className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium"
+            >
+              Open preview
+            </a>
+          ) : null}
           <button
             type="button"
             onClick={() => void handleCopyHook()}
