@@ -33,6 +33,9 @@ export default function HeroClip({
   const previewUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
   const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url || null;
   const downloadUrl = clip.download_url || null;
+  const hasPlayablePreview = Boolean(previewUrl);
+  const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
+  const previewStateLabel = hasPlayablePreview ? "Preview ready" : hasStillPreview ? "Still frame" : "Render pending";
   const whyThisHits = clip.why_this_matters || clip.reason || "Clear setup, quick payoff, and packaging built to travel.";
   const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
   const confidenceLabel = confidenceScore ? `${confidenceScore}% confidence` : formatConfidence(clip.confidence);
@@ -90,10 +93,10 @@ export default function HeroClip({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.68fr),minmax(320px,0.32fr)] xl:items-start">
         <div className="space-y-4">
           <div className="video-shell overflow-hidden rounded-[28px] border border-white/10 bg-black/50">
-            {previewUrl ? (
+            {hasPlayablePreview ? (
               <video
                 ref={videoRef}
-                src={previewUrl}
+                src={previewUrl || undefined}
                 poster={thumbnailUrl || undefined}
                 className="aspect-[9/16] w-full bg-black object-cover"
                 autoPlay
@@ -114,6 +117,7 @@ export default function HeroClip({
               <div className="flex flex-wrap gap-2">
                 <span className="status-chip status-approved">Lead clip</span>
                 <span className="status-chip status-submitted">Score {scoreLabel}</span>
+                <span className="status-chip status-ready">{previewStateLabel}</span>
                 {clip.platform_fit ? <span className="status-chip status-ready">{clip.platform_fit}</span> : null}
               </div>
               {postRank ? <span className="status-chip status-draft">Post #{postRank}</span> : null}
@@ -152,9 +156,20 @@ export default function HeroClip({
           </div>
 
           <div className="signal-card rounded-[24px] p-4">
-              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Why this lands</p>
-              <p className="text-sm leading-6 text-ink/82">{whyThisHits}</p>
-            </div>
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Why this lands</p>
+            <p className="text-sm leading-6 text-ink/82">{whyThisHits}</p>
+          </div>
+
+          <div className="metric-tile rounded-[24px] p-4">
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Preview status</p>
+            <p className="text-sm leading-6 text-ink/82">
+              {hasPlayablePreview
+                ? "Playable preview is ready now."
+                : hasStillPreview
+                  ? "A still preview is ready, but a playable render did not come back for this cut."
+                  : "This cut came back with strategy only. Try a different source if you need a playable preview."}
+            </p>
+          </div>
 
           <div className="grid gap-3 md:grid-cols-2">
             {clip.thumbnail_text ? (
@@ -185,7 +200,7 @@ export default function HeroClip({
           ) : null}
 
           <div className="flex flex-wrap gap-3">
-            {previewUrl ? (
+            {hasPlayablePreview ? (
               <button
                 type="button"
                 onClick={() => void togglePlayback()}
@@ -193,6 +208,16 @@ export default function HeroClip({
               >
                 {isPlaying ? "Pause clip" : "Play clip"}
               </button>
+            ) : null}
+            {hasPlayablePreview ? (
+              <a
+                href={previewUrl || undefined}
+                target="_blank"
+                rel="noreferrer"
+                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+              >
+                Open preview
+              </a>
             ) : null}
             {downloadUrl ? (
               <a
@@ -204,7 +229,7 @@ export default function HeroClip({
               </a>
             ) : (
               <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-3 text-sm text-[#ffe4eb]">
-                Pro export
+                Upgrade for export
               </span>
             )}
             <button

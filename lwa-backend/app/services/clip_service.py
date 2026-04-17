@@ -218,6 +218,8 @@ async def build_clip_response(
     preview_asset_url = resolve_preview_asset_url(clips=clips, source_context=source_context)
     download_asset_url = resolve_download_asset_url(clips=clips, source_context=source_context, entitlement=entitlement)
     thumbnail_url = resolve_thumbnail_url(clips=clips, source_context=source_context)
+    preview_ready_count = len([clip for clip in clips if clip.preview_url or clip.edited_clip_url or clip.clip_url or clip.raw_clip_url])
+    export_ready_count = len([clip for clip in clips if clip.download_url])
 
     response = ClipBatchResponse(
         request_id=request_id,
@@ -234,11 +236,11 @@ async def build_clip_response(
         processing_summary=ProcessingSummary(
             plan_name=entitlement.plan.name,
             credits_remaining=entitlement.credits_remaining,
-            estimated_turnaround="ready now" if assets_created else settings.default_turnaround,
-            recommended_next_step=(
-                "Open the edited clip, test it with real creators, then use those results to justify paid tiers."
-                if assets_created
-                else "No valid clips were produced. Try a different source video or a longer recording."
+            estimated_turnaround="preview ready now" if preview_ready_count else settings.default_turnaround,
+            recommended_next_step=build_recommended_next_step(
+                preview_ready_count=preview_ready_count,
+                export_ready_count=export_ready_count,
+                entitlement=entitlement,
             ),
             ai_provider=compiler_mode or provider_used,
             target_platform=target_platform,
@@ -379,6 +381,21 @@ def resolve_thumbnail_url(*, clips: list, source_context) -> str | None:
     if source_context:
         return source_context.thumbnail_url
     return None
+
+
+def build_recommended_next_step(
+    *,
+    preview_ready_count: int,
+    export_ready_count: int,
+    entitlement: EntitlementContext,
+) -> str:
+    if export_ready_count:
+        return "Open the lead preview, review the ranked cuts, then export the winners."
+    if preview_ready_count and not entitlement.plan.feature_flags.premium_exports:
+        return "Open the lead preview now. Upgrade when you want clean clip exports."
+    if preview_ready_count:
+        return "Open the lead preview now. Export will appear once rendering finishes."
+    return "The intelligence pack is ready, but no playable preview was produced. Try a longer or cleaner source."
 
 
 async def emit_progress(
