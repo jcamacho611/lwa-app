@@ -11,6 +11,11 @@ from openai import OpenAI
 from ..core.config import Settings
 from ..models.schemas import ClipResult
 from ..processor import SourceContext
+from .anthropic_service import (
+    anthropic_available,
+    generate_clip_packaging_with_opus,
+    generate_clip_packaging_with_sonnet,
+)
 from .ai_service import resolve_attention_mode
 
 logger = logging.getLogger("uvicorn.error")
@@ -26,13 +31,31 @@ async def compile_attention(
     selected_trend: Optional[str],
     content_angle: Optional[str],
     source_context: Optional[SourceContext],
+    premium_reasoning: bool = False,
 ) -> tuple[list[ClipResult], str]:
-    mode = resolve_attention_mode(settings)
+    mode = resolve_attention_mode(settings, premium_reasoning=premium_reasoning)
     logger.info("attention_compiler_start mode=%s clips=%s", mode, len(clips))
 
     if not clips:
         logger.info("attention_compiler_end mode=%s clips=0", mode)
         return clips, mode
+
+    if mode == "anthropic" and anthropic_available(settings):
+        try:
+            compiled = await asyncio.to_thread(
+                compile_with_anthropic,
+                settings,
+                clips,
+                target_platform,
+                selected_trend,
+                content_angle,
+                source_context,
+                premium_reasoning,
+            )
+            logger.info("attention_compiler_end mode=anthropic clips=%s", len(compiled))
+            return compiled, "anthropic-opus" if premium_reasoning else "anthropic-sonnet"
+        except Exception as error:
+            logger.warning("attention_compiler_fallback mode=anthropic reason=%s", error)
 
     if mode == "openai":
         try:
@@ -59,6 +82,47 @@ async def compile_attention(
     )
     logger.info("attention_compiler_end mode=fallback clips=%s", len(compiled))
     return compiled, "fallback"
+
+
+def compile_with_anthropic(
+    settings: Settings,
+    clips: list[ClipResult],
+    target_platform: str,
+    selected_trend: Optional[str],
+    content_angle: Optional[str],
+    source_context: Optional[SourceContext],
+    premium_reasoning: bool,
+) -> list[ClipResult]:
+    prompt = build_attention_prompt(
+        clips=clips,
+        target_platform=target_platform,
+        selected_trend=selected_trend,
+        content_angle=content_angle,
+        source_context=source_context,
+    )
+    if premium_reasoning:
+        raw = generate_clip_packaging_with_opus(settings=settings, prompt=prompt)
+    else:
+        raw = generate_clip_packaging_with_sonnet(settings=settings, prompt=prompt)
+
+    try:
+        payload = json.loads(raw)
+    except Exception as error:
+        raise RuntimeError(f"invalid compiler payload: {error}") from error
+
+    entries = payload.get("clips", [])
+    if not isinstance(entries, list) or not entries:
+        raise RuntimeError("empty compiler payload")
+
+    compiled = merge_compiler_entries(
+        clips=clips,
+        entries=entries,
+        target_platform=target_platform,
+        selected_trend=selected_trend,
+        content_angle=content_angle,
+        source_context=source_context,
+    )
+    return rank_compiled_clips(compiled)
 
 
 def compile_with_openai(

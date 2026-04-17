@@ -27,11 +27,9 @@ export function Logo({
       </span>
       {compact ? null : (
         <span className="flex min-w-0 flex-col">
-          <img
-            src="/brand/lwa-wordmark.svg"
-            alt="LWA"
-            className={["h-6 w-auto max-w-[170px]", animated ? "logo-wordmark-glow" : ""].join(" ")}
-          />
+          <span className={["logo-wordmark-display", animated ? "logo-wordmark-glow" : ""].join(" ")}>
+            LWA
+          </span>
           {showTagline ? (
             <span className="mt-0.5 text-[11px] uppercase tracking-[0.26em] text-muted">
               Ranked clips. Move first.

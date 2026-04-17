@@ -1,8 +1,22 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { Inter, Zen_Kaku_Gothic_New } from "next/font/google";
 import { resolveDirection, resolveLocale } from "../lib/intl";
 import { siteUrl } from "../lib/seo";
 import "./globals.css";
+
+const bodyFont = Inter({
+  subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
+});
+
+const displayFont = Zen_Kaku_Gothic_New({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-display",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -50,7 +64,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
   return (
     <html lang={locale} dir={direction} className="dark" suppressHydrationWarning>
-      <body className="bg-bgDark text-white antialiased">{children}</body>
+      <body className={`${bodyFont.variable} ${displayFont.variable} bg-bgDark text-white antialiased`}>{children}</body>
     </html>
   );
 }

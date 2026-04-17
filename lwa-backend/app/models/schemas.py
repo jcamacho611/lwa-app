@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -144,6 +144,42 @@ class JobStatusResponse(BaseModel):
     created_at: str
     updated_at: str
     result: Optional[ClipBatchResponse] = None
+    error: Optional[str] = None
+
+
+class SeedanceBackgroundRequest(BaseModel):
+    prompt: str
+    style_preset: Optional[str] = None
+    motion_profile: Optional[str] = None
+    duration_seconds: int = Field(default=6, ge=1, le=30)
+    aspect_ratio: str = "9:16"
+    seed: Optional[int] = None
+    reference_image_url: Optional[str] = None
+    source_clip_url: Optional[str] = None
+    source_asset_id: Optional[str] = None
+
+
+class SeedanceAssetResponse(BaseModel):
+    asset_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SeedanceJobResponse(BaseModel):
+    job_id: str
+    status: str
+    message: str
+    poll_url: str
+    asset: Optional[SeedanceAssetResponse] = None
+
+
+class SeedanceJobStatusResponse(BaseModel):
+    job_id: str
+    status: str
+    message: str
+    created_at: str
+    updated_at: str
+    asset: Optional[SeedanceAssetResponse] = None
     error: Optional[str] = None
 
 

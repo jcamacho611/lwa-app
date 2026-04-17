@@ -12,6 +12,11 @@ from .config import Settings
 from .mock_data import build_mock_clips
 from .processor import ClipSeed, SourceContext
 from .schemas import ClipResult, TrendItem
+from .services.anthropic_service import (
+    anthropic_available,
+    generate_clip_packaging_with_opus,
+    generate_clip_packaging_with_sonnet,
+)
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -20,6 +25,8 @@ def determine_provider(settings: Settings) -> str:
     provider = settings.ai_provider.lower()
 
     if provider == "auto":
+        if anthropic_available(settings):
+            return "anthropic"
         if settings.openai_api_key:
             return "openai"
         if settings.ollama_base_url:
@@ -38,8 +45,26 @@ async def generate_clips(
     content_angle: Optional[str],
     trend_context: List[TrendItem],
     source_context: Optional[SourceContext] = None,
+    premium_reasoning: bool = False,
 ) -> tuple[List[ClipResult], str]:
     provider = determine_provider(settings)
+
+    if provider == "anthropic":
+        try:
+            clips, used_provider = await generate_with_anthropic(
+                settings=settings,
+                video_url=video_url,
+                target_platform=target_platform,
+                selected_trend=selected_trend,
+                content_angle=content_angle,
+                trend_context=trend_context,
+                source_context=source_context,
+                premium_reasoning=premium_reasoning,
+            )
+            logger.info("clip_intelligence_mode mode=%s clips_scored=%s", used_provider, len(clips))
+            return clips, used_provider
+        except Exception as error:
+            logger.warning("clip_intelligence_fallback mode=anthropic reason=%s", error)
 
     if provider == "openai" and settings.openai_api_key:
         try:
@@ -151,6 +176,43 @@ async def generate_with_openai(
     ), "openai"
 
 
+async def generate_with_anthropic(
+    *,
+    settings: Settings,
+    video_url: str,
+    target_platform: str,
+    selected_trend: Optional[str],
+    content_angle: Optional[str],
+    trend_context: List[TrendItem],
+    source_context: Optional[SourceContext] = None,
+    premium_reasoning: bool = False,
+) -> tuple[List[ClipResult], str]:
+    prompt = build_generation_prompt(
+        video_url,
+        target_platform,
+        selected_trend,
+        content_angle,
+        trend_context,
+        source_context,
+    )
+    if premium_reasoning:
+        raw = generate_clip_packaging_with_opus(settings=settings, prompt=prompt)
+        used_provider = "anthropic-opus"
+    else:
+        raw = generate_clip_packaging_with_sonnet(settings=settings, prompt=prompt)
+        used_provider = "anthropic-sonnet"
+
+    return parse_generated_clips(
+        raw,
+        video_url,
+        target_platform,
+        selected_trend,
+        content_angle,
+        trend_context,
+        source_context,
+    ), used_provider
+
+
 def parse_generated_clips(
     raw: str,
     video_url: str,
@@ -246,6 +308,12 @@ def parse_generated_clips(
                     hook=hook,
                     title=title,
                     selected_trend=selected_trend,
+                    target_platform=target_platform,
+                    packaging_angle=packaging_angle,
+                ),
+                caption_variants=parse_caption_variants(
+                    clip.get("caption_variants"),
+                    caption=caption,
                     target_platform=target_platform,
                     packaging_angle=packaging_angle,
                 ),
@@ -429,8 +497,9 @@ def build_generation_prompt(
     transcript_text = (source_context.transcript[:1800] if source_context and source_context.transcript else "No transcript available.")
     visual_summary = (source_context.visual_summary[:800] if source_context and source_context.visual_summary else "No visual summary available.")
     seed_lines = build_seed_lines(source_context.clip_seeds if source_context else None)
+    desired_clip_count = min(max(len(source_context.clip_seeds), 3), 8) if source_context and source_context.clip_seeds else 3
     return f"""
-Generate exactly 3 short-form video clip ideas as JSON.
+Generate exactly {desired_clip_count} short-form video clip ideas as JSON.
 
 Video URL: {video_url}
 Source type: {source_type}
@@ -453,8 +522,15 @@ Return valid JSON in this shape:
     {{
       "title": "...",
       "hook": "...",
+      "why_this_matters": "...",
       "hook_variants": ["...", "...", "..."],
       "caption": "...",
+      "caption_variants": {{
+        "viral": "...",
+        "story": "...",
+        "educational": "...",
+        "controversial": "..."
+      }},
       "caption_style": "...",
       "reason": "...",
       "thumbnail_text": "...",
@@ -472,8 +548,10 @@ Rules:
 - Evaluate each clip using the actual transcript excerpt or visual summary, timing, and target platform.
 - If preferred packaging angle is present, bias the response toward it unless the clip clearly fits a stronger angle.
 - reason must explain in one short sentence why the clip will work.
+- why_this_matters must explain why this clip should be posted in the stack.
 - thumbnail_text must be 2 to 5 words and punchy.
 - hook_variants must contain exactly 3 alternate hook options.
+- caption_variants must include viral, story, educational, and controversial keys.
 - packaging_angle must be one of: shock, story, value, curiosity, controversy.
 - confidence must be a float between 0.0 and 1.0.
 """.strip()
@@ -586,6 +664,30 @@ def parse_hook_variants(
     )
 
 
+def parse_caption_variants(
+    value: object,
+    *,
+    caption: str,
+    target_platform: str,
+    packaging_angle: str,
+) -> dict[str, str]:
+    if isinstance(value, dict):
+        normalized = {str(key): str(item).strip() for key, item in value.items() if str(item).strip()}
+        if normalized:
+            defaults = default_caption_variants(
+                caption=caption,
+                target_platform=target_platform,
+                packaging_angle=packaging_angle,
+            )
+            defaults.update(normalized)
+            return defaults
+    return default_caption_variants(
+        caption=caption,
+        target_platform=target_platform,
+        packaging_angle=packaging_angle,
+    )
+
+
 def default_hook_variants(
     *,
     hook: str,
@@ -602,6 +704,21 @@ def default_hook_variants(
         f"The {focus} moment most creators skip is the one driving this clip.",
         f"If you post one {angle} clip for {platform_label}, start with this one.",
     ]
+
+
+def default_caption_variants(
+    *,
+    caption: str,
+    target_platform: str,
+    packaging_angle: str,
+) -> dict[str, str]:
+    platform_label = target_platform or "short-form"
+    return {
+        "viral": caption,
+        "story": f"{caption} Built to travel as a cleaner {packaging_angle} story for {platform_label}.",
+        "educational": f"{caption} Keep the framing clear so the takeaway lands fast on {platform_label}.",
+        "controversial": f"{caption} Frame the strongest disagreement early so the {platform_label} audience reacts.",
+    }
 
 
 def default_why_this_matters(*, title: str, target_platform: str, post_rank: int) -> str:

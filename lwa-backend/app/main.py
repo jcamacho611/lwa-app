@@ -13,6 +13,7 @@ from .api.routes.edit import router as edit_router
 from .api.routes.generate import router as generate_router
 from .api.routes.me import router as me_router
 from .api.routes.posting import router as posting_router
+from .api.routes.seedance import router as seedance_router
 from .api.routes.upload import router as upload_router
 from .api.routes.wallet import router as wallet_router
 from .core.config import get_settings
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     app.include_router(campaigns_router)
     app.include_router(wallet_router)
     app.include_router(posting_router)
+    app.include_router(seedance_router)
     app.include_router(clips_router)
     app.include_router(edit_router)
     logger.info(
