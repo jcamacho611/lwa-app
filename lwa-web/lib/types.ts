@@ -271,6 +271,23 @@ export type GenerateResponse = {
   clips: ClipResult[];
 };
 
+export type GenerateJobResponse = {
+  job_id: string;
+  status: string;
+  poll_url: string;
+  message: string;
+};
+
+export type GenerateJobStatusResponse = {
+  job_id: string;
+  status: string;
+  message: string;
+  created_at: string;
+  updated_at: string;
+  result?: GenerateResponse | null;
+  error?: string | null;
+};
+
 export type EditableClip = ClipResult;
 
 export type ClipPackDetail = {

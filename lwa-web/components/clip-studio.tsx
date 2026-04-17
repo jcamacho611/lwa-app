@@ -44,7 +44,7 @@ import {
   createPayoutRequest,
   createPostingConnection,
   createScheduledPost,
-  generateClips,
+  loadGenerateJob,
   loadBatches,
   loadCampaign,
   loadCampaigns,
@@ -62,6 +62,7 @@ import {
   updateCampaignAssignment,
   updateScheduledPost,
   uploadSource,
+  startGenerateJob,
 } from "../lib/api";
 import { clearStoredToken, readStoredToken, storeToken } from "../lib/auth";
 import {
@@ -166,8 +167,10 @@ export function ClipStudio({
   const [readyQueue, setReadyQueue] = useState<ReadyQueueItem[]>([]);
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null);
   const [loadingStageIndex, setLoadingStageIndex] = useState(0);
+  const [jobStatusMessage, setJobStatusMessage] = useState<string | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
   const homeStageRef = useRef<HTMLElement | null>(null);
+  const generationRequestRef = useRef(0);
 
   const activeSourceLabel = useMemo(() => {
     if (selectedUpload?.file_name || selectedUpload?.filename) {
@@ -296,12 +299,23 @@ export function ClipStudio({
       return;
     }
 
+    if (jobStatusMessage) {
+      setLoadingStageIndex(inferLoadingStageIndex(jobStatusMessage));
+      return;
+    }
+
     const interval = window.setInterval(() => {
       setLoadingStageIndex((current) => (current + 1) % 3);
     }, 1400);
 
     return () => window.clearInterval(interval);
-  }, [isLoading]);
+  }, [isLoading, jobStatusMessage]);
+
+  useEffect(() => {
+    return () => {
+      generationRequestRef.current += 1;
+    };
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -461,12 +475,16 @@ export function ClipStudio({
       return;
     }
 
+    const requestKey = generationRequestRef.current + 1;
+    generationRequestRef.current = requestKey;
     setIsLoading(true);
     setError(null);
     setPaywallMessage(null);
+    setResult(null);
+    setJobStatusMessage("Queueing source analysis.");
 
     try {
-      const data = await generateClips(
+      const job = await startGenerateJob(
         {
           url: videoUrl.trim() || undefined,
           platform,
@@ -475,7 +493,45 @@ export function ClipStudio({
         },
         token,
       );
-      setResult(data);
+      if (generationRequestRef.current !== requestKey) {
+        return;
+      }
+
+      setJobStatusMessage(job.message || "Queued. Starting source analysis.");
+
+      let completedResult: GenerateResponse | null = null;
+      let lastMessage = job.message || "Queued. Starting source analysis.";
+
+      for (let attempt = 0; attempt < 180; attempt += 1) {
+        if (generationRequestRef.current !== requestKey) {
+          return;
+        }
+
+        const status = await loadGenerateJob(job.job_id, token);
+        if (generationRequestRef.current !== requestKey) {
+          return;
+        }
+
+        lastMessage = status.message || lastMessage;
+        setJobStatusMessage(lastMessage);
+
+        if (status.status === "completed" && status.result) {
+          completedResult = status.result;
+          break;
+        }
+
+        if (status.status === "failed") {
+          throw new ApiError(status.error || status.message || "Unable to generate clips right now.", 500);
+        }
+
+        await waitForNextJobPoll(1500);
+      }
+
+      if (!completedResult) {
+        throw new Error("Generation is still processing. Give it another moment and run it again if the preview does not appear.");
+      }
+
+      setResult(completedResult);
       setPaywallMessage(null);
       if (token) {
         await refreshAccount(token);
@@ -489,7 +545,10 @@ export function ClipStudio({
         setError(submitError instanceof Error ? submitError.message : "Unable to generate clips right now.");
       }
     } finally {
-      setIsLoading(false);
+      if (generationRequestRef.current === requestKey) {
+        setIsLoading(false);
+        setJobStatusMessage(null);
+      }
     }
   }
 
@@ -739,6 +798,8 @@ export function ClipStudio({
     generationMode === "quick"
       ? "Paste once. See hooks first, then preview as the render lands."
       : "Keep local learning visible while the stack builds and move into the deeper operator layer after review.";
+  const loadingStatusLine =
+    jobStatusMessage || `${loadingStages[loadingStageIndex]}. ${GENERATOR_COPY.loading}`;
   const homeDiscoverySections = [
     {
       id: "why-lwa",
@@ -983,9 +1044,7 @@ export function ClipStudio({
         ) : null}
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-ink/60">
-            {isLoading ? `${loadingStages[loadingStageIndex]}. ${GENERATOR_COPY.loading}` : idleRunSummary}
-          </p>
+          <p className="text-sm text-ink/60">{isLoading ? loadingStatusLine : idleRunSummary}</p>
           <button
             type="submit"
             disabled={isLoading}
@@ -995,7 +1054,7 @@ export function ClipStudio({
           </button>
         </div>
 
-        {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} /> : null}
+        {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} message={jobStatusMessage} /> : null}
 
         {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
         {paywallMessage ? (
@@ -1138,7 +1197,7 @@ export function ClipStudio({
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <p className="text-sm text-ink/60">
-                {result ? "Clip pack ready. Review first, queue next, export when it fits." : idleRunSummary}
+                {isLoading ? loadingStatusLine : result ? "Clip pack ready. Review first, queue next, export when it fits." : idleRunSummary}
               </p>
               <button
                 type="submit"
@@ -1149,7 +1208,7 @@ export function ClipStudio({
               </button>
             </div>
 
-            {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} /> : null}
+            {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} message={jobStatusMessage} /> : null}
 
             {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
 
@@ -2034,7 +2093,15 @@ function WorkspaceRailCard({
   );
 }
 
-function LoadingSequence({ stages, activeIndex }: { stages: string[]; activeIndex: number }) {
+function LoadingSequence({
+  stages,
+  activeIndex,
+  message,
+}: {
+  stages: string[];
+  activeIndex: number;
+  message?: string | null;
+}) {
   return (
     <div className="panel-subtle rounded-[24px] px-5 py-6">
       <div className="mb-5 flex items-center gap-3">
@@ -2044,7 +2111,7 @@ function LoadingSequence({ stages, activeIndex }: { stages: string[]; activeInde
         </div>
         <div>
           <p className="text-lg font-medium text-ink">LWA is compiling the pack</p>
-          <p className="text-sm text-ink/60">Real media in. Ranked clips, copy, and previews out.</p>
+          <p className="text-sm text-ink/60">{message || "Real media in. Ranked clips, copy, and previews out."}</p>
         </div>
       </div>
 
@@ -2064,6 +2131,38 @@ function LoadingSequence({ stages, activeIndex }: { stages: string[]; activeInde
       </div>
     </div>
   );
+}
+
+function inferLoadingStageIndex(message: string) {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("render") ||
+    normalized.includes("preview") ||
+    normalized.includes("export") ||
+    normalized.includes("overlay") ||
+    normalized.includes("final")
+  ) {
+    return 2;
+  }
+
+  if (
+    normalized.includes("rank") ||
+    normalized.includes("packag") ||
+    normalized.includes("moment") ||
+    normalized.includes("attention") ||
+    normalized.includes("clip")
+  ) {
+    return 1;
+  }
+
+  return 0;
+}
+
+function waitForNextJobPoll(durationMs: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, durationMs);
+  });
 }
 
 function InlineAlert({

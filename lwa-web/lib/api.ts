@@ -7,6 +7,8 @@ import {
   CampaignSummary,
   ClipPackDetail,
   ClipPackSummary,
+  GenerateJobResponse,
+  GenerateJobStatusResponse,
   GenerateResponse,
   PlatformOption,
   PayoutRequest,
@@ -96,6 +98,21 @@ export async function generateClips(payload: GeneratePayload, token?: string | n
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(payload),
+  });
+}
+
+export async function startGenerateJob(payload: GeneratePayload, token?: string | null): Promise<GenerateJobResponse> {
+  return jsonRequest<GenerateJobResponse>("/api/jobs", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function loadGenerateJob(jobId: string, token?: string | null): Promise<GenerateJobStatusResponse> {
+  return jsonRequest<GenerateJobStatusResponse>(`/api/jobs/${jobId}`, {
+    headers: authHeaders(token, false),
+    cache: "no-store",
   });
 }
 
