@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from ...core.config import get_settings
 from ...dependencies.auth import get_platform_store, require_user
 from ...models.schemas import EditClipRequest
+from ...services.entitlements import require_feature_access
 from ...processor import (
     build_video_encoder_args,
     drawtext_filter,
@@ -26,6 +27,12 @@ platform_store = get_platform_store()
 @router.post("/clip")
 async def edit_clip(payload: EditClipRequest, request: Request) -> dict[str, object]:
     user = require_user(request)
+    require_feature_access(
+        settings=settings,
+        user=user,
+        feature_name="timeline_editor",
+        detail="Upgrade to Pro to unlock direct clip editing and clean export workflow.",
+    )
     if not ffmpeg_available(settings):
         raise HTTPException(status_code=503, detail="ffmpeg is not available")
 

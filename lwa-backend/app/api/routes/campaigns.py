@@ -11,15 +11,29 @@ from ...models.schemas import (
     CampaignCreateRequest,
     CampaignPatchRequest,
 )
+from ...core.config import get_settings
+from ...services.entitlements import require_feature_access
 
 router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
 platform_store = get_platform_store()
+settings = get_settings()
 logger = logging.getLogger("uvicorn.error")
+
+
+def require_campaigns_unlocked(request: Request):
+    user = require_user(request)
+    require_feature_access(
+        settings=settings,
+        user=user,
+        feature_name="campaign_mode",
+        detail="Upgrade to Scale to unlock campaign workflow and assignment coordination.",
+    )
+    return user
 
 
 @router.post("")
 async def create_campaign(payload: CampaignCreateRequest, request: Request) -> dict[str, object]:
-    user = require_user(request)
+    user = require_campaigns_unlocked(request)
     campaign = platform_store.create_campaign(
         user_id=user.id,
         name=payload.title,
@@ -35,13 +49,13 @@ async def create_campaign(payload: CampaignCreateRequest, request: Request) -> d
 
 @router.get("")
 async def list_campaigns(request: Request) -> dict[str, object]:
-    user = require_user(request)
+    user = require_campaigns_unlocked(request)
     return {"campaigns": platform_store.list_campaigns(user_id=user.id)}
 
 
 @router.get("/{campaign_id}")
 async def get_campaign(campaign_id: str, request: Request) -> dict[str, object]:
-    user = require_user(request)
+    user = require_campaigns_unlocked(request)
     campaign = platform_store.get_campaign(campaign_id=campaign_id, user_id=user.id)
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -50,7 +64,7 @@ async def get_campaign(campaign_id: str, request: Request) -> dict[str, object]:
 
 @router.patch("/{campaign_id}")
 async def update_campaign(campaign_id: str, payload: CampaignPatchRequest, request: Request) -> dict[str, object]:
-    user = require_user(request)
+    user = require_campaigns_unlocked(request)
     updates = payload.model_dump(exclude_none=True)
     if "title" in updates:
         updates["name"] = updates.pop("title")
@@ -62,7 +76,7 @@ async def update_campaign(campaign_id: str, payload: CampaignPatchRequest, reque
 
 @router.post("/{campaign_id}/assignments")
 async def create_campaign_assignments(campaign_id: str, payload: CampaignAssignmentCreateRequest, request: Request) -> dict[str, object]:
-    user = require_user(request)
+    user = require_campaigns_unlocked(request)
     try:
         assignments = platform_store.create_campaign_assignments(
             campaign_id=campaign_id,
@@ -89,7 +103,7 @@ async def update_campaign_assignment(
     payload: CampaignAssignmentPatchRequest,
     request: Request,
 ) -> dict[str, object]:
-    user = require_user(request)
+    user = require_campaigns_unlocked(request)
     updates = payload.model_dump(exclude_none=True)
     assignment = platform_store.update_campaign_assignment(
         campaign_id=campaign_id,

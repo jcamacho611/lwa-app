@@ -163,6 +163,23 @@ def resolve_entitlement(
     )
 
 
+def get_plan_for_user(*, settings: Settings, user: UserRecord) -> PlanDefinition:
+    return build_plan_from_user(settings, user.plan)
+
+
+def require_feature_access(
+    *,
+    settings: Settings,
+    user: UserRecord,
+    feature_name: str,
+    detail: str,
+) -> PlanDefinition:
+    plan = get_plan_for_user(settings=settings, user=user)
+    if bool(getattr(plan.feature_flags, feature_name, False)):
+        return plan
+    raise HTTPException(status_code=403, detail=detail)
+
+
 def build_free_plan(settings: Settings) -> PlanDefinition:
     return PlanDefinition(
         code="free",
