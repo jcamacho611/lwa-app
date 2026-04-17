@@ -664,16 +664,45 @@ private struct OmegaClipDetailView: View {
 
     private var whyItWorks: some View {
         OmegaGlassCard {
-            VStack(alignment: .leading, spacing: 10) {
-                OmegaSectionHeader(title: "Why This Works", subtitle: "Readable AI guidance for why this cut should win attention.")
-                Text(clip.primaryReason ?? "The compiler will explain why this clip matters once the metadata is available.")
-                    .font(.body)
-                    .foregroundStyle(.white.opacity(0.85))
+            VStack(alignment: .leading, spacing: 14) {
+                OmegaSectionHeader(title: "Why This Works", subtitle: "AI signal for why this cut should win attention.")
 
-                if let platformFit = clip.platformFit {
-                    Text(platformFit)
-                        .font(.subheadline)
-                        .foregroundStyle(OmegaPalette.secondaryText)
+                Text(clip.primaryReason ?? "Strong pacing, clear payoff, and creator-ready packaging.")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.92))
+
+                Divider()
+                    .background(Color.white.opacity(0.08))
+
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("PLATFORM FIT")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(OmegaPalette.mutedText)
+                        Text(clip.resolvedPlatformFit)
+                            .font(.subheadline)
+                            .foregroundStyle(OmegaPalette.secondaryText)
+                    }
+                    Spacer()
+                }
+
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("CTA")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(OmegaPalette.mutedText)
+                        Text(clip.resolvedCTA)
+                            .font(.subheadline)
+                            .foregroundStyle(OmegaPalette.secondaryText)
+                    }
+                    Spacer()
+                }
+
+                HStack(spacing: 10) {
+                    OmegaMetricPill(label: clip.resolvedPackagingAngle.capitalized)
+                    if let thumbnailText = clip.thumbnailText {
+                        OmegaMetricPill(label: "🖼 \(thumbnailText)")
+                    }
                 }
             }
         }
@@ -716,23 +745,49 @@ private struct OmegaClipDetailView: View {
 
     private var captionSection: some View {
         OmegaGlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                OmegaSectionHeader(title: "Caption Suggestions", subtitle: "Packaging copy and CTA ready for export.")
+            VStack(alignment: .leading, spacing: 14) {
+                OmegaSectionHeader(title: "Caption Suggestions", subtitle: "Packaging copy and caption variants ready for export.")
 
                 Text(clip.caption)
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(.white.opacity(0.88))
 
-                if let thumbnailText = clip.thumbnailText {
-                    Text("Thumbnail: \(thumbnailText)")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(OmegaPalette.gold)
-                }
+                Text("Thumbnail: \(clip.resolvedThumbnailText)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(OmegaPalette.gold)
 
-                if let ctaSuggestion = clip.ctaSuggestion {
-                    Text("CTA: \(ctaSuggestion)")
-                        .font(.subheadline)
-                        .foregroundStyle(OmegaPalette.secondaryText)
+                Text("CTA: \(clip.resolvedCTA)")
+                    .font(.subheadline)
+                    .foregroundStyle(OmegaPalette.secondaryText)
+
+                // Caption variants
+                if !clip.resolvedCaptionVariants.isEmpty {
+                    Divider()
+                        .background(Color.white.opacity(0.08))
+
+                    Text("CAPTION VARIANTS")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(OmegaPalette.mutedText)
+
+                    ForEach(clip.resolvedCaptionVariants.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
+                        Button {
+                            onCopy(value, "\(key.capitalized) caption copied.")
+                        } label: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(key.uppercased())
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(OmegaPalette.accent)
+                                Text(value)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.white.opacity(0.82))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(12)
+                            .background(OmegaPalette.card)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
 
                 HStack(spacing: 12) {
@@ -1365,20 +1420,26 @@ private extension ClipResult {
     }
 
     var packagingBundle: String {
-        let alternateHooks = hookVariants.isEmpty ? "not available" : hookVariants.joined(separator: "\n")
+        let alternateHooks = resolvedHookVariants.joined(separator: "\n")
+        let captionVariantLines = resolvedCaptionVariants
+            .sorted(by: { $0.key < $1.key })
+            .map { "  \($0.key): \($0.value)" }
+            .joined(separator: "\n")
         return """
         Title: \(title)
         Rank: \(displayRank.map(String.init) ?? "not available")
         Confidence: \(compilerConfidenceLabel ?? "not available")
-        Packaging angle: \(packagingAngleLabel ?? "not available")
+        Packaging angle: \(resolvedPackagingAngle)
         Hook: \(hook)
         Caption: \(caption)
-        Why this works: \(primaryReason ?? "not available")
-        Platform fit: \(platformFit ?? "not available")
-        Thumbnail text: \(thumbnailText ?? "not available")
-        CTA: \(ctaSuggestion ?? "not available")
+        Why this works: \(primaryReason ?? "Strong pacing, clear payoff, and creator-ready packaging.")
+        Platform fit: \(resolvedPlatformFit)
+        Thumbnail text: \(resolvedThumbnailText)
+        CTA: \(resolvedCTA)
         Alternate hooks:
         \(alternateHooks)
+        Caption variants:
+        \(captionVariantLines)
         """
     }
 

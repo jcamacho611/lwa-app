@@ -249,6 +249,7 @@ struct ClipResult: Codable, Identifiable {
     let postRank: Int?
     let bestPostOrder: Int?
     let hookVariants: [String]
+    let captionVariants: [String: String]
     let captionStyle: String?
     let platformFit: String?
     let packagingAngle: String?
@@ -280,6 +281,7 @@ struct ClipResult: Codable, Identifiable {
         case postRank = "post_rank"
         case bestPostOrder = "best_post_order"
         case hookVariants = "hook_variants"
+        case captionVariants = "caption_variants"
         case captionStyle = "caption_style"
         case platformFit = "platform_fit"
         case packagingAngle = "packaging_angle"
@@ -313,9 +315,42 @@ struct ClipResult: Codable, Identifiable {
         postRank = try container.decodeIfPresent(Int.self, forKey: .postRank)
         bestPostOrder = try container.decodeIfPresent(Int.self, forKey: .bestPostOrder)
         hookVariants = try container.decodeIfPresent([String].self, forKey: .hookVariants) ?? []
+        captionVariants = try container.decodeIfPresent([String: String].self, forKey: .captionVariants) ?? [:]
         captionStyle = try container.decodeIfPresent(String.self, forKey: .captionStyle)
         platformFit = try container.decodeIfPresent(String.self, forKey: .platformFit)
         packagingAngle = try container.decodeIfPresent(String.self, forKey: .packagingAngle)
+    }
+
+    // MARK: - Computed display helpers
+
+    /// Fallback-safe platform fit string.
+    var resolvedPlatformFit: String {
+        platformFit ?? "Optimized for fast short-form viewing."
+    }
+
+    /// Fallback-safe CTA string.
+    var resolvedCTA: String {
+        ctaSuggestion ?? "Prompt viewers to comment or follow."
+    }
+
+    /// Fallback-safe packaging angle.
+    var resolvedPackagingAngle: String {
+        packagingAngle ?? "value"
+    }
+
+    /// Fallback-safe thumbnail text.
+    var resolvedThumbnailText: String {
+        thumbnailText ?? String(hook.prefix(40))
+    }
+
+    /// Caption variants with at least a viral fallback.
+    var resolvedCaptionVariants: [String: String] {
+        captionVariants.isEmpty ? ["viral": caption] : captionVariants
+    }
+
+    /// Hook variants with at least the primary hook.
+    var resolvedHookVariants: [String] {
+        hookVariants.isEmpty ? [hook] : hookVariants
     }
 }
 

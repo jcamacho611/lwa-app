@@ -54,7 +54,9 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
         <div className="glass-panel rounded-[32px] p-6 sm:p-8">
         <p className="section-kicker">Payout readiness</p>
         <h3 className="mt-2 text-3xl font-semibold text-ink">Request funds from the ledger</h3>
-        <p className="mt-4 text-sm leading-7 text-ink/64">Review available balance and request a payout when you are ready.</p>
+        <p className="mt-4 text-sm leading-7 text-ink/64">
+          Review your available balance. Approved submissions unlock payout readiness. Transfers stay manual until payout rails are wired.
+        </p>
 
           {wallet?.submission_summary ? (
             <div className="mt-5 metric-tile rounded-[24px] p-4">
@@ -107,22 +109,39 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
           <div className="mt-6 space-y-3">
             {ledgerEntries.length ? (
               ledgerEntries.map((entry) => (
-                <div key={entry.id} className="metric-tile rounded-[24px] p-4">
+                <div key={entry.id} className="metric-tile rounded-[24px] p-4 transition hover:border-white/14">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-ink">{entry.description || entry.note || entry.type || "Ledger entry"}</p>
-                      <p className="mt-1 text-xs text-muted">{entry.created_at || "recent"}</p>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-ink">
+                        {entry.description || entry.note || entry.type || "Ledger entry"}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <p className="text-xs text-muted">{entry.created_at || "recent"}</p>
+                        {entry.status ? (
+                          <span className={["status-chip text-[10px]", `status-${entry.status}`].join(" ")}>
+                            {entry.status}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                    <span className={["rounded-full px-3 py-1 text-xs font-medium", entry.amount_cents >= 0 ? "bg-emerald-400/10 text-emerald-300" : "bg-amber-400/10 text-amber-300"].join(" ")}>
-                      {entry.amount_cents >= 0 ? "+" : "-"}
+                    <span className={[
+                      "rounded-full px-3 py-1.5 text-xs font-semibold tabular-nums",
+                      entry.amount_cents >= 0
+                        ? "border border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                        : "border border-amber-400/20 bg-amber-400/10 text-amber-300",
+                    ].join(" ")}>
+                      {entry.amount_cents >= 0 ? "+" : "−"}
                       {formatCents(Math.abs(entry.amount_cents))}
                     </span>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm text-ink/62">
-                No ledger entries yet. Earnings and payout activity will accumulate here over time.
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-6">
+                <p className="text-sm font-medium text-ink/72">No ledger entries yet</p>
+                <p className="mt-2 text-sm leading-7 text-ink/46">
+                  Earnings and payout activity will accumulate here as campaigns move through approval.
+                </p>
               </div>
             )}
           </div>

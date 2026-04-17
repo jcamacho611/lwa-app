@@ -44,11 +44,18 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
         <div>
           <p className="section-kicker">Ready queue</p>
           <h3 className="mt-3 text-2xl font-semibold text-ink">Next to post</h3>
-          <p className="mt-2 text-sm leading-7 text-ink/60">Reorder the stack, cut weak clips, then export the run.</p>
+          <p className="mt-2 text-sm leading-7 text-ink/60">
+            Reorder the stack, cut what doesn't fit, then export the run brief.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-ink/72">
-            {items.length} ready
+          <span className={[
+            "rounded-full border px-4 py-2 text-sm font-semibold",
+            items.length > 0
+              ? "border-accent/22 bg-accent/[0.08] text-accent"
+              : "border-white/10 bg-white/[0.05] text-ink/72",
+          ].join(" ")}>
+            {items.length} {items.length === 1 ? "clip" : "clips"} ready
           </span>
           {items.length ? (
             <button
@@ -56,7 +63,7 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
               onClick={onClear}
               className="secondary-button rounded-full px-4 py-2 text-sm font-medium"
             >
-              Clear
+              Clear all
             </button>
           ) : null}
         </div>
@@ -120,7 +127,7 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
                     <button
                       type="button"
                       onClick={() => onRemove(item.clipId)}
-                      className="rounded-full border border-accentCrimson/24 bg-[rgba(92,19,37,0.28)] px-4 py-2 text-sm font-medium text-red-100 transition hover:bg-[rgba(92,19,37,0.42)]"
+                      className="rounded-full border border-[rgba(143,29,54,0.36)] bg-[rgba(92,19,37,0.32)] px-4 py-2 text-sm font-medium text-red-100 transition hover:border-[rgba(143,29,54,0.56)] hover:bg-[rgba(92,19,37,0.52)] active:scale-95"
                     >
                       Remove
                     </button>
@@ -149,8 +156,11 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
           </div>
         </>
       ) : (
-        <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.03] p-5 text-sm text-ink/62">
-          Mark clips ready from Generate to build the next stack.
+        <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.03] p-6">
+          <p className="text-sm font-medium text-ink/72">Queue is empty</p>
+          <p className="mt-2 text-sm leading-7 text-ink/46">
+            Mark clips ready from Generate to build the next posting stack. The queue persists across sessions.
+          </p>
         </div>
       )}
     </section>

@@ -285,19 +285,41 @@ def apply_plan_feature_flags(
         caption_variants = clip.caption_variants or {}
         if not alt_hooks_unlocked:
             caption_variants = {"viral": caption_variants.get("viral") or clip.caption}
+
+        # Ensure all intelligence fields are always populated with meaningful fallbacks
+        why_this_matters = (
+            clip.why_this_matters
+            or clip.reason
+            or "Strong pacing, clear payoff, and creator-ready packaging."
+        )
+        cta_suggestion = clip.cta_suggestion or "Prompt viewers to comment or follow."
+        thumbnail_text = clip.thumbnail_text or clip.title or (clip.hook[:40] if clip.hook else "Best Clip")
+        platform_fit = clip.platform_fit or "Optimized for fast short-form viewing."
+        packaging_angle = clip.packaging_angle or "value"
+        hook_variants = clip.hook_variants if clip.hook_variants else [clip.hook]
+        if not alt_hooks_unlocked:
+            hook_variants = hook_variants[:1]
+        if not caption_variants:
+            caption_variants = {"viral": clip.caption}
+
         gated.append(
             clip.model_copy(
                 update={
-                    "hook_variants": clip.hook_variants if alt_hooks_unlocked else clip.hook_variants[:1],
+                    "hook_variants": hook_variants,
                     "caption_variants": caption_variants,
                     "timestamp_start": clip.start_time,
                     "timestamp_end": clip.end_time,
                     "duration": derive_clip_duration_seconds(clip.start_time, clip.end_time),
                     "transcript": clip.transcript_excerpt,
-                    "cta": clip.cta_suggestion,
+                    "cta": cta_suggestion,
+                    "cta_suggestion": cta_suggestion,
                     "preview_url": preview_url,
                     "download_url": download_url,
                     "thumbnail_url": clip.preview_image_url,
+                    "why_this_matters": why_this_matters,
+                    "thumbnail_text": thumbnail_text,
+                    "platform_fit": platform_fit,
+                    "packaging_angle": packaging_angle,
                 }
             )
         )
