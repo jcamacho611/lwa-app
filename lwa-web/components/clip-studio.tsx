@@ -10,6 +10,7 @@ import { CampaignPanel } from "./campaign-panel";
 import { ClipCard } from "./clip-card";
 import { ClipPackEditor, ClipPatchPayload } from "./clip-pack-editor";
 import { FeatureGatePanel } from "./feature-gate-panel";
+import HeroClip from "./HeroClip";
 import { HistoryPanel } from "./history-panel";
 import Navbar from "./Navbar";
 import { PostingPanel } from "./posting-panel";
@@ -292,7 +293,7 @@ export function ClipStudio({
     }
 
     const interval = window.setInterval(() => {
-      setLoadingStageIndex((current) => (current + 1) % 5);
+      setLoadingStageIndex((current) => (current + 1) % 3);
     }, 1400);
 
     return () => window.clearInterval(interval);
@@ -695,13 +696,7 @@ export function ClipStudio({
     ? preferenceProfile.preferredAngles
     : displayedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
   const featureProof = ["Ranked", "Queue-ready", "Campaign flow"];
-  const loadingStages = [
-    "Reading source",
-    "Pulling media",
-    "Understanding content",
-    "Finding clips",
-    "Packaging outputs",
-  ];
+  const loadingStages = ["Analyzing video", "Finding viral moments", "Generating clips"];
   const sourceTruthSummary = useMemo(() => {
     const content = result?.transcript || result?.visual_summary || "This source was processed into ranked short-form outputs.";
     if (!content) {
@@ -810,7 +805,7 @@ export function ClipStudio({
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-ink/60">{loadingStages[loadingStageIndex]}. Short-form outputs are on the way.</p>
+          <p className="text-sm text-ink/60">{loadingStages[loadingStageIndex]}. AI is working through the source.</p>
           <button
             type="submit"
             disabled={isLoading}
@@ -820,13 +815,7 @@ export function ClipStudio({
           </button>
         </div>
 
-        {isLoading ? (
-          <InlineState
-            title="Compiling clip pack..."
-            description={`${loadingStages[loadingStageIndex]}. ${loadingStageIndex >= 2 ? "Ranking hooks and angles." : "Shaping the pack."}${improveResults && preferenceProfile.topPackagingAngle ? ` Leaning ${preferenceProfile.topPackagingAngle}.` : ""}`}
-            stageIndex={loadingStageIndex}
-          />
-        ) : null}
+        {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} /> : null}
 
         {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
         {paywallMessage ? (
@@ -858,7 +847,7 @@ export function ClipStudio({
               <h2 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">
                 Turn one source into ranked clips
               </h2>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">Source in. Clips worth posting out.</p>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">Source in. Viral-ready clips out.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <StatPill tone="accent">{planSurface.name}</StatPill>
@@ -907,7 +896,7 @@ export function ClipStudio({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-sm font-medium text-ink">Improve my results</p>
-                    <p className="mt-1 text-sm text-ink/60">Bias future runs toward your taste.</p>
+                    <p className="mt-1 text-sm text-ink/60">Bias future runs toward what you keep.</p>
                     {preferenceProfile.topPackagingAngle || preferenceProfile.topHookStyle ? (
                       <p className="mt-3 text-sm text-accent">
                         Favoring {preferenceProfile.topPackagingAngle || "strong"} packaging
@@ -933,10 +922,10 @@ export function ClipStudio({
                 <p className="text-sm font-medium text-ink">What comes back</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {[
-                    "Ranked clips",
-                    "Hook variants",
-                    "Caption styles",
-                    "Post order",
+                    "Playable clips",
+                    "Hooks that hit",
+                    "Captions",
+                    "Download-ready",
                   ].map((item) => (
                     <div key={item} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
                       {item}
@@ -948,9 +937,7 @@ export function ClipStudio({
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <p className="text-sm text-ink/60">
-                {result
-                  ? "Clip pack is ready. Pick the winners and move."
-                  : "Use a public link or upload a video, audio file, or image."}
+                {result ? "Clip pack ready. Pick the winners and move." : "Use a public link or upload a file."}
               </p>
               <button
                 type="submit"
@@ -961,13 +948,7 @@ export function ClipStudio({
               </button>
             </div>
 
-            {isLoading ? (
-              <InlineState
-                title="Compiling clip pack..."
-                description={`${loadingStages[loadingStageIndex]}. ${loadingStageIndex >= 2 ? "Ranking hooks and angles." : "Shaping the pack."}${improveResults && preferenceProfile.topPackagingAngle ? ` Leaning ${preferenceProfile.topPackagingAngle}.` : ""}`}
-                stageIndex={loadingStageIndex}
-              />
-            ) : null}
+            {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} /> : null}
 
             {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
 
@@ -1008,7 +989,7 @@ export function ClipStudio({
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Upload a source</p>
             <h3 className="mt-3 text-xl font-semibold text-ink">Run it from a local file</h3>
-            <p className="mt-3 text-sm leading-7 text-ink/60">{token ? "Same ranking flow. More source control." : "Sign in to unlock uploads and saved source reuse."}</p>
+            <p className="mt-3 text-sm leading-7 text-ink/60">{token ? "Run the same AI flow on your own source." : "Sign in to unlock uploads and saved source reuse."}</p>
             <p className="mt-4 text-sm text-accent">{uploadingFileName ? `Uploading ${uploadingFileName}...` : activeSourceLabel}</p>
             <label className="secondary-button mt-5 inline-flex w-full cursor-pointer items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
               {token ? "Upload source file" : "Sign in to upload"}
@@ -1024,9 +1005,9 @@ export function ClipStudio({
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Why this works</p>
             <div className="mt-4 space-y-3 text-sm leading-7 text-ink/68">
-              <p>1. One source becomes multiple ranked outputs.</p>
-              <p>2. Hooks, captions, and angles come back ready to test.</p>
-              <p>3. Queue and campaign flow keep the best clips moving.</p>
+              <p>1. AI finds the moments worth clipping.</p>
+              <p>2. Previews come back ready to review.</p>
+              <p>3. Queue the winners and keep them moving.</p>
             </div>
           </div>
         </aside>
@@ -1040,14 +1021,14 @@ export function ClipStudio({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <p className="section-kicker">Clip pack ready</p>
-            <h3 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">Your best clips are ranked</h3>
-            <p className="mt-4 text-sm leading-7 text-subtext">Pick the winners, queue them, or move them into campaign flow.</p>
+            <h3 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">Your clip pack is ready</h3>
+            <p className="mt-4 text-sm leading-7 text-subtext">Watch the top clip first, then work through the rest.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <StatPill tone="accent">{displayedClips.length} clips</StatPill>
             <StatPill tone="neutral">{result.source_platform || "Upload"}</StatPill>
             {result.source_type ? <StatPill tone="neutral">{result.source_type.replace("_", " ")}</StatPill> : null}
-            {result.processing_summary?.recommended_next_step ? <StatPill tone="signal">{result.processing_summary.recommended_next_step}</StatPill> : null}
+            {result.processing_summary?.recommended_next_step ? <StatPill tone="signal">AI ranked</StatPill> : null}
           </div>
         </div>
       </div>
@@ -1091,10 +1072,9 @@ export function ClipStudio({
 
           {featuredClip ? (
             <div className="space-y-3">
-              <p className="section-kicker">Top output</p>
-              <ClipCard
+              <p className="section-kicker">Top clip</p>
+              <HeroClip
                 clip={featuredClip}
-                featured
                 feedbackVote={feedbackByClipId[featuredClip.record_id || featuredClip.clip_id || featuredClip.id] || null}
                 onVote={handleFeedbackVote}
                 queued={isQueued(featuredClip)}
@@ -1107,11 +1087,11 @@ export function ClipStudio({
             <div className="space-y-4">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="section-kicker">Remaining ranked clips</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">More clips worth testing</h4>
+                  <p className="section-kicker">Clip grid</p>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">More clips worth posting</h4>
                 </div>
               </div>
-              <div className="grid gap-5 lg:grid-cols-2">
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                 {remainingClips.map((clip) => (
                   <ClipCard
                     key={clip.id}
@@ -1694,37 +1674,33 @@ function WorkspaceRailCard({
   );
 }
 
-function InlineState({ title, description, stageIndex = 0 }: { title: string; description: string; stageIndex?: number }) {
-  const totalStages = 5;
+function LoadingSequence({ stages, activeIndex }: { stages: string[]; activeIndex: number }) {
   return (
-    <div className="panel-subtle rounded-[24px] px-5 py-8">
-      <div className="flex items-center gap-4">
-        {/* Spinner */}
-        <div className="relative flex h-12 w-12 shrink-0 items-center justify-center">
-          <div className="absolute inset-0 animate-spin-arc rounded-full border-2 border-white/10 border-t-accent" />
+    <div className="panel-subtle rounded-[24px] px-5 py-6">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+          <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
           <img src="/brand/lwa-mark.svg" alt="LWA" className="relative h-6 w-6 opacity-90" />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-ink">{title}</p>
-          <p className="mt-1 text-sm text-ink/60">{description}</p>
+        <div>
+          <p className="text-lg font-medium text-ink">AI is working</p>
+          <p className="text-sm text-ink/60">Real media in. Ranked clips out.</p>
         </div>
       </div>
-      {/* Stage progress dots */}
-      <div className="mt-5 flex items-center gap-2">
-        {Array.from({ length: totalStages }).map((_, i) => (
+
+      <div className="grid gap-3 md:grid-cols-3">
+        {stages.map((stage, index) => (
           <div
-            key={i}
+            key={stage}
             className={[
-              "stage-dot",
-              i === stageIndex ? "stage-dot-active" : i < stageIndex ? "stage-dot-done" : "",
+              "loading-stage rounded-[20px] px-4 py-4",
+              index === activeIndex ? "loading-stage-active" : "",
             ].join(" ")}
-          />
+          >
+            <p className="text-xs uppercase tracking-[0.24em] text-muted">Step {index + 1}</p>
+            <p className="mt-2 text-sm font-medium text-ink">{stage}</p>
+          </div>
         ))}
-        <span className="ml-2 text-xs text-ink/46">Stage {stageIndex + 1} of {totalStages}</span>
-      </div>
-      {/* Shimmer bar */}
-      <div className="mt-4 h-1 overflow-hidden rounded-full">
-        <div className="loading-shimmer h-full w-full rounded-full" />
       </div>
     </div>
   );
