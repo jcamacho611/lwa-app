@@ -83,6 +83,20 @@ class Settings:
         self.ai_provider = os.getenv("LWA_AI_PROVIDER", "auto")
         self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "")
         self.ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2")
+        # ── Anthropic (Claude) ──────────────────────────────────────────
+        self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        self.anthropic_model_sonnet = os.getenv("ANTHROPIC_MODEL_SONNET", "claude-sonnet-4-20250514")
+        self.anthropic_model_opus = os.getenv("ANTHROPIC_MODEL_OPUS", "claude-opus-4-20250514")
+        self.anthropic_model_haiku = os.getenv("ANTHROPIC_MODEL_HAIKU", "claude-haiku-3-20240307")
+        self.enable_anthropic = os.getenv("LWA_ENABLE_ANTHROPIC", "true").lower() in {"true", "1", "yes"}
+        self.premium_reasoning_provider = os.getenv("LWA_PREMIUM_REASONING_PROVIDER", "anthropic")
+        # ── Seedance (premium visual generation) ────────────────────────
+        self.seedance_enabled = os.getenv("SEEDANCE_ENABLED", "false").lower() in {"true", "1", "yes"}
+        self.seedance_api_key = os.getenv("SEEDANCE_API_KEY", "")
+        self.seedance_base_url = os.getenv("SEEDANCE_BASE_URL", "")
+        self.seedance_model = os.getenv("SEEDANCE_MODEL", "seedance-1-lite")
+        self.seedance_timeout_seconds = int(os.getenv("SEEDANCE_TIMEOUT_SECONDS", "120"))
+        self.seedance_poll_interval_seconds = int(os.getenv("SEEDANCE_POLL_INTERVAL_SECONDS", "5"))
         self.whop_api_key = os.getenv("WHOP_API_KEY", "")
         self.whop_company_id = os.getenv("WHOP_COMPANY_ID", "")
         self.google_api_key = os.getenv("GOOGLE_API_KEY", "")

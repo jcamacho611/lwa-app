@@ -15,6 +15,7 @@ from .api.routes.me import router as me_router
 from .api.routes.posting import router as posting_router
 from .api.routes.upload import router as upload_router
 from .api.routes.wallet import router as wallet_router
+from .api.routes.seedance import router as seedance_router
 from .core.config import get_settings
 
 settings = get_settings()
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
     app.include_router(posting_router)
     app.include_router(clips_router)
     app.include_router(edit_router)
+    app.include_router(seedance_router)
     logger.info(
         "app_ready generated_assets_dir=%s generated_mount=/generated uploads_dir=%s uploads_mount=/uploads log_level=%s",
         settings.generated_assets_dir,

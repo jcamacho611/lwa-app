@@ -9,7 +9,12 @@ from ..processor import SourceContext
 
 
 def resolve_attention_mode(settings: Settings) -> str:
-    return "openai" if settings.openai_api_key else "fallback"
+    from .anthropic_service import anthropic_available
+    if anthropic_available(settings):
+        return "anthropic"
+    if settings.openai_api_key:
+        return "openai"
+    return "fallback"
 
 
 async def generate_clip_copy(
