@@ -239,3 +239,32 @@ class EditClipRequest(BaseModel):
     start_time: Optional[str] = None
     end_time: Optional[str] = None
     caption_text: Optional[str] = None
+
+
+# ── Seedance schemas (additive) ────────────────────────────────────────────
+
+class SeedanceBackgroundRequest(BaseModel):
+    prompt: str = Field(..., description="Scene description for background generation")
+    style_preset: str = Field(default="mythic-void", description="Visual style preset")
+    motion_profile: str = Field(default="slow-drift", description="Motion behavior")
+    duration_seconds: int = Field(default=8, ge=2, le=30)
+    aspect_ratio: str = Field(default="16:9")
+    seed: Optional[int] = None
+    reference_image_url: Optional[str] = None
+    source_clip_url: Optional[str] = None
+    source_asset_id: Optional[str] = None
+
+
+class SeedanceJobResponse(BaseModel):
+    job_id: str
+    status: str
+    asset_url: Optional[str] = None
+    error: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class SeedanceStatusResponse(BaseModel):
+    enabled: bool
+    job: Optional[SeedanceJobResponse] = None
+    message: Optional[str] = None
