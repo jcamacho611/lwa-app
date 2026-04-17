@@ -11,8 +11,8 @@ type SearchLandingPageProps = {
 
 const searchNavItems = [
   { href: "/generate", label: "Forge Clips" },
-  { href: "/compare/opus-clip-alternative", label: "Compare" },
-  { href: "/use-cases/podcast-clipping", label: "Use Cases" },
+  { href: "/compare", label: "Compare" },
+  { href: "/use-cases", label: "Use Cases" },
 ] as const;
 
 export function SearchLandingPage({ page, jsonLd }: SearchLandingPageProps) {
