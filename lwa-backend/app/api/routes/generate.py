@@ -168,17 +168,29 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
 async def get_processing_job(job_id: str, http_request: Request) -> JobStatusResponse:
     enforce_api_key(http_request, settings)
     record = await job_store.get(job_id)
-    if not record:
+    if record:
+        return JobStatusResponse(
+            job_id=record.id,
+            status=record.status,
+            message=record.message,
+            created_at=record.created_at,
+            updated_at=record.updated_at,
+            result=record.result,
+            error=record.error,
+        )
+
+    persisted = platform_store.get_job(job_id)
+    if not persisted:
         raise HTTPException(status_code=404, detail="Job not found")
 
     return JobStatusResponse(
-        job_id=record.id,
-        status=record.status,
-        message=record.message,
-        created_at=record.created_at,
-        updated_at=record.updated_at,
-        result=record.result,
-        error=record.error,
+        job_id=str(persisted["id"]),
+        status=str(persisted["status"]),
+        message=str(persisted["message"]),
+        created_at=str(persisted["created_at"]),
+        updated_at=str(persisted["updated_at"]),
+        result=persisted.get("result"),
+        error=persisted.get("error"),
     )
 
 

@@ -427,8 +427,27 @@ async def run_job(
         status="processing",
         message="Queue accepted. Starting source ingest.",
     )
+    if platform_store is not None:
+        platform_store.update_job(
+            job_id=job_id,
+            status="processing",
+            message="Queue accepted. Starting source ingest.",
+        )
 
     try:
+        async def persist_progress(message: str) -> None:
+            await job_store.update(
+                job_id,
+                status="processing",
+                message=message,
+            )
+            if platform_store is not None:
+                platform_store.update_job(
+                    job_id=job_id,
+                    status="processing",
+                    message=message,
+                )
+
         response = await build_clip_response(
             settings=settings,
             request_id=job_id,
@@ -440,11 +459,7 @@ async def run_job(
             platform_store=platform_store,
             campaign_id=campaign_id,
             source_path=source_path,
-            progress_callback=lambda message: job_store.update(
-                job_id,
-                status="processing",
-                message=message,
-            ),
+            progress_callback=persist_progress,
         )
         await job_store.complete(job_id, response)
         if platform_store is not None:
@@ -461,7 +476,8 @@ async def run_job(
             platform_store.update_job(
                 job_id=job_id,
                 status="failed",
-                message=str(error),
+                message="Processing failed.",
+                error_text=str(error),
             )
 
 

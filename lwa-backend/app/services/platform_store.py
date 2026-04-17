@@ -100,7 +100,8 @@ class PlatformStore:
                     message TEXT NOT NULL,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
-                    response_json TEXT
+                    response_json TEXT,
+                    error_text TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS clips (
@@ -257,6 +258,7 @@ class PlatformStore:
             self._ensure_column(connection, "campaign_assignments", "note", "TEXT")
             self._ensure_column(connection, "campaign_assignments", "created_at", "TEXT")
             self._ensure_column(connection, "campaign_assignments", "updated_at", "TEXT")
+            self._ensure_column(connection, "jobs", "error_text", "TEXT")
 
     def _ensure_column(self, connection: sqlite3.Connection, table: str, column: str, column_type: str) -> None:
         rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
@@ -951,17 +953,45 @@ class PlatformStore:
         status: str,
         message: str,
         response_json: str | None = None,
+        error_text: str | None = None,
     ) -> None:
         updated_at = utcnow()
         with self._lock, self._connect() as connection:
             connection.execute(
                 """
                 UPDATE jobs
-                SET status = ?, message = ?, updated_at = ?, response_json = COALESCE(?, response_json)
+                SET status = ?,
+                    message = ?,
+                    updated_at = ?,
+                    response_json = COALESCE(?, response_json),
+                    error_text = CASE
+                        WHEN ? IS NOT NULL THEN ?
+                        WHEN ? = 'completed' THEN NULL
+                        ELSE error_text
+                    END
                 WHERE id = ?
                 """,
-                (status, message, updated_at, response_json, job_id),
+                (status, message, updated_at, response_json, error_text, error_text, status, job_id),
             )
+
+    def get_job(self, job_id: str) -> Optional[dict[str, Any]]:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, user_id, campaign_id, source_type, source_value, status, message,
+                       created_at, updated_at, response_json, error_text
+                FROM jobs
+                WHERE id = ?
+                """,
+                (job_id,),
+            ).fetchone()
+        if not row:
+            return None
+        payload = dict(row)
+        response_json = payload.get("response_json")
+        payload["result"] = ClipBatchResponse.model_validate_json(response_json) if response_json else None
+        payload["error"] = payload.get("error_text")
+        return payload
 
     def persist_clip_batch(
         self,
