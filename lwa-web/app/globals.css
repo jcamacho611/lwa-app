@@ -34,6 +34,9 @@
 
   --success: #34d399;
   --danger: #fb7185;
+
+  --font-body: "Inter Variable", "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "Noto Sans", "Noto Sans JP", sans-serif;
+  --font-display: "Zen Kaku Gothic New", "Noto Sans JP", "Inter Variable", sans-serif;
 }
 
 /* ─── Animated background keyframes ─────────────────────────────────────── */
@@ -121,6 +124,11 @@
   96% { opacity: 0.1; }
 }
 
+@keyframes depth-glow-drift {
+  0%, 100% { opacity: 0.22; transform: translate3d(0, 0, 0) scale(1); }
+  50% { opacity: 0.34; transform: translate3d(2%, -3%, 0) scale(1.08); }
+}
+
 @keyframes brand-breathe {
   0%, 100% { transform: scale(0.98); opacity: 0.7; }
   50% { transform: scale(1.04); opacity: 1; }
@@ -137,15 +145,41 @@
   100% { transform: rotate(360deg); }
 }
 
+@keyframes silhouette-float {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(0, -12px, 0) scale(1.02); }
+}
+
+@keyframes aura-flicker {
+  0%, 100% { opacity: 0.18; }
+  40% { opacity: 0.34; }
+  48% { opacity: 0.26; }
+  54% { opacity: 0.4; }
+  72% { opacity: 0.22; }
+}
+
+@keyframes eye-flicker {
+  0%, 86%, 100% { opacity: 0.18; filter: blur(6px); }
+  88% { opacity: 0.66; filter: blur(2px); }
+  90% { opacity: 0.24; }
+  92% { opacity: 0.74; filter: blur(1px); }
+  94% { opacity: 0.28; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .ai-depth-field,
   .ai-orb,
   .ai-orb-pulse,
   .ai-scan-line,
   .loading-shimmer,
+  .ai-particle-field,
   .ai-stars,
   .ai-fog,
   .ai-beam,
   .ai-shimmer,
+  .ai-silhouette,
+  .ai-aura-halo,
+  .ai-eye-glow,
   .logo-mark-shell-animated .logo-mark-aura,
   .logo-mark-shell-animated .logo-mark-ring,
   .logo-wordmark-glow,
@@ -172,22 +206,45 @@ body {
     radial-gradient(circle at 82% 12%, rgba(255, 45, 166, 0.08) 0%, transparent 26%),
     linear-gradient(180deg, #040405 0%, #080507 46%, #040405 100%);
   color: var(--text);
-  font-family:
-    "Inter Variable",
-    "Inter",
-    ui-sans-serif,
-    -apple-system,
-    BlinkMacSystemFont,
-    "SF Pro Display",
-    "SF Pro Text",
-    "Segoe UI",
-    "Noto Sans",
-    "Noto Sans JP",
-    sans-serif;
+  font-family: var(--font-body);
   letter-spacing: -0.01em;
 }
 
 /* ─── Animated AI background orbs ───────────────────────────────────────── */
+.ai-background {
+  --ai-depth-x: 0px;
+  --ai-depth-y: 0px;
+  --ai-glow-x: 50%;
+  --ai-glow-y: 26%;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: clip;
+}
+
+.ai-background-workspace {
+  opacity: 0.72;
+}
+
+.ai-background-home {
+  opacity: 1;
+}
+
+.ai-depth-field {
+  position: fixed;
+  inset: -8%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at var(--ai-glow-x) var(--ai-glow-y), rgba(255, 45, 166, 0.14), transparent 18%),
+    radial-gradient(circle at 14% 18%, rgba(255, 0, 60, 0.18), transparent 28%),
+    radial-gradient(circle at 74% 20%, rgba(0, 231, 255, 0.1), transparent 22%),
+    radial-gradient(circle at 52% 74%, rgba(161, 0, 47, 0.12), transparent 24%);
+  transform: translate3d(calc(var(--ai-depth-x) * 0.28), calc(var(--ai-depth-y) * 0.28), 0);
+  filter: blur(18px);
+  animation: depth-glow-drift 18s ease-in-out infinite;
+}
+
 .ai-orb {
   position: fixed;
   border-radius: 9999px;
@@ -257,6 +314,7 @@ body {
   animation-delay: 4s;
 }
 
+.ai-particle-field,
 .ai-stars,
 .ai-fog,
 .ai-beam,
@@ -264,6 +322,18 @@ body {
   position: fixed;
   inset: 0;
   pointer-events: none;
+}
+
+.ai-particle-field {
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.18) 0 1px, transparent 2px),
+    radial-gradient(circle at 36% 48%, rgba(255, 107, 139, 0.2) 0 1px, transparent 2px),
+    radial-gradient(circle at 62% 26%, rgba(0, 231, 255, 0.18) 0 1px, transparent 2px),
+    radial-gradient(circle at 74% 58%, rgba(255, 45, 166, 0.16) 0 1px, transparent 2px),
+    radial-gradient(circle at 88% 18%, rgba(255, 255, 255, 0.16) 0 1px, transparent 2px);
+  opacity: 0.28;
+  transform: translate3d(calc(var(--ai-depth-x) * -0.2), calc(var(--ai-depth-y) * -0.16), 0);
+  animation: particle-drift 24s linear infinite alternate;
 }
 
 .ai-stars {
@@ -310,6 +380,80 @@ body {
 .ai-shimmer-a {
   background: radial-gradient(circle at 72% 16%, rgba(255,45,166,0.08), transparent 18%);
   animation: lightning-pulse 18s ease-in-out infinite;
+}
+
+.ai-silhouette {
+  position: fixed;
+  bottom: -2%;
+  width: min(34vw, 420px);
+  aspect-ratio: 0.68;
+  pointer-events: none;
+  opacity: 0.72;
+  filter: saturate(1.06);
+  transform: translate3d(calc(var(--ai-depth-x) * -0.28), calc(var(--ai-depth-y) * -0.22), 0);
+  animation: silhouette-float 14s ease-in-out infinite;
+}
+
+.ai-silhouette-a {
+  right: 4%;
+  opacity: 0.78;
+}
+
+.ai-silhouette-b {
+  left: -2%;
+  bottom: 4%;
+  width: min(24vw, 280px);
+  opacity: 0.4;
+  animation-duration: 18s;
+  transform: translate3d(calc(var(--ai-depth-x) * 0.18), calc(var(--ai-depth-y) * -0.16), 0);
+}
+
+.ai-aura-halo,
+.ai-figure-core,
+.ai-eye-glow {
+  position: absolute;
+  inset: 0;
+}
+
+.ai-aura-halo {
+  border-radius: 50% 50% 40% 40%;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255, 45, 166, 0.18), transparent 28%),
+    radial-gradient(circle at 54% 52%, rgba(255, 0, 60, 0.16), transparent 34%),
+    radial-gradient(circle at 50% 70%, rgba(0, 231, 255, 0.08), transparent 44%);
+  filter: blur(24px);
+  animation: aura-flicker 7.8s ease-in-out infinite;
+}
+
+.ai-figure-core {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.06), transparent 12%),
+    radial-gradient(circle at 50% 24%, rgba(18, 7, 10, 0.88) 0 10%, transparent 11%),
+    radial-gradient(circle at 50% 38%, rgba(14, 6, 9, 0.9) 0 16%, transparent 17%),
+    radial-gradient(circle at 50% 62%, rgba(10, 4, 7, 0.88) 0 24%, transparent 25%),
+    linear-gradient(180deg, rgba(8, 4, 6, 0) 0%, rgba(8, 4, 6, 0.92) 26%, rgba(5, 4, 5, 0.98) 100%);
+  clip-path: polygon(50% 4%, 58% 10%, 64% 20%, 68% 31%, 72% 46%, 78% 64%, 74% 100%, 26% 100%, 22% 64%, 28% 46%, 32% 31%, 36% 20%, 42% 10%);
+  box-shadow:
+    0 0 60px rgba(255, 0, 60, 0.08),
+    0 0 100px rgba(0, 231, 255, 0.04);
+}
+
+.ai-eye-glow {
+  inset: 18% 34% auto 34%;
+  height: 18%;
+  background:
+    radial-gradient(circle at 30% 52%, rgba(255, 45, 166, 0.7) 0 12%, transparent 24%),
+    radial-gradient(circle at 70% 52%, rgba(0, 231, 255, 0.66) 0 12%, transparent 24%);
+  filter: blur(6px);
+  opacity: 0.24;
+}
+
+.ai-eye-glow-a {
+  animation: eye-flicker 8.8s ease-in-out infinite;
+}
+
+.ai-eye-glow-b {
+  animation: eye-flicker 10.4s ease-in-out infinite 1.2s;
 }
 
 /* Loading shimmer utility */
@@ -476,6 +620,19 @@ textarea {
   filter: drop-shadow(0 0 18px rgba(255, 0, 60, 0.1));
 }
 
+.logo-wordmark-display {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff1f5;
+  text-shadow:
+    0 0 24px rgba(255, 0, 60, 0.14),
+    0 0 30px rgba(0, 231, 255, 0.06);
+}
+
 .home-stage {
   --home-pointer-x: 50%;
   --home-pointer-y: 36%;
@@ -607,8 +764,9 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
 }
 .section-kicker {
+  font-family: var(--font-display);
   font-size: 0.72rem;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.32em;
   text-transform: uppercase;
   color: rgba(255, 107, 139, 0.84);
 }
@@ -892,7 +1050,41 @@ textarea {
 }
 
 .page-title {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
   text-wrap: balance;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.mode-switch {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015)),
+    rgba(255,255,255,0.02);
+}
+
+.mode-pill {
+  border: 1px solid transparent;
+  color: rgba(237, 242, 255, 0.68);
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.mode-pill:hover {
+  color: rgba(237, 242, 255, 0.88);
+}
+
+.mode-pill-active {
+  border-color: rgba(255, 0, 60, 0.24);
+  background: linear-gradient(135deg, rgba(255,0,60,0.18), rgba(255,45,166,0.12), rgba(0,231,255,0.08));
+  color: #fff1f5;
+  box-shadow: 0 12px 32px rgba(82, 10, 27, 0.28);
 }
 
 @keyframes driftGlow {
@@ -917,5 +1109,33 @@ textarea {
   .home-stage::before,
   .home-stage::after {
     display: none;
+  }
+
+  .ai-silhouette-b {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .logo-wordmark-display {
+    font-size: 1.2rem;
+    letter-spacing: 0.2em;
+  }
+
+  .page-title {
+    letter-spacing: 0.02em;
+  }
+
+  .ai-silhouette-a {
+    width: min(56vw, 260px);
+    right: -8%;
+    opacity: 0.46;
+  }
+
+  .ai-depth-field,
+  .ai-particle-field,
+  .ai-beam-b,
+  .ai-shimmer-a {
+    opacity: 0.56;
   }
 }

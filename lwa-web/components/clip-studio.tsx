@@ -162,6 +162,7 @@ export function ClipStudio({
   const [selectedUpload, setSelectedUpload] = useState<UploadAsset | null>(null);
   const [feedbackRecords, setFeedbackRecords] = useState<ClipFeedbackRecord[]>([]);
   const [improveResults, setImproveResults] = useState(false);
+  const [generationMode, setGenerationMode] = useState<"quick" | "pro">("quick");
   const [readyQueue, setReadyQueue] = useState<ReadyQueueItem[]>([]);
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null);
   const [loadingStageIndex, setLoadingStageIndex] = useState(0);
@@ -720,6 +721,24 @@ export function ClipStudio({
     : orderedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
   const featureProof = ["Best clip first", "Hooks + captions", "Queue-ready"];
   const loadingStages = ["Analyzing video", "Finding viral moments", "Generating clips"];
+  const deliveryMoments = [
+    {
+      label: "Paste once",
+      detail: "Start with one source and one target platform.",
+    },
+    {
+      label: "Review first",
+      detail: "See ranked clips, hooks, and captions before you export.",
+    },
+    {
+      label: "Move fast",
+      detail: "Queue the winners and keep the rest for later.",
+    },
+  ] as const;
+  const idleRunSummary =
+    generationMode === "quick"
+      ? "Paste a public link, get ranked clips back, then review the best option first."
+      : "Turn on local learning when you want the next pack to lean toward what you keep.";
   const homeDiscoverySections = [
     {
       id: "why-lwa",
@@ -872,12 +891,35 @@ export function ClipStudio({
         <div>
           <p className="section-kicker">Generate first</p>
           <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop one source. Leave with ranked clips.</h2>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/90">Real previews, packaging, and post order in one pass.</p>
+          <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/90">
+            {generationMode === "quick"
+              ? "One link in. Ranked clips, hooks, captions, and previews back."
+              : "Stay in the same workflow while LWA learns what you keep and tightens the next pack."}
+          </p>
         </div>
         <StatPill tone="accent">{platform}</StatPill>
       </div>
 
       <form onSubmit={onSubmit} className="mt-7 space-y-5">
+        <div className="mode-switch inline-flex rounded-full p-1">
+          {[
+            { value: "quick", label: "Quick mode" },
+            { value: "pro", label: "Pro mode" },
+          ].map((option) => {
+            const active = generationMode === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setGenerationMode(option.value as "quick" | "pro")}
+                className={["mode-pill rounded-full px-4 py-2 text-sm font-medium", active ? "mode-pill-active" : ""].join(" ")}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
         <label className="block">
           <span className="mb-3 block text-sm font-medium text-ink/84">Source link</span>
           <input
@@ -913,26 +955,44 @@ export function ClipStudio({
           </div>
         </div>
 
-        <div className="metric-tile rounded-[24px] p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-ink">Tighten future packs</p>
-              <p className="mt-1 text-sm text-ink/60">Bias new runs toward what you keep.</p>
+        <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
+          <div className="metric-tile rounded-[24px] p-4">
+            <p className="text-sm font-medium text-ink">What happens first</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {deliveryMoments.map((item) => (
+                <div key={item.label} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
+                  <span className="block font-medium text-ink">{item.label}</span>
+                  <span className="mt-2 block leading-6 text-ink/56">{item.detail}</span>
+                </div>
+              ))}
             </div>
-            <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={improveResults}
-                onChange={(event) => setImproveResults(event.target.checked)}
-                className="h-4 w-4 accent-cyan-400"
-              />
-              Improve results
-            </label>
           </div>
+
+          {generationMode === "pro" ? (
+            <div className="metric-tile rounded-[24px] p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-ink">Tighten future packs</p>
+                  <p className="mt-1 text-sm text-ink/60">Bias new runs toward what you keep.</p>
+                </div>
+                <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={improveResults}
+                    onChange={(event) => setImproveResults(event.target.checked)}
+                    className="h-4 w-4 accent-cyan-400"
+                  />
+                  Improve results
+                </label>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-ink/60">{loadingStages[loadingStageIndex]}. {GENERATOR_COPY.loading}</p>
+          <p className="text-sm text-ink/60">
+            {isLoading ? `${loadingStages[loadingStageIndex]}. ${GENERATOR_COPY.loading}` : idleRunSummary}
+          </p>
           <button
             type="submit"
             disabled={isLoading}
@@ -974,7 +1034,11 @@ export function ClipStudio({
               <h2 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">
                 {GENERATOR_COPY.title}
               </h2>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">{GENERATOR_COPY.subhead}</p>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">
+                {generationMode === "quick"
+                  ? "Keep the first run simple: paste a source, get the ranked pack, then decide what to post."
+                  : GENERATOR_COPY.subhead}
+              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <StatPill tone="accent">{planSurface.name}</StatPill>
@@ -983,6 +1047,25 @@ export function ClipStudio({
           </div>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-6">
+            <div className="mode-switch inline-flex rounded-full p-1">
+              {[
+                { value: "quick", label: "Quick mode" },
+                { value: "pro", label: "Pro mode" },
+              ].map((option) => {
+                const active = generationMode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setGenerationMode(option.value as "quick" | "pro")}
+                    className={["mode-pill rounded-full px-4 py-2 text-sm font-medium", active ? "mode-pill-active" : ""].join(" ")}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <label className="block">
               <span className="mb-3 block text-sm font-medium text-ink/84">Source link</span>
               <input
@@ -1018,53 +1101,55 @@ export function ClipStudio({
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
               <div className="metric-tile rounded-[24px] p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-ink">Tighten future packs</p>
-                    <p className="mt-1 text-sm text-ink/60">Bias new runs toward what you keep.</p>
-                    {preferenceProfile.topPackagingAngle || preferenceProfile.topHookStyle ? (
-                      <p className="mt-3 text-sm text-accent">
-                        Favoring {preferenceProfile.topPackagingAngle || "strong"} packaging
-                        {preferenceProfile.topHookStyle ? ` and ${preferenceProfile.topHookStyle} hooks` : ""}.
-                      </p>
-                    ) : (
-                      <p className="mt-3 text-sm text-ink/46">Mark what lands. The browser remembers.</p>
-                    )}
-                  </div>
-                  <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
-                    <input
-                      type="checkbox"
-                      checked={improveResults}
-                      onChange={(event) => setImproveResults(event.target.checked)}
-                      className="h-4 w-4 accent-cyan-400"
-                    />
-                    Improve results
-                  </label>
-                </div>
-              </div>
-
-              <div className="metric-tile rounded-[24px] p-4">
-                <p className="text-sm font-medium text-ink">What comes back</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {[
-                    "Playable clips",
-                    "Hooks that hit",
-                    "Captions",
-                    "Export-ready",
-                  ].map((item) => (
-                    <div key={item} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
-                      {item}
+                <p className="text-sm font-medium text-ink">What happens first</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {deliveryMoments.map((item) => (
+                    <div key={item.label} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
+                      <span className="block font-medium text-ink">{item.label}</span>
+                      <span className="mt-2 block leading-6 text-ink/56">{item.detail}</span>
                     </div>
                   ))}
                 </div>
               </div>
+
+              {generationMode === "pro" ? (
+                <div className="metric-tile rounded-[24px] p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-ink">Tighten future packs</p>
+                      <p className="mt-1 text-sm text-ink/60">Bias new runs toward what you keep.</p>
+                      {preferenceProfile.topPackagingAngle || preferenceProfile.topHookStyle ? (
+                        <p className="mt-3 text-sm text-accent">
+                          Favoring {preferenceProfile.topPackagingAngle || "strong"} packaging
+                          {preferenceProfile.topHookStyle ? ` and ${preferenceProfile.topHookStyle} hooks` : ""}.
+                        </p>
+                      ) : (
+                        <p className="mt-3 text-sm text-ink/46">Mark what lands. The browser remembers.</p>
+                      )}
+                    </div>
+                    <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
+                      <input
+                        type="checkbox"
+                        checked={improveResults}
+                        onChange={(event) => setImproveResults(event.target.checked)}
+                        className="h-4 w-4 accent-cyan-400"
+                      />
+                      Improve results
+                    </label>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <p className="text-sm text-ink/60">
-                {result ? "Clip pack ready. Review first, queue next, export when it fits." : "Use a public link or local file."}
+                {isLoading
+                  ? `${loadingStages[loadingStageIndex]}. ${GENERATOR_COPY.loading}`
+                  : result
+                    ? "Clip pack ready. Review first, queue next, export when it fits."
+                    : idleRunSummary}
               </p>
               <button
                 type="submit"
