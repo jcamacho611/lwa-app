@@ -37,11 +37,11 @@ enum APIConfig {
         #else
         let configured = BundleConfiguration.string(
             for: "LWAProductionAPIBaseURL",
-            fallback: "https://lwa-production-c9cc.up.railway.app"
+            fallback: "https://lwa-backend-production-c9cc.up.railway.app"
         )
         #endif
 
-        return URL(string: configured) ?? URL(string: "https://lwa-production-c9cc.up.railway.app")!
+        return URL(string: configured) ?? URL(string: "https://lwa-backend-production-c9cc.up.railway.app")!
     }
 
     static var baseURL: URL {

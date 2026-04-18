@@ -24,10 +24,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Description | Default |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | Backend base URL | `http://127.0.0.1:8000` |
+| `NEXT_PUBLIC_API_BASE_URL` | Backend base URL | `http://127.0.0.1:8000` |
 
 For local dev the backend should be running at `http://127.0.0.1:8000`.  
-For production set `NEXT_PUBLIC_API_URL=https://lwa-production-c9cc.up.railway.app`.
+For production set `NEXT_PUBLIC_API_BASE_URL=https://lwa-backend-production-c9cc.up.railway.app`.
 
 ## Production Build
 
@@ -43,7 +43,7 @@ npm run start
 | Root Directory | `lwa-web` |
 | Build Command | `npm install && npm run build` |
 | Start Command | `npm run start` |
-| Environment Variable | `NEXT_PUBLIC_API_URL=https://lwa-production-c9cc.up.railway.app` |
+| Environment Variable | `NEXT_PUBLIC_API_BASE_URL=https://lwa-backend-production-c9cc.up.railway.app` |
 
 Railway will auto-detect Node.js via Nixpacks. The `railway.toml` in this directory configures the build and deploy settings automatically.
 

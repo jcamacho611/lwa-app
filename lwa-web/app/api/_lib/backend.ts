@@ -1,7 +1,7 @@
 const BACKEND_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   process.env.LWA_BACKEND_URL ||
-  "https://lwa-production-c9cc.up.railway.app"
+  "https://lwa-backend-production-c9cc.up.railway.app"
 ).replace(/\/$/, "");
 
 export function backendUrl(path: string) {
