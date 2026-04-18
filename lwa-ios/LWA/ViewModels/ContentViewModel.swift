@@ -15,6 +15,7 @@ struct GenerationTrackItem: Identifiable {
 @MainActor
 final class ContentViewModel: ObservableObject {
     private let historyKey = "lwa.saved_runs"
+    private let reviewStateKey = "lwa.clip_review_states"
     private let generationStages = [
         "Analyzing source",
         "Finding moments",
@@ -34,6 +35,7 @@ final class ContentViewModel: ObservableObject {
     @Published private(set) var lastSubmittedURL = ""
     @Published private(set) var latestResponse: ClipResponse?
     @Published private(set) var history: [SavedRun] = []
+    @Published private(set) var reviewStates: [String: ClipReviewState] = [:]
     @Published var showPaywall = false
     @Published private(set) var trends: [TrendItem] = []
     @Published var selectedTrend: TrendItem?
@@ -45,6 +47,7 @@ final class ContentViewModel: ObservableObject {
     init(apiClient: APIClient = APIClient()) {
         self.apiClient = apiClient
         history = loadHistory()
+        reviewStates = loadReviewStates()
 
         Task {
             await refreshTrends()
@@ -198,6 +201,18 @@ final class ContentViewModel: ObservableObject {
         Array(history.prefix(8))
     }
 
+    var favoriteClipCount: Int {
+        clips.filter { reviewState(for: $0) == .favorite }.count
+    }
+
+    var approvedClipCount: Int {
+        clips.filter { reviewState(for: $0) == .approved }.count
+    }
+
+    var rejectedClipCount: Int {
+        clips.filter { reviewState(for: $0) == .rejected }.count
+    }
+
     var processingStatusLabel: String {
         if isUploading {
             return "Uploading source"
@@ -345,6 +360,20 @@ final class ContentViewModel: ObservableObject {
         """
     }
 
+    func reviewState(for clip: ClipResult) -> ClipReviewState? {
+        reviewStates[reviewKey(for: clip)]
+    }
+
+    func setReviewState(_ state: ClipReviewState?, for clip: ClipResult) {
+        let key = reviewKey(for: clip)
+        if let state {
+            reviewStates[key] = state
+        } else {
+            reviewStates.removeValue(forKey: key)
+        }
+        persistReviewStates()
+    }
+
     private func waitForJob(jobID: String) async throws -> ClipResponse {
         let deadline = Date().addingTimeInterval(180)
 
@@ -393,6 +422,26 @@ final class ContentViewModel: ObservableObject {
         }
 
         UserDefaults.standard.set(data, forKey: historyKey)
+    }
+
+    private func reviewKey(for clip: ClipResult) -> String {
+        clip.recordID ?? clip.id
+    }
+
+    private func loadReviewStates() -> [String: ClipReviewState] {
+        guard let data = UserDefaults.standard.data(forKey: reviewStateKey),
+              let decoded = try? JSONDecoder().decode([String: ClipReviewState].self, from: data) else {
+            return [:]
+        }
+        return decoded
+    }
+
+    private func persistReviewStates() {
+        guard let data = try? JSONEncoder().encode(reviewStates) else {
+            return
+        }
+
+        UserDefaults.standard.set(data, forKey: reviewStateKey)
     }
 
     private var activeGenerationStage: Int {

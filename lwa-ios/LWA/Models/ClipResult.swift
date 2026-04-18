@@ -377,6 +377,23 @@ struct SavedRun: Codable, Identifiable {
     }
 }
 
+enum ClipReviewState: String, Codable, CaseIterable {
+    case favorite
+    case approved
+    case rejected
+
+    var label: String {
+        switch self {
+        case .favorite:
+            return "Favorite"
+        case .approved:
+            return "Approved"
+        case .rejected:
+            return "Rejected"
+        }
+    }
+}
+
 private extension ProcessingSummary.FeatureFlags {
     init(
         clipLimit: Int,

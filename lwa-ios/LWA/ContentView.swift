@@ -24,6 +24,10 @@ struct ContentView: View {
                         onOpenUpload: { showFileImporter = true },
                         onOpenPaywall: { viewModel.showPaywall = true },
                         onOpenClip: { selectedClip = $0 },
+                        reviewStateForClip: { viewModel.reviewState(for: $0) },
+                        onSetReviewState: { clip, state in
+                            viewModel.setReviewState(state, for: clip)
+                        },
                         onRestoreRun: {
                             viewModel.restore(run: $0)
                             selectedTab = .home
@@ -75,6 +79,10 @@ struct ContentView: View {
         .sheet(item: $selectedClip) { clip in
             OmegaClipDetailView(
                 clip: clip,
+                reviewState: viewModel.reviewState(for: clip),
+                onSetReviewState: { state in
+                    viewModel.setReviewState(state, for: clip)
+                },
                 onCopy: { value, message in
                     copyToPasteboard(value, confirmation: message)
                 }
@@ -131,6 +139,8 @@ private struct OmegaHomeScreen: View {
     let onOpenUpload: () -> Void
     let onOpenPaywall: () -> Void
     let onOpenClip: (ClipResult) -> Void
+    let reviewStateForClip: (ClipResult) -> ClipReviewState?
+    let onSetReviewState: (ClipResult, ClipReviewState?) -> Void
     let onRestoreRun: (SavedRun) -> Void
     let onCopyBundle: () -> Void
 
@@ -444,12 +454,22 @@ private struct OmegaHomeScreen: View {
                     .buttonStyle(OmegaSecondaryButtonStyle())
                 }
 
+                HStack(spacing: 10) {
+                    OmegaMetricPill(label: "\(viewModel.favoriteClipCount) favorites")
+                    OmegaMetricPill(label: "\(viewModel.approvedClipCount) approved")
+                    OmegaMetricPill(label: "\(viewModel.rejectedClipCount) rejected")
+                }
+
                 VStack(spacing: 12) {
                     ForEach(viewModel.clips) { clip in
                         Button {
                             onOpenClip(clip)
                         } label: {
-                            OmegaClipCard(clip: clip, isFeatured: clip.id == viewModel.bestClip?.id)
+                            OmegaClipCard(
+                                clip: clip,
+                                isFeatured: clip.id == viewModel.bestClip?.id,
+                                reviewState: reviewStateForClip(clip)
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -532,6 +552,7 @@ private struct OmegaHistoryScreen: View {
 private struct OmegaClipCard: View {
     let clip: ClipResult
     let isFeatured: Bool
+    let reviewState: ClipReviewState?
 
     var body: some View {
         OmegaGlassCard {
@@ -572,6 +593,9 @@ private struct OmegaClipCard: View {
                             OmegaMetricPill(label: "Post #\(bestPostOrder)")
                         }
                         OmegaMetricPill(label: "\(clip.startTime)-\(clip.endTime)")
+                        if let reviewState {
+                            OmegaMetricPill(label: reviewState.label)
+                        }
                     }
 
                     if let primaryReason = clip.primaryReason {
@@ -588,6 +612,8 @@ private struct OmegaClipCard: View {
 
 private struct OmegaClipDetailView: View {
     let clip: ClipResult
+    let reviewState: ClipReviewState?
+    let onSetReviewState: (ClipReviewState?) -> Void
     let onCopy: (String, String) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -595,8 +621,15 @@ private struct OmegaClipDetailView: View {
     @State private var trimEnd: Double
     @State private var captionStyle = 0
 
-    init(clip: ClipResult, onCopy: @escaping (String, String) -> Void) {
+    init(
+        clip: ClipResult,
+        reviewState: ClipReviewState?,
+        onSetReviewState: @escaping (ClipReviewState?) -> Void,
+        onCopy: @escaping (String, String) -> Void
+    ) {
         self.clip = clip
+        self.reviewState = reviewState
+        self.onSetReviewState = onSetReviewState
         self.onCopy = onCopy
         let start = max(0, parseSeconds(clip.startTime))
         let end = max(start + 1, parseSeconds(clip.endTime))
@@ -612,6 +645,7 @@ private struct OmegaClipDetailView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {
                         playerCard
+                        operatorDecision
                         whyItWorks
                         hookSuggestions
                         captionSection
@@ -664,6 +698,44 @@ private struct OmegaClipDetailView: View {
                     if let bestPostOrder = clip.bestPostOrder {
                         OmegaMetricPill(label: "Post #\(bestPostOrder)")
                     }
+                    if let reviewState {
+                        OmegaMetricPill(label: reviewState.label)
+                    }
+                }
+            }
+        }
+    }
+
+    private var operatorDecision: some View {
+        OmegaGlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                OmegaSectionHeader(title: "Operator decision", subtitle: "Save a call on this clip before you move the pack.")
+
+                HStack(spacing: 10) {
+                    ForEach(ClipReviewState.allCases, id: \.rawValue) { state in
+                        Button {
+                            onSetReviewState(reviewState == state ? nil : state)
+                        } label: {
+                            Text(state.label)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(reviewState == state ? .black : .white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(reviewState == state ? OmegaPalette.accent : OmegaPalette.card)
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                if reviewState != nil {
+                    Button {
+                        onSetReviewState(nil)
+                    } label: {
+                        Label("Clear review state", systemImage: "xmark.circle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OmegaSecondaryButtonStyle())
                 }
             }
         }
