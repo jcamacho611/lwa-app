@@ -164,6 +164,7 @@ async def build_clip_response(
         content_angle=request.content_angle,
         trend_context=trend_context,
         source_context=source_context,
+        premium_reasoning=bool(entitlement.plan.feature_flags.priority_processing),
     )
     await emit_progress(progress_callback, "Compiling attention signals, ranking clips, and generating angles.")
     clips, compiler_mode = await compile_attention(
@@ -173,6 +174,7 @@ async def build_clip_response(
         selected_trend=request.selected_trend,
         content_angle=request.content_angle,
         source_context=source_context,
+        premium_reasoning=bool(entitlement.plan.feature_flags.priority_processing),
     )
     edited_assets_created = 0
     if source_context:
