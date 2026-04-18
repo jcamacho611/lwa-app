@@ -188,10 +188,15 @@ final class ContentViewModel: ObservableObject {
 
     var bestClip: ClipResult? {
         clips.sorted { lhs, rhs in
-            let lhsRank = lhs.postRank ?? lhs.bestPostOrder ?? lhs.rank ?? Int.max
-            let rhsRank = rhs.postRank ?? rhs.bestPostOrder ?? rhs.rank ?? Int.max
+            let lhsRank = lhs.rank ?? Int.max
+            let rhsRank = rhs.rank ?? Int.max
             if lhsRank != rhsRank {
                 return lhsRank < rhsRank
+            }
+            let lhsPostRank = lhs.postRank ?? lhs.bestPostOrder ?? Int.max
+            let rhsPostRank = rhs.postRank ?? rhs.bestPostOrder ?? Int.max
+            if lhsPostRank != rhsPostRank {
+                return lhsPostRank < rhsPostRank
             }
             return lhs.score > rhs.score
         }.first
@@ -333,10 +338,12 @@ final class ContentViewModel: ObservableObject {
 
         let clipLines = response.clips.enumerated().map { index, clip in
             """
-            \(clip.postRank ?? (index + 1)). \(clip.title) [\(clip.startTime)-\(clip.endTime)] score \(clip.score)
+            Review rank \(clip.rank ?? (index + 1)) | Post order \(clip.postRank ?? clip.bestPostOrder ?? (index + 1)) | \(clip.title) [\(clip.startTime)-\(clip.endTime)] score \(clip.score)
             Hook: \(clip.hook)
             Caption: \(clip.caption)
             Why it matters: \(clip.whyThisMatters ?? "not available")
+            Packaging angle: \(clip.resolvedPackagingAngle)
+            Caption style: \(clip.captionStyle ?? "not available")
             Thumbnail text: \(clip.thumbnailText ?? "not available")
             CTA: \(clip.ctaSuggestion ?? "not available")
             Alternate hooks: \(clip.hookVariants.isEmpty ? "not available" : clip.hookVariants.joined(separator: " | "))

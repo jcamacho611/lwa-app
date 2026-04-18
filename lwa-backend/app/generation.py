@@ -10,7 +10,7 @@ from openai import OpenAI
 
 from .config import Settings
 from .mock_data import build_mock_clips
-from .processor import ClipSeed, SourceContext
+from .processor import ClipSeed, SourceContext, score_excerpt
 from .schemas import ClipResult, TrendItem
 from .services.anthropic_service import (
     anthropic_available,
@@ -289,11 +289,22 @@ def parse_generated_clips(
                 aspect_ratio=clip.get("aspect_ratio"),
                 why_this_matters=str_or_fallback(
                     clip.get("why_this_matters"),
-                    reason,
+                    default_why_this_matters(
+                        title=title,
+                        target_platform=target_platform,
+                        post_rank=index,
+                        packaging_angle=packaging_angle,
+                        transcript_excerpt=seed.transcript_excerpt if seed else clip.get("transcript_excerpt"),
+                    ),
                 ),
                 confidence_score=clamp_score(
                     clip.get("confidence_score"),
-                    fallback=max(int(round(confidence * 100)), 55),
+                    fallback=fallback_confidence_score(
+                        score=score,
+                        confidence=confidence,
+                        transcript_excerpt=seed.transcript_excerpt if seed else clip.get("transcript_excerpt"),
+                        source_context=source_context,
+                    ),
                 ),
                 thumbnail_text=str_or_fallback(
                     clip.get("thumbnail_text"),
@@ -301,8 +312,14 @@ def parse_generated_clips(
                 ),
                 cta_suggestion=str_or_fallback(
                     clip.get("cta_suggestion"),
-                    default_cta_suggestion(target_platform=target_platform, post_rank=index),
+                    default_cta_suggestion(
+                        target_platform=target_platform,
+                        post_rank=index,
+                        packaging_angle=packaging_angle,
+                    ),
                 ),
+                post_rank=max(parse_int(clip.get("post_rank"), fallback=index), 1),
+                best_post_order=max(parse_int(clip.get("post_rank"), fallback=index), 1),
                 hook_variants=parse_hook_variants(
                     clip.get("hook_variants"),
                     hook=hook,
@@ -319,7 +336,7 @@ def parse_generated_clips(
                 ),
                 caption_style=str_or_fallback(
                     clip.get("caption_style"),
-                    default_caption_style(target_platform),
+                    default_caption_style(target_platform, packaging_angle=packaging_angle),
                 ),
                 platform_fit=platform_fit,
                 packaging_angle=packaging_angle,
@@ -336,13 +353,20 @@ def parse_generated_clips(
             clip.model_copy(
                 update={
                     "rank": rank,
-                    "post_rank": rank,
-                    "best_post_order": rank,
-                    "cta_suggestion": clip.cta_suggestion or default_cta_suggestion(target_platform=target_platform, post_rank=rank),
+                    "post_rank": clip.post_rank or rank,
+                    "best_post_order": clip.best_post_order or clip.post_rank or rank,
+                    "cta_suggestion": clip.cta_suggestion
+                    or default_cta_suggestion(
+                        target_platform=target_platform,
+                        post_rank=clip.post_rank or rank,
+                        packaging_angle=clip.packaging_angle,
+                    ),
                     "why_this_matters": clip.why_this_matters or default_why_this_matters(
                         title=clip.title,
                         target_platform=target_platform,
-                        post_rank=rank,
+                        post_rank=clip.post_rank or rank,
+                        packaging_angle=clip.packaging_angle,
+                        transcript_excerpt=clip.transcript_excerpt,
                     ),
                 }
             )
@@ -453,10 +477,21 @@ def build_source_grounded_fallback_clips(
                     title=title_focus,
                     target_platform=target_platform,
                     post_rank=index,
+                    packaging_angle=packaging_angle,
+                    transcript_excerpt=source_phrase,
                 ),
-                confidence_score=max(int(round(confidence * 100)), 58),
+                confidence_score=fallback_confidence_score(
+                    score=score,
+                    confidence=confidence,
+                    transcript_excerpt=source_phrase,
+                    source_context=source_context,
+                ),
                 thumbnail_text=default_thumbnail_text(title=title, hook=hook),
-                cta_suggestion=default_cta_suggestion(target_platform=target_platform, post_rank=index),
+                cta_suggestion=default_cta_suggestion(
+                    target_platform=target_platform,
+                    post_rank=index,
+                    packaging_angle=packaging_angle,
+                ),
                 post_rank=index,
                 best_post_order=index,
                 hook_variants=default_hook_variants(
@@ -470,7 +505,7 @@ def build_source_grounded_fallback_clips(
                     "viral": caption,
                     "story": f"{source_context.title or 'This source'} lands because the payoff shows up fast and the framing stays tight.",
                 },
-                caption_style=default_caption_style(target_platform),
+                caption_style=default_caption_style(target_platform, packaging_angle=packaging_angle),
                 platform_fit=default_platform_fit(target_platform=target_platform, packaging_angle=packaging_angle),
                 packaging_angle=packaging_angle,
                 duration=seed.duration,
@@ -535,6 +570,7 @@ Return valid JSON in this shape:
       "reason": "...",
       "thumbnail_text": "...",
       "cta_suggestion": "...",
+      "post_rank": 1,
       "score": 90,
       "confidence": 0.86,
       "platform_fit": "...",
@@ -549,6 +585,7 @@ Rules:
 - If preferred packaging angle is present, bias the response toward it unless the clip clearly fits a stronger angle.
 - reason must explain in one short sentence why the clip will work.
 - why_this_matters must explain why this clip should be posted in the stack.
+- post_rank must recommend where this clip should appear in the posting sequence.
 - thumbnail_text must be 2 to 5 words and punchy.
 - hook_variants must contain exactly 3 alternate hook options.
 - caption_variants must include viral, story, educational, and controversial keys.
@@ -721,12 +758,30 @@ def default_caption_variants(
     }
 
 
-def default_why_this_matters(*, title: str, target_platform: str, post_rank: int) -> str:
+def default_why_this_matters(
+    *,
+    title: str,
+    target_platform: str,
+    post_rank: int,
+    packaging_angle: str | None = None,
+    transcript_excerpt: object = None,
+) -> str:
+    packaging = (packaging_angle or "value").replace("_", " ")
+    transcript_focus = compact_phrase(str(transcript_excerpt or title))
     if post_rank == 1:
-        return f"This is the first-post candidate because {title.lower()} lands fast and needs the least setup for {target_platform} viewers."
+        return (
+            f"Lead with this because the {transcript_focus} payoff lands fast and gives {target_platform} viewers "
+            f"the clearest first impression with a {packaging} frame."
+        )
     if post_rank == 2:
-        return f"This works as the second post because it deepens the angle once the opening concept has already earned attention on {target_platform}."
-    return f"This is the closer clip: use it after the first two to convert attention into comments, saves, or follow-through on {target_platform}."
+        return (
+            f"Use this second because it deepens the {packaging} angle after the opener has already earned attention "
+            f"and keeps the {target_platform} stack coherent."
+        )
+    return (
+        f"Hold this for later in the stack because the {transcript_focus} moment works better once viewers already "
+        f"understand the angle and are ready to comment, save, or follow through on {target_platform}."
+    )
 
 
 def default_reason(*, title: str, target_platform: str, packaging_angle: str) -> str:
@@ -746,14 +801,19 @@ def default_thumbnail_text(*, title: str, hook: str) -> str:
     return " ".join(words[:4]).title()
 
 
-def default_cta_suggestion(*, target_platform: str, post_rank: int) -> str:
+def default_cta_suggestion(*, target_platform: str, post_rank: int, packaging_angle: str | None = None) -> str:
     platform = target_platform.lower()
+    packaging = (packaging_angle or "").lower()
     if post_rank == 1:
         return (
             "End by asking viewers if they want the full breakdown next."
             if platform == "youtube"
             else "End by asking viewers if they want part two."
         )
+    if packaging == "controversy":
+        return "Close by asking viewers which side they agree with and why."
+    if packaging == "story":
+        return "Close by asking viewers if they want the next part or full sequence."
     if platform == "instagram":
         return "Close by asking people to save this and send it to a creator friend."
     if platform == "facebook":
@@ -761,8 +821,17 @@ def default_cta_suggestion(*, target_platform: str, post_rank: int) -> str:
     return "Close by asking viewers which angle they want you to break down next."
 
 
-def default_caption_style(target_platform: str) -> str:
+def default_caption_style(target_platform: str, packaging_angle: str | None = None) -> str:
     normalized = target_platform.lower()
+    packaging = (packaging_angle or "").lower()
+    if packaging == "controversy":
+        return "Tension-led contrarian"
+    if packaging == "story":
+        return "Beat-driven narrative"
+    if packaging == "curiosity":
+        return "Question-led teaser"
+    if packaging == "shock":
+        return "Punchy interrupt"
     if normalized == "tiktok":
         return "Punchy proof-first"
     if normalized == "instagram":
@@ -836,6 +905,19 @@ def clamp_confidence(value: object, fallback: float) -> float:
     except Exception:
         parsed = fallback
     return max(0.0, min(parsed, 1.0))
+
+
+def fallback_confidence_score(
+    *,
+    score: int,
+    confidence: float,
+    transcript_excerpt: object,
+    source_context: Optional[SourceContext],
+) -> int:
+    transcript_bonus = min(score_excerpt(str(transcript_excerpt or "")) // 6, 10)
+    selection_bonus = 4 if source_context and source_context.selection_strategy == "transcript" and transcript_excerpt else 0
+    base = max(int(round(confidence * 100)), score - 4)
+    return max(55, min(base + transcript_bonus + selection_bonus, 99))
 
 
 def compact_phrase(value: str) -> str:

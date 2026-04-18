@@ -413,8 +413,8 @@ private struct OmegaHomeScreen: View {
                             HStack(spacing: 10) {
                                 OmegaMetricPill(label: bestClip.packagingAngleLabel ?? "Packaging pending")
                                 OmegaMetricPill(label: "Score \(bestClip.score)")
-                                if let bestPostOrder = bestClip.bestPostOrder {
-                                    OmegaMetricPill(label: "Post #\(bestPostOrder)")
+                                if let postOrder = bestClip.displayPostOrder {
+                                    OmegaMetricPill(label: "Post #\(postOrder)")
                                 }
                                 if bestClip.preferredAssetURL != nil {
                                     OmegaMetricPill(label: "Preview ready")
@@ -589,8 +589,8 @@ private struct OmegaClipCard: View {
                         if let packagingAngleLabel = clip.packagingAngleLabel {
                             OmegaMetricPill(label: packagingAngleLabel)
                         }
-                        if let bestPostOrder = clip.bestPostOrder {
-                            OmegaMetricPill(label: "Post #\(bestPostOrder)")
+                        if let postOrder = clip.displayPostOrder {
+                            OmegaMetricPill(label: "Post #\(postOrder)")
                         }
                         OmegaMetricPill(label: "\(clip.startTime)-\(clip.endTime)")
                         if let reviewState {
@@ -695,8 +695,8 @@ private struct OmegaClipDetailView: View {
                     if let packagingAngleLabel = clip.packagingAngleLabel {
                         OmegaMetricPill(label: packagingAngleLabel)
                     }
-                    if let bestPostOrder = clip.bestPostOrder {
-                        OmegaMetricPill(label: "Post #\(bestPostOrder)")
+                    if let postOrder = clip.displayPostOrder {
+                        OmegaMetricPill(label: "Post #\(postOrder)")
                     }
                     if let reviewState {
                         OmegaMetricPill(label: reviewState.label)
@@ -1513,9 +1513,11 @@ private extension ClipResult {
             .joined(separator: "\n")
         return """
         Title: \(title)
-        Rank: \(displayRank.map(String.init) ?? "not available")
+        Review rank: \(displayRank.map(String.init) ?? "not available")
+        Post order: \(displayPostOrder.map(String.init) ?? "not available")
         Confidence: \(compilerConfidenceLabel ?? "not available")
         Packaging angle: \(resolvedPackagingAngle)
+        Caption style: \(captionStyle ?? "not available")
         Hook: \(hook)
         Caption: \(caption)
         Why this works: \(primaryReason ?? "Strong pacing, clear payoff, and creator-ready packaging.")
@@ -1530,7 +1532,11 @@ private extension ClipResult {
     }
 
     var displayRank: Int? {
-        postRank ?? bestPostOrder ?? rank
+        rank ?? postRank ?? bestPostOrder
+    }
+
+    var displayPostOrder: Int? {
+        bestPostOrder ?? postRank
     }
 
     var compilerConfidenceValue: String? {
