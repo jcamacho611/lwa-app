@@ -57,6 +57,8 @@ class Settings:
             else os.path.join(os.getcwd(), "generated")
         )
         self.generated_assets_dir = os.getenv("LWA_GENERATED_ASSETS_DIR", default_generated_dir)
+        self.generated_asset_retention_hours = int(os.getenv("LWA_GENERATED_ASSET_RETENTION_HOURS", "72"))
+        self.generated_asset_prune_interval_seconds = int(os.getenv("LWA_GENERATED_ASSET_PRUNE_INTERVAL_SECONDS", "1800"))
         default_uploads_dir = (
             os.path.join(railway_volume_mount_path, "lwa-uploads")
             if railway_volume_mount_path
@@ -69,6 +71,8 @@ class Settings:
             else os.path.join(os.getcwd(), "generated", "lwa-usage.json")
         )
         self.usage_store_path = os.getenv("LWA_USAGE_STORE_PATH", default_usage_store)
+        self.abuse_window_seconds = int(os.getenv("LWA_ABUSE_WINDOW_SECONDS", "300"))
+        self.abuse_max_generation_requests = int(os.getenv("LWA_ABUSE_MAX_GENERATION_REQUESTS", "8"))
         default_platform_db = (
             os.path.join(railway_volume_mount_path, "lwa-platform.sqlite3")
             if railway_volume_mount_path

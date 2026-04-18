@@ -17,6 +17,7 @@ from .api.routes.seedance import router as seedance_router
 from .api.routes.upload import router as upload_router
 from .api.routes.wallet import router as wallet_router
 from .core.config import get_settings
+from .services.clip_service import maybe_prune_generated_assets
 
 settings = get_settings()
 logger = logging.getLogger("uvicorn.error")
@@ -24,6 +25,7 @@ logger = logging.getLogger("uvicorn.error")
 def create_app() -> FastAPI:
     Path(settings.generated_assets_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.uploads_dir).mkdir(parents=True, exist_ok=True)
+    maybe_prune_generated_assets(settings, force=True)
     app = FastAPI(
         title=settings.app_name,
         version="0.1.0",

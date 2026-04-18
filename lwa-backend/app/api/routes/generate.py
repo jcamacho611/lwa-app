@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from ...core.config import get_settings
 from ...dependencies.auth import get_optional_user, get_platform_store
-from ...job_store import JobStore
+from ...job_store import JobStore, RequestThrottle
 from ...models.schemas import (
     ClipBatchResponse,
     JobCreatedResponse,
@@ -27,6 +27,10 @@ from ...services.entitlements import UsageStore, resolve_entitlement
 router = APIRouter()
 settings = get_settings()
 job_store = JobStore()
+request_throttle = RequestThrottle(
+    window_seconds=settings.abuse_window_seconds,
+    max_requests=settings.abuse_max_generation_requests,
+)
 usage_store = UsageStore(settings.usage_store_path)
 platform_store = get_platform_store()
 logger = logging.getLogger("uvicorn.error")
@@ -71,6 +75,7 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
         usage_store=usage_store,
         current_user=current_user,
     )
+    await enforce_generation_throttle(entitlement=entitlement)
     request_id = f"req_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
     logger.info(
@@ -118,6 +123,7 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
         usage_store=usage_store,
         current_user=current_user,
     )
+    await enforce_generation_throttle(entitlement=entitlement)
     job_id = f"job_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
     logger.info(
@@ -220,3 +226,11 @@ def classify_upload_source(upload: dict[str, object]) -> str:
     if content_type.startswith("image/") or suffix in {"jpg", "jpeg", "png", "webp", "heic", "heif"}:
         return "image_upload"
     return "video_upload"
+
+
+async def enforce_generation_throttle(*, entitlement) -> None:
+    try:
+        await request_throttle.enforce(subject=entitlement.subject)
+    except HTTPException:
+        usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
+        raise

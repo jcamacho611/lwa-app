@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import logging
+import shutil
+import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from urllib.parse import urlparse
@@ -21,6 +23,7 @@ from ..services.video_service import build_source_context, export_social_ready_c
 from ..trends import fetch_public_trends, trends_timestamp
 
 logger = logging.getLogger("uvicorn.error")
+_last_generated_asset_prune_at = 0.0
 
 
 def enforce_api_key(request: Request, settings: Settings) -> None:
@@ -104,6 +107,7 @@ async def build_clip_response(
         yt_dlp_is_available,
         public_base_url,
     )
+    await asyncio.to_thread(maybe_prune_generated_assets, settings)
 
     await emit_progress(progress_callback, "Ingesting source media, transcript windows, and candidate moments.")
 
@@ -463,6 +467,8 @@ async def run_job(
                 status="failed",
                 message=str(error),
             )
+    finally:
+        await asyncio.to_thread(maybe_prune_generated_assets, settings)
 
 
 def resolve_local_asset_paths(*, settings: Settings, request_id: str, clips: list) -> dict[str, str]:
@@ -481,3 +487,42 @@ def resolve_local_asset_paths(*, settings: Settings, request_id: str, clips: lis
                 mapping[clip.id] = str(candidate_path)
                 break
     return mapping
+
+
+def maybe_prune_generated_assets(settings: Settings, *, force: bool = False) -> dict[str, int]:
+    global _last_generated_asset_prune_at
+
+    now = time.time()
+    if not force and (now - _last_generated_asset_prune_at) < max(settings.generated_asset_prune_interval_seconds, 60):
+        return {"scanned": 0, "removed": 0}
+
+    _last_generated_asset_prune_at = now
+    generated_root = Path(settings.generated_assets_dir)
+    generated_root.mkdir(parents=True, exist_ok=True)
+
+    retention_seconds = max(settings.generated_asset_retention_hours, 1) * 3600
+    removed = 0
+    scanned = 0
+
+    for asset_path in generated_root.iterdir():
+        scanned += 1
+        try:
+            age_seconds = now - asset_path.stat().st_mtime
+        except FileNotFoundError:
+            continue
+        if age_seconds < retention_seconds:
+            continue
+        if asset_path.is_dir():
+            shutil.rmtree(asset_path, ignore_errors=True)
+        else:
+            asset_path.unlink(missing_ok=True)
+        removed += 1
+
+    if removed:
+        logger.info(
+            "generated_assets_pruned scanned=%s removed=%s retention_hours=%s",
+            scanned,
+            removed,
+            settings.generated_asset_retention_hours,
+        )
+    return {"scanned": scanned, "removed": removed}

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, Optional
+from time import monotonic
+from typing import Deque, Dict, Optional
+
+from fastapi import HTTPException
 
 from .schemas import ClipBatchResponse
 
@@ -79,3 +83,41 @@ class JobStore:
         overflow = len(self._jobs) - self._max_jobs
         for job_id in sorted(self._jobs.keys(), key=lambda current: self._jobs[current].created_at)[:overflow]:
             del self._jobs[job_id]
+
+
+class RequestThrottle:
+    def __init__(self, *, window_seconds: int = 300, max_requests: int = 8) -> None:
+        self._window_seconds = max(window_seconds, 1)
+        self._max_requests = max(max_requests, 1)
+        self._events: Dict[str, Deque[float]] = {}
+        self._lock = asyncio.Lock()
+
+    async def enforce(self, *, subject: str) -> None:
+        now = monotonic()
+        async with self._lock:
+            bucket = self._events.setdefault(subject, deque())
+            self._trim_bucket(bucket=bucket, now=now)
+            if len(bucket) >= self._max_requests:
+                retry_after = max(int(self._window_seconds - (now - bucket[0])), 1)
+                raise HTTPException(
+                    status_code=429,
+                    detail=(
+                        f"Too many generation requests in a short window. "
+                        f"Wait about {retry_after} seconds and try again."
+                    ),
+                )
+            bucket.append(now)
+            self._trim_subjects(now=now)
+
+    def _trim_bucket(self, *, bucket: Deque[float], now: float) -> None:
+        while bucket and (now - bucket[0]) >= self._window_seconds:
+            bucket.popleft()
+
+    def _trim_subjects(self, *, now: float) -> None:
+        stale_subjects = []
+        for subject, bucket in self._events.items():
+            self._trim_bucket(bucket=bucket, now=now)
+            if not bucket:
+                stale_subjects.append(subject)
+        for subject in stale_subjects:
+            self._events.pop(subject, None)
