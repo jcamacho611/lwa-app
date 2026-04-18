@@ -238,6 +238,7 @@ async def build_clip_response(
         download_asset_url=download_asset_url,
         thumbnail_url=thumbnail_url,
         processing_summary=ProcessingSummary(
+            plan_code=entitlement.plan.code,
             plan_name=entitlement.plan.name,
             credits_remaining=entitlement.credits_remaining,
             estimated_turnaround="preview ready now" if preview_ready_count else settings.default_turnaround,
@@ -257,6 +258,9 @@ async def build_clip_response(
             source_duration_seconds=source_duration_seconds,
             assets_created=assets_created,
             edited_assets_created=edited_assets_created,
+            free_preview_unlocked=entitlement.plan.code == "free",
+            persistence_requires_signup=current_user is None,
+            upgrade_prompt=build_upgrade_prompt(entitlement=entitlement, current_user=current_user),
             feature_flags=entitlement.plan.feature_flags,
         ),
         trend_context=trend_context[:6],
@@ -280,6 +284,7 @@ def apply_plan_feature_flags(
 ) -> list:
     clip_limit = max(entitlement.plan.feature_flags.clip_limit, 1)
     alt_hooks_unlocked = bool(entitlement.plan.feature_flags.alt_hooks)
+    packaging_profiles_unlocked = bool(entitlement.plan.feature_flags.packaging_profiles)
     exports_unlocked = bool(entitlement.plan.feature_flags.premium_exports)
     ranked = sorted(
         clips,
@@ -293,6 +298,8 @@ def apply_plan_feature_flags(
         caption_variants = clip.caption_variants or {}
         if not alt_hooks_unlocked:
             caption_variants = {"viral": caption_variants.get("viral") or clip.caption}
+        elif not packaging_profiles_unlocked:
+            caption_variants = {"viral": caption_variants.get("viral") or clip.caption}
 
         # Ensure all intelligence fields are always populated with meaningful fallbacks
         why_this_matters = (
@@ -304,17 +311,21 @@ def apply_plan_feature_flags(
         thumbnail_text = clip.thumbnail_text or clip.title or (clip.hook[:40] if clip.hook else "Best Clip")
         platform_fit = clip.platform_fit or "Optimized for fast short-form viewing."
         packaging_angle = clip.packaging_angle or "value"
+        caption_style = clip.caption_style or "Short-form native"
         hook_variants = clip.hook_variants if clip.hook_variants else [clip.hook]
         if not alt_hooks_unlocked:
             hook_variants = hook_variants[:1]
         if not caption_variants:
             caption_variants = {"viral": clip.caption}
+        if not packaging_profiles_unlocked:
+            caption_style = "Standard short-form"
 
         gated.append(
             clip.model_copy(
                 update={
                     "hook_variants": hook_variants,
                     "caption_variants": caption_variants,
+                    "caption_style": caption_style,
                     "timestamp_start": clip.start_time,
                     "timestamp_end": clip.end_time,
                     "duration": derive_clip_duration_seconds(clip.start_time, clip.end_time),
@@ -400,6 +411,25 @@ def build_recommended_next_step(
     if preview_ready_count:
         return "Open the lead preview now. Export will appear once rendering finishes."
     return "The intelligence pack is ready, but no playable preview was produced. Try a longer or cleaner source."
+
+
+def build_upgrade_prompt(
+    *,
+    entitlement: EntitlementContext,
+    current_user: UserRecord | None,
+) -> str | None:
+    if entitlement.plan.code == "free":
+        if current_user is None:
+            return (
+                "Keep the first runs free. Create an account when you want synced uploads and saved workflow history, "
+                "then move to Pro for more clips, alternate hooks, and clean exports."
+            )
+        return (
+            "Upgrade to Pro for more clips per run, alternate hooks, richer caption packaging, and export-ready assets."
+        )
+    if entitlement.plan.code == "pro":
+        return "Upgrade to Scale when you need campaign mode, posting queue access, and higher daily volume."
+    return None
 
 
 async def emit_progress(

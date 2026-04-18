@@ -183,7 +183,18 @@ final class ContentViewModel: ObservableObject {
         guard let response = latestResponse else {
             return "Free preview"
         }
-        return response.processingSummary.featureFlags.premiumExports ? "Premium exports live" : "Free exports locked"
+        switch response.processingSummary.planCode {
+        case "scale":
+            return "Scale workflow live"
+        case "pro":
+            return "Pro packaging live"
+        default:
+            return response.processingSummary.persistenceRequiresSignup ? "Free preview active" : "Free plan active"
+        }
+    }
+
+    var upgradePromptLabel: String? {
+        latestResponse?.processingSummary.upgradePrompt
     }
 
     var bestClip: ClipResult? {

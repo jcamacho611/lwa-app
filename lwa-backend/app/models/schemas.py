@@ -89,6 +89,7 @@ class FeatureFlags(BaseModel):
 
 
 class ProcessingSummary(BaseModel):
+    plan_code: str = "free"
     plan_name: str
     credits_remaining: int
     estimated_turnaround: str
@@ -104,6 +105,9 @@ class ProcessingSummary(BaseModel):
     source_duration_seconds: Optional[int] = None
     assets_created: int = 0
     edited_assets_created: int = 0
+    free_preview_unlocked: bool = True
+    persistence_requires_signup: bool = False
+    upgrade_prompt: Optional[str] = None
     feature_flags: FeatureFlags = Field(default_factory=FeatureFlags)
 
 

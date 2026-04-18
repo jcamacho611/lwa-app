@@ -82,6 +82,7 @@ struct ProcessingSummary: Codable {
     }
 
     let planName: String
+    let planCode: String
     let creditsRemaining: Int
     let estimatedTurnaround: String
     let recommendedNextStep: String
@@ -95,10 +96,14 @@ struct ProcessingSummary: Codable {
     let sourceDurationSeconds: Int?
     let assetsCreated: Int
     let editedAssetsCreated: Int
+    let freePreviewUnlocked: Bool
+    let persistenceRequiresSignup: Bool
+    let upgradePrompt: String?
     let featureFlags: FeatureFlags
 
     enum CodingKeys: String, CodingKey {
         case planName = "plan_name"
+        case planCode = "plan_code"
         case creditsRemaining = "credits_remaining"
         case estimatedTurnaround = "estimated_turnaround"
         case recommendedNextStep = "recommended_next_step"
@@ -112,12 +117,16 @@ struct ProcessingSummary: Codable {
         case sourceDurationSeconds = "source_duration_seconds"
         case assetsCreated = "assets_created"
         case editedAssetsCreated = "edited_assets_created"
+        case freePreviewUnlocked = "free_preview_unlocked"
+        case persistenceRequiresSignup = "persistence_requires_signup"
+        case upgradePrompt = "upgrade_prompt"
         case featureFlags = "feature_flags"
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         planName = try container.decode(String.self, forKey: .planName)
+        planCode = try container.decodeIfPresent(String.self, forKey: .planCode) ?? planName.lowercased()
         creditsRemaining = try container.decode(Int.self, forKey: .creditsRemaining)
         estimatedTurnaround = try container.decode(String.self, forKey: .estimatedTurnaround)
         recommendedNextStep = try container.decode(String.self, forKey: .recommendedNextStep)
@@ -131,6 +140,9 @@ struct ProcessingSummary: Codable {
         sourceDurationSeconds = try container.decodeIfPresent(Int.self, forKey: .sourceDurationSeconds)
         assetsCreated = try container.decodeIfPresent(Int.self, forKey: .assetsCreated) ?? 0
         editedAssetsCreated = try container.decodeIfPresent(Int.self, forKey: .editedAssetsCreated) ?? 0
+        freePreviewUnlocked = try container.decodeIfPresent(Bool.self, forKey: .freePreviewUnlocked) ?? (planCode == "free")
+        persistenceRequiresSignup = try container.decodeIfPresent(Bool.self, forKey: .persistenceRequiresSignup) ?? false
+        upgradePrompt = try container.decodeIfPresent(String.self, forKey: .upgradePrompt)
         featureFlags = try container.decodeIfPresent(FeatureFlags.self, forKey: .featureFlags) ?? FeatureFlags(
             clipLimit: 3,
             altHooks: false,

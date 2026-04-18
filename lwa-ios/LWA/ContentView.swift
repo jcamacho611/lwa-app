@@ -192,6 +192,12 @@ private struct OmegaHomeScreen: View {
                     OmegaMetricPill(label: viewModel.premiumStatusLabel)
                     OmegaMetricPill(label: viewModel.planName)
                 }
+
+                if let upgradePrompt = viewModel.upgradePromptLabel, !upgradePrompt.isEmpty {
+                    Text(upgradePrompt)
+                        .font(.footnote)
+                        .foregroundStyle(OmegaPalette.secondaryText)
+                }
             }
         }
     }
