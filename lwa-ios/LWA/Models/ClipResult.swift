@@ -88,6 +88,12 @@ struct ProcessingSummary: Codable {
     let recommendedNextStep: String
     let aiProvider: String
     let targetPlatform: String
+    let platformDecision: String
+    let recommendedPlatform: String?
+    let platformRecommendationReason: String?
+    let recommendedContentType: String?
+    let recommendedOutputStyle: String?
+    let manualPlatformOverride: Bool
     let trendUsed: String?
     let sourcesConsidered: [String]
     let processingMode: String
@@ -96,6 +102,8 @@ struct ProcessingSummary: Codable {
     let sourceDurationSeconds: Int?
     let assetsCreated: Int
     let editedAssetsCreated: Int
+    let renderedClipCount: Int
+    let strategyOnlyClipCount: Int
     let freePreviewUnlocked: Bool
     let persistenceRequiresSignup: Bool
     let upgradePrompt: String?
@@ -109,6 +117,12 @@ struct ProcessingSummary: Codable {
         case recommendedNextStep = "recommended_next_step"
         case aiProvider = "ai_provider"
         case targetPlatform = "target_platform"
+        case platformDecision = "platform_decision"
+        case recommendedPlatform = "recommended_platform"
+        case platformRecommendationReason = "platform_recommendation_reason"
+        case recommendedContentType = "recommended_content_type"
+        case recommendedOutputStyle = "recommended_output_style"
+        case manualPlatformOverride = "manual_platform_override"
         case trendUsed = "trend_used"
         case sourcesConsidered = "sources_considered"
         case processingMode = "processing_mode"
@@ -117,6 +131,8 @@ struct ProcessingSummary: Codable {
         case sourceDurationSeconds = "source_duration_seconds"
         case assetsCreated = "assets_created"
         case editedAssetsCreated = "edited_assets_created"
+        case renderedClipCount = "rendered_clip_count"
+        case strategyOnlyClipCount = "strategy_only_clip_count"
         case freePreviewUnlocked = "free_preview_unlocked"
         case persistenceRequiresSignup = "persistence_requires_signup"
         case upgradePrompt = "upgrade_prompt"
@@ -132,6 +148,12 @@ struct ProcessingSummary: Codable {
         recommendedNextStep = try container.decode(String.self, forKey: .recommendedNextStep)
         aiProvider = try container.decode(String.self, forKey: .aiProvider)
         targetPlatform = try container.decode(String.self, forKey: .targetPlatform)
+        platformDecision = try container.decodeIfPresent(String.self, forKey: .platformDecision) ?? "auto"
+        recommendedPlatform = try container.decodeIfPresent(String.self, forKey: .recommendedPlatform)
+        platformRecommendationReason = try container.decodeIfPresent(String.self, forKey: .platformRecommendationReason)
+        recommendedContentType = try container.decodeIfPresent(String.self, forKey: .recommendedContentType)
+        recommendedOutputStyle = try container.decodeIfPresent(String.self, forKey: .recommendedOutputStyle)
+        manualPlatformOverride = try container.decodeIfPresent(Bool.self, forKey: .manualPlatformOverride) ?? false
         trendUsed = try container.decodeIfPresent(String.self, forKey: .trendUsed)
         sourcesConsidered = try container.decode([String].self, forKey: .sourcesConsidered)
         processingMode = try container.decode(String.self, forKey: .processingMode)
@@ -140,6 +162,8 @@ struct ProcessingSummary: Codable {
         sourceDurationSeconds = try container.decodeIfPresent(Int.self, forKey: .sourceDurationSeconds)
         assetsCreated = try container.decodeIfPresent(Int.self, forKey: .assetsCreated) ?? 0
         editedAssetsCreated = try container.decodeIfPresent(Int.self, forKey: .editedAssetsCreated) ?? 0
+        renderedClipCount = try container.decodeIfPresent(Int.self, forKey: .renderedClipCount) ?? 0
+        strategyOnlyClipCount = try container.decodeIfPresent(Int.self, forKey: .strategyOnlyClipCount) ?? 0
         freePreviewUnlocked = try container.decodeIfPresent(Bool.self, forKey: .freePreviewUnlocked) ?? (planCode == "free")
         persistenceRequiresSignup = try container.decodeIfPresent(Bool.self, forKey: .persistenceRequiresSignup) ?? false
         upgradePrompt = try container.decodeIfPresent(String.self, forKey: .upgradePrompt)
