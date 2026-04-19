@@ -110,6 +110,8 @@ class PlatformStore:
                     user_id TEXT,
                     campaign_id TEXT,
                     source_type TEXT,
+                    source_video_url TEXT,
+                    source_upload_content_type TEXT,
                     source_title TEXT,
                     source_platform TEXT,
                     source_transcript TEXT,
@@ -217,6 +219,8 @@ class PlatformStore:
             self._ensure_column(connection, "clips", "trim_end_seconds", "REAL")
             self._ensure_column(connection, "clips", "caption_style_override", "TEXT")
             self._ensure_column(connection, "clips", "source_type", "TEXT")
+            self._ensure_column(connection, "clips", "source_video_url", "TEXT")
+            self._ensure_column(connection, "clips", "source_upload_content_type", "TEXT")
             self._ensure_column(connection, "clips", "source_title", "TEXT")
             self._ensure_column(connection, "clips", "source_platform", "TEXT")
             self._ensure_column(connection, "clips", "source_transcript", "TEXT")
@@ -963,6 +967,28 @@ class PlatformStore:
                 (status, message, updated_at, response_json, job_id),
             )
 
+    def get_job(self, *, job_id: str, user_id: str | None = None) -> Optional[dict[str, Any]]:
+        query = """
+            SELECT id, user_id, campaign_id, source_type, source_value, status, message, created_at, updated_at, response_json
+            FROM jobs
+            WHERE id = ?
+        """
+        params: tuple[object, ...] = (job_id,)
+        if user_id:
+            query += " AND user_id = ?"
+            params = (job_id, user_id)
+        with self._lock, self._connect() as connection:
+            row = connection.execute(query, params).fetchone()
+        if not row:
+            return None
+        payload = dict(row)
+        if payload.get("response_json"):
+            try:
+                payload["response_json"] = json.loads(payload["response_json"])
+            except Exception:
+                pass
+        return payload
+
     def persist_clip_batch(
         self,
         *,
@@ -981,14 +1007,14 @@ class PlatformStore:
                 connection.execute(
                     """
                     INSERT OR REPLACE INTO clips (
-                        id, request_id, clip_key, user_id, campaign_id, source_type, source_title, source_platform,
+                        id, request_id, clip_key, user_id, campaign_id, source_type, source_video_url, source_upload_content_type, source_title, source_platform,
                         source_transcript, source_visual_summary, source_preview_asset_url, source_download_asset_url,
                         source_thumbnail_url, title, hook, caption, start_time, end_time, duration_seconds, score,
                         confidence, confidence_score, rank_value, reason, why_this_matters, clip_format, transcript_excerpt, packaging_angle, platform_fit, post_rank, best_post_order,
                         cta_suggestion, thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, download_url, raw_clip_url,
                         edited_clip_url, preview_image_url, local_asset_path, trim_start_seconds,
                         trim_end_seconds, caption_style_override, approved, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         record_id,
@@ -997,6 +1023,8 @@ class PlatformStore:
                         user_id,
                         campaign_id,
                         response.source_type,
+                        response.video_url,
+                        None,
                         response.source_title,
                         response.source_platform,
                         response.transcript,
@@ -1078,9 +1106,10 @@ class PlatformStore:
 
     def get_clip(self, *, clip_id: str, user_id: str | None = None) -> Optional[dict[str, Any]]:
         query = """
-            SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
+            SELECT id, request_id, clip_key, user_id, campaign_id, source_type, source_video_url, source_upload_content_type,
+                   title, hook, caption, start_time, end_time, score, confidence,
                    confidence_score, rank_value, reason, why_this_matters, packaging_angle, platform_fit, post_rank, best_post_order, cta_suggestion,
-                   thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
+                   thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, download_url, raw_clip_url, edited_clip_url, preview_image_url,
                    local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
                    approved, created_at
             FROM clips
@@ -1095,6 +1124,57 @@ class PlatformStore:
         if not row:
             return None
         return self._clip_payload_from_row(row)
+
+    def update_clip_recovery(
+        self,
+        *,
+        clip_id: str,
+        user_id: str,
+        clip_url: str | None,
+        raw_clip_url: str | None,
+        edited_clip_url: str | None,
+        preview_image_url: str | None,
+        download_url: str | None,
+        local_asset_path: str | None = None,
+    ) -> Optional[dict[str, Any]]:
+        with self._lock, self._connect() as connection:
+            result = connection.execute(
+                """
+                UPDATE clips
+                SET clip_url = COALESCE(?, clip_url),
+                    raw_clip_url = COALESCE(?, raw_clip_url),
+                    edited_clip_url = COALESCE(?, edited_clip_url),
+                    preview_image_url = COALESCE(?, preview_image_url),
+                    download_url = COALESCE(?, download_url),
+                    local_asset_path = COALESCE(?, local_asset_path)
+                WHERE id = ? AND user_id = ?
+                """,
+                (
+                    clip_url,
+                    raw_clip_url,
+                    edited_clip_url,
+                    preview_image_url,
+                    download_url,
+                    local_asset_path,
+                    clip_id,
+                    user_id,
+                ),
+            )
+            if not result.rowcount:
+                return None
+            row = connection.execute(
+                """
+                SELECT id, request_id, clip_key, user_id, campaign_id, source_type, source_video_url, source_upload_content_type,
+                       title, hook, caption, start_time, end_time, score, confidence,
+                       confidence_score, rank_value, reason, why_this_matters, packaging_angle, platform_fit, post_rank, best_post_order, cta_suggestion,
+                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, download_url, raw_clip_url, edited_clip_url, preview_image_url,
+                       local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
+                       approved, created_at
+                FROM clips WHERE id = ?
+                """,
+                (clip_id,),
+            ).fetchone()
+        return self._clip_payload_from_row(row) if row else None
 
     def update_clip_edit(
         self,
@@ -1533,6 +1613,9 @@ class PlatformStore:
             "request_id": row["request_id"],
             "clip_id": row["clip_key"],
             "id": row["clip_key"],
+            "source_type": self._row_value(row, "source_type"),
+            "source_video_url": self._row_value(row, "source_video_url"),
+            "source_upload_content_type": self._row_value(row, "source_upload_content_type"),
             "title": row["title"],
             "hook": row["hook"],
             "caption": row["caption"],

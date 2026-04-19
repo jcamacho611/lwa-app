@@ -2,9 +2,17 @@ from __future__ import annotations
 
 import unittest
 
+from fastapi import HTTPException
+
 from app.models.schemas import ClipResult
 from app.processor import SourceContext
-from app.services.clip_service import clip_has_rendered_media, recommend_platform_strategy
+from app.services.clip_service import (
+    clip_has_rendered_media,
+    clip_record_needs_recovery,
+    recommend_platform_strategy,
+    recovery_request_for_clip,
+    select_recovery_candidate,
+)
 
 
 class ClipStrategyTests(unittest.TestCase):
@@ -96,6 +104,49 @@ class ClipStrategyTests(unittest.TestCase):
 
         self.assertTrue(clip_has_rendered_media(rendered_clip))
         self.assertFalse(clip_has_rendered_media(strategy_only_clip))
+
+    def test_clip_record_needs_recovery_checks_missing_media(self) -> None:
+        self.assertTrue(clip_record_needs_recovery({"preview_url": None, "clip_url": None}))
+        self.assertFalse(clip_record_needs_recovery({"preview_url": "https://example.com/preview.mp4"}))
+
+    def test_recovery_request_requires_reusable_source_reference(self) -> None:
+        with self.assertRaises(HTTPException) as context:
+            recovery_request_for_clip({"source_video_url": "None", "source_type": "url"})
+
+        self.assertEqual(context.exception.status_code, 409)
+        self.assertIn("reusable source reference", str(context.exception.detail))
+
+    def test_select_recovery_candidate_prefers_matching_clip_id(self) -> None:
+        recovered_clip = ClipResult(
+            id="clip_002",
+            title="Recovered clip",
+            hook="Recovered hook",
+            caption="Recovered caption",
+            start_time="00:10",
+            end_time="00:22",
+            score=91,
+            format="Hook First",
+            preview_url="https://example.com/recovered.mp4",
+        )
+        fallback_clip = ClipResult(
+            id="clip_001",
+            title="Fallback clip",
+            hook="Fallback hook",
+            caption="Fallback caption",
+            start_time="00:03",
+            end_time="00:14",
+            score=84,
+            format="Hook First",
+            preview_url="https://example.com/fallback.mp4",
+        )
+
+        selected = select_recovery_candidate(
+            original_clip={"clip_id": "clip_002", "start_time": "00:10", "end_time": "00:22"},
+            recovered_clips=[fallback_clip, recovered_clip],
+        )
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected.id, "clip_002")
 
 
 if __name__ == "__main__":

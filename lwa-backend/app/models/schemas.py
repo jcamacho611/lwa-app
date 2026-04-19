@@ -159,6 +159,25 @@ class JobStatusResponse(BaseModel):
     error: Optional[str] = None
 
 
+class ClipRecoveryJobResponse(BaseModel):
+    job_id: str
+    clip_id: str
+    status: str
+    message: str
+    poll_url: str
+
+
+class ClipRecoveryStatusResponse(BaseModel):
+    job_id: str
+    clip_id: str
+    status: str
+    message: str
+    created_at: str
+    updated_at: str
+    recovered_clip: Optional[ClipResult] = None
+    error: Optional[str] = None
+
+
 class SeedanceBackgroundRequest(BaseModel):
     prompt: str
     style_preset: Optional[str] = None

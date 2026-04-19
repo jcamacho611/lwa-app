@@ -21,6 +21,7 @@ from ...services.clip_service import (
     dependency_health,
     enforce_api_key,
     get_live_trends,
+    provider_health,
     run_job,
 )
 from ...services.entitlements import UsageStore, resolve_entitlement
@@ -51,6 +52,7 @@ async def health_check() -> dict[str, object]:
     return {
         "status": "ok",
         "dependencies": dependency_health(settings),
+        "providers": provider_health(settings),
     }
 
 

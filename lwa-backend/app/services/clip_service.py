@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import json
 import logging
 import re
 import shutil
@@ -9,6 +10,7 @@ import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from urllib.parse import urlparse
+from uuid import uuid4
 
 from fastapi import HTTPException, Request
 
@@ -20,6 +22,7 @@ from ..services.ai_service import generate_clip_copy
 from ..services.attention_compiler import compile_attention
 from ..services.entitlements import EntitlementContext, UsageStore
 from ..services.platform_store import PlatformStore
+from ..services.seedance_service import seedance_available
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
 from ..trends import fetch_public_trends, trends_timestamp
 
@@ -36,11 +39,12 @@ def enforce_api_key(request: Request, settings: Settings) -> None:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
 
-def dependency_health(settings: Settings) -> dict[str, bool]:
+def dependency_health(settings: Settings) -> dict[str, object]:
     return {
         "ffmpeg": ffmpeg_available(settings),
         "yt_dlp": importlib.util.find_spec("yt_dlp") is not None,
         "openai_key_present": bool(settings.openai_api_key),
+        "anthropic_key_present": bool(settings.anthropic_api_key),
         "whop_key_present": bool(settings.whop_api_key),
         "google_key_present": bool(settings.google_api_key or settings.youtube_api_key),
         "tiktok_keys_present": bool(settings.tiktok_client_key and settings.tiktok_client_secret),
@@ -49,6 +53,51 @@ def dependency_health(settings: Settings) -> dict[str, bool]:
             or settings.facebook_page_access_token
             or settings.instagram_access_token
         ),
+        "seedance_enabled": bool(settings.seedance_enabled),
+        "seedance_configured": bool(settings.seedance_api_key and settings.seedance_base_url),
+    }
+
+
+def provider_health(settings: Settings) -> dict[str, dict[str, object]]:
+    return {
+        "openai": {
+            "configured": bool(settings.openai_api_key),
+            "selected_when_available": settings.ai_provider in {"auto", "openai"},
+            "status": "configured" if settings.openai_api_key else "missing-key",
+        },
+        "anthropic": {
+            "configured": bool(settings.enable_anthropic and settings.anthropic_api_key),
+            "selected_when_available": settings.ai_provider in {"auto", "anthropic"}
+            or settings.premium_reasoning_provider == "anthropic",
+            "status": "configured"
+            if settings.enable_anthropic and settings.anthropic_api_key
+            else "disabled" if not settings.enable_anthropic else "missing-key",
+        },
+        "seedance": seedance_status(settings),
+    }
+
+
+def seedance_status(settings: Settings) -> dict[str, object]:
+    configured = bool(settings.seedance_api_key and settings.seedance_base_url)
+    available = seedance_available(settings)
+    if not settings.seedance_enabled:
+        status = "disabled"
+        message = "Seedance is turned off. LWA uses the internal visual engine instead."
+    elif not configured:
+        status = "misconfigured"
+        message = "Seedance is enabled but missing required config. Internal visual engine remains active."
+    else:
+        status = "adapter-only"
+        message = "Seedance config is present, but the adapter remains vendor-contract-blocked. Core clipping stays internal."
+
+    return {
+        "enabled": bool(settings.seedance_enabled),
+        "configured": configured,
+        "available": available,
+        "adapter_only": True,
+        "core_clipping_dependency": False,
+        "status": status,
+        "message": message,
     }
 
 
@@ -90,7 +139,7 @@ async def build_clip_response(
     source_path: str | None = None,
     progress_callback: Callable[[str], Awaitable[None]] | None = None,
 ) -> ClipBatchResponse:
-    video_url = str(request.video_url)
+    video_url = str(request.video_url or "")
     candidate_limit = min(max(entitlement.plan.feature_flags.clip_limit, 20), 40)
     trend_context_response = await get_live_trends()
     trend_context: list[TrendItem] = trend_context_response.trends
@@ -431,6 +480,17 @@ def clip_has_rendered_media(clip) -> bool:
     )
 
 
+def clip_record_needs_recovery(clip_record: dict[str, object]) -> bool:
+    return not bool(
+        clip_record.get("preview_url")
+        or clip_record.get("edited_clip_url")
+        or clip_record.get("clip_url")
+        or clip_record.get("raw_clip_url")
+        or clip_record.get("thumbnail_url")
+        or clip_record.get("preview_image_url")
+    )
+
+
 def build_recommended_next_step(
     *,
     preview_ready_count: int,
@@ -466,6 +526,154 @@ def build_upgrade_prompt(
     if entitlement.plan.code == "pro":
         return "Upgrade to Scale when you need campaign mode, posting queue access, and higher daily volume."
     return None
+
+
+def recovery_request_for_clip(clip_record: dict[str, object]) -> ProcessRequest:
+    source_video_url = str(clip_record.get("source_video_url") or "").strip()
+    if source_video_url.lower() in {"none", "null"}:
+        source_video_url = ""
+    if not source_video_url:
+        raise HTTPException(
+            status_code=409,
+            detail="Recovery is unavailable because this clip was saved without a reusable source reference.",
+        )
+    return ProcessRequest(
+        video_url=source_video_url,
+        source_type=clip_record.get("source_type"),
+        upload_content_type=clip_record.get("source_upload_content_type"),
+        content_angle=clip_record.get("packaging_angle"),
+    )
+
+
+def select_recovery_candidate(*, original_clip: dict[str, object], recovered_clips: list) -> object | None:
+    media_ready = [clip for clip in recovered_clips if clip_has_rendered_media(clip)]
+    if not media_ready:
+        return None
+
+    original_clip_key = str(original_clip.get("clip_id") or original_clip.get("id") or "").strip()
+    for clip in media_ready:
+        if clip.id == original_clip_key:
+            return clip
+
+    original_start = original_clip.get("start_time")
+    original_end = original_clip.get("end_time")
+    for clip in media_ready:
+        if clip.start_time == original_start and clip.end_time == original_end:
+            return clip
+
+    original_post_rank = original_clip.get("post_rank") or original_clip.get("best_post_order")
+    for clip in media_ready:
+        if (clip.post_rank or clip.best_post_order or clip.rank) == original_post_rank:
+            return clip
+
+    original_rank = original_clip.get("rank")
+    for clip in media_ready:
+        if clip.rank == original_rank:
+            return clip
+
+    return media_ready[0]
+
+
+async def run_clip_recovery(
+    *,
+    settings: Settings,
+    platform_store: PlatformStore,
+    clip_record: dict[str, object],
+    current_user: UserRecord,
+    entitlement: EntitlementContext,
+    public_base_url: str,
+    route_path: str,
+    recovery_job_id: str,
+) -> dict[str, object]:
+    request = recovery_request_for_clip(clip_record)
+    response = await build_clip_response(
+        settings=settings,
+        request_id=f"recover_{uuid4().hex[:10]}",
+        request=request,
+        public_base_url=public_base_url,
+        route_path=route_path,
+        entitlement=entitlement,
+        current_user=current_user,
+        platform_store=None,
+        source_path=None,
+    )
+    recovered_clip = select_recovery_candidate(original_clip=clip_record, recovered_clips=response.clips)
+    if recovered_clip is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Recovery completed, but no playable or previewable media was produced for this clip.",
+        )
+
+    local_asset_paths = resolve_local_asset_paths(
+        settings=settings,
+        request_id=response.request_id,
+        clips=response.clips,
+    )
+    updated_clip = platform_store.update_clip_recovery(
+        clip_id=str(clip_record["record_id"]),
+        user_id=current_user.id,
+        clip_url=recovered_clip.clip_url,
+        raw_clip_url=recovered_clip.raw_clip_url,
+        edited_clip_url=recovered_clip.edited_clip_url or recovered_clip.preview_url,
+        preview_image_url=recovered_clip.preview_image_url or recovered_clip.thumbnail_url,
+        download_url=recovered_clip.download_url,
+        local_asset_path=local_asset_paths.get(recovered_clip.id),
+    )
+    if not updated_clip:
+        raise HTTPException(status_code=404, detail="Recovered media was produced, but the stored clip could not be updated.")
+    return updated_clip
+
+
+async def run_clip_recovery_job(
+    *,
+    settings: Settings,
+    platform_store: PlatformStore,
+    clip_record: dict[str, object],
+    current_user: UserRecord,
+    entitlement: EntitlementContext,
+    public_base_url: str,
+    route_path: str,
+    job_id: str,
+) -> None:
+    platform_store.update_job(
+        job_id=job_id,
+        status="processing",
+        message="Retrying media generation for the strategy-only clip.",
+    )
+    try:
+        recovered_clip = await run_clip_recovery(
+            settings=settings,
+            platform_store=platform_store,
+            clip_record=clip_record,
+            current_user=current_user,
+            entitlement=entitlement,
+            public_base_url=public_base_url,
+            route_path=route_path,
+            recovery_job_id=job_id,
+        )
+    except HTTPException as error:
+        platform_store.update_job(
+            job_id=job_id,
+            status="failed",
+            message=error.detail if isinstance(error.detail, str) else "Recovery failed.",
+            response_json=json.dumps({"error": error.detail}),
+        )
+        return
+    except Exception as error:
+        platform_store.update_job(
+            job_id=job_id,
+            status="failed",
+            message="Recovery failed.",
+            response_json=json.dumps({"error": str(error)}),
+        )
+        return
+
+    platform_store.update_job(
+        job_id=job_id,
+        status="recovered",
+        message="Recovered media is ready.",
+        response_json=json.dumps({"recovered_clip": recovered_clip}),
+    )
 
 
 CONTENT_TYPE_KEYWORDS: dict[str, tuple[str, ...]] = {
