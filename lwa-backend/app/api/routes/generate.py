@@ -40,9 +40,19 @@ logger = logging.getLogger("uvicorn.error")
 
 @router.get("/")
 async def root() -> dict[str, object]:
+    base_url = settings.api_base_url or "http://127.0.0.1:8000"
+    api_key_enabled = bool(settings.api_key_secret or settings.pro_api_keys or settings.scale_api_keys)
     return {
         "status": "ok",
         "service": settings.app_name,
+        "environment": settings.environment,
+        "docs_url": f"{base_url}/docs",
+        "health_url": f"{base_url}/health",
+        "generate_url": f"{base_url}/generate",
+        "jobs_url": f"{base_url}/v1/jobs",
+        "trends_url": f"{base_url}/v1/trends",
+        "api_key_header": settings.api_key_header_name if api_key_enabled else None,
+        "client_id_header": settings.client_id_header_name,
     }
 
 
@@ -51,6 +61,10 @@ async def root() -> dict[str, object]:
 async def health_check() -> dict[str, object]:
     return {
         "status": "ok",
+        "service": settings.app_name,
+        "environment": settings.environment,
+        "version": settings.service_version,
+        "port": settings.port,
         "dependencies": dependency_health(settings),
         "providers": provider_health(settings),
     }
