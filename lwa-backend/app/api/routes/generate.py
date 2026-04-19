@@ -18,6 +18,7 @@ from ...models.schemas import (
 from ...models.user import UserRecord
 from ...services.clip_service import (
     build_clip_response,
+    dependency_health,
     enforce_api_key,
     get_live_trends,
     run_job,
@@ -49,6 +50,7 @@ async def root() -> dict[str, object]:
 async def health_check() -> dict[str, object]:
     return {
         "status": "ok",
+        "dependencies": dependency_health(settings),
     }
 
 
