@@ -17,12 +17,41 @@ type HeroClipProps = {
   onRecover?: (clip: ClipResult) => void;
 };
 
-function formatConfidence(value?: number | null) {
-  if (typeof value !== "number") {
-    return null;
-  }
+function authorityLabel(rank?: number | null) {
+  if (rank === 1) return "🔥 POST FIRST";
+  if (rank === 2) return "⚡ POST SECOND";
+  if (rank === 3) return "🧠 TEST THIRD";
+  return "MOVE LATER";
+}
 
-  return `${Math.round(value * 100)}% confidence`;
+function decisionInstruction(rank?: number | null, hasRenderProof?: boolean) {
+  if (rank === 1 && hasRenderProof) {
+    return "Post this first — strongest interruption and highest retention probability.";
+  }
+  if (rank === 2) {
+    return "Post this second — it deepens the stack after the opener lands.";
+  }
+  if (rank === 3) {
+    return "Test this third — useful angle once the first two establish the frame.";
+  }
+  return hasRenderProof
+    ? "Use this next when you want another clip that is already distribution-ready."
+    : "Strong engagement signal, but treat it as leverage until render proof comes back.";
+}
+
+function buildPackageText(clip: ClipResult) {
+  return [
+    `Title: ${clip.title}`,
+    `Hook: ${clip.hook}`,
+    `Caption: ${clip.caption}`,
+    `Why this matters: ${clip.why_this_matters || clip.reason || "Not available"}`,
+    `Post order: ${authorityLabel(clip.post_rank || clip.best_post_order || clip.rank || null)}`,
+    `Packaging angle: ${clip.packaging_angle || "value"}`,
+    `Thumbnail text: ${clip.thumbnail_text || "Best Clip"}`,
+    `CTA: ${clip.cta_suggestion || "Ask viewers to comment or follow."}`,
+    `Caption style: ${clip.caption_style || "Short-form native"}`,
+    `Hook variants: ${(clip.hook_variants || []).join(" | ") || "Not available"}`,
+  ].join("\n");
 }
 
 export default function HeroClip({
@@ -36,20 +65,20 @@ export default function HeroClip({
 }: HeroClipProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [copiedField, setCopiedField] = useState<"hook" | "caption" | null>(null);
+  const [copiedPackage, setCopiedPackage] = useState(false);
 
   const previewUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
   const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url || null;
   const downloadUrl = clip.download_url || null;
   const hasPlayablePreview = Boolean(previewUrl);
   const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
-  const previewStateLabel = hasPlayablePreview ? "Preview ready" : hasStillPreview ? "Still preview" : "Strategy only";
-  const whyThisHits = clip.why_this_matters || clip.reason || "Clear setup, quick payoff, and packaging built to travel.";
-  const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
-  const confidenceLabel = confidenceScore ? `${confidenceScore}% confidence` : formatConfidence(clip.confidence);
+  const hasRenderProof = hasPlayablePreview || hasStillPreview;
   const scoreLabel = useMemo(() => clip.virality_score ?? clip.score, [clip.score, clip.virality_score]);
+  const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
-  const captionStyle = clip.caption_style || null;
+  const postAuthority = authorityLabel(postRank);
+  const decisionText = decisionInstruction(postRank, hasRenderProof);
+  const whyThisHits = clip.why_this_matters || clip.reason || "Clear setup, quick payoff, and packaging built to travel.";
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 2);
 
   useEffect(() => {
@@ -85,28 +114,29 @@ export default function HeroClip({
     setIsPlaying(false);
   }
 
-  async function copyField(field: "hook" | "caption") {
-    const value = field === "hook" ? clip.hook : clip.caption;
+  async function handleCopyPackage() {
     try {
-      await navigator.clipboard.writeText(value);
-      setCopiedField(field);
-      window.setTimeout(() => setCopiedField((current) => (current === field ? null : current)), 1600);
+      await navigator.clipboard.writeText(buildPackageText(clip));
+      setCopiedPackage(true);
+      window.setTimeout(() => setCopiedPackage(false), 1600);
     } catch {
-      setCopiedField(null);
+      setCopiedPackage(false);
     }
   }
 
   return (
-    <section className="hero-card rounded-[34px] p-5 sm:p-6 lg:p-7 animate-fade-in">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.68fr),minmax(320px,0.32fr)] xl:items-start">
+    <section className="group relative overflow-hidden rounded-[38px] border border-yellow-400/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02)),linear-gradient(180deg,rgba(24,10,12,0.94),rgba(7,4,6,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_32px_96px_rgba(255,193,7,0.12)] sm:p-7 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,214,102,0.16),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(255,0,102,0.12),transparent_32%)]" />
+
+      <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
         <div className="space-y-4">
-          <div className="video-shell overflow-hidden rounded-[28px] border border-white/10 bg-black/50">
+          <div className="video-shell overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-[0_12px_44px_rgba(0,0,0,0.28)]">
             {hasPlayablePreview ? (
               <video
                 ref={videoRef}
                 src={previewUrl || undefined}
                 poster={thumbnailUrl || undefined}
-                className="aspect-[9/16] w-full bg-black object-cover"
+                className="aspect-[9/16] w-full bg-black object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                 autoPlay
                 muted
                 loop
@@ -114,137 +144,48 @@ export default function HeroClip({
                 preload="metadata"
               />
             ) : thumbnailUrl ? (
-              <img src={thumbnailUrl} alt={clip.hook} className="aspect-[9/16] w-full bg-black object-cover" />
+              <img src={thumbnailUrl} alt={clip.hook} className="aspect-[9/16] w-full bg-black object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
             ) : (
               <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,30,86,0.24),transparent_44%),radial-gradient(circle_at_80%_20%,rgba(0,231,255,0.14),transparent_38%),linear-gradient(180deg,#040405,#0d080b)] text-sm text-ink/56">
                 Preview unavailable
               </div>
             )}
 
-            <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
+            <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
-                <span className="status-chip status-approved">{hasPlayablePreview || hasStillPreview ? "Rendered lead" : "Strategy lead"}</span>
+                <span className="status-chip status-approved">{hasRenderProof ? "Lead answer" : "Lead strategy"}</span>
                 <span className="status-chip status-submitted">Score {scoreLabel}</span>
-                <span className="status-chip status-ready">{previewStateLabel}</span>
-                {clip.platform_fit ? <span className="status-chip status-ready">{clip.platform_fit}</span> : null}
+                {confidenceScore ? <span className="status-chip status-ready">{confidenceScore}% confidence</span> : null}
               </div>
-              {postRank ? <span className="status-chip status-draft">Post #{postRank}</span> : null}
+              <span className="rounded-full border border-yellow-300/25 bg-yellow-300/12 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-yellow-100">
+                {postAuthority}
+              </span>
             </div>
           </div>
-        </div>
-
-        <div className="space-y-5">
-          <div className="space-y-3">
-            <p className="section-kicker">Top result</p>
-            <h2 className="text-2xl font-semibold leading-tight text-ink sm:text-[2rem]">{clip.hook}</h2>
-            <p className="text-sm leading-7 text-ink/72">{clip.caption}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {clip.packaging_angle ? (
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-                {clip.packaging_angle}
-              </span>
-            ) : null}
-            {confidenceLabel ? (
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-                {confidenceLabel}
-              </span>
-            ) : null}
-            {captionStyle ? (
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-                {captionStyle}
-              </span>
-            ) : null}
-            {clip.start_time && clip.end_time ? (
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-                {clip.start_time} - {clip.end_time}
-              </span>
-            ) : null}
-          </div>
-
-          <div className="signal-card rounded-[24px] p-4">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Why this lands</p>
-            <p className="text-sm leading-6 text-ink/82">{whyThisHits}</p>
-          </div>
-
-          <div className="metric-tile rounded-[24px] p-4">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Preview status</p>
-            <p className="text-sm leading-6 text-ink/82">
-              {hasPlayablePreview
-                ? "Playable preview is ready now."
-                : hasStillPreview
-                  ? "A still preview is ready, but a playable render did not come back for this cut."
-                  : "This cut came back with strategy only. Use recovery to retry media proof from the same source."}
-            </p>
-            {!hasPlayablePreview && recoveryState ? (
-              <p className="mt-3 text-sm text-ink/58">
-                {recoveryState.status === "failed" && recoveryState.error ? recoveryState.error : recoveryState.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {clip.thumbnail_text ? (
-              <div className="metric-tile rounded-[24px] p-4">
-                <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Thumbnail line</p>
-                <p className="text-sm font-medium text-ink">{clip.thumbnail_text}</p>
-              </div>
-            ) : null}
-            {clip.cta_suggestion ? (
-              <div className="metric-tile rounded-[24px] p-4">
-                <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">CTA</p>
-                <p className="text-sm font-medium text-ink">{clip.cta_suggestion}</p>
-              </div>
-            ) : null}
-          </div>
-
-          {hookVariants.length ? (
-            <div className="metric-tile rounded-[24px] p-4">
-              <p className="mb-3 text-xs uppercase tracking-[0.24em] text-muted">Alternate hooks</p>
-              <div className="flex flex-wrap gap-2">
-                {hookVariants.map((variant) => (
-                  <span key={variant} className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-ink/78">
-                    {variant}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null}
 
           <div className="flex flex-wrap gap-3">
-            {hasPlayablePreview ? (
-              <button
-                type="button"
-                onClick={() => void togglePlayback()}
-                className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
-              >
-                {isPlaying ? "Pause clip" : "Play clip"}
-              </button>
-            ) : null}
-            {hasPlayablePreview ? (
-              <a
-                href={previewUrl || undefined}
-                target="_blank"
-                rel="noreferrer"
-                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
-              >
-                Open preview
-              </a>
-            ) : null}
             {downloadUrl ? (
               <a
                 href={downloadUrl}
                 download
-                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+                className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
               >
-                Export clip
+                Export lead clip
               </a>
             ) : (
-              <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-3 text-sm text-[#ffe4eb]">
+              <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-2.5 text-sm text-[#ffe4eb]">
                 Upgrade for export
               </span>
             )}
+
+            <button
+              type="button"
+              onClick={() => void handleCopyPackage()}
+              className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+            >
+              {copiedPackage ? "Package copied" : "Copy package"}
+            </button>
+
             <button
               type="button"
               onClick={() => onToggleQueue?.(clip)}
@@ -253,9 +194,20 @@ export default function HeroClip({
                 queued ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.18),rgba(255,45,166,0.1))] text-white shadow-crimson" : "",
               ].join(" ")}
             >
-              {queued ? "Queued" : "Queue clip"}
+              {queued ? "Queued for post" : "Queue post"}
             </button>
-            {!hasPlayablePreview && !hasStillPreview ? (
+
+            {hasPlayablePreview ? (
+              <button
+                type="button"
+                onClick={() => void togglePlayback()}
+                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+              >
+                {isPlaying ? "Pause preview" : "Play preview"}
+              </button>
+            ) : null}
+
+            {!hasRenderProof ? (
               <button
                 type="button"
                 onClick={() => onRecover?.(clip)}
@@ -263,7 +215,7 @@ export default function HeroClip({
                 className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {recoveryState?.status === "processing"
-                  ? "Recovering render..."
+                  ? "Recovering..."
                   : recoveryState?.status === "queued"
                     ? "Recovery queued"
                     : recoveryState?.status === "failed"
@@ -271,46 +223,92 @@ export default function HeroClip({
                       : "Recover render"}
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={() => void copyField("hook")}
-              className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
-            >
-              {copiedField === "hook" ? "Hook copied" : "Copy hook"}
-            </button>
-            <button
-              type="button"
-              onClick={() => void copyField("caption")}
-              className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
-            >
-              {copiedField === "caption" ? "Caption copied" : "Copy caption"}
-            </button>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          <div className="space-y-3">
+            <p className="section-kicker">Lead decision</p>
+            <h2 className="text-2xl font-semibold leading-tight text-ink sm:text-[2.1rem]">{clip.title}</h2>
+            <p className="text-lg leading-8 text-ink/88">{clip.hook}</p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="rounded-[26px] border border-yellow-300/18 bg-[linear-gradient(180deg,rgba(255,214,102,0.1),rgba(255,214,102,0.04))] p-5">
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-yellow-100/70">System call</p>
+            <p className="text-base font-medium leading-7 text-white">{decisionText}</p>
+          </div>
+
+          <div className="signal-card rounded-[24px] p-4">
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Why this lands</p>
+            <p className="text-sm leading-6 text-ink/82">{whyThisHits}</p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="metric-tile rounded-[24px] p-4">
+              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Packaging angle</p>
+              <p className="text-sm font-medium text-ink">{clip.packaging_angle || "Value"}</p>
+            </div>
+            <div className="metric-tile rounded-[24px] p-4">
+              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Caption style</p>
+              <p className="text-sm font-medium text-ink">{clip.caption_style || "Short-form native"}</p>
+            </div>
+            <div className="metric-tile rounded-[24px] p-4">
+              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Thumbnail line</p>
+              <p className="text-sm font-medium text-ink">{clip.thumbnail_text || "Best Clip"}</p>
+            </div>
+            <div className="metric-tile rounded-[24px] p-4">
+              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">CTA</p>
+              <p className="text-sm font-medium text-ink">{clip.cta_suggestion || "Ask viewers to comment or follow for the next cut."}</p>
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/80">{postAuthority}</span>
+              {clip.platform_fit ? (
+                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/80">{clip.platform_fit}</span>
+              ) : null}
+              {clip.start_time && clip.end_time ? (
+                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/80">
+                  {clip.start_time} - {clip.end_time}
+                </span>
+              ) : null}
+            </div>
+            {hookVariants.length ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {hookVariants.map((variant) => (
+                  <span key={variant} className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-ink/78">
+                    {variant}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={() => onVote?.(clip, "good")}
               className={[
-                "rounded-full border px-4 py-2 text-sm font-medium transition",
+                "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                 feedbackVote === "good"
                   ? "border-emerald-400/30 bg-emerald-400/12 text-emerald-200"
-                  : "border-white/12 bg-white/[0.06] text-ink hover:border-emerald-400/30 hover:bg-emerald-400/10 hover:text-emerald-200",
+                  : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-emerald-400/30 hover:bg-emerald-400/10 hover:text-emerald-200",
               ].join(" ")}
             >
-              Good clip
+              Good
             </button>
             <button
               type="button"
               onClick={() => onVote?.(clip, "bad")}
               className={[
-                "rounded-full border px-4 py-2 text-sm font-medium transition",
+                "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                 feedbackVote === "bad"
                   ? "border-red-400/30 bg-red-400/10 text-red-100"
-                  : "border-white/12 bg-white/[0.06] text-ink hover:border-red-400/30 hover:bg-red-400/10 hover:text-red-100",
+                  : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-red-400/30 hover:bg-red-400/10 hover:text-red-100",
               ].join(" ")}
             >
-              Bad clip
+              Bad
             </button>
           </div>
         </div>

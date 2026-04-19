@@ -17,6 +17,26 @@ export type VideoCardProps = {
   onRecover?: (clip: ClipResult) => void;
 };
 
+function authorityLabel(rank?: number | null) {
+  if (rank === 1) return "🔥 POST FIRST";
+  if (rank === 2) return "⚡ POST SECOND";
+  if (rank === 3) return "🧠 TEST THIRD";
+  return "MOVE LATER";
+}
+
+function buildPackageText(clip: ClipResult) {
+  return [
+    `Title: ${clip.title}`,
+    `Hook: ${clip.hook}`,
+    `Caption: ${clip.caption}`,
+    `Why this matters: ${clip.why_this_matters || clip.reason || "Not available"}`,
+    `Post order: ${authorityLabel(clip.post_rank || clip.best_post_order || clip.rank || null)}`,
+    `Packaging angle: ${clip.packaging_angle || "value"}`,
+    `Thumbnail text: ${clip.thumbnail_text || "Best Clip"}`,
+    `CTA: ${clip.cta_suggestion || "Ask viewers to comment or follow."}`,
+  ].join("\n");
+}
+
 export default function VideoCard({
   clip,
   feedbackVote = null,
@@ -28,19 +48,20 @@ export default function VideoCard({
 }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isHovering, setIsHovering] = useState(false);
-  const [copiedHook, setCopiedHook] = useState(false);
+  const [copiedPackage, setCopiedPackage] = useState(false);
 
   const previewUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
   const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url || null;
   const downloadUrl = clip.download_url || null;
   const hasPlayablePreview = Boolean(previewUrl);
   const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
-  const previewStateLabel = hasPlayablePreview ? "Preview ready" : hasStillPreview ? "Still preview" : "Strategy only";
+  const hasRenderProof = hasPlayablePreview || hasStillPreview;
   const scoreLabel = clip.virality_score ?? clip.score;
   const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
   const whyThisHits = clip.why_this_matters || clip.reason || null;
   const captionStyle = clip.caption_style || null;
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
+  const authority = authorityLabel(postRank);
 
   async function handleEnter() {
     setIsHovering(true);
@@ -53,7 +74,7 @@ export default function VideoCard({
       video.currentTime = 0;
       await video.play();
     } catch {
-      // Ignore autoplay rejections and keep the poster visible.
+      // ignore autoplay rejection
     }
   }
 
@@ -68,19 +89,24 @@ export default function VideoCard({
     video.currentTime = 0;
   }
 
-  async function handleCopyHook() {
+  async function handleCopyPackage() {
     try {
-      await navigator.clipboard.writeText(clip.hook);
-      setCopiedHook(true);
-      window.setTimeout(() => setCopiedHook(false), 1600);
+      await navigator.clipboard.writeText(buildPackageText(clip));
+      setCopiedPackage(true);
+      window.setTimeout(() => setCopiedPackage(false), 1600);
     } catch {
-      setCopiedHook(false);
+      setCopiedPackage(false);
     }
   }
 
   return (
     <article
-      className="video-card group rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015)),linear-gradient(180deg,rgba(18,7,10,0.9),rgba(8,4,6,0.98))] p-4 shadow-card transition duration-300 hover:-translate-y-1 hover:border-white/16"
+      className={[
+        "group rounded-[28px] border p-4 shadow-card transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
+        hasRenderProof
+          ? "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015)),linear-gradient(180deg,rgba(18,7,10,0.9),rgba(8,4,6,0.98))] hover:border-white/18"
+          : "border-amber-400/14 bg-[linear-gradient(180deg,rgba(255,214,102,0.05),rgba(255,214,102,0.02)),linear-gradient(180deg,rgba(15,10,4,0.94),rgba(8,5,3,0.98))] opacity-90 hover:border-amber-300/24",
+      ].join(" ")}
       onMouseEnter={() => void handleEnter()}
       onMouseLeave={handleLeave}
     >
@@ -90,98 +116,69 @@ export default function VideoCard({
             ref={videoRef}
             src={previewUrl || undefined}
             poster={thumbnailUrl || undefined}
-            className="aspect-[9/16] w-full bg-black object-cover transition duration-300 group-hover:scale-[1.01]"
+            className="aspect-[9/16] w-full bg-black object-cover transition duration-300 group-hover:scale-[1.02]"
             muted
             loop
             playsInline
             preload="metadata"
           />
         ) : thumbnailUrl ? (
-          <img src={thumbnailUrl} alt={clip.hook} className="aspect-[9/16] w-full bg-black object-cover" />
+          <img src={thumbnailUrl} alt={clip.hook} className="aspect-[9/16] w-full bg-black object-cover transition duration-300 group-hover:scale-[1.02]" />
         ) : (
-          <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,30,86,0.24),transparent_44%),radial-gradient(circle_at_80%_20%,rgba(0,231,255,0.14),transparent_38%),linear-gradient(180deg,#040405,#0d080b)] text-sm text-ink/56">
+          <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,214,102,0.12),transparent_44%),linear-gradient(180deg,#040405,#0d080b)] text-sm text-ink/56">
             Preview unavailable
           </div>
         )}
 
         <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 p-3">
           <div className="flex items-center justify-between gap-3">
-            <span className="status-chip status-submitted">Score {scoreLabel}</span>
+            <span
+              className={[
+                "rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-[0.16em]",
+                hasRenderProof ? "bg-emerald-400/12 text-emerald-200" : "bg-amber-300/12 text-amber-100",
+              ].join(" ")}
+            >
+              {hasRenderProof ? "READY NOW" : "HIGH LEVERAGE"}
+            </span>
             <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/82 backdrop-blur">
-              {hasPlayablePreview ? (isHovering ? "Previewing" : "Hover to play") : previewStateLabel}
+              {hasPlayablePreview ? (isHovering ? "Previewing" : "Hover to play") : hasStillPreview ? "Still preview" : "Strategy only"}
             </span>
           </div>
         </div>
       </div>
 
       <div className="mt-4 space-y-3">
-        <div className="space-y-2">
-          <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-ink">{clip.hook}</h3>
-          <p className="line-clamp-2 text-sm leading-6 text-ink/64">{clip.caption}</p>
-        </div>
-
         <div className="flex flex-wrap gap-2">
-          {clip.platform_fit ? (
-            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-              {clip.platform_fit}
-            </span>
-          ) : null}
-          {postRank ? (
-            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-              Post #{postRank}
-            </span>
-          ) : null}
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/82">{authority}</span>
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">Score {scoreLabel}</span>
           {confidenceScore ? (
-            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-              {confidenceScore}% confidence
-            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">{confidenceScore}% confidence</span>
           ) : null}
           {captionStyle ? (
-            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-              {captionStyle}
-            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">{captionStyle}</span>
           ) : null}
         </div>
 
-        {whyThisHits ? (
-          <div className="signal-card rounded-[20px] px-3 py-3">
-            <p className="mb-1 text-[10px] uppercase tracking-[0.22em] text-muted">Why this lands</p>
-            <p className="line-clamp-3 text-xs leading-6 text-ink/78">{whyThisHits}</p>
-          </div>
-        ) : null}
-
-        <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
-          <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Preview status</p>
-          <p className="mt-1 text-xs font-medium text-ink/82">
-            {hasPlayablePreview
-              ? "Playable preview is ready."
-              : hasStillPreview
-                ? "Still frame is ready. No playable clip came back for this cut."
-                : "Strategy is ready, but this cut came back without render proof."}
-          </p>
-          {!hasPlayablePreview && recoveryState ? (
-            <p className="mt-2 text-xs leading-5 text-ink/58">
-              {recoveryState.status === "failed" && recoveryState.error ? recoveryState.error : recoveryState.message}
-            </p>
-          ) : null}
+        <div className="space-y-2">
+          <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-ink">{clip.title}</h3>
+          <p className="line-clamp-2 text-sm leading-6 text-ink/80">{clip.hook}</p>
+          {whyThisHits ? <p className="line-clamp-3 text-sm leading-6 text-ink/56">{whyThisHits}</p> : null}
         </div>
 
-        {clip.thumbnail_text || clip.cta_suggestion ? (
-          <div className="clip-quick-pack grid gap-2">
-            {clip.thumbnail_text ? (
-              <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Thumbnail</p>
-                <p className="mt-1 text-xs font-medium text-ink/82">{clip.thumbnail_text}</p>
-              </div>
-            ) : null}
-            {clip.cta_suggestion ? (
-              <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-muted">CTA</p>
-                <p className="mt-1 text-xs font-medium text-ink/82">{clip.cta_suggestion}</p>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+        <div className="grid gap-2">
+          {clip.thumbnail_text ? (
+            <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Thumbnail</p>
+              <p className="mt-1 text-xs font-medium text-ink/82">{clip.thumbnail_text}</p>
+            </div>
+          ) : null}
+          {clip.cta_suggestion ? (
+            <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-muted">CTA</p>
+              <p className="mt-1 text-xs font-medium text-ink/82">{clip.cta_suggestion}</p>
+            </div>
+          ) : null}
+        </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -192,22 +189,18 @@ export default function VideoCard({
               queued ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.18),rgba(255,45,166,0.1))] text-white shadow-crimson" : "",
             ].join(" ")}
           >
-            {queued ? "Queued" : "Queue clip"}
+            {queued ? "Queued for post" : "Queue post"}
           </button>
+
           {downloadUrl ? (
             <a
               href={downloadUrl}
               download
               className="primary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold"
             >
-              Export
+              Export clip
             </a>
-          ) : (
-            <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-2 text-sm text-[#ffe4eb]">
-              Upgrade for export
-            </span>
-          )}
-          {hasPlayablePreview ? (
+          ) : hasPlayablePreview ? (
             <a
               href={previewUrl || undefined}
               target="_blank"
@@ -217,7 +210,8 @@ export default function VideoCard({
               Open preview
             </a>
           ) : null}
-          {!hasPlayablePreview && !hasStillPreview ? (
+
+          {!hasRenderProof ? (
             <button
               type="button"
               onClick={() => onRecover?.(clip)}
@@ -233,12 +227,13 @@ export default function VideoCard({
                     : "Recover render"}
             </button>
           ) : null}
+
           <button
             type="button"
-            onClick={() => void handleCopyHook()}
+            onClick={() => void handleCopyPackage()}
             className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium"
           >
-            {copiedHook ? "Hook copied" : "Copy hook"}
+            {copiedPackage ? "Package copied" : "Copy package"}
           </button>
         </div>
 

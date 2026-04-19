@@ -1566,18 +1566,19 @@ export function ClipStudio({
           <div className="glass-panel rounded-[28px] p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
-                <p className="section-kicker">Lead asset</p>
-                <h4 className="mt-3 text-2xl font-semibold text-ink">{result.source_title || "Processed source"}</h4>
+                <p className="section-kicker">LWA recommendation</p>
+                <h4 className="mt-3 text-2xl font-semibold text-ink">Post this first. Then move the stack.</h4>
                 <p className="mt-3 text-sm leading-7 text-ink/70">{sourceTruthSummary}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {recommendedPlatform ? <StatPill tone="accent">Recommended: {recommendedPlatform}</StatPill> : null}
                   {recommendedContentType ? <StatPill tone="signal">{recommendedContentType}</StatPill> : null}
+                  {recommendedOutputStyle ? <StatPill tone="neutral">{recommendedOutputStyle}</StatPill> : null}
                 </div>
-                {recommendedOutputStyle ? (
-                  <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/58">Output style: {recommendedOutputStyle}</p>
-                ) : null}
                 {platformRecommendationReason ? (
                   <p className="mt-4 max-w-2xl text-sm leading-7 text-ink/58">{platformRecommendationReason}</p>
+                ) : null}
+                {result.processing_summary?.recommended_next_step ? (
+                  <p className="mt-3 text-sm font-medium text-ink/82">{result.processing_summary.recommended_next_step}</p>
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-3">
@@ -1620,7 +1621,7 @@ export function ClipStudio({
 
           {renderedHeroClip ? (
             <div className="space-y-3">
-              <p className="section-kicker">Best rendered clip</p>
+              <p className="section-kicker">Lead answer</p>
               <HeroClip
                 clip={renderedHeroClip}
                 feedbackVote={feedbackByClipId[renderedHeroClip.record_id || renderedHeroClip.clip_id || renderedHeroClip.id] || null}
@@ -1637,8 +1638,11 @@ export function ClipStudio({
             <div className="space-y-4">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="section-kicker">Rendered clips</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">Media-ready clips</h4>
+                  <p className="section-kicker">Rendered lane</p>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">🎬 READY TO POST NOW</h4>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
+                    These clips are fully rendered and optimized for distribution.
+                  </p>
                 </div>
               </div>
               <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -1660,7 +1664,7 @@ export function ClipStudio({
 
           {strategyHeroClip ? (
             <div className="space-y-3">
-              <p className="section-kicker">Top strategy recommendation</p>
+              <p className="section-kicker">Top high-leverage idea</p>
               <HeroClip
                 clip={strategyHeroClip}
                 feedbackVote={feedbackByClipId[strategyHeroClip.record_id || strategyHeroClip.clip_id || strategyHeroClip.id] || null}
@@ -1677,10 +1681,10 @@ export function ClipStudio({
             <div className="space-y-4">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="section-kicker">Strategy-only</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">Recommendations waiting for render proof</h4>
+                  <p className="section-kicker">Strategy lane</p>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">🧠 HIGH-LEVERAGE IDEAS</h4>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-                    These cuts still have ranking, hooks, captions, post order, and packaging logic. They just came back without media assets in this run. Use recover render when you want LWA to retry media proof from the same source.
+                    Not rendered yet — but strong engagement potential.
                   </p>
                 </div>
               </div>
@@ -1708,13 +1712,13 @@ export function ClipStudio({
           {orderedClips.length ? <ReviewOrderPanel clips={orderedClips} /> : null}
 
           <div className="glass-panel rounded-[28px] p-5">
-            <p className="section-kicker">{RESULTS_COPY.outputTrust}</p>
-            <h4 className="mt-3 text-xl font-semibold text-ink">What is ready now</h4>
+            <p className="section-kicker">Packaging + export rail</p>
+            <h4 className="mt-3 text-xl font-semibold text-ink">What is ready to move now</h4>
             <div className="mt-4 grid gap-3">
               <MetricTile
                 label="Rendered clips"
                 value={String(renderedClipCount)}
-                detail={renderedClipCount ? "Media proof is ready for these cuts now" : "No rendered clip came back yet"}
+                detail={renderedClipCount ? "These are ready to distribute right now" : "No rendered clip came back yet"}
               />
               <MetricTile
                 label="Strategy-only"
@@ -1735,7 +1739,7 @@ export function ClipStudio({
               <MetricTile
                 label="Lead preview"
                 value={leadPreviewReady ? "Yes" : "No"}
-                detail={leadPreviewReady ? "Open the lead asset beside the ranked cuts" : "No lead preview asset came back yet"}
+                detail={leadPreviewReady ? "Open the lead asset and move immediately" : "No lead preview asset came back yet"}
               />
             </div>
           </div>
@@ -1759,11 +1763,11 @@ export function ClipStudio({
 
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">{RESULTS_COPY.executionGuide}</p>
-            <h4 className="mt-3 text-xl font-semibold text-ink">Move this pack fast</h4>
+            <h4 className="mt-3 text-xl font-semibold text-ink">Decision rail</h4>
             <div className="mt-4 space-y-3 text-sm text-ink/72">
               <p>1. Post the lead clip first.</p>
-              <p>2. Test the alternate hooks before recutting.</p>
-              <p>3. Mark what lands so the next pack tightens.</p>
+              <p>2. Export the ready-now cuts before you spend time on strategy-only ideas.</p>
+              <p>3. Use the high-leverage lane for testing and rerender decisions.</p>
             </div>
             <p className="mt-4 text-sm text-accent">
               {improveResults ? "Preference learning is on." : "Turn on Improve results to apply local learning."}
@@ -2361,6 +2365,7 @@ function ReviewOrderPanel({ clips }: { clips: ClipResult[] }) {
           const order = clip.post_rank || clip.best_post_order || clip.rank || index + 1;
           const detail = clip.thumbnail_text || clip.cta_suggestion || clip.packaging_angle || "Ready for review";
           const active = index === 0;
+          const authority = order === 1 ? "🔥 POST FIRST" : order === 2 ? "⚡ POST SECOND" : order === 3 ? "🧠 TEST THIRD" : "MOVE LATER";
 
           return (
             <div
@@ -2378,6 +2383,7 @@ function ReviewOrderPanel({ clips }: { clips: ClipResult[] }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="line-clamp-1 text-sm font-semibold text-ink">{clip.hook}</p>
                     {active ? <StatPill tone="signal">Lead</StatPill> : null}
+                    <StatPill tone={active ? "accent" : "neutral"}>{authority}</StatPill>
                   </div>
                   <p className="mt-2 line-clamp-2 text-xs leading-6 text-ink/62">{detail}</p>
                 </div>
