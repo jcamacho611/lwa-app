@@ -96,6 +96,12 @@ class ProcessingSummary(BaseModel):
     recommended_next_step: str
     ai_provider: str
     target_platform: str
+    platform_decision: str = "auto"
+    recommended_platform: Optional[str] = None
+    platform_recommendation_reason: Optional[str] = None
+    recommended_content_type: Optional[str] = None
+    recommended_output_style: Optional[str] = None
+    manual_platform_override: bool = False
     trend_used: Optional[str] = None
     sources_considered: List[str]
     processing_mode: str
@@ -105,6 +111,8 @@ class ProcessingSummary(BaseModel):
     source_duration_seconds: Optional[int] = None
     assets_created: int = 0
     edited_assets_created: int = 0
+    rendered_clip_count: int = 0
+    strategy_only_clip_count: int = 0
     free_preview_unlocked: bool = True
     persistence_requires_signup: bool = False
     upgrade_prompt: Optional[str] = None

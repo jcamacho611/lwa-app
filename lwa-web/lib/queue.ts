@@ -1,6 +1,6 @@
 "use client";
 
-import type { ClipResult, PlatformOption } from "./types";
+import type { ClipResult } from "./types";
 
 const QUEUE_KEY = "lwa-web-ready-queue-v1";
 
@@ -14,7 +14,7 @@ export type ReadyQueueItem = {
   bestPostOrder?: number | null;
   viralityScore?: number | null;
   assetUrl?: string | null;
-  targetPlatform: PlatformOption;
+  targetPlatform: string;
   addedAt: string;
 };
 
@@ -44,7 +44,7 @@ export function writeReadyQueue(items: ReadyQueueItem[]) {
   window.localStorage.setItem(QUEUE_KEY, JSON.stringify(items.slice(-40)));
 }
 
-export function createReadyQueueItem(clip: ClipResult, targetPlatform: PlatformOption): ReadyQueueItem {
+export function createReadyQueueItem(clip: ClipResult, targetPlatform: string): ReadyQueueItem {
   return {
     clipId: clip.record_id || clip.clip_id || clip.id,
     requestId: clip.request_id || null,

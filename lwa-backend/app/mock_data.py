@@ -5,7 +5,7 @@ from .schemas import ClipResult, TrendItem
 
 def build_mock_clips(
     video_url: str,
-    target_platform: str = "TikTok",
+    target_platform: str = "Short-form",
     selected_trend: Optional[str] = None,
     content_angle: Optional[str] = None,
     trend_context: Optional[List[TrendItem]] = None,
@@ -17,7 +17,7 @@ def build_mock_clips(
     source_label = video_url.split("//")[-1].split("/")[0]
     lead_trend = selected_trend or (trend_context[0].title if trend_context else "creator growth")
     preferred_angle = (content_angle or "").strip().lower()
-    platform_label = target_platform or "TikTok"
+    platform_label = target_platform or "Short-form"
     title_prefix = source_title or platform_label
     clip_urls = normalize_clip_urls(clip_urls)
     start_end_pairs = normalize_start_end_pairs(start_end_pairs)

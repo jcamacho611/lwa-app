@@ -27,7 +27,7 @@ export default function VideoCard({
   const downloadUrl = clip.download_url || null;
   const hasPlayablePreview = Boolean(previewUrl);
   const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
-  const previewStateLabel = hasPlayablePreview ? "Preview ready" : hasStillPreview ? "Still frame" : "Render pending";
+  const previewStateLabel = hasPlayablePreview ? "Preview ready" : hasStillPreview ? "Still preview" : "Strategy only";
   const scoreLabel = clip.virality_score ?? clip.score;
   const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
   const whyThisHits = clip.why_this_matters || clip.reason || null;
@@ -149,7 +149,7 @@ export default function VideoCard({
               ? "Playable preview is ready."
               : hasStillPreview
                 ? "Still frame is ready. No playable clip came back for this cut."
-                : "Strategy is ready, but no preview asset came back."}
+                : "Strategy is ready, but this cut came back without render proof."}
           </p>
         </div>
 

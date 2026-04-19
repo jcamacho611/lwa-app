@@ -261,11 +261,20 @@ export type GenerateResponse = {
   selected_trend?: string | null;
   processing_summary?: {
     target_platform?: string;
+    platform_decision?: "auto" | "manual" | string;
+    recommended_platform?: string | null;
+    platform_recommendation_reason?: string | null;
+    recommended_content_type?: string | null;
+    recommended_output_style?: string | null;
+    manual_platform_override?: boolean;
     ai_provider?: string;
     plan_name?: string;
+    plan_code?: string;
     credits_remaining?: number;
     estimated_turnaround?: string;
     recommended_next_step?: string;
+    rendered_clip_count?: number;
+    strategy_only_clip_count?: number;
     feature_flags?: FeatureFlags;
   };
   clips: ClipResult[];

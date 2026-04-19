@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   }
 
   const url = payload.url?.trim();
-  const platform = payload.platform?.trim() || "TikTok";
+  const platform = payload.platform?.trim();
   const uploadFileId = payload.uploadFileId?.trim();
   const contentAngle = payload.contentAngle?.trim();
   const authorization = request.headers.get("authorization");
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         video_url: url || undefined,
         upload_file_id: uploadFileId || undefined,
-        target_platform: platform,
+        target_platform: platform || undefined,
         content_angle: contentAngle || undefined,
       }),
       cache: "no-store",

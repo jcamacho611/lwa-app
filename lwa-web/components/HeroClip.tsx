@@ -35,7 +35,7 @@ export default function HeroClip({
   const downloadUrl = clip.download_url || null;
   const hasPlayablePreview = Boolean(previewUrl);
   const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
-  const previewStateLabel = hasPlayablePreview ? "Preview ready" : hasStillPreview ? "Still frame" : "Render pending";
+  const previewStateLabel = hasPlayablePreview ? "Preview ready" : hasStillPreview ? "Still preview" : "Strategy only";
   const whyThisHits = clip.why_this_matters || clip.reason || "Clear setup, quick payoff, and packaging built to travel.";
   const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
   const confidenceLabel = confidenceScore ? `${confidenceScore}% confidence` : formatConfidence(clip.confidence);
@@ -115,7 +115,7 @@ export default function HeroClip({
 
             <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
-                <span className="status-chip status-approved">Lead clip</span>
+                <span className="status-chip status-approved">{hasPlayablePreview || hasStillPreview ? "Rendered lead" : "Strategy lead"}</span>
                 <span className="status-chip status-submitted">Score {scoreLabel}</span>
                 <span className="status-chip status-ready">{previewStateLabel}</span>
                 {clip.platform_fit ? <span className="status-chip status-ready">{clip.platform_fit}</span> : null}

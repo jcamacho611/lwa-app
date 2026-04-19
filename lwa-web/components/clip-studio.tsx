@@ -89,6 +89,17 @@ import { resolveWorldState, type WorldSignal } from "../lib/world-state";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 
+function clipHasRenderedMedia(clip: ClipResult) {
+  return Boolean(
+    clip.preview_url ||
+      clip.edited_clip_url ||
+      clip.clip_url ||
+      clip.raw_clip_url ||
+      clip.thumbnail_url ||
+      clip.preview_image_url,
+  );
+}
+
 const appNavItems = [
   { href: "/dashboard", label: rewriteSurfaceLabel("Dashboard"), section: "dashboard" },
   { href: "/generate", label: rewriteSurfaceLabel("Generate"), section: "generate" },
@@ -136,6 +147,7 @@ export function ClipStudio({
 }: ClipStudioProps) {
   const [videoUrl, setVideoUrl] = useState("");
   const [platform, setPlatform] = useState<PlatformOption>("TikTok");
+  const [useManualPlatform, setUseManualPlatform] = useState(false);
   const [result, setResult] = useState<GenerateResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -485,7 +497,7 @@ export function ClipStudio({
       const data = await generateClips(
         {
           url: videoUrl.trim() || undefined,
-          platform,
+          platform: useManualPlatform ? platform : undefined,
           uploadFileId: selectedUpload?.file_id || selectedUpload?.source_ref?.upload_id,
           contentAngle: improveResults ? preferenceProfile.topPackagingAngle : undefined,
         },
@@ -707,6 +719,10 @@ export function ClipStudio({
   const campaignsUnlocked = Boolean(activeFeatureFlags.campaign_mode);
   const walletUnlocked = Boolean(activeFeatureFlags.wallet_view);
   const postingQueueUnlocked = Boolean(activeFeatureFlags.posting_queue);
+  const activeFeedbackPlatform = useMemo<PlatformOption>(() => {
+    const candidate = result?.processing_summary?.target_platform || platform;
+    return platforms.includes(candidate as PlatformOption) ? (candidate as PlatformOption) : "TikTok";
+  }, [platform, result?.processing_summary?.target_platform]);
   const orderedClips = useMemo(() => {
     return [...displayedClips].sort((left, right) => {
       const leftOrder = left.post_rank || left.best_post_order || left.rank || Number.MAX_SAFE_INTEGER;
@@ -745,8 +761,6 @@ export function ClipStudio({
         : generatorHovered
           ? "hover"
           : "idle";
-  const featuredClip = orderedClips[0] ?? null;
-  const remainingClips = orderedClips.slice(1);
   const requiresAccount = !["home", "generate", "upload"].includes(initialSection);
   const showGenerator = ["home", "generate", "upload"].includes(initialSection);
   const showDashboard = ["dashboard"].includes(initialSection);
@@ -764,21 +778,21 @@ export function ClipStudio({
   const deliveryMoments = [
     {
       label: "Paste once",
-      detail: "Start with one source and one target platform.",
+      detail: "Start with one source. LWA recommends the first destination after analysis.",
     },
     {
       label: "Review first",
-      detail: "See ranked clips, hooks, and captions before you export.",
+      detail: "See rendered clips first, then strategy-only recommendations that still need media proof.",
     },
     {
       label: "Move fast",
-      detail: "Queue the winners and keep the rest for later.",
+      detail: "Export what is ready now and keep the rest in the stack for later.",
     },
   ] as const;
   const idleRunSummary =
     generationMode === "quick"
-      ? "Paste a public link, get ranked clips back, then review the best option first."
-      : "Turn on local learning when you want the next pack to lean toward what you keep.";
+      ? "Paste one public source, let LWA recommend the first destination, then review rendered proof before strategy-only ideas."
+      : "Keep the destination on auto unless you already know the landing feed. Turn on local learning when you want tighter future packs.";
   const homeDiscoverySections = [
     {
       id: "why-lwa",
@@ -854,6 +868,20 @@ export function ClipStudio({
       orderedClips.filter((clip) => clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url).length,
     [orderedClips],
   );
+  const renderedClips = useMemo(() => orderedClips.filter((clip) => clipHasRenderedMedia(clip)), [orderedClips]);
+  const strategyOnlyClips = useMemo(() => orderedClips.filter((clip) => !clipHasRenderedMedia(clip)), [orderedClips]);
+  const renderedHeroClip = renderedClips[0] ?? null;
+  const renderedGridClips = renderedHeroClip ? renderedClips.slice(1) : renderedClips;
+  const strategyHeroClip = !renderedHeroClip ? strategyOnlyClips[0] ?? null : null;
+  const strategyGridClips = strategyHeroClip ? strategyOnlyClips.slice(1) : strategyOnlyClips;
+  const effectiveTargetPlatform = result?.processing_summary?.target_platform || (useManualPlatform ? platform : "Auto");
+  const recommendedPlatform = result?.processing_summary?.recommended_platform || result?.processing_summary?.target_platform || null;
+  const recommendedContentType = result?.processing_summary?.recommended_content_type || null;
+  const recommendedOutputStyle = result?.processing_summary?.recommended_output_style || null;
+  const platformDecision = result?.processing_summary?.platform_decision || (useManualPlatform ? "manual" : "auto");
+  const platformRecommendationReason = result?.processing_summary?.platform_recommendation_reason || null;
+  const renderedClipCount = result?.processing_summary?.rendered_clip_count ?? renderedClips.length;
+  const strategyOnlyClipCount = result?.processing_summary?.strategy_only_clip_count ?? strategyOnlyClips.length;
   const exportReadyCount = useMemo(() => orderedClips.filter((clip) => clip.download_url).length, [orderedClips]);
   const leadPreviewReady = Boolean(result?.preview_asset_url);
   const leadExportReady = Boolean(result?.download_asset_url);
@@ -866,7 +894,7 @@ export function ClipStudio({
   }, [result?.transcript, result?.visual_summary]);
 
   function handleFeedbackVote(clip: GenerateResponse["clips"][number], vote: "good" | "bad") {
-    setFeedbackRecords((current) => upsertFeedbackRecord(current, createFeedbackRecord(clip, vote, platform)));
+    setFeedbackRecords((current) => upsertFeedbackRecord(current, createFeedbackRecord(clip, vote, activeFeedbackPlatform)));
   }
 
   function resolveClipQueueId(clip: ClipResult) {
@@ -883,7 +911,7 @@ export function ClipStudio({
     setReadyQueue((current) =>
       current.some((item) => item.clipId === clipId)
         ? removeReadyQueueItem(current, clipId)
-        : upsertReadyQueueItem(current, createReadyQueueItem(clip, platform)),
+        : upsertReadyQueueItem(current, createReadyQueueItem(clip, result?.processing_summary?.target_platform || platform)),
     );
   }
 
@@ -959,7 +987,7 @@ export function ClipStudio({
               : "Stay in the same workflow while LWA learns what you keep and tightens the next pack."}
           </p>
         </div>
-        <StatPill tone="accent">{platform}</StatPill>
+        <StatPill tone="accent">{useManualPlatform ? platform : "Auto recommend"}</StatPill>
       </div>
 
       <form onSubmit={onSubmit} className="mt-7 space-y-5">
@@ -995,28 +1023,57 @@ export function ClipStudio({
           />
         </label>
 
-        <div>
-          <span className="mb-3 block text-sm font-medium text-ink/84">Post for</span>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {platforms.map((item) => {
-              const active = item === platform;
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setPlatform(item)}
-                  className={[
-                    "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
-                    active
-                      ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
-                      : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
-                  ].join(" ")}
-                >
-                  {item}
-                </button>
-              );
-            })}
+        <div className="space-y-3">
+          <div className="metric-tile rounded-[24px] p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-ink">Destination</p>
+                <p className="mt-2 text-sm leading-7 text-ink/72">
+                  {useManualPlatform
+                    ? `Manual override is on for ${platform}.`
+                    : "LWA will recommend the first destination after it scores the source and identifies the strongest clip style."}
+                </p>
+                <p className="mt-1 text-sm text-ink/50">
+                  {useManualPlatform
+                    ? "Use this only when you already know the landing feed."
+                    : "Manual override still exists, but it is secondary to the engine recommendation."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUseManualPlatform((current) => !current)}
+                className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium"
+              >
+                {useManualPlatform ? "Use auto recommendation" : "Set manual override"}
+              </button>
+            </div>
           </div>
+
+          {useManualPlatform ? (
+            <div>
+              <span className="mb-3 block text-sm font-medium text-ink/84">Manual destination override</span>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {platforms.map((item) => {
+                  const active = item === platform;
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setPlatform(item)}
+                      className={[
+                        "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
+                        active
+                          ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
+                          : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
+                      ].join(" ")}
+                    >
+                      {item}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
@@ -1147,28 +1204,57 @@ export function ClipStudio({
               />
             </label>
 
-            <div>
-              <span className="mb-3 block text-sm font-medium text-ink/84">Post for</span>
-              <div className="grid gap-2 sm:grid-cols-3">
-                {platforms.map((item) => {
-                  const active = item === platform;
-                  return (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => setPlatform(item)}
-                      className={[
-                        "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
-                        active
-                          ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
-                          : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
-                      ].join(" ")}
-                    >
-                      {item}
-                    </button>
-                  );
-                })}
+            <div className="space-y-3">
+              <div className="metric-tile rounded-[24px] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-ink">Destination</p>
+                    <p className="mt-2 text-sm leading-7 text-ink/72">
+                      {useManualPlatform
+                        ? `Manual override is on for ${platform}.`
+                        : "Keep the first run on auto. LWA will recommend the likely best destination and output style after it scores the source."}
+                    </p>
+                    <p className="mt-1 text-sm text-ink/50">
+                      {useManualPlatform
+                        ? "Use this when a campaign or feed target is already fixed."
+                        : "Only override the destination when you know the publishing requirement before the run."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUseManualPlatform((current) => !current)}
+                    className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium"
+                  >
+                    {useManualPlatform ? "Use auto recommendation" : "Set manual override"}
+                  </button>
+                </div>
               </div>
+
+              {useManualPlatform ? (
+                <div>
+                  <span className="mb-3 block text-sm font-medium text-ink/84">Manual destination override</span>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {platforms.map((item) => {
+                      const active = item === platform;
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setPlatform(item)}
+                          className={[
+                            "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
+                            active
+                              ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
+                              : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
+                          ].join(" ")}
+                        >
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
@@ -1299,9 +1385,9 @@ export function ClipStudio({
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Flow</p>
             <div className="mt-4 space-y-3 text-sm leading-7 text-ink/68">
-              <p>1. LWA finds the moments worth cutting.</p>
-              <p>2. Review the previews before you export.</p>
-              <p>3. Queue the winners and move them fast.</p>
+              <p>1. LWA finds the moments worth cutting and recommends the first destination.</p>
+              <p>2. Review rendered clips before you spend time on strategy-only cuts.</p>
+              <p>3. Queue the winners and export the assets that are already ready.</p>
             </div>
           </div>
         </aside>
@@ -1320,9 +1406,12 @@ export function ClipStudio({
           </div>
           <div className="flex flex-wrap gap-2">
             <StatPill tone="accent">{displayedClips.length} clips</StatPill>
+            <StatPill tone="signal">{renderedClipCount} rendered</StatPill>
+            {strategyOnlyClipCount ? <StatPill tone="neutral">{strategyOnlyClipCount} strategy-only</StatPill> : null}
             <StatPill tone="neutral">{result.source_platform || "Upload"}</StatPill>
             {result.source_type ? <StatPill tone="neutral">{result.source_type.replace("_", " ")}</StatPill> : null}
-            {result.processing_summary?.recommended_next_step ? <StatPill tone="signal">AI ranked</StatPill> : null}
+            <StatPill tone="accent">{effectiveTargetPlatform}</StatPill>
+            {platformDecision === "manual" ? <StatPill tone="neutral">Manual target</StatPill> : <StatPill tone="signal">Auto target</StatPill>}
           </div>
         </div>
       </div>
@@ -1335,6 +1424,16 @@ export function ClipStudio({
                 <p className="section-kicker">Lead asset</p>
                 <h4 className="mt-3 text-2xl font-semibold text-ink">{result.source_title || "Processed source"}</h4>
                 <p className="mt-3 text-sm leading-7 text-ink/70">{sourceTruthSummary}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {recommendedPlatform ? <StatPill tone="accent">Recommended: {recommendedPlatform}</StatPill> : null}
+                  {recommendedContentType ? <StatPill tone="signal">{recommendedContentType}</StatPill> : null}
+                </div>
+                {recommendedOutputStyle ? (
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/58">Output style: {recommendedOutputStyle}</p>
+                ) : null}
+                {platformRecommendationReason ? (
+                  <p className="mt-4 max-w-2xl text-sm leading-7 text-ink/58">{platformRecommendationReason}</p>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-3">
                 {leadPreviewReady ? (
@@ -1364,35 +1463,78 @@ export function ClipStudio({
             </div>
           </div>
 
-          {!previewReadyCount ? (
-            <InlineAlert tone="violet" title="Preview pending">
-              The intelligence pack is ready, but no playable preview asset came back from this source. Review the copy and ranking now, then retry with a longer or cleaner source if you need a rendered cut.
+          {!renderedClipCount ? (
+            <InlineAlert tone="violet" title="Strategy pack ready">
+              LWA returned ranking, hooks, captions, and post order, but this run did not produce rendered media. Review the strategy stack now, then retry with a longer or cleaner source if you need playable output.
+            </InlineAlert>
+          ) : !previewReadyCount ? (
+            <InlineAlert tone="violet" title="Playable preview pending">
+              This run returned rendered media, but not a playable preview for every cut. Review the media-ready clips first, then use the strategy-only stack to decide what is worth rerunning.
             </InlineAlert>
           ) : null}
 
-          {featuredClip ? (
+          {renderedHeroClip ? (
             <div className="space-y-3">
-              <p className="section-kicker">{RESULTS_COPY.topClip}</p>
+              <p className="section-kicker">Best rendered clip</p>
               <HeroClip
-                clip={featuredClip}
-                feedbackVote={feedbackByClipId[featuredClip.record_id || featuredClip.clip_id || featuredClip.id] || null}
+                clip={renderedHeroClip}
+                feedbackVote={feedbackByClipId[renderedHeroClip.record_id || renderedHeroClip.clip_id || renderedHeroClip.id] || null}
                 onVote={handleFeedbackVote}
-                queued={isQueued(featuredClip)}
+                queued={isQueued(renderedHeroClip)}
                 onToggleQueue={handleToggleQueue}
               />
             </div>
           ) : null}
 
-          {remainingClips.length ? (
+          {renderedGridClips.length ? (
             <div className="space-y-4">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="section-kicker">{RESULTS_COPY.gridTitle}</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">{RESULTS_COPY.gridTitle}</h4>
+                  <p className="section-kicker">Rendered clips</p>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">Media-ready clips</h4>
                 </div>
               </div>
               <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {remainingClips.map((clip) => (
+                {renderedGridClips.map((clip) => (
+                  <ClipCard
+                    key={clip.id}
+                    clip={clip}
+                    feedbackVote={feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null}
+                    onVote={handleFeedbackVote}
+                    queued={isQueued(clip)}
+                    onToggleQueue={handleToggleQueue}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {strategyHeroClip ? (
+            <div className="space-y-3">
+              <p className="section-kicker">Top strategy recommendation</p>
+              <HeroClip
+                clip={strategyHeroClip}
+                feedbackVote={feedbackByClipId[strategyHeroClip.record_id || strategyHeroClip.clip_id || strategyHeroClip.id] || null}
+                onVote={handleFeedbackVote}
+                queued={isQueued(strategyHeroClip)}
+                onToggleQueue={handleToggleQueue}
+              />
+            </div>
+          ) : null}
+
+          {strategyGridClips.length ? (
+            <div className="space-y-4">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="section-kicker">Strategy-only</p>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">Recommendations waiting for render proof</h4>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
+                    These cuts still have ranking, hooks, captions, post order, and packaging logic. They just came back without media assets in this run.
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {strategyGridClips.map((clip) => (
                   <ClipCard
                     key={clip.id}
                     clip={clip}

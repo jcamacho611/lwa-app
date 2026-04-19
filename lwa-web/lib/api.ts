@@ -30,7 +30,7 @@ export class ApiError extends Error {
 
 type GeneratePayload = {
   url?: string;
-  platform: PlatformOption;
+  platform?: PlatformOption;
   uploadFileId?: string;
   contentAngle?: string;
 };

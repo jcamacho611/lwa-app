@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import logging
+import re
 import shutil
 import time
 from collections.abc import Awaitable, Callable
@@ -90,7 +91,6 @@ async def build_clip_response(
     progress_callback: Callable[[str], Awaitable[None]] | None = None,
 ) -> ClipBatchResponse:
     video_url = str(request.video_url)
-    target_platform = request.target_platform or "TikTok"
     candidate_limit = min(max(entitlement.plan.feature_flags.clip_limit, 20), 40)
     trend_context_response = await get_live_trends()
     trend_context: list[TrendItem] = trend_context_response.trends
@@ -160,6 +160,18 @@ async def build_clip_response(
         )
         await emit_progress(progress_callback, "Runtime dependencies are limited. Building a lightweight clip pack.")
 
+    source_platform = source_context.source_platform if source_context else detect_platform(video_url)
+    auto_target_platform, recommendation_reason, recommended_content_type, recommended_output_style = (
+        recommend_platform_strategy(
+            source_context=source_context,
+            detected_source_platform=source_platform,
+            selected_trend=request.selected_trend,
+            content_angle=request.content_angle,
+        )
+    )
+    manual_platform_override = bool(request.target_platform)
+    target_platform = request.target_platform or auto_target_platform
+
     clips, provider_used = await generate_clip_copy(
         settings=settings,
         video_url=video_url,
@@ -218,11 +230,12 @@ async def build_clip_response(
     assets_created = len([clip for clip in clips if clip.clip_url])
     selection_strategy = source_context.selection_strategy if source_context else "timeline"
     source_type = source_context.source_type if source_context else (request.source_type or ("video_upload" if source_path else "url"))
-    source_platform = source_context.source_platform if source_context else detect_platform(video_url)
     preview_asset_url = resolve_preview_asset_url(clips=clips, source_context=source_context)
     download_asset_url = resolve_download_asset_url(clips=clips, source_context=source_context, entitlement=entitlement)
     thumbnail_url = resolve_thumbnail_url(clips=clips, source_context=source_context)
     preview_ready_count = len([clip for clip in clips if clip.preview_url or clip.edited_clip_url or clip.clip_url or clip.raw_clip_url])
+    rendered_clip_count = len([clip for clip in clips if clip_has_rendered_media(clip)])
+    strategy_only_clip_count = max(len(clips) - rendered_clip_count, 0)
     export_ready_count = len([clip for clip in clips if clip.download_url])
 
     response = ClipBatchResponse(
@@ -244,11 +257,18 @@ async def build_clip_response(
             estimated_turnaround="preview ready now" if preview_ready_count else settings.default_turnaround,
             recommended_next_step=build_recommended_next_step(
                 preview_ready_count=preview_ready_count,
+                rendered_clip_count=rendered_clip_count,
                 export_ready_count=export_ready_count,
                 entitlement=entitlement,
             ),
             ai_provider=compiler_mode or provider_used,
             target_platform=target_platform,
+            platform_decision="manual" if manual_platform_override else "auto",
+            recommended_platform=auto_target_platform,
+            platform_recommendation_reason=recommendation_reason,
+            recommended_content_type=recommended_content_type,
+            recommended_output_style=recommended_output_style,
+            manual_platform_override=manual_platform_override,
             trend_used=request.selected_trend,
             sources_considered=sorted({item.source for item in trend_context}),
             processing_mode=processing_mode,
@@ -258,6 +278,8 @@ async def build_clip_response(
             source_duration_seconds=source_duration_seconds,
             assets_created=assets_created,
             edited_assets_created=edited_assets_created,
+            rendered_clip_count=rendered_clip_count,
+            strategy_only_clip_count=strategy_only_clip_count,
             free_preview_unlocked=entitlement.plan.code == "free",
             persistence_requires_signup=current_user is None,
             upgrade_prompt=build_upgrade_prompt(entitlement=entitlement, current_user=current_user),
@@ -398,9 +420,21 @@ def resolve_thumbnail_url(*, clips: list, source_context) -> str | None:
     return None
 
 
+def clip_has_rendered_media(clip) -> bool:
+    return bool(
+        clip.preview_url
+        or clip.edited_clip_url
+        or clip.clip_url
+        or clip.raw_clip_url
+        or clip.thumbnail_url
+        or clip.preview_image_url
+    )
+
+
 def build_recommended_next_step(
     *,
     preview_ready_count: int,
+    rendered_clip_count: int,
     export_ready_count: int,
     entitlement: EntitlementContext,
 ) -> str:
@@ -410,6 +444,8 @@ def build_recommended_next_step(
         return "Open the lead preview now. Upgrade when you want clean clip exports."
     if preview_ready_count:
         return "Open the lead preview now. Export will appear once rendering finishes."
+    if rendered_clip_count:
+        return "Review the rendered clips first. The rest of the pack is still useful as strategy, but it needs another run for playable proof."
     return "The intelligence pack is ready, but no playable preview was produced. Try a longer or cleaner source."
 
 
@@ -430,6 +466,136 @@ def build_upgrade_prompt(
     if entitlement.plan.code == "pro":
         return "Upgrade to Scale when you need campaign mode, posting queue access, and higher daily volume."
     return None
+
+
+CONTENT_TYPE_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "Anime / fandom edit": ("anime", "manga", "amv", "fandom", "arc", "character", "episode", "edit"),
+    "Reaction / commentary": ("reaction", "react", "commentary", "podcast", "interview", "stream", "review", "breakdown"),
+    "Shock / reveal": ("shocking", "shock", "reveal", "twist", "secret", "plot twist", "crazy", "wait for it"),
+    "Meme / quote-core": ("meme", "quote", "funny", "joke", "one-liner", "insane line", "caption this"),
+    "Story payoff": ("story", "happened", "moment", "ending", "then", "finally", "payoff", "turned out"),
+    "Animal / absurdity": ("dog", "cat", "animal", "pet", "absurd", "weird", "chaos", "wild animal"),
+    "Polished lifestyle": ("beauty", "fashion", "outfit", "routine", "travel", "aesthetic", "morning routine", "fit check"),
+}
+
+
+def recommend_platform_strategy(
+    *,
+    source_context,
+    detected_source_platform: str,
+    selected_trend: str | None,
+    content_angle: str | None,
+) -> tuple[str, str, str, str]:
+    recommended_content_type = infer_content_type(
+        source_context=source_context,
+        detected_source_platform=detected_source_platform,
+        selected_trend=selected_trend,
+        content_angle=content_angle,
+    )
+
+    if recommended_content_type == "Polished lifestyle" or detected_source_platform.lower() == "instagram":
+        recommended_platform = "Instagram Reels"
+    elif recommended_content_type in {"Reaction / commentary", "Story payoff"}:
+        recommended_platform = "YouTube Shorts"
+    elif recommended_content_type == "Anime / fandom edit":
+        recommended_platform = "TikTok"
+    elif recommended_content_type == "Animal / absurdity":
+        recommended_platform = "TikTok"
+    elif recommended_content_type == "Meme / quote-core":
+        recommended_platform = "TikTok"
+    elif recommended_content_type == "Shock / reveal":
+        recommended_platform = "TikTok"
+    elif detected_source_platform.lower() in {"youtube", "twitch"}:
+        recommended_platform = "YouTube Shorts"
+    else:
+        recommended_platform = "TikTok"
+
+    return (
+        recommended_platform,
+        platform_recommendation_reason(
+            recommended_platform=recommended_platform,
+            recommended_content_type=recommended_content_type,
+            detected_source_platform=detected_source_platform,
+        ),
+        recommended_content_type,
+        recommended_output_style(
+            recommended_platform=recommended_platform,
+            recommended_content_type=recommended_content_type,
+        ),
+    )
+
+
+def infer_content_type(
+    *,
+    source_context,
+    detected_source_platform: str,
+    selected_trend: str | None,
+    content_angle: str | None,
+) -> str:
+    combined = " ".join(
+        part
+        for part in [
+            source_context.title if source_context else "",
+            source_context.description if source_context else "",
+            source_context.transcript if source_context else "",
+            source_context.visual_summary if source_context else "",
+            detected_source_platform,
+            selected_trend or "",
+            content_angle or "",
+        ]
+        if part
+    ).lower()
+    normalized = re.sub(r"\s+", " ", combined)
+
+    scored = [
+        (label, sum(1 for keyword in keywords if keyword in normalized))
+        for label, keywords in CONTENT_TYPE_KEYWORDS.items()
+    ]
+    best_label, best_score = max(scored, key=lambda item: item[1], default=("Educational / value", 0))
+    if best_score > 0:
+        return best_label
+    if detected_source_platform.lower() in {"youtube", "twitch"}:
+        return "Reaction / commentary"
+    return "Educational / value"
+
+
+def platform_recommendation_reason(
+    *,
+    recommended_platform: str,
+    recommended_content_type: str,
+    detected_source_platform: str,
+) -> str:
+    if recommended_platform == "TikTok":
+        return (
+            f"This source reads like {recommended_content_type.lower()}, so the fastest cold-open, caption-led "
+            "cut is the strongest first destination."
+        )
+    if recommended_platform == "Instagram Reels":
+        return (
+            f"This source reads like {recommended_content_type.lower()}, so a more polished visual package fits best "
+            "before you branch into other feeds."
+        )
+    if detected_source_platform.lower() in {"youtube", "twitch"}:
+        return (
+            f"This source reads like {recommended_content_type.lower()} from a longer-form platform, so Shorts is the "
+            "cleanest first destination for payoff-first clipping."
+        )
+    return (
+        f"This source reads like {recommended_content_type.lower()}, so Shorts-style structure is the clearest first "
+        "destination for replayable retention."
+    )
+
+
+def recommended_output_style(*, recommended_platform: str, recommended_content_type: str) -> str:
+    if recommended_platform == "TikTok":
+        if recommended_content_type == "Anime / fandom edit":
+            return "High-contrast cold open with short caption bursts and fast loop payoff."
+        if recommended_content_type == "Animal / absurdity":
+            return "Instant action up front with minimal setup and comment bait at the end."
+        return "Fast interruption, bold captions, and payoff in the first beat."
+    if recommended_platform == "Instagram Reels":
+        return "Cleaner framing, polished captions, and a more aesthetic payoff beat."
+    return "Context-light opener, readable captions, and a clean payoff before the follow-up CTA."
 
 
 async def emit_progress(
