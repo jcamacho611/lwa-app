@@ -180,7 +180,7 @@ struct APIClient {
         videoURL: String,
         uploadFileID: String? = nil,
         selectedTrend: TrendItem?,
-        targetPlatform: String
+        targetPlatform: String? = nil
     ) async throws -> ClipResponse {
         if uploadFileID == nil {
             guard let candidateURL = URL(string: videoURL),
@@ -205,7 +205,7 @@ struct APIClient {
                 uploadFileID: uploadFileID,
                 selectedTrend: selectedTrend?.title,
                 trendSource: selectedTrend?.source,
-                targetPlatform: targetPlatform,
+                targetPlatform: normalizedTargetPlatform(targetPlatform),
                 contentAngle: nil
             )
         )
@@ -229,7 +229,7 @@ struct APIClient {
         videoURL: String,
         uploadFileID: String? = nil,
         selectedTrend: TrendItem?,
-        targetPlatform: String
+        targetPlatform: String? = nil
     ) async throws -> JobCreatedResponse {
         if uploadFileID == nil {
             guard let candidateURL = URL(string: videoURL),
@@ -250,7 +250,7 @@ struct APIClient {
                 uploadFileID: uploadFileID,
                 selectedTrend: selectedTrend?.title,
                 trendSource: selectedTrend?.source,
-                targetPlatform: targetPlatform,
+                targetPlatform: normalizedTargetPlatform(targetPlatform),
                 contentAngle: nil
             )
         )
@@ -344,6 +344,11 @@ struct APIClient {
 
         return try JSONDecoder().decode(UploadedSource.self, from: data)
     }
+
+    private func normalizedTargetPlatform(_ targetPlatform: String?) -> String? {
+        let normalized = targetPlatform?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return normalized.isEmpty ? nil : normalized
+    }
 }
 
 private func mimeType(for fileExtension: String) -> String {
@@ -386,7 +391,7 @@ private struct ProcessRequest: Encodable {
     let uploadFileID: String?
     let selectedTrend: String?
     let trendSource: String?
-    let targetPlatform: String
+    let targetPlatform: String?
     let contentAngle: String?
 
     enum CodingKeys: String, CodingKey {
