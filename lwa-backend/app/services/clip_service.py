@@ -19,6 +19,7 @@ from ..models.user import UserRecord
 from ..services.ai_service import generate_clip_copy
 from ..services.attention_compiler import compile_attention
 from ..services.entitlements import EntitlementContext, UsageStore
+from ..services.intelligence import enrich_clip_with_intelligence
 from ..services.platform_store import PlatformStore
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
 from ..trends import fetch_public_trends, trends_timestamp
@@ -202,6 +203,7 @@ async def build_clip_response(
             clip_seeds=source_context.clip_seeds,
             request_id=request_id,
             public_base_url=public_base_url,
+            target_platform=target_platform,
         )
         logger.info(
             "clip_exports_complete request_id=%s route=%s clip_seeds=%s exports=%s",
@@ -217,6 +219,14 @@ async def build_clip_response(
             route_path,
             fallback_reason or "real pipeline unavailable",
         )
+
+    clips = enrich_clips_with_intelligence(
+        clips=clips,
+        target_platform=target_platform,
+        source_context=source_context,
+        selected_trend=request.selected_trend,
+        content_angle=request.content_angle,
+    )
 
     clips = apply_plan_feature_flags(
         clips=clips,
@@ -342,6 +352,12 @@ def apply_plan_feature_flags(
         if not packaging_profiles_unlocked:
             caption_style = "Standard short-form"
 
+        # Gate premium intelligence fields behind packaging_profiles flag
+        packaging_intelligence = clip.packaging_intelligence if packaging_profiles_unlocked else None
+        output_enrichment = clip.output_enrichment if packaging_profiles_unlocked else None
+        emotional_triggers = clip.emotional_triggers if clip.emotional_triggers else []
+        category = clip.category or None
+
         gated.append(
             clip.model_copy(
                 update={
@@ -361,10 +377,93 @@ def apply_plan_feature_flags(
                     "thumbnail_text": thumbnail_text,
                     "platform_fit": platform_fit,
                     "packaging_angle": packaging_angle,
+                    # Intelligence Layer fields
+                    "category": category,
+                    "emotional_triggers": emotional_triggers,
+                    "packaging_intelligence": packaging_intelligence,
+                    # Output Engine fields
+                    "output_enrichment": output_enrichment,
                 }
             )
         )
     return gated
+
+
+def enrich_clips_with_intelligence(
+    *,
+    clips: list,
+    target_platform: str,
+    source_context,
+    selected_trend: str | None,
+    content_angle: str | None,
+) -> list:
+    """
+    Runs each clip through the intelligence service to populate category,
+    emotional_triggers, packaging_intelligence, enriched scores, and
+    intelligence-driven why_this_matters / hook_variants / caption_style /
+    platform_fit fields.
+    """
+    source_title = source_context.title if source_context else ""
+    source_description = source_context.description if source_context else ""
+    source_transcript = source_context.transcript if source_context else ""
+    source_platform = source_context.source_platform if source_context else ""
+
+    enriched: list = []
+    for clip in clips:
+        try:
+            intel = enrich_clip_with_intelligence(
+                clip_id=clip.id,
+                title=clip.title,
+                hook=clip.hook,
+                caption=clip.caption,
+                transcript_excerpt=clip.transcript_excerpt,
+                packaging_angle=clip.packaging_angle or "value",
+                target_platform=target_platform,
+                post_rank=clip.post_rank or clip.rank or 1,
+                base_score=clip.score or 70,
+                base_confidence=clip.confidence or 0.70,
+                source_title=source_title,
+                source_description=source_description,
+                source_transcript=source_transcript,
+                source_platform=source_platform,
+                selected_trend=selected_trend or "",
+                content_angle=content_angle or "",
+                start_time=clip.start_time,
+                end_time=clip.end_time,
+            )
+            # Merge intelligence fields — preserve existing AI-generated values
+            # for core copy fields (hook, caption, reason) but enrich metadata
+            update: dict = {
+                "category": intel.get("category"),
+                "emotional_triggers": intel.get("emotional_triggers", []),
+                "packaging_intelligence": intel.get("packaging_intelligence"),
+                "confidence_score": intel.get("confidence_score") or clip.confidence_score,
+            }
+            # Only override why_this_matters if the intelligence version is richer
+            existing_why = clip.why_this_matters or ""
+            intel_why = intel.get("why_this_matters", "")
+            if intel_why and len(intel_why) > len(existing_why):
+                update["why_this_matters"] = intel_why
+
+            # Only override hook_variants if intelligence provides better ones
+            existing_hooks = clip.hook_variants or []
+            intel_hooks = intel.get("hook_variants", [])
+            if intel_hooks and len(intel_hooks) >= len(existing_hooks):
+                update["hook_variants"] = intel_hooks
+
+            # Always enrich caption_style and platform_fit with intelligence
+            if intel.get("caption_style"):
+                update["caption_style"] = intel["caption_style"]
+            if intel.get("platform_fit"):
+                update["platform_fit"] = intel["platform_fit"]
+
+            enriched.append(clip.model_copy(update=update))
+        except Exception as exc:
+            logger.warning("intelligence_enrichment_failed clip_id=%s reason=%s", clip.id, exc)
+            enriched.append(clip)
+
+    logger.info("intelligence_enrichment_complete clips=%s platform=%s", len(enriched), target_platform)
+    return enriched
 
 
 def derive_clip_duration_seconds(start_time: str | None, end_time: str | None) -> int | None:

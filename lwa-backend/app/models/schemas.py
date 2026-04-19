@@ -70,6 +70,12 @@ class ClipResult(BaseModel):
     preview_url: Optional[str] = None
     download_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    # Intelligence Layer — Phase 1
+    category: Optional[str] = None
+    emotional_triggers: List[str] = Field(default_factory=list)
+    packaging_intelligence: Optional[dict[str, Any]] = None
+    # Output Engine — Phase 2
+    output_enrichment: Optional[dict[str, Any]] = None
 
 
 class FeatureFlags(BaseModel):
