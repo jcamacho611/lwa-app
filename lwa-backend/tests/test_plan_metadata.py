@@ -20,6 +20,7 @@ class PlanMetadataTests(unittest.TestCase):
             score=92,
             rank=1,
             format="Hook First",
+            clip_url="https://example.com/clip.mp4",
             why_this_matters="Lead with this because the payoff lands immediately.",
             thumbnail_text="Stop Random Clips",
             cta_suggestion="Ask viewers if they want the full breakdown next.",
@@ -52,6 +53,15 @@ class PlanMetadataTests(unittest.TestCase):
         self.assertEqual(len(clip.hook_variants), 1)
         self.assertEqual(set(clip.caption_variants.keys()), {"viral"})
         self.assertEqual(clip.caption_style, "Standard short-form")
+        self.assertIsNotNone(clip.caption_modes)
+        self.assertEqual(clip.caption_modes.primary, clip.caption)
+        self.assertEqual(clip.caption_modes.story, clip.caption)
+        self.assertIsNotNone(clip.edit_plan)
+        self.assertEqual(clip.edit_plan.posting_role, "post first")
+        self.assertIsNotNone(clip.export_bundle)
+        self.assertTrue(clip.export_bundle.preview_ready)
+        self.assertFalse(clip.export_bundle.download_ready)
+        self.assertEqual(clip.export_bundle.post_sequence_label, "post first")
         self.assertIn("Create an account", build_upgrade_prompt(entitlement=entitlement, current_user=None))
 
     def test_pro_plan_preserves_richer_packaging(self) -> None:
@@ -71,6 +81,14 @@ class PlanMetadataTests(unittest.TestCase):
         self.assertEqual(len(clip.hook_variants), 2)
         self.assertIn("story", clip.caption_variants)
         self.assertEqual(clip.caption_style, "Punchy proof-first")
+        self.assertIsNotNone(clip.caption_modes)
+        self.assertEqual(clip.caption_modes.story, clip.caption_variants["story"])
+        self.assertIsNotNone(clip.edit_plan)
+        self.assertEqual(clip.edit_plan.visual_focus, "Stop Random Clips")
+        self.assertIsNotNone(clip.export_bundle)
+        self.assertTrue(clip.export_bundle.preview_ready)
+        self.assertTrue(clip.export_bundle.download_ready)
+        self.assertEqual(clip.export_bundle.post_order, 1)
         self.assertIn("Scale", build_upgrade_prompt(entitlement=entitlement, current_user=object()))
 
 

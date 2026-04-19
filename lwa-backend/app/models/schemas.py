@@ -30,6 +30,34 @@ class TrendItem(BaseModel):
     url: Optional[str] = None
 
 
+class CaptionModes(BaseModel):
+    primary: Optional[str] = None
+    short: Optional[str] = None
+    story: Optional[str] = None
+    educational: Optional[str] = None
+    controversial: Optional[str] = None
+    style: Optional[str] = None
+    angle: Optional[str] = None
+
+
+class EditPlan(BaseModel):
+    opening_beat: Optional[str] = None
+    pacing: Optional[str] = None
+    visual_focus: Optional[str] = None
+    overlay_plan: Optional[str] = None
+    posting_role: Optional[str] = None
+
+
+class ExportBundle(BaseModel):
+    post_order: Optional[int] = None
+    post_sequence_label: Optional[str] = None
+    packaging_angle: Optional[str] = None
+    thumbnail_text: Optional[str] = None
+    cta: Optional[str] = None
+    preview_ready: bool = False
+    download_ready: bool = False
+
+
 class ClipResult(BaseModel):
     record_id: Optional[str] = None
     id: str
@@ -60,6 +88,9 @@ class ClipResult(BaseModel):
     hook_variants: List[str] = Field(default_factory=list)
     caption_variants: dict[str, str] = Field(default_factory=dict)
     caption_style: Optional[str] = None
+    caption_modes: Optional[CaptionModes] = None
+    edit_plan: Optional[EditPlan] = None
+    export_bundle: Optional[ExportBundle] = None
     platform_fit: Optional[str] = None
     packaging_angle: Optional[str] = None
     duration: Optional[int] = None

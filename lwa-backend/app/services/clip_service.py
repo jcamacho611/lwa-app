@@ -16,7 +16,16 @@ from fastapi import HTTPException, Request
 
 from ..core.config import Settings
 from ..job_store import JobStore
-from ..models.schemas import ClipBatchResponse, ProcessRequest, ProcessingSummary, TrendItem, TrendsResponse
+from ..models.schemas import (
+    CaptionModes,
+    ClipBatchResponse,
+    EditPlan,
+    ExportBundle,
+    ProcessRequest,
+    ProcessingSummary,
+    TrendItem,
+    TrendsResponse,
+)
 from ..models.user import UserRecord
 from ..services.ai_service import generate_clip_copy
 from ..services.attention_compiler import compile_attention
@@ -383,6 +392,7 @@ def apply_plan_feature_flags(
         platform_fit = clip.platform_fit or "Optimized for fast short-form viewing."
         packaging_angle = clip.packaging_angle or "value"
         caption_style = clip.caption_style or "Short-form native"
+        post_order = clip.post_rank or clip.best_post_order or clip.rank or 1
         hook_variants = clip.hook_variants if clip.hook_variants else [clip.hook]
         if not alt_hooks_unlocked:
             hook_variants = hook_variants[:1]
@@ -390,6 +400,28 @@ def apply_plan_feature_flags(
             caption_variants = {"viral": clip.caption}
         if not packaging_profiles_unlocked:
             caption_style = "Standard short-form"
+        caption_modes = build_caption_modes(
+            clip=clip,
+            caption_variants=caption_variants,
+            caption_style=caption_style,
+            packaging_angle=packaging_angle,
+        )
+        edit_plan = build_edit_plan(
+            clip=clip,
+            caption_style=caption_style,
+            thumbnail_text=thumbnail_text,
+            packaging_angle=packaging_angle,
+            post_order=post_order,
+        )
+        export_bundle = build_export_bundle(
+            clip=clip,
+            preview_url=preview_url,
+            download_url=download_url,
+            post_order=post_order,
+            packaging_angle=packaging_angle,
+            thumbnail_text=thumbnail_text,
+            cta_suggestion=cta_suggestion,
+        )
 
         gated.append(
             clip.model_copy(
@@ -397,6 +429,11 @@ def apply_plan_feature_flags(
                     "hook_variants": hook_variants,
                     "caption_variants": caption_variants,
                     "caption_style": caption_style,
+                    "caption_modes": caption_modes,
+                    "edit_plan": edit_plan,
+                    "export_bundle": export_bundle,
+                    "post_rank": post_order,
+                    "best_post_order": clip.best_post_order or post_order,
                     "timestamp_start": clip.start_time,
                     "timestamp_end": clip.end_time,
                     "duration": derive_clip_duration_seconds(clip.start_time, clip.end_time),
@@ -414,6 +451,91 @@ def apply_plan_feature_flags(
             )
         )
     return gated
+
+
+def build_caption_modes(
+    *,
+    clip,
+    caption_variants: dict[str, str],
+    caption_style: str,
+    packaging_angle: str,
+) -> CaptionModes:
+    base_caption = clip.caption or caption_variants.get("viral") or ""
+    return CaptionModes(
+        primary=base_caption,
+        short=shorten_caption(base_caption),
+        story=caption_variants.get("story") or base_caption,
+        educational=caption_variants.get("educational") or base_caption,
+        controversial=caption_variants.get("controversial") or base_caption,
+        style=caption_style,
+        angle=packaging_angle,
+    )
+
+
+def build_edit_plan(
+    *,
+    clip,
+    caption_style: str,
+    thumbnail_text: str,
+    packaging_angle: str,
+    post_order: int,
+) -> EditPlan:
+    opening = "Start on the strongest payoff line in the first beat."
+    if packaging_angle == "story":
+        opening = "Open on the setup beat, then cut quickly to the turning point."
+    elif packaging_angle == "controversy":
+        opening = "Start on the disagreement line and keep the tension visible immediately."
+    elif packaging_angle == "curiosity":
+        opening = "Open on the question or tease before revealing the explanation."
+    elif packaging_angle == "shock":
+        opening = "Open on the interruption moment and keep the pacing tight."
+
+    return EditPlan(
+        opening_beat=opening,
+        pacing=caption_style or "Short-form native",
+        visual_focus=thumbnail_text or clip.title or "Lead moment",
+        overlay_plan=clip.hook,
+        posting_role=posting_role_label(post_order),
+    )
+
+
+def build_export_bundle(
+    *,
+    clip,
+    preview_url: str | None,
+    download_url: str | None,
+    post_order: int,
+    packaging_angle: str,
+    thumbnail_text: str,
+    cta_suggestion: str,
+) -> ExportBundle:
+    return ExportBundle(
+        post_order=post_order,
+        post_sequence_label=posting_role_label(post_order),
+        packaging_angle=packaging_angle,
+        thumbnail_text=thumbnail_text or clip.title or "Best Clip",
+        cta=cta_suggestion or "Prompt viewers to comment or follow.",
+        preview_ready=bool(preview_url),
+        download_ready=bool(download_url),
+    )
+
+
+def shorten_caption(value: str, limit: int = 90) -> str:
+    normalized = " ".join((value or "").split())
+    if len(normalized) <= limit:
+        return normalized
+    trimmed = normalized[:limit].rsplit(" ", 1)[0].strip()
+    return f"{trimmed}..." if trimmed else normalized[:limit]
+
+
+def posting_role_label(post_order: int) -> str:
+    if post_order == 1:
+        return "post first"
+    if post_order == 2:
+        return "post second"
+    if post_order == 3:
+        return "post third"
+    return "post later"
 
 
 def derive_clip_duration_seconds(start_time: str | None, end_time: str | None) -> int | None:
