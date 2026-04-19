@@ -21,6 +21,52 @@ from .ai_service import resolve_attention_mode
 logger = logging.getLogger("uvicorn.error")
 
 ALLOWED_PACKAGING_ANGLES = {"shock", "story", "value", "controversy", "curiosity"}
+SIGNAL_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "before",
+    "but",
+    "by",
+    "for",
+    "from",
+    "get",
+    "gets",
+    "got",
+    "has",
+    "have",
+    "how",
+    "if",
+    "in",
+    "into",
+    "is",
+    "it",
+    "its",
+    "just",
+    "most",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "their",
+    "them",
+    "they",
+    "this",
+    "to",
+    "use",
+    "using",
+    "want",
+    "when",
+    "why",
+    "with",
+    "you",
+    "your",
+}
 
 
 async def compile_attention(
@@ -399,7 +445,25 @@ def heuristic_analysis(
             ),
         ),
     )
-    focus = selected_trend or compact_phrase(clip.title or clip.hook)
+    focus = selected_trend or focus_phrase_for(
+        clip.transcript_excerpt,
+        clip.hook,
+        clip.title,
+        source_context.title if source_context else "",
+    )
+    hook_variants = build_hook_variants(
+        clip=clip,
+        target_platform=target_platform,
+        packaging_angle=packaging_angle,
+        focus=focus,
+        selected_trend=selected_trend,
+    )
+    thumbnail_text = thumbnail_text_for(
+        clip.title,
+        clip.hook,
+        transcript_excerpt=clip.transcript_excerpt,
+        packaging_angle=packaging_angle,
+    )
 
     return {
         "score": score,
@@ -416,11 +480,7 @@ def heuristic_analysis(
             post_rank=index,
             review_rank=index,
         ),
-        "hook_variants": [
-            f"Why {focus} is the {packaging_angle} angle most creators are missing.",
-            f"The {focus} moment worth posting first on {target_platform}.",
-            f"If you test one {packaging_angle} hook from this source, make it this one.",
-        ],
+        "hook_variants": hook_variants,
         "caption_variants": caption_variants_for(
             clip=clip,
             target_platform=target_platform,
@@ -428,8 +488,8 @@ def heuristic_analysis(
         ),
         "packaging_angle": packaging_angle,
         "platform_fit": platform_fit_for(target_platform, packaging_angle),
-        "thumbnail_text": thumbnail_text_for(clip.title, clip.hook),
-        "cta_suggestion": cta_for(target_platform, index),
+        "thumbnail_text": thumbnail_text,
+        "cta_suggestion": cta_for(target_platform, index, packaging_angle=packaging_angle),
         "caption_style": caption_style_for(target_platform, packaging_angle),
     }
 
@@ -498,11 +558,11 @@ Rules:
 
 
 def normalize_hook_variants(value: object, *, fallback: list[str]) -> list[str]:
+    variants: list[str] = []
     if isinstance(value, list):
-        variants = [str(item).strip() for item in value if str(item).strip()]
-        if variants:
-            return variants[:5]
-    return fallback
+        variants.extend(str(item).strip() for item in value if str(item).strip())
+    variants.extend(fallback)
+    return unique_variants(variants)[:5]
 
 
 def normalize_packaging_angle(value: object, *, fallback: str) -> str:
@@ -593,20 +653,130 @@ def platform_fit_for(target_platform: str, packaging_angle: str) -> str:
     return f"{target_platform} packaging built around a {packaging_angle} angle."
 
 
-def thumbnail_text_for(title: str, hook: str) -> str:
-    source = hook if len(hook.strip()) >= len(title.strip()) else title
-    words = [
+def unique_variants(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    normalized: list[str] = []
+    for value in values:
+        cleaned = value.strip()
+        if not cleaned:
+            continue
+        fingerprint = cleaned.lower()
+        if fingerprint in seen:
+            continue
+        seen.add(fingerprint)
+        normalized.append(cleaned)
+    return normalized
+
+
+def significant_words(value: str) -> list[str]:
+    return [
         word
-        for word in re.findall(r"[A-Za-z0-9']+", source)
-        if word.lower() not in {"the", "and", "that", "with", "this", "your", "from", "into"}
+        for word in re.findall(r"[A-Za-z0-9']+", value)
+        if word.lower() not in SIGNAL_STOPWORDS and len(word) > 2
     ]
-    return " ".join(words[:4]).title() or "Best Clip"
 
 
-def cta_for(target_platform: str, rank: int) -> str:
+def focus_phrase_for(*values: object) -> str:
+    for value in values:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        words = significant_words(text)
+        if len(words) >= 2:
+            return " ".join(words[:3]).lower()
+    for value in values:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        words = re.findall(r"[A-Za-z0-9']+", text)
+        if words:
+            return " ".join(words[:3]).lower()
+    return "this clip"
+
+
+def build_hook_variants(
+    *,
+    clip: ClipResult,
+    target_platform: str,
+    packaging_angle: str,
+    focus: str,
+    selected_trend: Optional[str],
+) -> list[str]:
+    trend_or_focus = (selected_trend or focus).strip()
+    title_focus = focus_phrase_for(clip.title, clip.hook)
+
+    if packaging_angle == "shock":
+        variants = [
+            f"Stop scrolling: {title_focus} changes the whole clip.",
+            f"The {trend_or_focus} moment nobody sees coming.",
+            f"This is the interruption that makes the full post hit harder.",
+        ]
+    elif packaging_angle == "story":
+        variants = [
+            f"The moment {title_focus} finally clicks.",
+            f"Post this story beat first if you want the payoff to land.",
+            f"This {trend_or_focus} sequence is the part viewers remember.",
+        ]
+    elif packaging_angle == "controversy":
+        variants = [
+            f"Most creators still get {title_focus} wrong.",
+            f"The {trend_or_focus} take people will argue with instantly.",
+            f"If you want comments, lead with this contrarian beat.",
+        ]
+    elif packaging_angle == "curiosity":
+        variants = [
+            f"Why {title_focus} is suddenly working again.",
+            f"The {trend_or_focus} angle viewers will wait to hear explained.",
+            f"This is the question-led opener worth testing first.",
+        ]
+    else:
+        variants = [
+            f"The clearest {trend_or_focus} takeaway from the source.",
+            f"If you post one practical cut for {target_platform}, start here.",
+            f"This is the proof-first clip most creators should lead with.",
+        ]
+
+    return unique_variants(variants)[:5]
+
+
+def thumbnail_text_for(
+    title: str,
+    hook: str,
+    *,
+    transcript_excerpt: str | None = None,
+    packaging_angle: str | None = None,
+) -> str:
+    words = significant_words(" ".join(part for part in [hook, transcript_excerpt or "", title] if part))
+    if len(words) < 2:
+        words = re.findall(r"[A-Za-z0-9']+", hook or title)
+
+    selected = [word.title() for word in words[:4] if word]
+    if len(selected) == 1:
+        suffix = {
+            "shock": "Moment",
+            "story": "Payoff",
+            "controversy": "Take",
+            "curiosity": "Question",
+            "value": "Framework",
+        }.get((packaging_angle or "value").lower(), "Clip")
+        selected.append(suffix)
+
+    if not selected:
+        selected = ["Best", "Clip"]
+
+    return " ".join(selected[:5])
+
+
+def cta_for(target_platform: str, rank: int, *, packaging_angle: str | None = None) -> str:
     platform = target_platform.lower()
+    if packaging_angle == "controversy":
+        return "Ask viewers which side they agree with and why."
+    if packaging_angle == "story":
+        return "Ask viewers if they want the next beat or the full sequence."
+    if packaging_angle == "value":
+        return "Ask viewers which step they want broken down next."
     if rank == 1:
-        return "Ask viewers if they want the full breakdown next."
+        return "Ask viewers if they want the full breakdown or next part."
     if platform == "instagram":
         return "Ask viewers to save this and send it to a creator friend."
     if platform == "youtube":
@@ -638,11 +808,22 @@ def caption_style_for(target_platform: str, packaging_angle: str) -> str:
 
 def posting_stage_for(clip: ClipResult) -> int:
     angle = (clip.packaging_angle or "value").lower()
-    if angle in {"shock", "curiosity"}:
+    combined_text = " ".join(
+        part.lower()
+        for part in [clip.hook, clip.title, clip.caption, clip.transcript_excerpt or ""]
+        if part
+    )
+    if angle in {"shock", "curiosity"} or any(
+        keyword in combined_text for keyword in {"stop", "secret", "before", "why", "mistake", "nobody"}
+    ):
         return 0
-    if angle == "controversy":
+    if angle == "controversy" or any(
+        keyword in combined_text for keyword in {"wrong", "argue", "debate", "myth", "disagree"}
+    ):
         return 1
-    if angle == "value":
+    if angle == "value" or any(
+        keyword in combined_text for keyword in {"step", "framework", "exact", "how", "lesson", "breakdown"}
+    ):
         return 2
     return 3
 
@@ -655,7 +836,7 @@ def why_this_matters_for(
     post_rank: int,
     review_rank: int,
 ) -> str:
-    focus = compact_phrase(clip.transcript_excerpt or clip.title or clip.hook)
+    focus = focus_phrase_for(clip.transcript_excerpt, clip.title, clip.hook)
     platform_name = target_platform or "short-form"
     if post_rank == 1:
         return (
@@ -664,8 +845,13 @@ def why_this_matters_for(
         )
     if post_rank == 2:
         return (
-            f"Use this second because it deepens the {packaging_angle} angle after the opener and keeps the stack "
-            f"feeling intentional for {platform_name} viewers."
+            f"Use this second because it deepens the {packaging_angle} angle after the opener and gives the posting stack "
+            f"a stronger middle beat for {platform_name} viewers."
+        )
+    if post_rank == 3:
+        return (
+            f"Use this later in the stack as the payoff clip because the {focus} beat turns attention into a clearer next "
+            f"step once the first two posts have already built context."
         )
     if review_rank == 1:
         return (

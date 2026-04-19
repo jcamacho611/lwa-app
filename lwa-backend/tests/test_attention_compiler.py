@@ -126,6 +126,41 @@ class AttentionCompilerTests(unittest.TestCase):
         self.assertTrue(clip.caption_variants)
         self.assertEqual(clip.post_rank, 1)
         self.assertGreaterEqual(clip.confidence_score or 0, 55)
+        self.assertEqual(len(clip.hook_variants), 3)
+        self.assertEqual(len(set(clip.hook_variants)), len(clip.hook_variants))
+        self.assertGreaterEqual(len((clip.thumbnail_text or "").split()), 2)
+        self.assertLessEqual(len((clip.thumbnail_text or "").split()), 5)
+        self.assertIn("Open with this", clip.why_this_matters or "")
+
+    def test_compile_with_fallback_builds_stronger_packaging_for_contrarian_clip(self) -> None:
+        clips = [
+            self.build_clip(
+                clip_id="clip_contra",
+                title="Everyone clips this wrong",
+                hook="Most creators still post this angle in the wrong order.",
+                caption="This contrarian beat should spark comments and debate.",
+                score=86,
+                packaging_angle="controversy",
+                transcript_excerpt="Most creators still clip this wrong and miss the actual payoff.",
+                start_time="00:08",
+                end_time="00:22",
+            )
+        ]
+
+        compiled = compile_with_fallback(
+            clips=clips,
+            target_platform="TikTok",
+            selected_trend=None,
+            content_angle=None,
+            source_context=None,
+        )
+
+        clip = compiled[0]
+        self.assertEqual(clip.post_rank, 1)
+        self.assertEqual(clip.caption_style, "Tension-led contrarian")
+        self.assertIn("which side", (clip.cta_suggestion or "").lower())
+        self.assertEqual(len(clip.hook_variants), 3)
+        self.assertTrue(any("wrong" in variant.lower() or "contrarian" in variant.lower() for variant in clip.hook_variants))
 
 
 if __name__ == "__main__":
