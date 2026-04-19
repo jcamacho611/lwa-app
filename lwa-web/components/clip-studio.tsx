@@ -85,6 +85,7 @@ import {
 } from "../lib/queue";
 import { GENERATOR_COPY, HERO_COPY, RESULTS_COPY, rewriteSurfaceLabel } from "../lib/brand-voice";
 import { getPlanSurface } from "../lib/plans";
+import { resolveWorldState, type WorldSignal } from "../lib/world-state";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 
@@ -167,7 +168,11 @@ export function ClipStudio({
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null);
   const [loadingStageIndex, setLoadingStageIndex] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [sourceInputFocused, setSourceInputFocused] = useState(false);
+  const [generatorHovered, setGeneratorHovered] = useState(false);
+  const [completionPulse, setCompletionPulse] = useState(false);
   const homeStageRef = useRef<HTMLElement | null>(null);
+  const previousLoadingStateRef = useRef(false);
 
   const activeSourceLabel = useMemo(() => {
     if (selectedUpload?.file_name || selectedUpload?.filename) {
@@ -310,6 +315,17 @@ export function ClipStudio({
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, []);
+
+  useEffect(() => {
+    if (previousLoadingStateRef.current && !isLoading) {
+      setCompletionPulse(true);
+      const timeout = window.setTimeout(() => setCompletionPulse(false), 2600);
+      previousLoadingStateRef.current = isLoading;
+      return () => window.clearTimeout(timeout);
+    }
+
+    previousLoadingStateRef.current = isLoading;
+  }, [isLoading]);
 
   useEffect(() => {
     if (initialSection !== "campaigns" || !token || !campaigns.length || selectedCampaignId) {
@@ -705,6 +721,30 @@ export function ClipStudio({
   }, [displayedClips]);
 
   const isHome = initialSection === "home";
+  const hasSourceSelected = Boolean(videoUrl.trim() || selectedUpload?.file_id || selectedUpload?.source_ref?.upload_id);
+  const worldState = useMemo(
+    () =>
+      resolveWorldState({
+        variant: isHome ? "home" : "workspace",
+        generationMode,
+        inputFocused: sourceInputFocused,
+        generatorHovered,
+        isLoading,
+        hasResult: Boolean(result),
+        hasSource: hasSourceSelected,
+        completionPulse,
+      }),
+    [completionPulse, generationMode, generatorHovered, hasSourceSelected, isHome, isLoading, result, sourceInputFocused],
+  );
+  const worldSignal: WorldSignal = isLoading
+    ? "generating"
+    : completionPulse || Boolean(result)
+      ? "complete"
+      : sourceInputFocused
+        ? "focus"
+        : generatorHovered
+          ? "hover"
+          : "idle";
   const featuredClip = orderedClips[0] ?? null;
   const remainingClips = orderedClips.slice(1);
   const requiresAccount = !["home", "generate", "upload"].includes(initialSection);
@@ -887,8 +927,28 @@ export function ClipStudio({
     homeStageRef.current.style.setProperty("--home-tilt-y", "0px");
   }
 
+  function handleGeneratorPointerEnter() {
+    setGeneratorHovered(true);
+  }
+
+  function handleGeneratorPointerLeave() {
+    setGeneratorHovered(false);
+  }
+
+  function handleSourceFocus() {
+    setSourceInputFocused(true);
+  }
+
+  function handleSourceBlur() {
+    setSourceInputFocused(false);
+  }
+
   const homeGeneratorSection = (
-    <section className="hero-card rounded-[34px] p-6 sm:p-8">
+    <section
+      className="hero-card rounded-[34px] p-6 sm:p-8"
+      onPointerEnter={handleGeneratorPointerEnter}
+      onPointerLeave={handleGeneratorPointerLeave}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="section-kicker">Generate first</p>
@@ -928,6 +988,8 @@ export function ClipStudio({
             type="url"
             value={videoUrl}
             onChange={(event) => setVideoUrl(event.target.value)}
+            onFocus={handleSourceFocus}
+            onBlur={handleSourceBlur}
             placeholder="Paste YouTube, MP4, or any public video URL"
             className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
           />
@@ -1029,7 +1091,11 @@ export function ClipStudio({
   const generatorSection = (
     <section className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),320px]">
-        <section className="hero-card rounded-[34px] p-6 sm:p-8">
+        <section
+          className="hero-card rounded-[34px] p-6 sm:p-8"
+          onPointerEnter={handleGeneratorPointerEnter}
+          onPointerLeave={handleGeneratorPointerLeave}
+        >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl">
               <p className="section-kicker">{initialSection === "upload" ? "Upload + Generate" : rewriteSurfaceLabel("Generate")}</p>
@@ -1074,6 +1140,8 @@ export function ClipStudio({
                 type="url"
                 value={videoUrl}
                 onChange={(event) => setVideoUrl(event.target.value)}
+                onFocus={handleSourceFocus}
+                onBlur={handleSourceBlur}
                 placeholder="Paste YouTube, MP4, or any public video URL"
                 className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
               />
@@ -1416,7 +1484,7 @@ export function ClipStudio({
 
   return (
     <main className="app-shell-grid min-h-screen">
-      <AIBackground variant={isHome ? "home" : "workspace"} />
+      <AIBackground variant={isHome ? "home" : "workspace"} worldState={worldState} generationMode={generationMode} signal={worldSignal} />
       <AuthPanel
         isOpen={authOpen}
         mode={authMode}
