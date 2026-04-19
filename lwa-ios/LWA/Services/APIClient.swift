@@ -347,7 +347,10 @@ struct APIClient {
 
     private func normalizedTargetPlatform(_ targetPlatform: String?) -> String? {
         let normalized = targetPlatform?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return normalized.isEmpty ? nil : normalized
+        if normalized.isEmpty || normalized.caseInsensitiveCompare("Auto") == .orderedSame {
+            return nil
+        }
+        return normalized
     }
 }
 

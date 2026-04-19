@@ -14,6 +14,8 @@ struct GenerationTrackItem: Identifiable {
 
 @MainActor
 final class ContentViewModel: ObservableObject {
+    static let autoPlatformLabel = "Auto"
+
     private let historyKey = "lwa.saved_runs"
     private let reviewStateKey = "lwa.clip_review_states"
     private let generationStages = [
@@ -24,7 +26,13 @@ final class ContentViewModel: ObservableObject {
         "Delivering assets",
     ]
 
-    let supportedPlatforms = ["TikTok", "Instagram", "YouTube", "Facebook"]
+    let supportedPlatforms = [
+        ContentViewModel.autoPlatformLabel,
+        "TikTok",
+        "Instagram Reels",
+        "YouTube Shorts",
+        "Facebook",
+    ]
 
     @Published var videoURL = ""
     @Published private(set) var selectedUpload: UploadedSource?
@@ -39,7 +47,7 @@ final class ContentViewModel: ObservableObject {
     @Published var showPaywall = false
     @Published private(set) var trends: [TrendItem] = []
     @Published var selectedTrend: TrendItem?
-    @Published var selectedPlatform = "TikTok"
+    @Published var selectedPlatform = ContentViewModel.autoPlatformLabel
     @Published private(set) var jobStatusMessage = "Preparing request."
 
     private let apiClient: APIClient
@@ -59,7 +67,7 @@ final class ContentViewModel: ObservableObject {
             lastSubmittedURL = mostRecentRun.response.videoURL
             videoURL = mostRecentRun.response.videoURL
             selectedTrend = mostRecentRun.response.trendContext.first
-            selectedPlatform = mostRecentRun.response.processingSummary.targetPlatform
+            syncSelectedPlatform(with: mostRecentRun.response)
         }
     }
 
@@ -82,13 +90,14 @@ final class ContentViewModel: ObservableObject {
                 videoURL: trimmedURL,
                 uploadFileID: selectedUpload?.id,
                 selectedTrend: selectedTrend,
-                targetPlatform: selectedPlatform
+                targetPlatform: selectedPlatformOverride
             )
             jobStatusMessage = job.message
             let response = try await waitForJob(jobID: job.jobID)
             clips = response.clips
             lastSubmittedURL = response.videoURL
             latestResponse = response
+            syncSelectedPlatform(with: response)
             saveRun(response)
             showPaywall = !AppConfiguration.isAppStoreMode && response.processingSummary.creditsRemaining <= 1
         } catch {
@@ -153,7 +162,7 @@ final class ContentViewModel: ObservableObject {
         videoURL = run.response.videoURL
         selectedUpload = nil
         selectedTrend = run.response.trendContext.first
-        selectedPlatform = run.response.processingSummary.targetPlatform
+        syncSelectedPlatform(with: run.response)
         errorMessage = nil
     }
 
@@ -195,6 +204,75 @@ final class ContentViewModel: ObservableObject {
 
     var upgradePromptLabel: String? {
         latestResponse?.processingSummary.upgradePrompt
+    }
+
+    var isAutoPlatformSelection: Bool {
+        selectedPlatform == Self.autoPlatformLabel
+    }
+
+    var selectedPlatformCallout: String {
+        isAutoPlatformSelection ? Self.autoPlatformLabel : selectedPlatform
+    }
+
+    var destinationSelectionTitle: String {
+        isAutoPlatformSelection ? "Auto destination on" : "Manual override active"
+    }
+
+    var destinationSelectionDetail: String {
+        if isAutoPlatformSelection {
+            return "LWA will recommend the first packaging destination after analysis. Use manual override only when you need to force a specific platform."
+        }
+        return "This run will force \(selectedPlatform) as the first packaging destination."
+    }
+
+    var destinationDecisionLabel: String? {
+        guard let summary = latestResponse?.processingSummary else {
+            return nil
+        }
+        return summary.manualPlatformOverride ? "Manual override" : "Auto destination"
+    }
+
+    var effectiveTargetPlatformLabel: String? {
+        guard let summary = latestResponse?.processingSummary else {
+            return nil
+        }
+
+        if summary.manualPlatformOverride {
+            return summary.targetPlatform
+        }
+
+        return summary.recommendedPlatform ?? summary.targetPlatform
+    }
+
+    var recommendedPlatformLabel: String? {
+        latestResponse?.processingSummary.recommendedPlatform
+    }
+
+    var recommendationReasonLabel: String? {
+        latestResponse?.processingSummary.platformRecommendationReason
+    }
+
+    var recommendedContentTypeLabel: String? {
+        latestResponse?.processingSummary.recommendedContentType
+    }
+
+    var recommendedOutputStyleLabel: String? {
+        latestResponse?.processingSummary.recommendedOutputStyle
+    }
+
+    var renderedClipCount: Int {
+        latestResponse?.processingSummary.renderedClipCount ?? 0
+    }
+
+    var strategyOnlyClipCount: Int {
+        latestResponse?.processingSummary.strategyOnlyClipCount ?? 0
+    }
+
+    var renderTruthDetail: String? {
+        guard let summary = latestResponse?.processingSummary else {
+            return nil
+        }
+        return "\(summary.renderedClipCount) preview-ready clips, \(summary.strategyOnlyClipCount) strategy-only clips."
     }
 
     var bestClip: ClipResult? {
@@ -301,10 +379,13 @@ final class ContentViewModel: ObservableObject {
         }
 
         if let response = latestResponse {
-            return "\(response.clips.count) clips ready for \(response.processingSummary.targetPlatform). Edited exports: \(response.processingSummary.editedAssetsCreated)."
+            let destination = effectiveTargetPlatformLabel ?? response.processingSummary.targetPlatform
+            let renderTruth = "\(response.processingSummary.renderedClipCount) preview-ready, \(response.processingSummary.strategyOnlyClipCount) strategy-only."
+            let mode = response.processingSummary.manualPlatformOverride ? "Manual target \(destination)." : "Auto recommended \(destination)."
+            return "\(renderTruth) \(mode) Edited exports: \(response.processingSummary.editedAssetsCreated)."
         }
 
-        return "Paste a long-form source, choose the target platform, and launch the run."
+        return "Paste a long-form source and launch the run. Auto destination stays on unless you need a manual override."
     }
 
     var generationTrack: [GenerationTrackItem] {
@@ -368,11 +449,18 @@ final class ContentViewModel: ObservableObject {
         Source: \(response.videoURL)
         Platform: \(response.sourcePlatform ?? "not available")
         Target: \(response.processingSummary.targetPlatform)
+        Destination decision: \(response.processingSummary.platformDecision)
+        Recommended platform: \(response.processingSummary.recommendedPlatform ?? "not available")
+        Recommendation reason: \(response.processingSummary.platformRecommendationReason ?? "not available")
+        Recommended content type: \(response.processingSummary.recommendedContentType ?? "not available")
+        Recommended output style: \(response.processingSummary.recommendedOutputStyle ?? "not available")
         AI: \(response.processingSummary.aiProvider)
         Mode: \(response.processingSummary.processingMode)
         Selection: \(response.processingSummary.selectionStrategy)
         Plan: \(response.processingSummary.planName)
         Edited exports: \(response.processingSummary.editedAssetsCreated)
+        Preview-ready clips: \(response.processingSummary.renderedClipCount)
+        Strategy-only clips: \(response.processingSummary.strategyOnlyClipCount)
 
         \(clipLines.joined(separator: "\n\n"))
         """
@@ -503,5 +591,24 @@ final class ContentViewModel: ObservableObject {
         }
 
         return isLoading ? 1 : 0
+    }
+
+    private var selectedPlatformOverride: String? {
+        guard !isAutoPlatformSelection else {
+            return nil
+        }
+        let trimmed = selectedPlatform.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func syncSelectedPlatform(with response: ClipResponse) {
+        let summary = response.processingSummary
+        guard summary.manualPlatformOverride else {
+            selectedPlatform = Self.autoPlatformLabel
+            return
+        }
+
+        let trimmedTarget = summary.targetPlatform.trimmingCharacters(in: .whitespacesAndNewlines)
+        selectedPlatform = trimmedTarget.isEmpty ? Self.autoPlatformLabel : trimmedTarget
     }
 }

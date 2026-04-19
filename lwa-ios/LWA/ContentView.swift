@@ -243,9 +243,13 @@ private struct OmegaHomeScreen: View {
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Target Platform")
+                    Text("Destination mode")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(OmegaPalette.mutedText)
+
+                    Text(viewModel.destinationSelectionDetail)
+                        .font(.caption)
+                        .foregroundStyle(OmegaPalette.secondaryText)
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
@@ -271,6 +275,59 @@ private struct OmegaHomeScreen: View {
                     }
                 }
 
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 10) {
+                        Text(viewModel.destinationSelectionTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+
+                        if let decisionLabel = viewModel.destinationDecisionLabel {
+                            OmegaMetricPill(label: decisionLabel)
+                        }
+                    }
+
+                    if let effectiveTarget = viewModel.effectiveTargetPlatformLabel {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                OmegaMetricPill(label: effectiveTarget)
+
+                                if let recommendedPlatform = viewModel.recommendedPlatformLabel,
+                                   recommendedPlatform != effectiveTarget {
+                                    OmegaMetricPill(label: "Rec \(recommendedPlatform)")
+                                }
+
+                                if let contentType = viewModel.recommendedContentTypeLabel {
+                                    OmegaMetricPill(label: contentType)
+                                }
+
+                                if let outputStyle = viewModel.recommendedOutputStyleLabel {
+                                    OmegaMetricPill(label: outputStyle)
+                                }
+
+                                OmegaMetricPill(label: "\(viewModel.renderedClipCount) preview-ready")
+                                OmegaMetricPill(label: "\(viewModel.strategyOnlyClipCount) strategy-only")
+                            }
+                        }
+                    } else {
+                        Text(
+                            viewModel.isAutoPlatformSelection
+                                ? "Auto mode keeps the source flow minimal and lets the backend recommend the first destination after analysis."
+                                : "Manual override is armed for the next run, but you can switch back to Auto any time."
+                        )
+                            .font(.caption)
+                            .foregroundStyle(OmegaPalette.secondaryText)
+                    }
+
+                    if let recommendationReason = viewModel.recommendationReasonLabel, !recommendationReason.isEmpty {
+                        Text(recommendationReason)
+                            .font(.caption)
+                            .foregroundStyle(OmegaPalette.secondaryText)
+                    }
+                }
+                .padding(14)
+                .background(OmegaPalette.card.opacity(0.84))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
                 HStack(spacing: 12) {
                     OmegaMetricPill(label: viewModel.sourceSummaryLabel)
                     OmegaMetricPill(label: viewModel.premiumStatusLabel)
@@ -287,7 +344,7 @@ private struct OmegaHomeScreen: View {
                         Text(viewModel.isLoading ? "Generating clip pack" : "Generate clip pack")
                             .font(.headline.weight(.semibold))
                         Spacer()
-                        Text(viewModel.selectedPlatform)
+                        Text(viewModel.selectedPlatformCallout)
                             .font(.caption.weight(.bold))
                     }
                 }
@@ -392,6 +449,38 @@ private struct OmegaHomeScreen: View {
                     message: "Run a source and the lead clip will appear here with ranking, copy, and export actions."
                 )
             } else {
+                if let effectiveTarget = viewModel.effectiveTargetPlatformLabel {
+                    OmegaGlassCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(spacing: 10) {
+                                Text("Output call")
+                                    .font(.headline.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                if let decisionLabel = viewModel.destinationDecisionLabel {
+                                    OmegaMetricPill(label: decisionLabel)
+                                }
+                            }
+
+                            HStack(spacing: 8) {
+                                OmegaMetricPill(label: effectiveTarget)
+                                if let recommendedPlatform = viewModel.recommendedPlatformLabel,
+                                   recommendedPlatform != effectiveTarget {
+                                    OmegaMetricPill(label: "Rec \(recommendedPlatform)")
+                                }
+                                OmegaMetricPill(label: "\(viewModel.renderedClipCount) preview-ready")
+                                OmegaMetricPill(label: "\(viewModel.strategyOnlyClipCount) strategy-only")
+                            }
+
+                            if let recommendationReason = viewModel.recommendationReasonLabel, !recommendationReason.isEmpty {
+                                Text(recommendationReason)
+                                    .font(.caption)
+                                    .foregroundStyle(OmegaPalette.secondaryText)
+                            }
+                        }
+                    }
+                }
+
                 if let bestClip = viewModel.bestClip {
                     OmegaGlassCard {
                         VStack(alignment: .leading, spacing: 14) {
