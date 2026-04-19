@@ -88,7 +88,7 @@ import {
 } from "../lib/queue";
 import { GENERATOR_COPY, HERO_COPY, RESULTS_COPY, rewriteSurfaceLabel } from "../lib/brand-voice";
 import { getPlanSurface } from "../lib/plans";
-import { resolveWorldState, type WorldSignal } from "../lib/world-state";
+import { resolveWorldPhase, resolveWorldState, type WorldSignal } from "../lib/world-state";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 
@@ -226,8 +226,8 @@ export function ClipStudio({
       case "generate":
         return {
           label: "Generate",
-          title: "Build a ranked clip pack",
-          description: "Paste a source. Get clips worth posting.",
+          title: "Build your clip stack",
+          description: "Paste a source. Get the next cuts worth moving.",
         };
       case "upload":
         return {
@@ -758,11 +758,23 @@ export function ClipStudio({
         inputFocused: sourceInputFocused,
         generatorHovered,
         isLoading,
+        loadingStageIndex,
         hasResult: Boolean(result),
         hasSource: hasSourceSelected,
         completionPulse,
       }),
-    [completionPulse, generationMode, generatorHovered, hasSourceSelected, isHome, isLoading, result, sourceInputFocused],
+    [completionPulse, generationMode, generatorHovered, hasSourceSelected, isHome, isLoading, loadingStageIndex, result, sourceInputFocused],
+  );
+  const worldPhase = useMemo(
+    () =>
+      resolveWorldPhase({
+        isLoading,
+        loadingStageIndex,
+        hasResult: Boolean(result),
+        hasSource: hasSourceSelected,
+        completionPulse,
+      }),
+    [completionPulse, hasSourceSelected, isLoading, loadingStageIndex, result],
   );
   const worldSignal: WorldSignal = isLoading
     ? "generating"
@@ -786,11 +798,11 @@ export function ClipStudio({
     ? preferenceProfile.preferredAngles
     : orderedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
   const featureProof = ["Best clip first", "Hooks + captions", "Queue-ready"];
-  const loadingStages = ["Analyzing video", "Finding viral moments", "Generating clips"];
+  const loadingStages = ["Reading source", "Finding the best moments", "Preparing clips"];
   const deliveryMoments = [
-    {
-      label: "Paste once",
-      detail: "Start with one source. LWA recommends the first destination after analysis.",
+      {
+        label: "Paste once",
+        detail: "Start with one source. LWA recommends the first destination after reading the source.",
     },
     {
       label: "Review first",
@@ -810,9 +822,9 @@ export function ClipStudio({
       id: "why-lwa",
       kicker: "Why LWA",
       title: "Built for source-to-post speed, not random clip dumps.",
-      body: "LWA is strongest when you need the best cut first, cleaner packaging, and a workflow that still holds together after generation.",
+      body: "LWA is strongest when you need the next post picked for you, cleaner packaging, and a workflow that still holds together after generation.",
       bullets: [
-        "Lead clip authority with post order and packaging attached",
+        "Lead clip authority with posting order and packaging attached",
         "Hooks, captions, timestamps, and previews in one review layer",
         "Queue, archive, campaigns, and wallet surfaces already in the product",
       ],
@@ -824,11 +836,11 @@ export function ClipStudio({
     {
       id: "how-it-works",
       kicker: "How it works",
-      title: "One source in. Ranked stack out.",
-      body: "Drop a public link or upload a file. LWA processes the source, ranks the strongest cuts, and returns copy and output signals that help you move faster.",
+      title: "One source in. Post order out.",
+      body: "Drop a public link or upload a file. LWA processes the source, chooses what to move first, and returns the package and output signals that help you move faster.",
       bullets: [
-        "Analyze source media and candidate moments",
-        "Rank clips, packaging, and post order",
+        "Read source media and candidate moments",
+        "Choose the posting stack and package",
         "Review, queue, export, and reopen from history",
       ],
     },
@@ -840,13 +852,13 @@ export function ClipStudio({
       bullets: [
         "Podcasters, streamers, interview shows, and creator brands",
         "Clippers and agencies running throughput instead of one-off edits",
-        "Teams that care about ranking, packaging, and workflow trust",
+        "Teams that care about packaging, workflow, and output trust",
       ],
     },
     {
       id: "compare",
       kicker: "Compare",
-      title: "Use LWA when you want ranking and workflow, not just a clip pull.",
+      title: "Use LWA when you want direction and workflow, not just a clip pull.",
       body: "The right comparison is not blog fluff. It is whether the product helps you decide what to post first and move the stack after generation.",
       bullets: [
         "Stronger review hierarchy than noisy clip dumps",
@@ -904,7 +916,7 @@ export function ClipStudio({
   );
   const leadExportReady = Boolean(result?.download_asset_url || renderedHeroClip?.download_url);
   const sourceTruthSummary = useMemo(() => {
-    const content = result?.transcript || result?.visual_summary || "This source was processed into ranked short-form outputs.";
+    const content = result?.transcript || result?.visual_summary || "This source was processed into a decisive short-form stack.";
     if (!content) {
       return null;
     }
@@ -1125,7 +1137,7 @@ export function ClipStudio({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="section-kicker">Generate first</p>
-          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop one source. Leave with ranked clips.</h2>
+          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop one source. Leave with your next posts.</h2>
           <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/90">
             {generationMode === "quick"
               ? "One link in. Ranked clips, hooks, captions, and previews back."
@@ -1176,7 +1188,7 @@ export function ClipStudio({
                 <p className="mt-2 text-sm leading-7 text-ink/72">
                   {useManualPlatform
                     ? `Manual override is on for ${platform}.`
-                    : "LWA will recommend the first destination after it scores the source and identifies the strongest clip style."}
+                    : "LWA will recommend the first destination after it reads the source and identifies the strongest clip style."}
                 </p>
                 <p className="mt-1 text-sm text-ink/50">
                   {useManualPlatform
@@ -1306,7 +1318,7 @@ export function ClipStudio({
               </h2>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">
                 {generationMode === "quick"
-                  ? "Keep the first run simple: paste a source, get the ranked pack, then decide what to post."
+                  ? "Keep the first run simple: paste a source, get the stack, then decide what to move."
                   : GENERATOR_COPY.subhead}
               </p>
             </div>
@@ -1357,7 +1369,7 @@ export function ClipStudio({
                     <p className="mt-2 text-sm leading-7 text-ink/72">
                       {useManualPlatform
                         ? `Manual override is on for ${platform}.`
-                        : "Keep the first run on auto. LWA will recommend the likely best destination and output style after it scores the source."}
+                        : "Keep the first run on auto. LWA will recommend the likely best destination and output style after it reads the source."}
                     </p>
                     <p className="mt-1 text-sm text-ink/50">
                       {useManualPlatform
@@ -1493,13 +1505,13 @@ export function ClipStudio({
                 value={typeof creditsRemaining === "number" ? String(creditsRemaining) : String(planLimits.generationsPerDay)}
                 detail={typeof creditsRemaining === "number" ? "Available today" : "Daily run limit"}
               />
-              <MetricTile label="Clip access" value={String(planLimits.clipLimit)} detail="Visible ranked clips per run" />
+              <MetricTile label="Clip access" value={String(planLimits.clipLimit)} detail="Visible clips per run" />
               <MetricTile label="Uploads" value={String(planLimits.uploadsPerDay)} detail="Local source uploads today" />
             </div>
             <div className="mt-4 space-y-3">
               {!activeFeatureFlags.premium_exports ? (
                 <div className="metric-tile rounded-[24px] px-4 py-3 text-sm text-ink/72">
-                  Pro unlocks clean exports, 20 ranked clips, stronger hook coverage, and wallet visibility.
+                  Pro unlocks clean exports, 20 clips, stronger hook coverage, and wallet visibility.
                 </div>
               ) : null}
               {!activeFeatureFlags.campaign_mode || !activeFeatureFlags.posting_queue ? (
@@ -1514,7 +1526,7 @@ export function ClipStudio({
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Upload a source</p>
             <h3 className="mt-3 text-xl font-semibold text-ink">Run it from your own file</h3>
-            <p className="mt-3 text-sm leading-7 text-ink/60">{token ? "Video, audio, or image. Same ranking flow." : "Sign in to unlock uploads and saved source reuse."}</p>
+            <p className="mt-3 text-sm leading-7 text-ink/60">{token ? "Video, audio, or image. Same output flow." : "Sign in to unlock uploads and saved source reuse."}</p>
             <p className="mt-4 text-sm text-accent">{uploadingFileName ? `Uploading ${uploadingFileName}...` : activeSourceLabel}</p>
             <label className="secondary-button mt-5 inline-flex w-full cursor-pointer items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
               {token ? "Upload source file" : "Sign in to upload"}
@@ -1611,7 +1623,7 @@ export function ClipStudio({
 
           {!renderedClipCount ? (
             <InlineAlert tone="violet" title="Strategy pack ready">
-              LWA returned ranking, hooks, captions, and post order, but this run did not produce rendered media. Review the strategy stack now, then retry with a longer or cleaner source if you need playable output.
+              LWA returned the package, hooks, captions, and posting order, but this run did not produce rendered media. Review the strategy stack now, then retry with a longer or cleaner source if you need playable output.
             </InlineAlert>
           ) : !previewReadyCount ? (
             <InlineAlert tone="violet" title="Playable preview pending">
@@ -1788,7 +1800,7 @@ export function ClipStudio({
 
   return (
     <main className="app-shell-grid min-h-screen">
-      <AIBackground variant={isHome ? "home" : "workspace"} worldState={worldState} generationMode={generationMode} signal={worldSignal} />
+      <AIBackground variant={isHome ? "home" : "workspace"} worldState={worldState} worldPhase={worldPhase} generationMode={generationMode} signal={worldSignal} />
       <AuthPanel
         isOpen={authOpen}
         mode={authMode}
@@ -2355,9 +2367,9 @@ function ReviewOrderPanel({ clips }: { clips: ClipResult[] }) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="section-kicker">Post order</p>
-          <h4 className="mt-3 text-xl font-semibold text-ink">Best clip first</h4>
+          <h4 className="mt-3 text-xl font-semibold text-ink">Move this stack</h4>
         </div>
-        <StatPill tone="accent">{ordered.length} ranked</StatPill>
+        <StatPill tone="accent">{ordered.length} clips</StatPill>
       </div>
 
       <div className="mt-5 space-y-3">

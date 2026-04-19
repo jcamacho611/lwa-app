@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ClipResult } from "../lib/types";
 
 type HeroClipProps = {
@@ -26,17 +26,17 @@ function authorityLabel(rank?: number | null) {
 
 function decisionInstruction(rank?: number | null, hasRenderProof?: boolean) {
   if (rank === 1 && hasRenderProof) {
-    return "Post this first — strongest interruption and highest retention probability.";
+    return "Post this first — clearest interruption and strongest opening momentum.";
   }
   if (rank === 2) {
-    return "Post this second — it deepens the stack after the opener lands.";
+    return "Post this next — it keeps the story moving after the opener lands.";
   }
   if (rank === 3) {
-    return "Test this third — useful angle once the first two establish the frame.";
+    return "Continuation clip — useful once the first two establish the frame.";
   }
   return hasRenderProof
-    ? "Use this next when you want another clip that is already distribution-ready."
-    : "Strong engagement signal, but treat it as leverage until render proof comes back.";
+    ? "Post this next when you want another cut that is already ready to move."
+    : "High viral potential — keep it in the stack until render proof comes back.";
 }
 
 function buildPackageText(clip: ClipResult) {
@@ -73,8 +73,6 @@ export default function HeroClip({
   const hasPlayablePreview = Boolean(previewUrl);
   const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
   const hasRenderProof = hasPlayablePreview || hasStillPreview;
-  const scoreLabel = useMemo(() => clip.virality_score ?? clip.score, [clip.score, clip.virality_score]);
-  const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
   const postAuthority = authorityLabel(postRank);
   const decisionText = decisionInstruction(postRank, hasRenderProof);
@@ -153,9 +151,8 @@ export default function HeroClip({
 
             <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
-                <span className="status-chip status-approved">{hasRenderProof ? "Lead answer" : "Lead strategy"}</span>
-                <span className="status-chip status-submitted">Score {scoreLabel}</span>
-                {confidenceScore ? <span className="status-chip status-ready">{confidenceScore}% confidence</span> : null}
+                <span className="status-chip status-approved">{hasRenderProof ? "POST THIS FIRST" : "HIGH VIRAL POTENTIAL"}</span>
+                {clip.caption_style ? <span className="status-chip status-submitted">{clip.caption_style}</span> : null}
               </div>
               <span className="rounded-full border border-yellow-300/25 bg-yellow-300/12 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-yellow-100">
                 {postAuthority}
@@ -228,7 +225,7 @@ export default function HeroClip({
 
         <div className="space-y-5">
           <div className="space-y-3">
-            <p className="section-kicker">Lead decision</p>
+            <p className="section-kicker">Lead drop</p>
             <h2 className="text-2xl font-semibold leading-tight text-ink sm:text-[2.1rem]">{clip.title}</h2>
             <p className="text-lg leading-8 text-ink/88">{clip.hook}</p>
           </div>
@@ -238,19 +235,14 @@ export default function HeroClip({
             <p className="text-base font-medium leading-7 text-white">{decisionText}</p>
           </div>
 
-          <div className="signal-card rounded-[24px] p-4">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Why this lands</p>
-            <p className="text-sm leading-6 text-ink/82">{whyThisHits}</p>
-          </div>
-
           <div className="grid gap-3 md:grid-cols-2">
             <div className="metric-tile rounded-[24px] p-4">
-              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Packaging angle</p>
-              <p className="text-sm font-medium text-ink">{clip.packaging_angle || "Value"}</p>
+              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Move</p>
+              <p className="text-sm font-medium text-ink">{postAuthority}</p>
             </div>
             <div className="metric-tile rounded-[24px] p-4">
-              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Caption style</p>
-              <p className="text-sm font-medium text-ink">{clip.caption_style || "Short-form native"}</p>
+              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">High viral potential</p>
+              <p className="text-sm font-medium text-ink">{clip.packaging_angle || clip.platform_fit || "Built to travel fast"}</p>
             </div>
             <div className="metric-tile rounded-[24px] p-4">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Thumbnail line</p>
@@ -262,7 +254,10 @@ export default function HeroClip({
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+          <details className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+            <summary className="cursor-pointer list-none text-xs uppercase tracking-[0.24em] text-muted transition-colors duration-300 hover:text-ink/76">
+              Open package notes
+            </summary>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/80">{postAuthority}</span>
               {clip.platform_fit ? (
@@ -283,7 +278,8 @@ export default function HeroClip({
                 ))}
               </div>
             ) : null}
-          </div>
+            <p className="mt-4 text-sm leading-6 text-ink/76">{whyThisHits}</p>
+          </details>
 
           <div className="flex gap-2">
             <button

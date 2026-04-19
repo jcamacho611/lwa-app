@@ -240,6 +240,7 @@
   .ai-scan-line,
   .loading-shimmer,
   .ai-particle-field,
+  .world-particle-canvas,
   .ai-stars,
   .ai-fog,
   .ai-beam,
@@ -255,7 +256,9 @@
   .world-foreground-particles,
   .world-event,
   .world-character-shell,
+  .world-character-body,
   .world-character-aura,
+  .world-character-glow,
   .world-character-sigil,
   .world-character-crown,
   .world-character-core,
@@ -539,6 +542,12 @@ body {
 
 .world-engine {
   --world-pointer-strength: 0;
+  --world-light-alpha: 0.18;
+  --world-particle-opacity: 0.14;
+  --world-character-gold: 0;
+  --world-energy-opacity: 0.28;
+  --world-hud-opacity: 0.18;
+  --world-character-boost: 1;
 }
 
 .world-engine[data-world-state="idle"] {
@@ -563,6 +572,36 @@ body {
   --world-energy-opacity: 0.68;
   --world-hud-opacity: 0.42;
   --world-character-boost: 1.18;
+}
+
+.world-engine[data-world-phase="idle"] {
+  --world-light-alpha: 0.14;
+  --world-particle-opacity: 0.1;
+  --world-character-gold: 0;
+}
+
+.world-engine[data-world-phase="analyzing"] {
+  --world-light-alpha: 0.2;
+  --world-particle-opacity: 0.16;
+  --world-character-gold: 0.04;
+}
+
+.world-engine[data-world-phase="generating"] {
+  --world-light-alpha: 0.26;
+  --world-particle-opacity: 0.22;
+  --world-character-gold: 0.08;
+}
+
+.world-engine[data-world-phase="rendering"] {
+  --world-light-alpha: 0.34;
+  --world-particle-opacity: 0.28;
+  --world-character-gold: 0.14;
+}
+
+.world-engine[data-world-phase="ready"] {
+  --world-light-alpha: 0.22;
+  --world-particle-opacity: 0.14;
+  --world-character-gold: 0.24;
 }
 
 .world-sky,
@@ -637,7 +676,7 @@ body {
     radial-gradient(circle at 24% 28%, rgba(255, 107, 139, 0.12), transparent 16%),
     radial-gradient(circle at 78% 18%, rgba(0, 231, 255, 0.12), transparent 16%),
     radial-gradient(circle at 56% 78%, rgba(255, 45, 166, 0.08), transparent 18%);
-  opacity: 0.22;
+  opacity: var(--world-light-alpha);
   animation: world-foreground-drift 14s ease-in-out infinite;
 }
 
@@ -650,6 +689,14 @@ body {
     radial-gradient(circle at 64% 68%, rgba(255, 255, 255, 0.12) 0 1px, transparent 2px);
   opacity: 0.18;
   animation: particle-drift 18s linear infinite alternate;
+}
+
+.world-particle-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--world-particle-opacity);
+  mix-blend-mode: screen;
 }
 
 .world-event {
@@ -680,13 +727,27 @@ body {
 }
 
 .world-character {
+  --character-drift-x: 0px;
+  --character-drift-y: 0px;
+  --character-breath: 1;
+  --character-tilt: 0deg;
+  --character-glow: 0.26;
+  --character-eye-alpha: 0.3;
+  --character-state-scale: 1;
+  --character-state-lift: 0px;
   position: fixed;
   bottom: -4%;
   width: min(32vw, 420px);
   aspect-ratio: 0.68;
   opacity: 0.68;
-  transform: translate3d(calc(var(--ai-depth-x) * -0.2), calc(var(--ai-depth-y) * -0.18), 0);
+  transform: translate3d(
+      calc(var(--ai-depth-x) * -0.2 + var(--character-drift-x)),
+      calc(var(--ai-depth-y) * -0.18 + var(--character-drift-y) + var(--character-state-lift)),
+      0
+    )
+    scale(var(--character-state-scale));
   filter: saturate(1.08) brightness(0.94);
+  will-change: transform, opacity, filter;
 }
 
 .world-character-left {
@@ -695,7 +756,12 @@ body {
 
 .world-character-right {
   right: 2%;
-  transform: translate3d(calc(var(--ai-depth-x) * 0.18), calc(var(--ai-depth-y) * -0.18), 0);
+  transform: translate3d(
+      calc(var(--ai-depth-x) * 0.18 + var(--character-drift-x)),
+      calc(var(--ai-depth-y) * -0.18 + var(--character-drift-y) + var(--character-state-lift)),
+      0
+    )
+    scale(var(--character-state-scale));
 }
 
 .world-character-center {
@@ -703,17 +769,26 @@ body {
   bottom: 10%;
   width: min(18vw, 220px);
   opacity: 0.24;
-  transform: translate3d(calc(-50% + var(--ai-depth-x) * 0.04), calc(var(--ai-depth-y) * -0.08), 0);
+  transform: translate3d(
+      calc(-50% + var(--ai-depth-x) * 0.04 + var(--character-drift-x)),
+      calc(var(--ai-depth-y) * -0.08 + var(--character-drift-y) + var(--character-state-lift)),
+      0
+    )
+    scale(var(--character-state-scale));
 }
 
 .world-character-shell {
   position: relative;
   width: 100%;
   height: 100%;
-  animation: world-character-drift 16s ease-in-out infinite;
+  transform: scale(var(--character-breath)) rotate(var(--character-tilt));
+  transition: filter 240ms ease, opacity 240ms ease;
+  will-change: transform, filter, opacity;
 }
 
+.world-character-body,
 .world-character-aura,
+.world-character-glow,
 .world-character-sigil,
 .world-character-crown,
 .world-character-core,
@@ -723,11 +798,32 @@ body {
   inset: 0;
 }
 
+.world-character-body {
+  background:
+    radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.07), transparent 12%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 24%),
+    linear-gradient(180deg, rgba(17, 8, 11, 0.96) 0%, rgba(10, 6, 8, 0.98) 42%, rgba(5, 4, 5, 1) 100%);
+  clip-path: polygon(50% 4%, 58% 8%, 66% 18%, 71% 33%, 75% 54%, 79% 68%, 74% 100%, 26% 100%, 21% 68%, 25% 54%, 29% 33%, 34% 18%, 42% 8%);
+  box-shadow:
+    inset 0 0 32px rgba(255, 255, 255, 0.03),
+    0 0 64px rgba(0, 0, 0, 0.34);
+}
+
 .world-character-aura {
   border-radius: 46% 46% 42% 42%;
   filter: blur(26px);
-  opacity: 0.22;
+  opacity: calc(0.16 + var(--character-glow) * 0.32);
   animation: world-character-halo 8.6s ease-in-out infinite;
+}
+
+.world-character-glow {
+  border-radius: 46% 46% 42% 42%;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.08), transparent 16%),
+    radial-gradient(circle at 50% 60%, rgba(255, 255, 255, calc(0.04 + var(--world-character-gold) * 0.28)), transparent 26%);
+  filter: blur(18px);
+  opacity: var(--character-glow);
+  animation: world-character-halo 6.8s ease-in-out infinite;
 }
 
 .world-character-sigil {
@@ -774,7 +870,7 @@ body {
   inset: 18% 34% auto;
   height: 18%;
   filter: blur(6px);
-  opacity: 0.22;
+  opacity: var(--character-eye-alpha);
   animation: world-character-eyes 9.8s ease-in-out infinite;
 }
 
@@ -802,16 +898,18 @@ body {
     radial-gradient(circle at 30% 52%, rgba(141, 247, 255, 0.36), transparent 28%);
 }
 
-.world-character[data-character-state="alert"] .world-character-shell {
-  transform: scale(1.02) translateY(-4px);
+.world-character[data-character-state="alert"] {
+  --character-state-scale: 1.02;
+  --character-state-lift: -4px;
 }
 
 .world-character[data-character-state="alert"] .world-character-aura {
   opacity: 0.34;
 }
 
-.world-character[data-character-state="focus"] .world-character-shell {
-  transform: scale(1.04) translateY(-10px);
+.world-character[data-character-state="focus"] {
+  --character-state-scale: 1.04;
+  --character-state-lift: -10px;
 }
 
 .world-character[data-character-state="focus"] .world-character-aura {
@@ -823,8 +921,9 @@ body {
   opacity: 0.58;
 }
 
-.world-character[data-character-state="surge"] .world-character-shell {
-  transform: scale(var(--world-character-boost)) translateY(-18px);
+.world-character[data-character-state="surge"] {
+  --character-state-scale: var(--world-character-boost);
+  --character-state-lift: -18px;
 }
 
 .world-character[data-character-state="surge"] .world-character-aura {
@@ -835,6 +934,27 @@ body {
 .world-character[data-character-state="surge"] .world-character-eyes {
   opacity: 0.88;
   filter: blur(2px);
+}
+
+.world-character[data-character-phase="analyzing"] .world-character-glow,
+.world-character[data-character-phase="analyzing"] .world-character-sigil {
+  opacity: calc(var(--character-glow) + 0.08);
+}
+
+.world-character[data-character-phase="generating"] .world-character-glow,
+.world-character[data-character-phase="generating"] .world-character-aura {
+  filter: blur(14px);
+}
+
+.world-character[data-character-phase="rendering"] .world-character-sigil,
+.world-character[data-character-phase="rendering"] .world-character-crown {
+  opacity: 0.5;
+}
+
+.world-character[data-character-phase="ready"] .world-character-glow {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 248, 216, 0.12), transparent 16%),
+    radial-gradient(circle at 50% 58%, rgba(255, 214, 102, 0.22), transparent 28%);
 }
 
 .world-engine[data-world-mode="pro"] .world-hud-secondary {
@@ -861,15 +981,30 @@ body {
 }
 
 .world-engine[data-pointer-active="true"] .world-character-left {
-  transform: translate3d(calc(var(--ai-depth-x) * -0.28), calc(var(--ai-depth-y) * -0.24), 0);
+  transform: translate3d(
+      calc(var(--ai-depth-x) * -0.28 + var(--character-drift-x)),
+      calc(var(--ai-depth-y) * -0.24 + var(--character-drift-y) + var(--character-state-lift)),
+      0
+    )
+    scale(var(--character-state-scale));
 }
 
 .world-engine[data-pointer-active="true"] .world-character-right {
-  transform: translate3d(calc(var(--ai-depth-x) * 0.22), calc(var(--ai-depth-y) * -0.22), 0);
+  transform: translate3d(
+      calc(var(--ai-depth-x) * 0.22 + var(--character-drift-x)),
+      calc(var(--ai-depth-y) * -0.22 + var(--character-drift-y) + var(--character-state-lift)),
+      0
+    )
+    scale(var(--character-state-scale));
 }
 
 .world-engine[data-pointer-active="true"] .world-character-center {
-  transform: translate3d(calc(-50% + var(--ai-depth-x) * 0.08), calc(var(--ai-depth-y) * -0.12), 0);
+  transform: translate3d(
+      calc(-50% + var(--ai-depth-x) * 0.08 + var(--character-drift-x)),
+      calc(var(--ai-depth-y) * -0.12 + var(--character-drift-y) + var(--character-state-lift)),
+      0
+    )
+    scale(var(--character-state-scale));
 }
 
 @media (max-width: 1024px) {
@@ -927,7 +1062,8 @@ body {
 
   .world-event,
   .world-hud-secondary,
-  .world-character-center {
+  .world-character-center,
+  .world-particle-canvas {
     display: none;
   }
 }

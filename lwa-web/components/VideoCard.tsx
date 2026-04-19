@@ -37,6 +37,13 @@ function buildPackageText(clip: ClipResult) {
   ].join("\n");
 }
 
+function decisionText(rank?: number | null, hasRenderProof?: boolean) {
+  if (rank === 1) return "Post this first";
+  if (rank === 2) return "Post this next";
+  if (rank === 3) return "Continuation clip";
+  return hasRenderProof ? "Ready to move" : "High viral potential";
+}
+
 export default function VideoCard({
   clip,
   feedbackVote = null,
@@ -56,12 +63,11 @@ export default function VideoCard({
   const hasPlayablePreview = Boolean(previewUrl);
   const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
   const hasRenderProof = hasPlayablePreview || hasStillPreview;
-  const scoreLabel = clip.virality_score ?? clip.score;
-  const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
   const whyThisHits = clip.why_this_matters || clip.reason || null;
   const captionStyle = clip.caption_style || null;
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
   const authority = authorityLabel(postRank);
+  const decision = decisionText(postRank, hasRenderProof);
 
   async function handleEnter() {
     setIsHovering(true);
@@ -150,10 +156,9 @@ export default function VideoCard({
       <div className="mt-4 space-y-3">
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/82">{authority}</span>
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">Score {scoreLabel}</span>
-          {confidenceScore ? (
-            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">{confidenceScore}% confidence</span>
-          ) : null}
+          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
+            {hasRenderProof ? "Ready now" : "High viral potential"}
+          </span>
           {captionStyle ? (
             <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">{captionStyle}</span>
           ) : null}
@@ -161,8 +166,8 @@ export default function VideoCard({
 
         <div className="space-y-2">
           <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-ink">{clip.title}</h3>
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/62">{decision}</p>
           <p className="line-clamp-2 text-sm leading-6 text-ink/80">{clip.hook}</p>
-          {whyThisHits ? <p className="line-clamp-3 text-sm leading-6 text-ink/56">{whyThisHits}</p> : null}
         </div>
 
         <div className="grid gap-2">
@@ -174,11 +179,20 @@ export default function VideoCard({
           ) : null}
           {clip.cta_suggestion ? (
             <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-[0.22em] text-muted">CTA</p>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Move</p>
               <p className="mt-1 text-xs font-medium text-ink/82">{clip.cta_suggestion}</p>
             </div>
           ) : null}
         </div>
+
+        {whyThisHits ? (
+          <details className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
+            <summary className="cursor-pointer list-none text-[10px] uppercase tracking-[0.22em] text-muted transition-colors duration-300 hover:text-ink/76">
+              Open package notes
+            </summary>
+            <p className="mt-2 text-xs leading-6 text-ink/62">{whyThisHits}</p>
+          </details>
+        ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
           <button

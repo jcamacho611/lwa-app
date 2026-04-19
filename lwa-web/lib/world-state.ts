@@ -1,6 +1,7 @@
 export type WorldState = "idle" | "alert" | "focus" | "surge";
 export type WorldSignal = "idle" | "hover" | "focus" | "generating" | "complete";
 export type WorldMode = "quick" | "pro";
+export type WorldPhase = "idle" | "analyzing" | "generating" | "rendering" | "ready";
 
 type ResolveWorldStateInput = {
   variant?: "workspace" | "home";
@@ -8,6 +9,7 @@ type ResolveWorldStateInput = {
   inputFocused?: boolean;
   generatorHovered?: boolean;
   isLoading?: boolean;
+  loadingStageIndex?: number;
   hasResult?: boolean;
   hasSource?: boolean;
   completionPulse?: boolean;
@@ -40,6 +42,7 @@ export function resolveWorldState({
   inputFocused = false,
   generatorHovered = false,
   isLoading = false,
+  loadingStageIndex = 0,
   hasResult = false,
   hasSource = false,
   completionPulse = false,
@@ -58,6 +61,34 @@ export function resolveWorldState({
 
   if (variant === "home" && generationMode === "pro") {
     return "alert";
+  }
+
+  return "idle";
+}
+
+export function resolveWorldPhase({
+  isLoading = false,
+  loadingStageIndex = 0,
+  hasResult = false,
+  hasSource = false,
+  completionPulse = false,
+}: ResolveWorldStateInput): WorldPhase {
+  if (isLoading) {
+    if (loadingStageIndex <= 0) {
+      return "analyzing";
+    }
+    if (loadingStageIndex === 1) {
+      return "generating";
+    }
+    return "rendering";
+  }
+
+  if (completionPulse || hasResult) {
+    return "ready";
+  }
+
+  if (hasSource) {
+    return "analyzing";
   }
 
   return "idle";

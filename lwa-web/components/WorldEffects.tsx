@@ -1,12 +1,15 @@
+import type { WorldPhase } from "../lib/world-state";
 import { WorldLayer } from "./WorldLayer";
+import { WorldParticleField } from "./WorldParticleField";
 
 type WorldEffectsProps = {
   variant: "workspace" | "home";
+  phase: WorldPhase;
   eventKind: "scan" | "flare" | "surge";
   eventEpoch: number;
 };
 
-export function WorldEffects({ variant, eventKind, eventEpoch }: WorldEffectsProps) {
+export function WorldEffects({ variant, phase, eventKind, eventEpoch }: WorldEffectsProps) {
   return (
     <>
       <WorldLayer className="world-sky" />
@@ -22,6 +25,7 @@ export function WorldEffects({ variant, eventKind, eventEpoch }: WorldEffectsPro
         <>
           <WorldLayer className="world-ruins" />
           <WorldLayer className="world-energy-field" />
+          <WorldParticleField variant={variant} phase={phase} />
           <div className="ai-particle-field" />
           <div className="ai-stars" />
           <div className="ai-fog ai-fog-a" />
