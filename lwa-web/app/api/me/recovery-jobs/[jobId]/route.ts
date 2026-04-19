@@ -1,0 +1,30 @@
+import { NextRequest, NextResponse } from "next/server";
+import { authorizationHeader, backendUrl, parseBackendResponse } from "../../../_lib/backend";
+
+type RouteContext = {
+  params: Promise<{
+    jobId: string;
+  }>;
+};
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  const authorization = request.headers.get("authorization");
+  const token = authorization?.toLowerCase().startsWith("bearer ") ? authorization.split(" ", 2)[1] : null;
+
+  if (!token) {
+    return NextResponse.json({ detail: "Authentication required" }, { status: 401 });
+  }
+
+  const { jobId } = await context.params;
+
+  try {
+    const response = await fetch(backendUrl(`/v1/me/recovery-jobs/${jobId}`), {
+      headers: authorizationHeader(token),
+      cache: "no-store",
+    });
+    const data = await parseBackendResponse(response);
+    return NextResponse.json(data, { status: response.status });
+  } catch {
+    return NextResponse.json({ detail: "Unable to load recovery status right now." }, { status: 502 });
+  }
+}

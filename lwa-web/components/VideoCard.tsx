@@ -9,6 +9,12 @@ export type VideoCardProps = {
   onVote?: (clip: ClipResult, vote: "good" | "bad") => void;
   queued?: boolean;
   onToggleQueue?: (clip: ClipResult) => void;
+  recoveryState?: {
+    status: "queued" | "processing" | "recovered" | "failed";
+    message: string;
+    error?: string | null;
+  } | null;
+  onRecover?: (clip: ClipResult) => void;
 };
 
 export default function VideoCard({
@@ -17,6 +23,8 @@ export default function VideoCard({
   onVote,
   queued = false,
   onToggleQueue,
+  recoveryState = null,
+  onRecover,
 }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -151,6 +159,11 @@ export default function VideoCard({
                 ? "Still frame is ready. No playable clip came back for this cut."
                 : "Strategy is ready, but this cut came back without render proof."}
           </p>
+          {!hasPlayablePreview && recoveryState ? (
+            <p className="mt-2 text-xs leading-5 text-ink/58">
+              {recoveryState.status === "failed" && recoveryState.error ? recoveryState.error : recoveryState.message}
+            </p>
+          ) : null}
         </div>
 
         {clip.thumbnail_text || clip.cta_suggestion ? (
@@ -203,6 +216,22 @@ export default function VideoCard({
             >
               Open preview
             </a>
+          ) : null}
+          {!hasPlayablePreview && !hasStillPreview ? (
+            <button
+              type="button"
+              onClick={() => onRecover?.(clip)}
+              disabled={recoveryState?.status === "queued" || recoveryState?.status === "processing"}
+              className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {recoveryState?.status === "processing"
+                ? "Recovering..."
+                : recoveryState?.status === "queued"
+                  ? "Recovery queued"
+                  : recoveryState?.status === "failed"
+                    ? "Retry render"
+                    : "Recover render"}
+            </button>
           ) : null}
           <button
             type="button"

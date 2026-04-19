@@ -22,6 +22,7 @@ import {
   CampaignAssignment,
   CampaignDetail,
   CampaignSummary,
+  ClipRecoveryStatus,
   ClipPackDetail,
   ClipResult,
   ClipPackSummary,
@@ -45,6 +46,7 @@ import {
   createPostingConnection,
   createScheduledPost,
   generateClips,
+  loadClipRecoveryJob,
   loadBatches,
   loadCampaign,
   loadCampaigns,
@@ -58,6 +60,7 @@ import {
   loadWalletLedger,
   logOut,
   patchClip,
+  recoverClip,
   updateCampaign,
   updateCampaignAssignment,
   updateScheduledPost,
@@ -99,6 +102,13 @@ function clipHasRenderedMedia(clip: ClipResult) {
       clip.preview_image_url,
   );
 }
+
+type ClipRecoveryState = {
+  jobId?: string;
+  status: "queued" | "processing" | "recovered" | "failed";
+  message: string;
+  error?: string | null;
+};
 
 const appNavItems = [
   { href: "/dashboard", label: rewriteSurfaceLabel("Dashboard"), section: "dashboard" },
@@ -175,6 +185,7 @@ export function ClipStudio({
   const [selectedUpload, setSelectedUpload] = useState<UploadAsset | null>(null);
   const [feedbackRecords, setFeedbackRecords] = useState<ClipFeedbackRecord[]>([]);
   const [improveResults, setImproveResults] = useState(false);
+  const [clipRecoveryStates, setClipRecoveryStates] = useState<Record<string, ClipRecoveryState>>({});
   const [generationMode, setGenerationMode] = useState<"quick" | "pro">("quick");
   const [readyQueue, setReadyQueue] = useState<ReadyQueueItem[]>([]);
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null);
@@ -504,6 +515,7 @@ export function ClipStudio({
         token,
       );
       setResult(data);
+      setClipRecoveryStates({});
       setPaywallMessage(null);
       if (token) {
         await refreshAccount(token);
@@ -880,11 +892,17 @@ export function ClipStudio({
   const recommendedOutputStyle = result?.processing_summary?.recommended_output_style || null;
   const platformDecision = result?.processing_summary?.platform_decision || (useManualPlatform ? "manual" : "auto");
   const platformRecommendationReason = result?.processing_summary?.platform_recommendation_reason || null;
-  const renderedClipCount = result?.processing_summary?.rendered_clip_count ?? renderedClips.length;
-  const strategyOnlyClipCount = result?.processing_summary?.strategy_only_clip_count ?? strategyOnlyClips.length;
+  const renderedClipCount = renderedClips.length;
+  const strategyOnlyClipCount = strategyOnlyClips.length;
   const exportReadyCount = useMemo(() => orderedClips.filter((clip) => clip.download_url).length, [orderedClips]);
-  const leadPreviewReady = Boolean(result?.preview_asset_url);
-  const leadExportReady = Boolean(result?.download_asset_url);
+  const leadPreviewReady = Boolean(
+    result?.preview_asset_url ||
+      renderedHeroClip?.preview_url ||
+      renderedHeroClip?.edited_clip_url ||
+      renderedHeroClip?.clip_url ||
+      renderedHeroClip?.raw_clip_url,
+  );
+  const leadExportReady = Boolean(result?.download_asset_url || renderedHeroClip?.download_url);
   const sourceTruthSummary = useMemo(() => {
     const content = result?.transcript || result?.visual_summary || "This source was processed into ranked short-form outputs.";
     if (!content) {
@@ -925,6 +943,133 @@ export function ClipStudio({
 
   function handleClearQueue() {
     setReadyQueue(clearReadyQueue());
+  }
+
+  function replaceClipInResult(updatedClip: ClipResult) {
+    setResult((current) => {
+      if (!current) {
+        return current;
+      }
+      const nextClips = current.clips.map((clip) => {
+        const currentId = clip.record_id || clip.clip_id || clip.id;
+        const updatedId = updatedClip.record_id || updatedClip.clip_id || updatedClip.id;
+        return currentId === updatedId ? { ...clip, ...updatedClip } : clip;
+      });
+      const nextRenderedClipCount = nextClips.filter((clip) => clipHasRenderedMedia(clip)).length;
+      const nextStrategyOnlyClipCount = Math.max(nextClips.length - nextRenderedClipCount, 0);
+      return {
+        ...current,
+        clips: nextClips,
+        preview_asset_url:
+          current.preview_asset_url ||
+          updatedClip.preview_url ||
+          updatedClip.edited_clip_url ||
+          updatedClip.clip_url ||
+          updatedClip.raw_clip_url ||
+          null,
+        download_asset_url: current.download_asset_url || updatedClip.download_url || null,
+        thumbnail_url: current.thumbnail_url || updatedClip.preview_image_url || updatedClip.thumbnail_url || null,
+        processing_summary: current.processing_summary
+          ? {
+              ...current.processing_summary,
+              rendered_clip_count: nextRenderedClipCount,
+              strategy_only_clip_count: nextStrategyOnlyClipCount,
+            }
+          : current.processing_summary,
+      };
+    });
+  }
+
+  function applyRecoveryStatus(clipId: string, status: ClipRecoveryStatus) {
+    setClipRecoveryStates((current) => ({
+      ...current,
+      [clipId]: {
+        jobId: status.job_id,
+        status:
+          status.status === "recovered" || status.status === "failed"
+            ? status.status
+            : status.status === "processing"
+              ? "processing"
+              : "queued",
+        message: status.message,
+        error: status.error || null,
+      },
+    }));
+
+    if (status.status === "recovered" && status.recovered_clip) {
+      replaceClipInResult(status.recovered_clip);
+      setClipRecoveryStates((current) => ({
+        ...current,
+        [clipId]: {
+          jobId: status.job_id,
+          status: "recovered",
+          message: status.message,
+          error: null,
+        },
+      }));
+    }
+  }
+
+  async function pollRecoveryJob(clipId: string, jobId: string) {
+    if (!token) {
+      return;
+    }
+    try {
+      const status = await loadClipRecoveryJob(token, jobId);
+      applyRecoveryStatus(clipId, status);
+      if (status.status === "queued" || status.status === "processing") {
+        window.setTimeout(() => {
+          void pollRecoveryJob(clipId, jobId);
+        }, 1600);
+      }
+    } catch (recoveryError) {
+      setClipRecoveryStates((current) => ({
+        ...current,
+        [clipId]: {
+          jobId,
+          status: "failed",
+          message: recoveryError instanceof Error ? recoveryError.message : "Unable to poll recovery status.",
+          error: recoveryError instanceof Error ? recoveryError.message : "Unable to poll recovery status.",
+        },
+      }));
+    }
+  }
+
+  async function handleRecoverClip(clip: ClipResult) {
+    if (!token) {
+      setAuthMode("login");
+      setAuthOpen(true);
+      return;
+    }
+    const clipId = clip.record_id || clip.clip_id || clip.id;
+    setClipRecoveryStates((current) => ({
+      ...current,
+      [clipId]: {
+        status: "queued",
+        message: "Recovery queued. Retrying media generation for this clip.",
+      },
+    }));
+    try {
+      const job = await recoverClip(token, clipId);
+      setClipRecoveryStates((current) => ({
+        ...current,
+        [clipId]: {
+          jobId: job.job_id,
+          status: "queued",
+          message: job.message,
+        },
+      }));
+      void pollRecoveryJob(clipId, job.job_id);
+    } catch (recoveryError) {
+      setClipRecoveryStates((current) => ({
+        ...current,
+        [clipId]: {
+          status: "failed",
+          message: recoveryError instanceof Error ? recoveryError.message : "Unable to start recovery.",
+          error: recoveryError instanceof Error ? recoveryError.message : "Unable to start recovery.",
+        },
+      }));
+    }
   }
 
   function handleHomePointerMove(event: ReactPointerEvent<HTMLElement>) {
@@ -1482,6 +1627,8 @@ export function ClipStudio({
                 onVote={handleFeedbackVote}
                 queued={isQueued(renderedHeroClip)}
                 onToggleQueue={handleToggleQueue}
+                recoveryState={clipRecoveryStates[resolveClipQueueId(renderedHeroClip)] || null}
+                onRecover={handleRecoverClip}
               />
             </div>
           ) : null}
@@ -1503,6 +1650,8 @@ export function ClipStudio({
                     onVote={handleFeedbackVote}
                     queued={isQueued(clip)}
                     onToggleQueue={handleToggleQueue}
+                    recoveryState={clipRecoveryStates[resolveClipQueueId(clip)] || null}
+                    onRecover={handleRecoverClip}
                   />
                 ))}
               </div>
@@ -1518,6 +1667,8 @@ export function ClipStudio({
                 onVote={handleFeedbackVote}
                 queued={isQueued(strategyHeroClip)}
                 onToggleQueue={handleToggleQueue}
+                recoveryState={clipRecoveryStates[resolveClipQueueId(strategyHeroClip)] || null}
+                onRecover={handleRecoverClip}
               />
             </div>
           ) : null}
@@ -1529,7 +1680,7 @@ export function ClipStudio({
                   <p className="section-kicker">Strategy-only</p>
                   <h4 className="mt-2 text-2xl font-semibold text-ink">Recommendations waiting for render proof</h4>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-                    These cuts still have ranking, hooks, captions, post order, and packaging logic. They just came back without media assets in this run.
+                    These cuts still have ranking, hooks, captions, post order, and packaging logic. They just came back without media assets in this run. Use recover render when you want LWA to retry media proof from the same source.
                   </p>
                 </div>
               </div>
@@ -1542,6 +1693,8 @@ export function ClipStudio({
                     onVote={handleFeedbackVote}
                     queued={isQueued(clip)}
                     onToggleQueue={handleToggleQueue}
+                    recoveryState={clipRecoveryStates[resolveClipQueueId(clip)] || null}
+                    onRecover={handleRecoverClip}
                   />
                 ))}
               </div>
@@ -1559,9 +1712,14 @@ export function ClipStudio({
             <h4 className="mt-3 text-xl font-semibold text-ink">What is ready now</h4>
             <div className="mt-4 grid gap-3">
               <MetricTile
-                label="Playable clips"
-                value={String(previewReadyCount)}
-                detail={previewReadyCount ? "Playable previews are live in this pack" : "No playable previews came back yet"}
+                label="Rendered clips"
+                value={String(renderedClipCount)}
+                detail={renderedClipCount ? "Media proof is ready for these cuts now" : "No rendered clip came back yet"}
+              />
+              <MetricTile
+                label="Strategy-only"
+                value={String(strategyOnlyClipCount)}
+                detail={strategyOnlyClipCount ? "Use recovery when you want media proof retried" : "Every visible clip has media proof"}
               />
               <MetricTile
                 label="Export unlocked"

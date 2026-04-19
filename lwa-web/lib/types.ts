@@ -280,6 +280,25 @@ export type GenerateResponse = {
   clips: ClipResult[];
 };
 
+export type ClipRecoveryJob = {
+  job_id: string;
+  clip_id: string;
+  status: string;
+  message: string;
+  poll_url: string;
+};
+
+export type ClipRecoveryStatus = {
+  job_id: string;
+  clip_id: string;
+  status: "queued" | "processing" | "recovered" | "failed" | string;
+  message: string;
+  created_at?: string;
+  updated_at?: string;
+  recovered_clip?: ClipResult | null;
+  error?: string | null;
+};
+
 export type EditableClip = ClipResult;
 
 export type ClipPackDetail = {

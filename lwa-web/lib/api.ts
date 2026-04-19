@@ -6,6 +6,8 @@ import {
   CampaignDetail,
   CampaignSummary,
   ClipPackDetail,
+  ClipRecoveryJob,
+  ClipRecoveryStatus,
   ClipPackSummary,
   GenerateResponse,
   PlatformOption,
@@ -158,6 +160,19 @@ export async function patchClip(
     method: "PATCH",
     headers: authHeaders(token),
     body: JSON.stringify(updates),
+  });
+}
+
+export async function recoverClip(token: string, clipId: string) {
+  return jsonRequest<ClipRecoveryJob>(`/api/me/clips/${clipId}/recover`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
+export async function loadClipRecoveryJob(token: string, jobId: string) {
+  return jsonRequest<ClipRecoveryStatus>(`/api/me/recovery-jobs/${jobId}`, {
+    headers: authHeaders(token, false),
   });
 }
 

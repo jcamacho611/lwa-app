@@ -9,6 +9,12 @@ type HeroClipProps = {
   feedbackVote?: "good" | "bad" | null;
   onToggleQueue?: (clip: ClipResult) => void;
   onVote?: (clip: ClipResult, vote: "good" | "bad") => void;
+  recoveryState?: {
+    status: "queued" | "processing" | "recovered" | "failed";
+    message: string;
+    error?: string | null;
+  } | null;
+  onRecover?: (clip: ClipResult) => void;
 };
 
 function formatConfidence(value?: number | null) {
@@ -25,6 +31,8 @@ export default function HeroClip({
   feedbackVote = null,
   onToggleQueue,
   onVote,
+  recoveryState = null,
+  onRecover,
 }: HeroClipProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -167,8 +175,13 @@ export default function HeroClip({
                 ? "Playable preview is ready now."
                 : hasStillPreview
                   ? "A still preview is ready, but a playable render did not come back for this cut."
-                  : "This cut came back with strategy only. Try a different source if you need a playable preview."}
+                  : "This cut came back with strategy only. Use recovery to retry media proof from the same source."}
             </p>
+            {!hasPlayablePreview && recoveryState ? (
+              <p className="mt-3 text-sm text-ink/58">
+                {recoveryState.status === "failed" && recoveryState.error ? recoveryState.error : recoveryState.message}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -242,6 +255,22 @@ export default function HeroClip({
             >
               {queued ? "Queued" : "Queue clip"}
             </button>
+            {!hasPlayablePreview && !hasStillPreview ? (
+              <button
+                type="button"
+                onClick={() => onRecover?.(clip)}
+                disabled={recoveryState?.status === "queued" || recoveryState?.status === "processing"}
+                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {recoveryState?.status === "processing"
+                  ? "Recovering render..."
+                  : recoveryState?.status === "queued"
+                    ? "Recovery queued"
+                    : recoveryState?.status === "failed"
+                      ? "Retry render"
+                      : "Recover render"}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => void copyField("hook")}
