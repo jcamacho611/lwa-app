@@ -343,6 +343,15 @@ def parse_generated_clips(
             )
         )
 
+    normalized = supplement_source_grounded_clips(
+        normalized,
+        target_platform=target_platform,
+        selected_trend=selected_trend,
+        content_angle=content_angle,
+        trend_context=trend_context,
+        source_context=source_context,
+    )
+
     ranked = sorted(
         normalized,
         key=lambda current: (-(current.score or 0), -(current.confidence or 0.0), current.start_time),
@@ -375,6 +384,41 @@ def parse_generated_clips(
     logger.info("clip_scoring_complete mode=ai clips_scored=%s", len(finalized))
     logger.info("clip_ranking_complete ranked=%s", len(finalized))
     return finalized
+
+
+def supplement_source_grounded_clips(
+    clips: List[ClipResult],
+    *,
+    target_platform: str,
+    selected_trend: Optional[str],
+    content_angle: Optional[str],
+    trend_context: List[TrendItem],
+    source_context: Optional[SourceContext],
+) -> List[ClipResult]:
+    if not source_context or not source_context.clip_seeds:
+        return clips
+
+    desired_count = desired_clip_count_for_source(source_context)
+    if len(clips) >= desired_count:
+        return clips
+
+    existing_ids = {clip.id for clip in clips}
+    supplemented = list(clips)
+    for candidate in build_source_grounded_fallback_clips(
+        target_platform=target_platform,
+        selected_trend=selected_trend,
+        content_angle=content_angle,
+        trend_context=trend_context,
+        source_context=source_context,
+    ):
+        if candidate.id in existing_ids:
+            continue
+        supplemented.append(candidate)
+        existing_ids.add(candidate.id)
+        if len(supplemented) >= desired_count:
+            break
+
+    return supplemented
 
 
 def build_fallback_clips(
@@ -532,7 +576,7 @@ def build_generation_prompt(
     transcript_text = (source_context.transcript[:1800] if source_context and source_context.transcript else "No transcript available.")
     visual_summary = (source_context.visual_summary[:800] if source_context and source_context.visual_summary else "No visual summary available.")
     seed_lines = build_seed_lines(source_context.clip_seeds if source_context else None)
-    desired_clip_count = min(max(len(source_context.clip_seeds), 3), 8) if source_context and source_context.clip_seeds else 3
+    desired_clip_count = desired_clip_count_for_source(source_context)
     return f"""
 Generate exactly {desired_clip_count} short-form video clip ideas as JSON.
 
@@ -582,6 +626,7 @@ Return valid JSON in this shape:
 
 Rules:
 - Evaluate each clip using the actual transcript excerpt or visual summary, timing, and target platform.
+- Use the provided clip windows as the media boundaries; prefer tight starts and stop shortly after the payoff.
 - If preferred packaging angle is present, bias the response toward it unless the clip clearly fits a stronger angle.
 - reason must explain in one short sentence why the clip will work.
 - why_this_matters must explain why this clip should be posted in the stack.
@@ -592,6 +637,12 @@ Rules:
 - packaging_angle must be one of: shock, story, value, curiosity, controversy.
 - confidence must be a float between 0.0 and 1.0.
 """.strip()
+
+
+def desired_clip_count_for_source(source_context: Optional[SourceContext]) -> int:
+    if not source_context or not source_context.clip_seeds:
+        return 3
+    return min(max(len(source_context.clip_seeds), 4), 12)
 
 
 def build_seed_lines(clip_seeds: Optional[List[ClipSeed]]) -> str:
