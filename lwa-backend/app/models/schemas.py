@@ -58,6 +58,14 @@ class ExportBundle(BaseModel):
     download_ready: bool = False
 
 
+class GeneratedScripts(BaseModel):
+    main: str
+    variants: List[str] = Field(default_factory=list)
+    hooks: List[str] = Field(default_factory=list)
+    titles: List[str] = Field(default_factory=list)
+    ctas: List[str] = Field(default_factory=list)
+
+
 class ClipResult(BaseModel):
     record_id: Optional[str] = None
     id: str
@@ -165,6 +173,7 @@ class ClipBatchResponse(BaseModel):
     processing_summary: ProcessingSummary
     trend_context: List[TrendItem]
     clips: List[ClipResult]
+    scripts: Optional[GeneratedScripts] = None
 
 
 class TrendsResponse(BaseModel):

@@ -1641,13 +1641,20 @@ def build_transcript_windows_from_cues(cues: List[tuple[float, float, str]]) -> 
         excerpt = normalize_caption_text(" ".join(parts))
         if len(excerpt.split()) < 6:
             continue
+        previous_end = cues[start_index - 1][1] if start_index > 0 else None
+        gap_before = max(window_start - previous_end, 0.0) if previous_end is not None else 0.0
+        duration = max(window_end - window_start, 0.1)
 
         windows.append(
             TranscriptWindow(
                 start_seconds=window_start,
                 end_seconds=window_end,
                 excerpt=excerpt,
-                score=score_excerpt(excerpt),
+                score=score_transcript_window(
+                    excerpt=excerpt,
+                    duration_seconds=duration,
+                    gap_before_seconds=gap_before,
+                ),
             )
         )
 
@@ -1696,4 +1703,31 @@ def score_excerpt(excerpt: str) -> int:
         if keyword in lower
     )
     punctuation_bonus = 3 if "?" in excerpt or "!" in excerpt else 0
-    return min(len(words), 35) + (keyword_hits * 4) + punctuation_bonus
+    payoff_bonus = 6 if any(keyword in lower for keyword in ["but", "then", "because", "finally", "realized", "changed"]) else 0
+    hook_bonus = 5 if words and words[0].lower().strip(".,!?") in {"stop", "why", "how", "this", "nobody", "never"} else 0
+    return min(len(words), 35) + (keyword_hits * 4) + punctuation_bonus + payoff_bonus + hook_bonus
+
+
+def score_transcript_window(*, excerpt: str, duration_seconds: float, gap_before_seconds: float) -> int:
+    words = excerpt.split()
+    speech_density = len(words) / max(duration_seconds, 0.1)
+    density_bonus = 0
+    if 2.2 <= speech_density <= 4.8:
+        density_bonus = 8
+    elif speech_density > 4.8:
+        density_bonus = 4
+
+    boundary_bonus = 4 if excerpt.rstrip().endswith((".", "!", "?")) else 0
+    reset_bonus = 3 if 0.25 <= gap_before_seconds <= 1.8 else 0
+    dead_space_penalty = 8 if gap_before_seconds > 3.0 else 0
+    short_window_penalty = 6 if len(words) < 10 else 0
+
+    return max(
+        0,
+        score_excerpt(excerpt)
+        + density_bonus
+        + boundary_bonus
+        + reset_bonus
+        - dead_space_penalty
+        - short_window_penalty,
+    )

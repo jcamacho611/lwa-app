@@ -33,6 +33,7 @@ from ..services.entitlements import EntitlementContext, UsageStore
 from ..services.platform_store import PlatformStore
 from ..services.seedance_service import seedance_available
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
+from ..style_engine import build_script_pack
 from ..trends import fetch_public_trends, trends_timestamp
 
 logger = logging.getLogger("uvicorn.error")
@@ -295,6 +296,17 @@ async def build_clip_response(
     rendered_clip_count = len([clip for clip in clips if clip_has_rendered_media(clip)])
     strategy_only_clip_count = max(len(clips) - rendered_clip_count, 0)
     export_ready_count = len([clip for clip in clips if clip.download_url])
+    script_pack = build_script_pack(
+        source_title=source_title,
+        transcript=source_context.transcript if source_context else None,
+        target_platform=target_platform,
+        clip_phrases=[
+            phrase
+            for clip in clips[:6]
+            for phrase in [clip.transcript_excerpt or clip.hook or clip.title]
+            if phrase
+        ],
+    )
 
     response = ClipBatchResponse(
         request_id=request_id,
@@ -345,6 +357,7 @@ async def build_clip_response(
         ),
         trend_context=trend_context[:6],
         clips=clips,
+        scripts=script_pack,
     )
     if platform_store is not None:
         response = platform_store.persist_clip_batch(

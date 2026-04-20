@@ -642,7 +642,7 @@ Rules:
 def desired_clip_count_for_source(source_context: Optional[SourceContext]) -> int:
     if not source_context or not source_context.clip_seeds:
         return 3
-    return min(max(len(source_context.clip_seeds), 4), 12)
+    return min(max(len(source_context.clip_seeds), 10), 16)
 
 
 def build_seed_lines(clip_seeds: Optional[List[ClipSeed]]) -> str:
