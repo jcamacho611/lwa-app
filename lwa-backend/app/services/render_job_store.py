@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from uuid import uuid4
@@ -21,16 +23,26 @@ class RenderJobStore:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self._init_db()
-    
-    def _init_db(self) -> None:
-        """Initialize the render jobs database."""
-        import sqlite3
+
+    @contextmanager
+    def _connect(self):
         from pathlib import Path
-        
+
         db_path = Path(self.settings.clipping_db_path)
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        with sqlite3.connect(db_path) as connection:
+        connection = sqlite3.connect(db_path)
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    def _init_db(self) -> None:
+        """Initialize the render jobs database."""
+        with self._connect() as connection:
             connection.executescript("""
                 CREATE TABLE IF NOT EXISTS render_jobs (
                     id TEXT PRIMARY KEY,
@@ -63,14 +75,10 @@ class RenderJobStore:
         output_path: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create a new render job."""
-        import sqlite3
-        from pathlib import Path
-        
         job_id = f"render_job_{uuid4().hex[:12]}"
         created_at = utcnow()
-        
-        db_path = Path(self.settings.clipping_db_path)
-        with sqlite3.connect(db_path) as connection:
+
+        with self._connect() as connection:
             connection.execute(
                 """
                 INSERT INTO render_jobs (
@@ -102,11 +110,7 @@ class RenderJobStore:
         output_path: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Update render job status and results."""
-        import sqlite3
-        from pathlib import Path
-        
-        db_path = Path(self.settings.clipping_db_path)
-        with sqlite3.connect(db_path) as connection:
+        with self._connect() as connection:
             updates = []
             values = []
             
@@ -140,11 +144,7 @@ class RenderJobStore:
     
     def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get render job by ID."""
-        import sqlite3
-        from pathlib import Path
-        
-        db_path = Path(self.settings.clipping_db_path)
-        with sqlite3.connect(db_path) as connection:
+        with self._connect() as connection:
             connection.row_factory = sqlite3.Row
             row = connection.execute(
                 "SELECT * FROM render_jobs WHERE id = ?",
@@ -157,11 +157,7 @@ class RenderJobStore:
     
     def get_jobs_by_clip(self, clip_id: str) -> list[Dict[str, Any]]:
         """Get all render jobs for a specific clip."""
-        import sqlite3
-        from pathlib import Path
-        
-        db_path = Path(self.settings.clipping_db_path)
-        with sqlite3.connect(db_path) as connection:
+        with self._connect() as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
                 "SELECT * FROM render_jobs WHERE clip_id = ? ORDER BY created_at DESC",
@@ -172,11 +168,7 @@ class RenderJobStore:
     
     def get_pending_jobs(self, limit: int = 50) -> list[Dict[str, Any]]:
         """Get pending render jobs."""
-        import sqlite3
-        from pathlib import Path
-        
-        db_path = Path(self.settings.clipping_db_path)
-        with sqlite3.connect(db_path) as connection:
+        with self._connect() as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
                 "SELECT * FROM render_jobs WHERE status IN ('pending', 'rendering') ORDER BY created_at DESC LIMIT ?",
@@ -187,11 +179,7 @@ class RenderJobStore:
     
     def log_job_event(self, job_id: str, level: str, message: str) -> None:
         """Log an event for a render job."""
-        import sqlite3
-        from pathlib import Path
-        
-        db_path = Path(self.settings.clipping_db_path)
-        with sqlite3.connect(db_path) as connection:
+        with self._connect() as connection:
             log_id = f"job_log_{uuid4().hex[:12]}"
             created_at = utcnow()
             
@@ -208,11 +196,7 @@ class RenderJobStore:
     
     def cleanup_old_jobs(self, days: int = 7) -> int:
         """Clean up old render jobs."""
-        import sqlite3
-        from pathlib import Path
-        
-        db_path = Path(self.settings.clipping_db_path)
-        with sqlite3.connect(db_path) as connection:
+        with self._connect() as connection:
             result = connection.execute(
                 "DELETE FROM render_jobs WHERE created_at < datetime('now', '-{} days')",
                 (days,),

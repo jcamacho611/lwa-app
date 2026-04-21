@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 from ..core.config import Settings
 
@@ -15,12 +16,20 @@ def utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def get_connection(settings: Settings) -> sqlite3.Connection:
+@contextmanager
+def get_connection(settings: Settings) -> Iterator[sqlite3.Connection]:
     path = Path(settings.clipping_db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(path)
     connection.row_factory = sqlite3.Row
-    return connection
+    try:
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 SCHEMA = """
