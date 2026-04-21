@@ -34,7 +34,7 @@ export function Logo({
           />
           {showTagline ? (
             <span className="mt-0.5 text-[11px] uppercase tracking-[0.26em] text-muted">
-              Ranked clips. Move first.
+              Clips worth posting.
             </span>
           ) : null}
         </span>

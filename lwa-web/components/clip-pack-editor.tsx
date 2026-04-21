@@ -90,7 +90,7 @@ export function ClipPackEditor({ clipPack, onSave, onClose, readOnly = false, lo
           <p className="section-kicker">Clip pack detail</p>
           <h3 className="mt-2 text-3xl font-semibold text-ink">{clipPack.source_title || clipPack.request_id}</h3>
           <p className="mt-2 max-w-3xl text-sm leading-7 text-ink/64">
-            Review the ranked pack, then adjust hooks, captions, CTA, and packaging without leaving the browser.
+            Review the pack, then adjust hooks, captions, CTA, and packaging without leaving the browser.
           </p>
         </div>
         <button

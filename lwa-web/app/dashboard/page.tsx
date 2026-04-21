@@ -4,8 +4,7 @@ import { buildPageMetadata } from "../../lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Control Room",
-  description:
-    "Run the creator workspace from one place: ranked clip packs, queue state, uploads, campaigns, and wallet visibility.",
+  description: "Run clip packs, queue state, uploads, campaigns, and wallet visibility from one workspace.",
   path: "/dashboard",
   keywords: ["creator control room", "clip workflow", "operator dashboard", "content repurposing workspace"],
 });

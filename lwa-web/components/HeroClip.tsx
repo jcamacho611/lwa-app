@@ -18,9 +18,9 @@ type HeroClipProps = {
 };
 
 function authorityLabel(rank?: number | null) {
-  if (rank === 1) return "🔥 POST FIRST";
-  if (rank === 2) return "⚡ POST SECOND";
-  if (rank === 3) return "🧠 TEST THIRD";
+  if (rank === 1) return "POST FIRST";
+  if (rank === 2) return "POST SECOND";
+  if (rank === 3) return "TEST THIRD";
   return "MOVE LATER";
 }
 
@@ -123,8 +123,8 @@ export default function HeroClip({
   }
 
   return (
-    <section className="group relative overflow-hidden rounded-[38px] border border-yellow-400/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02)),linear-gradient(180deg,rgba(24,10,12,0.94),rgba(7,4,6,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_32px_96px_rgba(255,193,7,0.12)] sm:p-7 lg:p-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,214,102,0.16),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(255,0,102,0.12),transparent_32%)]" />
+    <section className="group relative overflow-hidden rounded-[38px] border border-cyan-300/18 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.018)),linear-gradient(180deg,rgba(9,10,26,0.94),rgba(5,5,13,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.38)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_32px_96px_rgba(56,189,248,0.1)] sm:p-7 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.14),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(0,231,255,0.1),transparent_32%),radial-gradient(circle_at_60%_80%,rgba(82,10,27,0.14),transparent_34%)]" />
 
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
         <div className="space-y-4">
@@ -154,7 +154,7 @@ export default function HeroClip({
                 <span className="status-chip status-approved">{hasRenderProof ? "POST THIS FIRST" : "HIGH VIRAL POTENTIAL"}</span>
                 {clip.caption_style ? <span className="status-chip status-submitted">{clip.caption_style}</span> : null}
               </div>
-              <span className="rounded-full border border-yellow-300/25 bg-yellow-300/12 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-yellow-100">
+              <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-cyan-100">
                 {postAuthority}
               </span>
             </div>
@@ -230,8 +230,8 @@ export default function HeroClip({
             <p className="text-lg leading-8 text-ink/88">{clip.hook}</p>
           </div>
 
-          <div className="rounded-[26px] border border-yellow-300/18 bg-[linear-gradient(180deg,rgba(255,214,102,0.1),rgba(255,214,102,0.04))] p-5">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-yellow-100/70">System call</p>
+          <div className="rounded-[26px] border border-cyan-300/18 bg-[linear-gradient(180deg,rgba(0,231,255,0.09),rgba(124,58,237,0.045))] p-5">
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-cyan-100/70">System call</p>
             <p className="text-base font-medium leading-7 text-white">{decisionText}</p>
           </div>
 

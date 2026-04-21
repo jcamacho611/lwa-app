@@ -214,49 +214,49 @@ export function ClipStudio({
         return {
           label: "Dashboard",
           title: "Your control room",
-          description: "Runs, queue, campaigns, and account state in one place.",
+          description: "Runs, queue, campaigns, and account state.",
         };
       case "generate":
         return {
           label: "Generate",
           title: "Build your clip stack",
-          description: "Paste a source. Get the next cuts worth moving.",
+          description: "Paste a source. Get clips worth posting.",
         };
       case "upload":
         return {
           label: "Upload",
           title: "Bring your own file",
-          description: "Run the same flow with local video, audio, or images.",
+          description: "Run the same flow with local files.",
         };
       case "history":
         return {
           label: "History",
           title: "Reopen saved work",
-          description: "Review past packs and reopen what still hits.",
+          description: "Reopen past packs.",
         };
       case "batches":
         return {
           label: "Batches",
           title: "Queue multiple sources",
-          description: "Group links and uploads into one repeatable run.",
+          description: "Group sources into repeatable runs.",
         };
       case "campaigns":
         return {
           label: "Campaigns",
           title: "Run content pushes",
-          description: "Assign clips, track status, and keep ops moving.",
+          description: "Assign clips and track status.",
         };
       case "wallet":
         return {
           label: "Wallet",
           title: "Track value and payout state",
-          description: "See ledger movement, readiness, and payout requests.",
+          description: "See balance and payout state.",
         };
       case "settings":
         return {
           label: "Settings",
           title: "Manage account and workflow",
-          description: "Plan, credits, role, and unlocked workflow depth.",
+          description: "Plan, credits, and account controls.",
         };
       default:
         return null;
@@ -736,73 +736,73 @@ export function ClipStudio({
   const topAngles = (preferenceProfile.preferredAngles.length
     ? preferenceProfile.preferredAngles
     : orderedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
-  const featureProof = ["Best clip first", "Hooks + captions", "Queue-ready"];
-  const loadingStages = ["Reading source", "Finding the best moments", "Preparing clips"];
+  const featureProof = ["Best clip first", "Hooks that hit", "Export-ready"];
+  const loadingStages = ["Reading source", "Finding clips", "Preparing outputs"];
   const deliveryMoments = [
       {
-        label: "Paste once",
-        detail: "Start with one source. LWA recommends the first destination after reading the source.",
+        label: "Source in",
+        detail: "Paste or upload once.",
     },
     {
-      label: "Review first",
-      detail: "See rendered clips first, then strategy-only recommendations that still need media proof.",
+      label: "Best first",
+      detail: "LWA puts the lead cut on top.",
     },
     {
-      label: "Move fast",
-      detail: "Export what is ready now and keep the rest in the stack for later.",
+      label: "Post faster",
+      detail: "Queue or export ready clips.",
     },
   ] as const;
   const idleRunSummary =
     generationMode === "quick"
-      ? "Paste one public source, let LWA recommend the first destination, then review rendered proof before strategy-only ideas."
-      : "Keep the destination on auto unless you already know the landing feed. Turn on local learning when you want tighter future packs.";
+      ? "Paste one source. LWA picks the first move."
+      : "Keep auto on. Use learning for tighter future packs.";
   const homeDiscoverySections = [
     {
       id: "why-lwa",
       kicker: "Why LWA",
-      title: "Built for source-to-post speed, not random clip dumps.",
-      body: "LWA is strongest when you need the next post picked for you, cleaner packaging, and a workflow that still holds together after generation.",
+      title: "Built for source-to-post speed.",
+      body: "LWA picks the next clip, packages it, and keeps the workflow moving.",
       bullets: [
-        "Lead clip authority with posting order and packaging attached",
-        "Hooks, captions, timestamps, and previews in one review layer",
-        "Queue, archive, campaigns, and wallet surfaces already in the product",
+        "Lead clip authority",
+        "Hooks, captions, previews",
+        "Queue, archive, campaigns, wallet",
       ],
       links: [
-        { href: "/generate", label: "Forge clips" },
-        { href: "/dashboard", label: "Open Control Room" },
+        { href: "/generate", label: "Generate clips" },
+        { href: "/dashboard", label: "Open workspace" },
       ],
     },
     {
       id: "how-it-works",
       kicker: "How it works",
       title: "One source in. Post order out.",
-      body: "Drop a public link or upload a file. LWA processes the source, chooses what to move first, and returns the package and output signals that help you move faster.",
+      body: "Drop a link or file. LWA chooses what to post first.",
       bullets: [
-        "Read source media and candidate moments",
-        "Choose the posting stack and package",
-        "Review, queue, export, and reopen from history",
+        "Read source media",
+        "Choose the posting stack",
+        "Review, queue, export",
       ],
     },
     {
       id: "who-its-for",
       kicker: "Who it’s for",
-      title: "Creators, clippers, agencies, and operator-heavy teams.",
-      body: "This is for people already making long-form content and trying to turn one source into more chances to win without stacking more editing overhead.",
+      title: "For creators, clippers, and teams.",
+      body: "Turn long-form into more clips without adding editing overhead.",
       bullets: [
-        "Podcasters, streamers, interview shows, and creator brands",
-        "Clippers and agencies running throughput instead of one-off edits",
-        "Teams that care about packaging, workflow, and output trust",
+        "Podcasts, streams, interviews",
+        "Clippers and agencies",
+        "Teams that need output trust",
       ],
     },
     {
       id: "compare",
       kicker: "Compare",
-      title: "Use LWA when you want direction and workflow, not just a clip pull.",
-      body: "The right comparison is not blog fluff. It is whether the product helps you decide what to post first and move the stack after generation.",
+      title: "Use LWA when the decision matters.",
+      body: "The value is knowing what to post first and moving it fast.",
       bullets: [
-        "Stronger review hierarchy than noisy clip dumps",
-        "More operator-ready than basic AI clipping tools",
-        "Built to sit between source ingest and posting workflow",
+        "Clear review hierarchy",
+        "Operator-ready workspace",
+        "Built between ingest and posting",
       ],
       links: [
         { href: "/compare/opus-clip-alternative", label: "Opus Clip alternative" },
@@ -812,12 +812,12 @@ export function ClipStudio({
     {
       id: "faq",
       kicker: "FAQ",
-      title: "Real product questions, not filler.",
-      body: "Use the product for faster output, better packaging, and clearer post order. It helps operators and creators move with more confidence, not with fake promises.",
+      title: "Built for real output.",
+      body: "Use LWA for faster clips, better packaging, and clearer post order.",
       bullets: [
-        "Free stays useful, but premium unlocks cleaner export and deeper workflow leverage",
-        "Uploads, history, queue, campaigns, and wallet surfaces stay in the same workspace",
-        "The goal is more clips worth posting from content you already own",
+        "Free proves value",
+        "Premium unlocks leverage",
+        "Everything stays in one workspace",
       ],
       links: [
         { href: "/use-cases/podcast-clipping", label: "Podcast clipping" },
@@ -1032,11 +1032,11 @@ export function ClipStudio({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="section-kicker">Generate first</p>
-          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop one source. Leave with your next posts.</h2>
+          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop one source. Get clips worth posting.</h2>
           <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/90">
             {generationMode === "quick"
-              ? "One link in. Ranked clips, hooks, captions, and previews back."
-              : "Stay in the same workflow while LWA learns what you keep and tightens the next pack."}
+              ? "Previews, hooks, and post order back."
+              : "LWA learns what you keep and tightens the next pack."}
           </p>
         </div>
         <StatPill tone="accent">{useManualPlatform ? platform : "Auto recommend"}</StatPill>
@@ -1081,12 +1081,10 @@ export function ClipStudio({
                 <p className="mt-2 text-sm leading-7 text-ink/72">
                   {useManualPlatform
                     ? `Manual override is on for ${platform}.`
-                    : "LWA will recommend the first destination after it reads the source and identifies the strongest clip style."}
+                    : "Auto stays on unless you already know the feed."}
                 </p>
                 <p className="mt-1 text-sm text-ink/50">
-                  {useManualPlatform
-                    ? "Use this only when you already know the landing feed."
-                    : "Manual override still exists, but it is secondary to the engine recommendation."}
+                  {useManualPlatform ? "Use this for fixed campaigns." : "Manual override is secondary."}
                 </p>
               </div>
               <button
@@ -1128,7 +1126,7 @@ export function ClipStudio({
 
         <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
           <div className="metric-tile rounded-[24px] p-4">
-            <p className="text-sm font-medium text-ink">What happens first</p>
+            <p className="text-sm font-medium text-ink">Flow</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {deliveryMoments.map((item) => (
                 <div key={item.label} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
@@ -1255,13 +1253,11 @@ export function ClipStudio({
                     <p className="text-sm font-medium text-ink">Destination</p>
                     <p className="mt-2 text-sm leading-7 text-ink/72">
                       {useManualPlatform
-                        ? `Manual override is on for ${platform}.`
-                        : "Keep the first run on auto. LWA will recommend the likely best destination and output style after it reads the source."}
+                      ? `Manual override is on for ${platform}.`
+                      : "Auto stays on unless you already know the feed."}
                     </p>
                     <p className="mt-1 text-sm text-ink/50">
-                      {useManualPlatform
-                        ? "Use this when a campaign or feed target is already fixed."
-                        : "Only override the destination when you know the publishing requirement before the run."}
+                      {useManualPlatform ? "Use this for fixed campaigns." : "Manual override is secondary."}
                     </p>
                   </div>
                   <button
@@ -1303,7 +1299,7 @@ export function ClipStudio({
 
             <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
               <div className="metric-tile rounded-[24px] p-4">
-                <p className="text-sm font-medium text-ink">What happens first</p>
+                <p className="text-sm font-medium text-ink">Flow</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   {deliveryMoments.map((item) => (
                     <div key={item.label} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
@@ -1319,14 +1315,14 @@ export function ClipStudio({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-sm font-medium text-ink">Tighten future packs</p>
-                      <p className="mt-1 text-sm text-ink/60">Bias new runs toward what you keep.</p>
+                      <p className="mt-1 text-sm text-ink/60">Learn from what you keep.</p>
                       {preferenceProfile.topPackagingAngle || preferenceProfile.topHookStyle ? (
                         <p className="mt-3 text-sm text-accent">
                           Favoring {preferenceProfile.topPackagingAngle || "strong"} packaging
                           {preferenceProfile.topHookStyle ? ` and ${preferenceProfile.topHookStyle} hooks` : ""}.
                         </p>
                       ) : (
-                        <p className="mt-3 text-sm text-ink/46">Mark what lands. The browser remembers.</p>
+                        <p className="mt-3 text-sm text-ink/46">Mark what lands.</p>
                       )}
                     </div>
                     <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
@@ -1538,9 +1534,9 @@ export function ClipStudio({
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="section-kicker">Rendered lane</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">🎬 READY TO POST NOW</h4>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">READY TO POST NOW</h4>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-                    These clips are fully rendered and optimized for distribution.
+                    Rendered clips ready for distribution.
                   </p>
                 </div>
               </div>
@@ -1581,9 +1577,9 @@ export function ClipStudio({
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="section-kicker">Strategy lane</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">🧠 HIGH-LEVERAGE IDEAS</h4>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">HIGH-LEVERAGE IDEAS</h4>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-                    Not rendered yet — but strong engagement potential.
+                    Strong angles waiting on media proof.
                   </p>
                 </div>
               </div>
@@ -1747,7 +1743,7 @@ export function ClipStudio({
                       }}
                       className="primary-button inline-flex rounded-full px-4 py-2.5 text-sm font-semibold"
                     >
-                      Forge the stack
+                      Generate clips
                     </button>
                   </>
                 )}
@@ -1771,7 +1767,7 @@ export function ClipStudio({
                   <p className="section-kicker">{HERO_COPY.kicker}</p>
                 </div>
                 <h1 className="page-title max-w-5xl text-5xl font-semibold leading-[0.98] text-ink sm:text-6xl lg:text-7xl">
-                  Turn one source into the <span className="text-gradient">clips people actually replay.</span>
+                  <span className="text-gradient">Viral-ready clips.</span> One source in.
                 </h1>
                 <p className="max-w-3xl text-base leading-8 text-subtext sm:text-lg">
                   {HERO_COPY.subhead}
@@ -1790,7 +1786,7 @@ export function ClipStudio({
                 </Link>
               </div>
 
-              <p className="text-sm uppercase tracking-[0.24em] text-ink/56">Built for creators, clippers, and operators</p>
+              <p className="text-sm uppercase tracking-[0.24em] text-ink/56">For creators, clippers, and media teams</p>
 
               <div className="flex flex-wrap gap-2">
                 {featureProof.map((item, index) => (
@@ -1849,11 +1845,11 @@ export function ClipStudio({
               <div className="sticky top-28 space-y-4">
                 <WorkspaceRailCard
                   label="Studio pulse"
-                  title={user ? "Generate first. Move fast after." : "Premium workspace"}
+                  title={user ? "Generate first. Move fast." : "Premium workspace"}
                   description={
                     user
-                      ? "Move from generation to queue, assignments, and payout readiness without leaving the workspace."
-                      : "Sign in to unlock saved runs, campaigns, wallet views, and queue state."
+                      ? "Move from generation to queue, assignments, and payout readiness."
+                      : "Sign in for saved runs, campaigns, wallet, and queue state."
                   }
                 >
                   <div className="mt-5 flex flex-wrap gap-2">
@@ -1862,7 +1858,7 @@ export function ClipStudio({
                   </div>
                 </WorkspaceRailCard>
 
-                <WorkspaceRailCard label="Account" title={user ? user.email : "Guest mode"} description={user ? `Role ${user.role || "creator"}` : "Use account mode for uploads, history, campaigns, and wallet state."}>
+                <WorkspaceRailCard label="Account" title={user ? user.email : "Guest mode"} description={user ? `Role ${user.role || "creator"}` : "Sign in for uploads, history, campaigns, and wallet."}>
                   <div className="mt-5 grid gap-3">
                     <MetricTile label="Clip packs" value={String(clipPacks.length)} detail="Saved history" />
                     <MetricTile label="Uploads" value={String(uploads.length)} detail="Reusable sources" />
@@ -1873,7 +1869,7 @@ export function ClipStudio({
                 <WorkspaceRailCard
                   label="Next move"
                   title="Use the system in order"
-                  description="Generate first, queue the winners, then move them into campaign flow."
+                  description="Generate, queue winners, then move into campaign flow."
                 />
               </div>
             </aside>
@@ -2137,8 +2133,8 @@ function MarketingPreview({ user }: { user: UserProfile | null }) {
     <div className="grid gap-4 sm:grid-cols-2">
       {[
         {
-          title: "Ranked clip outputs",
-          detail: "Score, fit, and post order come back structured.",
+          title: "Viral-ready outputs",
+          detail: "Fit and post order come back structured.",
         },
         {
           title: "Packaging intelligence",
@@ -2268,7 +2264,7 @@ function ReviewOrderPanel({ clips }: { clips: ClipResult[] }) {
           const order = clip.post_rank || clip.best_post_order || clip.rank || index + 1;
           const detail = clip.thumbnail_text || clip.cta_suggestion || clip.packaging_angle || "Ready for review";
           const active = index === 0;
-          const authority = order === 1 ? "🔥 POST FIRST" : order === 2 ? "⚡ POST SECOND" : order === 3 ? "🧠 TEST THIRD" : "MOVE LATER";
+          const authority = order === 1 ? "POST FIRST" : order === 2 ? "POST SECOND" : order === 3 ? "TEST THIRD" : "MOVE LATER";
 
           return (
             <div
@@ -2333,8 +2329,8 @@ function LoadingSequence({ stages, activeIndex }: { stages: string[]; activeInde
           <img src="/brand/lwa-mark.svg" alt="LWA" className="relative h-6 w-6 opacity-90" />
         </div>
         <div>
-          <p className="text-lg font-medium text-ink">LWA is compiling the pack</p>
-          <p className="text-sm text-ink/60">Real media in. Ranked clips, copy, and previews out.</p>
+          <p className="text-lg font-medium text-ink">LWA is building outputs</p>
+          <p className="text-sm text-ink/60">Real media in. Clips, copy, and previews out.</p>
         </div>
       </div>
 

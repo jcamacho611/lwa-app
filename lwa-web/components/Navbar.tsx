@@ -31,14 +31,14 @@ export default function Navbar({
   return (
     <header
       className={[
-        "glass-panel sticky top-4 z-40 rounded-[30px] border-white/8 px-4 py-3 sm:px-5",
+        "glass-panel sticky top-4 z-40 rounded-[28px] border-white/8 px-4 py-3 sm:px-5",
         variant === "home" ? "navbar-home" : "navbar-workspace",
       ].join(" ")}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Logo compact={compactLogo} showTagline={showTagline} animated={variant === "home"} />
 
-        <nav className="order-3 flex w-full gap-2 overflow-x-auto pb-1 md:order-2 md:w-auto md:flex-1 md:justify-center md:pb-0">
+        <nav className="order-3 flex w-full gap-1.5 overflow-x-auto pb-1 md:order-2 md:w-auto md:flex-1 md:justify-center md:pb-0">
           {items.map((item) => {
             const active = pathname === item.href;
             return (
@@ -46,7 +46,7 @@ export default function Navbar({
                 key={item.href}
                 href={item.href}
                 className={[
-                  "nav-pill whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium",
+                  "nav-pill whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium",
                   active ? "nav-pill-active" : "",
                 ].join(" ")}
               >

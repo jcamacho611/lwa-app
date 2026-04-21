@@ -18,9 +18,9 @@ export type VideoCardProps = {
 };
 
 function authorityLabel(rank?: number | null) {
-  if (rank === 1) return "🔥 POST FIRST";
-  if (rank === 2) return "⚡ POST SECOND";
-  if (rank === 3) return "🧠 TEST THIRD";
+  if (rank === 1) return "POST FIRST";
+  if (rank === 2) return "POST SECOND";
+  if (rank === 3) return "TEST THIRD";
   return "MOVE LATER";
 }
 

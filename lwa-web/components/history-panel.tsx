@@ -92,7 +92,7 @@ export function HistoryPanel({ clipPacks, selectedClipPackId, isLoading, onOpenC
           <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-6">
             <p className="text-sm font-medium text-ink/72">No saved runs yet</p>
             <p className="mt-2 text-sm leading-7 text-ink/46">
-              Generate while signed in to turn your archive into a reusable library of ranked assets.
+              Generate while signed in to turn your archive into a reusable library of assets.
             </p>
           </div>
         )}

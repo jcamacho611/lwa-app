@@ -18,7 +18,7 @@ export function buildDescription(description: string) {
 }
 
 export function comparisonDescription(a: string, b: string) {
-  return `Compare ${a} vs ${b} for clipping speed, ranked outputs, hooks, captions, timestamps, packaging, and creator workflow fit.`;
+  return `Compare ${a} vs ${b} for clipping speed, structured outputs, hooks, captions, timestamps, packaging, and creator workflow fit.`;
 }
 
 export function buildPageMetadata({
