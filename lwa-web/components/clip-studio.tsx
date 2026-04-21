@@ -97,6 +97,13 @@ import { resolveWorldPhase, resolveWorldState, type WorldSignal } from "../lib/w
 import { useStableResults } from "../hooks/useStableResults";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
+type SourceMode = "video" | "image" | "idea";
+
+const sourceModeOptions: Array<{ value: SourceMode; label: string; detail: string }> = [
+  { value: "video", label: "Video", detail: "Clip a source" },
+  { value: "image", label: "Image", detail: "Generate motion" },
+  { value: "idea", label: "Idea", detail: "Create from prompt" },
+];
 
 function clipHasRenderedMedia(clip: ClipResult) {
   return hasPreviewAsset(clip);
@@ -155,6 +162,8 @@ export function ClipStudio({
   pageDescription,
 }: ClipStudioProps) {
   const [videoUrl, setVideoUrl] = useState("");
+  const [sourceMode, setSourceMode] = useState<SourceMode>("video");
+  const [ideaPrompt, setIdeaPrompt] = useState("");
   const [platform, setPlatform] = useState<PlatformOption>("TikTok");
   const [useManualPlatform, setUseManualPlatform] = useState(false);
   const [result, setResult] = useState<GenerateResponse | null>(null);
@@ -196,16 +205,24 @@ export function ClipStudio({
   const [generatorHovered, setGeneratorHovered] = useState(false);
   const stableResult = useStableResults(result);
   const activeResult = stableResult ?? result;
+  const selectedUploadId = selectedUpload?.file_id || selectedUpload?.source_ref?.upload_id || selectedUpload?.id || "";
+  const selectedUploadName = selectedUpload?.file_name || selectedUpload?.filename || "";
+  const selectedUploadType = (selectedUpload?.content_type || "").toLowerCase();
+  const selectedUploadIsImage =
+    selectedUploadType.startsWith("image/") || /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(selectedUploadName);
 
   const activeSourceLabel = useMemo(() => {
-    if (selectedUpload?.file_name || selectedUpload?.filename) {
-      return `Using upload: ${selectedUpload.file_name || selectedUpload.filename}`;
+    if (sourceMode === "idea") {
+      return ideaPrompt.trim() ? "Using idea prompt" : "No idea entered";
+    }
+    if (selectedUploadName) {
+      return `Using upload: ${selectedUploadName}`;
     }
     if (videoUrl.trim()) {
       return "Using pasted URL";
     }
     return "No source selected";
-  }, [selectedUpload, videoUrl]);
+  }, [ideaPrompt, selectedUploadName, sourceMode, videoUrl]);
 
   const pageIntro = useMemo(() => {
     if (pageTitle || pageDescription || pageLabel) {
@@ -487,8 +504,20 @@ export function ClipStudio({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!videoUrl.trim() && !selectedUpload?.file_id && !selectedUpload?.source_ref?.upload_id) {
+    if (sourceMode === "video" && !videoUrl.trim() && !selectedUploadId) {
       setError("Paste a public source URL or upload a file to generate your clip pack.");
+      return;
+    }
+    if (sourceMode === "image" && !selectedUploadId) {
+      setError("Upload an image before running Image mode.");
+      return;
+    }
+    if (sourceMode === "image" && !selectedUploadIsImage) {
+      setError("Image mode needs a JPG, PNG, WebP, HEIC, or HEIF upload.");
+      return;
+    }
+    if (sourceMode === "idea" && ideaPrompt.trim().length < 10) {
+      setError("Give LWA a clearer idea prompt before generating.");
       return;
     }
 
@@ -499,10 +528,12 @@ export function ClipStudio({
     try {
       const data = await generateClips(
         {
-          url: videoUrl.trim() || undefined,
+          mode: sourceMode,
+          url: sourceMode === "video" ? videoUrl.trim() || undefined : undefined,
           platform: useManualPlatform ? platform : undefined,
-          uploadFileId: selectedUpload?.file_id || selectedUpload?.source_ref?.upload_id,
+          uploadFileId: sourceMode === "idea" ? undefined : selectedUploadId || undefined,
           contentAngle: improveResults ? preferenceProfile.topPackagingAngle : undefined,
+          ideaPrompt: sourceMode === "idea" || sourceMode === "image" ? ideaPrompt.trim() || undefined : undefined,
         },
         token,
       );
@@ -546,17 +577,19 @@ export function ClipStudio({
     if (!file) {
       return;
     }
-    if (!token) {
-      setAuthMode("login");
-      setAuthOpen(true);
-      return;
-    }
     setUploadingFileName(file.name);
     setError(null);
     try {
       const upload = await uploadSource(file, token);
       setSelectedUpload(upload);
-      await refreshAccount(token);
+      if (file.type.startsWith("image/")) {
+        setSourceMode("image");
+      } else {
+        setSourceMode("video");
+      }
+      if (token) {
+        await refreshAccount(token);
+      }
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Unable to upload that file right now.");
     } finally {
@@ -741,7 +774,12 @@ export function ClipStudio({
   }, [displayedClips]);
 
   const isHome = initialSection === "home";
-  const hasSourceSelected = Boolean(videoUrl.trim() || selectedUpload?.file_id || selectedUpload?.source_ref?.upload_id);
+  const hasSourceSelected =
+    sourceMode === "idea"
+      ? Boolean(ideaPrompt.trim())
+      : sourceMode === "image"
+        ? Boolean(selectedUploadId)
+        : Boolean(videoUrl.trim() || selectedUploadId);
   const requiresAccount = !["home", "generate", "upload"].includes(initialSection);
   const showGenerator = ["home", "generate", "upload"].includes(initialSection);
   const showDashboard = ["dashboard"].includes(initialSection);
@@ -755,7 +793,12 @@ export function ClipStudio({
     ? preferenceProfile.preferredAngles
     : orderedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
   const featureProof = ["Best clip first", "Hooks that hit", "Export-ready"];
-  const loadingStages = ["Reading source", "Finding clips", "Preparing outputs"];
+  const loadingStages =
+    sourceMode === "idea"
+      ? ["Reading idea", "Generating motion", "Preparing output"]
+      : sourceMode === "image"
+        ? ["Reading image", "Generating motion", "Preparing output"]
+        : ["Reading source", "Finding clips", "Preparing outputs"];
   const deliveryMoments = [
       {
         label: "Source in",
@@ -771,7 +814,11 @@ export function ClipStudio({
     },
   ] as const;
   const idleRunSummary =
-    generationMode === "quick"
+    sourceMode === "idea"
+      ? "Describe the asset. LWA generates a short-form starting point."
+      : sourceMode === "image"
+        ? "Upload an image. LWA turns it into a motion-ready asset."
+        : generationMode === "quick"
       ? "Paste one source. LWA picks the first move."
       : "Keep auto on. Use learning for tighter future packs.";
   const homeDiscoverySections = [
@@ -1123,6 +1170,94 @@ export function ClipStudio({
     }
   }
 
+  function renderSourceModeControls() {
+    return (
+      <div>
+        <span className="mb-3 block text-sm font-medium text-ink/84">Input type</span>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {sourceModeOptions.map((option) => {
+            const active = sourceMode === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setSourceMode(option.value)}
+                className={[
+                  "rounded-[20px] border px-4 py-3 text-left transition",
+                  active
+                    ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
+                    : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
+                ].join(" ")}
+              >
+                <span className="block text-sm font-semibold">{option.label}</span>
+                <span className="mt-1 block text-xs text-ink/52">{option.detail}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function renderSourceInput() {
+    if (sourceMode === "idea") {
+      return (
+        <label className="block">
+          <span className="mb-3 block text-sm font-medium text-ink/84">Idea prompt</span>
+          <textarea
+            data-lwa-source-input="true"
+            value={ideaPrompt}
+            onChange={(event) => setIdeaPrompt(event.target.value)}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
+            placeholder="Describe the short-form asset you want LWA to generate"
+            rows={4}
+            className="input-surface input-command w-full resize-none rounded-[28px] px-5 py-5 text-base"
+          />
+        </label>
+      );
+    }
+
+    if (sourceMode === "image") {
+      return (
+        <div className="operator-tile rounded-[24px] p-4">
+          <p className="text-sm font-medium text-ink">Image source</p>
+          <p className="mt-2 text-sm leading-7 text-ink/68">
+            {selectedUploadIsImage
+              ? `Ready: ${selectedUploadName}`
+              : "Upload an image in the source panel. LWA will send it through the generation provider flow."}
+          </p>
+          <label className="mt-4 block">
+            <span className="mb-3 block text-sm font-medium text-ink/84">Optional direction</span>
+            <textarea
+              value={ideaPrompt}
+              onChange={(event) => setIdeaPrompt(event.target.value)}
+              placeholder="Add motion, style, or platform direction for this image"
+              rows={3}
+              className="input-surface input-command w-full resize-none rounded-[24px] px-5 py-4 text-base"
+            />
+          </label>
+        </div>
+      );
+    }
+
+    return (
+      <label className="block">
+        <span className="mb-3 block text-sm font-medium text-ink/84">Source link</span>
+        <input
+          type="url"
+          data-lwa-source-input="true"
+          value={videoUrl}
+          onChange={(event) => setVideoUrl(event.target.value)}
+          onFocus={() => setInputFocused(true)}
+          onBlur={() => setInputFocused(false)}
+          placeholder="Paste YouTube, MP4, or any public video URL"
+          className="input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
+        />
+      </label>
+    );
+  }
+
   const homeGeneratorSection = (
     <section
       className="generator-command-card rounded-[38px] p-6 sm:p-8"
@@ -1162,19 +1297,9 @@ export function ClipStudio({
           })}
         </div>
 
-        <label className="block">
-          <span className="mb-3 block text-sm font-medium text-ink/84">Source link</span>
-          <input
-            type="url"
-            data-lwa-source-input="true"
-            value={videoUrl}
-            onChange={(event) => setVideoUrl(event.target.value)}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-            placeholder="Paste YouTube, MP4, or any public video URL"
-            className="input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
-          />
-        </label>
+        {renderSourceModeControls()}
+
+        {renderSourceInput()}
 
         <div className="space-y-3">
           <div className="operator-tile rounded-[24px] p-4">
@@ -1342,19 +1467,9 @@ export function ClipStudio({
               })}
             </div>
 
-            <label className="block">
-              <span className="mb-3 block text-sm font-medium text-ink/84">Source link</span>
-              <input
-                type="url"
-                data-lwa-source-input="true"
-                value={videoUrl}
-                onChange={(event) => setVideoUrl(event.target.value)}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => setInputFocused(false)}
-                placeholder="Paste YouTube, MP4, or any public video URL"
-                className="input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
-              />
-            </label>
+            {renderSourceModeControls()}
+
+            {renderSourceInput()}
 
             <div className="space-y-3">
               <div className="operator-tile rounded-[24px] p-4">
@@ -1519,10 +1634,12 @@ export function ClipStudio({
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Upload a source</p>
             <h3 className="mt-3 text-xl font-semibold text-ink">Run it from your own file</h3>
-            <p className="mt-3 text-sm leading-7 text-ink/60">{token ? "Video, audio, or image. Same output flow." : "Sign in to unlock uploads and saved source reuse."}</p>
+            <p className="mt-3 text-sm leading-7 text-ink/60">
+              Video keeps the clipping flow. Image moves through generation. Your first upload works before signup.
+            </p>
             <p className="mt-4 text-sm text-accent">{uploadingFileName ? `Uploading ${uploadingFileName}...` : activeSourceLabel}</p>
             <label className="secondary-button mt-5 inline-flex w-full cursor-pointer items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
-              {token ? "Upload source file" : "Sign in to upload"}
+              Upload source file
               <input
                 type="file"
                 accept=".mp4,.mov,.m4v,.webm,.mp3,.wav,.m4a,.aac,.ogg,.oga,.flac,.jpg,.jpeg,.png,.webp,.heic,.heif,video/*,audio/*,image/*"

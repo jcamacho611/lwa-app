@@ -232,9 +232,10 @@ def resolve_request_source(
     base_url: str,
 ) -> tuple[ProcessRequest, str | None]:
     if request.upload_file_id:
-        if not current_user:
-            raise HTTPException(status_code=401, detail="Authentication required for uploaded sources")
-        upload = platform_store.get_upload(request.upload_file_id, user_id=current_user.id)
+        upload = platform_store.get_upload(
+            request.upload_file_id,
+            user_id=current_user.id if current_user else None,
+        )
         if not upload:
             raise HTTPException(status_code=404, detail="Upload not found")
         source_type = classify_upload_source(upload)

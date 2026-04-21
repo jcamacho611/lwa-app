@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authorizationHeader, backendUrl, parseBackendResponse } from "../../_lib/backend";
 
 export async function GET(
   request: NextRequest,
@@ -7,15 +8,15 @@ export async function GET(
   try {
     const clipId = params.clipId;
     
+    const authorization = request.headers.get("authorization");
+    const token = authorization?.toLowerCase().startsWith("bearer ") ? authorization.split(" ", 2)[1] : null;
+
     // Call backend to get clip render status
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/clip-status/${clipId}`, {
+    const response = await fetch(backendUrl(`/v1/clip-status/${clipId}`), {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        // Add auth header if available
-        ...(request.headers.get("authorization") && {
-          "Authorization": request.headers.get("authorization")
-        })
+        ...authorizationHeader(token),
       },
     });
 
@@ -26,7 +27,7 @@ export async function GET(
       );
     }
 
-    const data = await response.json();
+    const data = await parseBackendResponse(response);
     
     return NextResponse.json(data, {
       status: 200,

@@ -91,7 +91,6 @@ class ClipResult(BaseModel):
     render_status: Optional[str] = None
     is_rendered: Optional[bool] = None
     is_strategy_only: Optional[bool] = None
-    export_bundle: Optional[str] = None
     post_rank: Optional[int] = None
     best_post_order: Optional[int] = None
     virality_score: Optional[int] = None
@@ -114,12 +113,7 @@ class ClipResult(BaseModel):
     timestamp_end: Optional[str] = None
     transcript: Optional[str] = None
     cta: Optional[str] = None
-    preview_url: Optional[str] = None
     download_url: Optional[str] = None
-    thumbnail_url: Optional[str] = None
-    is_rendered: Optional[bool] = None
-    is_strategy_only: Optional[bool] = None
-    render_status: Optional[str] = None
     render_error: Optional[str] = None
     request_id: Optional[str] = None
 
@@ -244,27 +238,39 @@ class SeedanceBackgroundRequest(BaseModel):
 
 
 class SeedanceAssetResponse(BaseModel):
+    asset_id: Optional[str] = None
+    provider: str = "seedance"
+    status: Optional[str] = None
     asset_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    public_url: Optional[str] = None
+    local_path: Optional[str] = None
+    content_type: Optional[str] = None
+    duration_seconds: Optional[int] = None
+    aspect_ratio: Optional[str] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class SeedanceJobResponse(BaseModel):
     job_id: str
+    provider_job_id: Optional[str] = None
     status: str
     message: str
     poll_url: str
     asset: Optional[SeedanceAssetResponse] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class SeedanceJobStatusResponse(BaseModel):
     job_id: str
+    provider_job_id: Optional[str] = None
     status: str
     message: str
     created_at: str
     updated_at: str
     asset: Optional[SeedanceAssetResponse] = None
     error: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class AuthRequest(BaseModel):

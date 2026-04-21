@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import json
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -8,8 +9,6 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from ..core.config import Settings
-from ..models.schemas import ClipBatchResponse
-
 logger = logging.getLogger("uvicorn.error")
 
 
@@ -36,48 +35,36 @@ class OutputBuilder:
             bundle_dir = Path(self.settings.generated_assets_dir) / request_id
             bundle_dir.mkdir(parents=True, exist_ok=True)
             
-            # Create metadata file
             metadata = {
                 "request_id": request_id,
                 "bundle_id": bundle_id,
                 "created_at": created_at,
                 "clip_count": len(clips),
                 "bundle_format": bundle_format,
+                "clips": clips,
             }
-            
-            if include_metadata:
-                metadata_path = bundle_dir / "metadata.json"
-                with open(metadata_path, "w") as f:
-                    import json
-                    json.dump(metadata, f, indent=2)
-            
-            # Create bundle file
+
             bundle_path = bundle_dir / f"{bundle_id}.{bundle_format}"
             
             if bundle_format.lower() == "zip":
                 with zipfile.ZipFile(bundle_path, "w", zipfile.ZIP_DEFLATED) as bundle_zip:
+                    if include_metadata:
+                        bundle_zip.writestr("metadata.json", json.dumps(metadata, indent=2))
+
                     for clip in clips:
                         clip_id = clip.get("id", "")
-                        if clip.get("preview_url"):
-                            # Add preview clip
-                            preview_path = bundle_dir / f"{clip_id}_preview.mp4"
-                            if Path(clip["preview_url"]).exists():
-                                bundle_zip.write(clip["preview_url"], f"{clip_id}_preview.mp4")
-                        
-                        if clip.get("download_url"):
-                            # Add download clip
-                            download_path = bundle_dir / f"{clip_id}_download.mp4"
-                            if Path(clip["download_url"]).exists():
-                                bundle_zip.write(clip["download_url"], f"{clip_id}_download.mp4")
-                        
-                        if clip.get("edited_clip_url"):
-                            # Add edited clip
-                            edited_path = bundle_dir / f"{clip_id}_edited.mp4"
-                            if Path(clip["edited_clip_url"]).exists():
-                                bundle_zip.write(clip["edited_clip_url"], f"{clip_id}_edited.mp4")
-            
-            # Add README to bundle
-            readme_content = f"""# Clip Bundle {bundle_id}
+                        for field_name, suffix in (
+                            ("preview_url", "preview"),
+                            ("download_url", "download"),
+                            ("edited_clip_url", "edited"),
+                            ("clip_url", "clip"),
+                            ("raw_clip_url", "raw"),
+                        ):
+                            asset_path = self._local_asset_path(clip.get(field_name))
+                            if asset_path:
+                                bundle_zip.write(asset_path, f"{clip_id}_{suffix}{asset_path.suffix}")
+
+                    readme_content = f"""# Clip Bundle {bundle_id}
 
 Generated: {created_at}
 Clips: {len(clips)}
@@ -85,20 +72,20 @@ Format: {bundle_format}
 
 ## Usage
 1. Extract this bundle
-2. Each clip is available in multiple formats:
-   - Preview: {clip_id}_preview.mp4
-   - Download: {clip_id}_download.mp4  
-   - Edited: {clip_id}_edited.mp4
+2. Review metadata.json for hooks, captions, timestamps, scores, and asset URLs
+3. Use included media files when local rendered assets were available
 
 ## File Structure
 - metadata.json: Bundle metadata and clip information
-- Various .mp4 files: Individual clip files in different formats
+- Optional media files: Individual clip files in available formats
 
 This bundle was created by LWA for batch processing and distribution.
 """
-            
-            with open(bundle_path / "README.md", "w") as f:
-                f.write(readme_content)
+                    bundle_zip.writestr("README.md", readme_content)
+            else:
+                manifest_path = bundle_dir / f"{bundle_id}.json"
+                manifest_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+                bundle_path = manifest_path
             
             return {
                 "bundle_id": bundle_id,
@@ -113,6 +100,17 @@ This bundle was created by LWA for batch processing and distribution.
         except Exception as error:
             logger.error(f"output_builder_failed request_id={request_id} error={str(error)}")
             raise
+
+    def _local_asset_path(self, value: object) -> Optional[Path]:
+        if not isinstance(value, str) or not value.strip():
+            return None
+
+        candidate = value.strip()
+        if candidate.startswith(("http://", "https://", "/generated/", "/uploads/")):
+            return None
+
+        path = Path(candidate)
+        return path if path.exists() and path.is_file() else None
     
     def create_export_manifest(
         self,
@@ -142,7 +140,6 @@ This bundle was created by LWA for batch processing and distribution.
             
             manifest_path = manifest_dir / f"{manifest_id}.{export_format}"
             with open(manifest_path, "w") as f:
-                import json
                 json.dump(manifest_data, f, indent=2)
             
             return {

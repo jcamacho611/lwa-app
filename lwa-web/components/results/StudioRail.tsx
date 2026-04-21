@@ -10,6 +10,24 @@ type StudioRailProps = {
   selectedClipId?: string;
 };
 
+function secondsFromTime(value?: string | number | null) {
+  if (typeof value === "number") return value;
+  if (!value) return null;
+  const parts = value.split(":").map((part) => Number(part));
+  if (parts.some((part) => Number.isNaN(part))) return null;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return null;
+}
+
+function durationLabel(clip: ClipResult) {
+  const start = secondsFromTime(clip.start_time);
+  const end = secondsFromTime(clip.end_time);
+  if (start == null || end == null || end <= start) return null;
+  const duration = end - start;
+  return `${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, "0")}`;
+}
+
 export function StudioRail({ clips, onClipSelect, selectedClipId }: StudioRailProps) {
   return (
     <div className="flex flex-col gap-3 p-4 bg-ink/5 rounded-xl">
@@ -25,6 +43,7 @@ export function StudioRail({ clips, onClipSelect, selectedClipId }: StudioRailPr
           const isFailed = renderStatus === "failed";
           const isPending = renderStatus === "pending";
           const isRendering = renderStatus === "rendering";
+          const duration = durationLabel(clip);
           
           return (
             <div
@@ -70,13 +89,12 @@ export function StudioRail({ clips, onClipSelect, selectedClipId }: StudioRailPr
                 </div>
 
                 {/* Timing Info */}
-                {(clip.start_time !== undefined && clip.end_time !== undefined) && (
+                {duration ? (
                   <div className="text-sm text-ink/60">
                     <span className="font-medium">Duration:</span>{" "}
-                    {Math.floor((clip.end_time - clip.start_time) / 60)}:
-                    {String(Math.floor((clip.end_time - clip.start_time) % 60)).padStart(2, "0")}
+                    {duration}
                   </div>
-                )}
+                ) : null}
 
                 {/* Hook/CTA */}
                 {clip.hook && (

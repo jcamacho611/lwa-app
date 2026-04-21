@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authorizationHeader, backendUrl, parseBackendResponse } from "../../_lib/backend";
 
 export async function POST(
   request: NextRequest,
@@ -7,15 +8,15 @@ export async function POST(
   try {
     const videoId = params.videoId;
     
+    const authorization = request.headers.get("authorization");
+    const token = authorization?.toLowerCase().startsWith("bearer ") ? authorization.split(" ", 2)[1] : null;
+
     // Call backend to get video export bundle
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/video-analysis/export/${videoId}`, {
+    const response = await fetch(backendUrl(`/v1/video-analysis/export/${videoId}`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Add auth header if available
-        ...(request.headers.get("authorization") && {
-          "Authorization": request.headers.get("authorization")
-        })
+        ...authorizationHeader(token),
       },
     });
 
@@ -26,7 +27,7 @@ export async function POST(
       );
     }
 
-    const data = await response.json();
+    const data = await parseBackendResponse(response);
     
     return NextResponse.json(data, {
       status: 200,

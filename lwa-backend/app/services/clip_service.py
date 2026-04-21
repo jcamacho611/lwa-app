@@ -101,7 +101,7 @@ def seedance_status(settings: Settings) -> dict[str, object]:
         message = "Seedance is enabled but missing required config. Internal visual engine remains active."
     else:
         status = "adapter-only"
-        message = "Seedance config is present, but the adapter remains vendor-contract-blocked. Core clipping stays internal."
+        message = "Seedance config is present as an optional adapter. Core clipping stays internal and independent."
 
     return {
         "enabled": bool(settings.seedance_enabled),

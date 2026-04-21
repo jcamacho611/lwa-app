@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 from uuid import uuid4
 
-from ..generation_providers.seedance_provider import SeedanceProvider
-from ..generation_providers.base_provider import BaseGenerationProvider
-from ...core.config import Settings
-from ...models.schemas import GenerationRequest, GenerationResponse
+from .generation_providers.seedance_provider import SeedanceProvider
+from .generation_providers.base_provider import BaseGenerationProvider
+from ..core.config import Settings
+from ..models.schemas import GenerationRequest, GenerationResponse
 
 logger = logging.getLogger("uvicorn.error")
 

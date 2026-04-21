@@ -16,19 +16,19 @@ function hasPlayablePreview(clip: PollableClip) {
   return Boolean(clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url);
 }
 
-export function useClipPreviewPolling<T extends PollableClip>(initialClip: T, maxAttempts = 24): T {
-  const [clip, setClip] = useState(initialClip);
+export function useClipPreviewPolling<T extends PollableClip>(initialClip: T | null | undefined, maxAttempts = 24): T {
+  const [clip, setClip] = useState<T>((initialClip || {}) as T);
 
   useEffect(() => {
-    setClip(initialClip);
+    setClip((initialClip || {}) as T);
   }, [
-    initialClip.id,
-    initialClip.request_id,
-    initialClip.preview_url,
-    initialClip.edited_clip_url,
-    initialClip.clip_url,
-    initialClip.raw_clip_url,
-    initialClip.render_status,
+    initialClip?.id,
+    initialClip?.request_id,
+    initialClip?.preview_url,
+    initialClip?.edited_clip_url,
+    initialClip?.clip_url,
+    initialClip?.raw_clip_url,
+    initialClip?.render_status,
   ]);
 
   useEffect(() => {

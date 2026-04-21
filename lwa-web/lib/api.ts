@@ -32,10 +32,12 @@ export class ApiError extends Error {
 }
 
 type GeneratePayload = {
+  mode?: "video" | "image" | "idea";
   url?: string;
   platform?: PlatformOption;
   uploadFileId?: string;
   contentAngle?: string;
+  ideaPrompt?: string;
 };
 
 type BatchCreatePayload = {
@@ -216,7 +218,7 @@ export async function loadUploads(token: string) {
   return payload.uploads || [];
 }
 
-export async function uploadSource(file: File, token: string) {
+export async function uploadSource(file: File, token?: string | null) {
   const formData = new FormData();
   formData.append("file", file);
   return jsonRequest<UploadAsset>("/api/uploads", {

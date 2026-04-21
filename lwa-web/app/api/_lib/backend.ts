@@ -25,6 +25,28 @@ export function bearerTokenFromRequest(request: Request): string | null {
   return authorization.split(" ", 2)[1] || null;
 }
 
+export const GUEST_ID_COOKIE = "lwa_guest_id";
+
+export function guestIdFromRequest(request: Request): string {
+  const cookieHeader = request.headers.get("cookie") || "";
+  const existing = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${GUEST_ID_COOKIE}=`))
+    ?.split("=")[1];
+
+  return existing ? decodeURIComponent(existing) : crypto.randomUUID();
+}
+
+export function guestHeaders(guestId: string | null | undefined): Record<string, string> {
+  if (!guestId) {
+    return {};
+  }
+  return {
+    "x-lwa-client-id": guestId,
+  };
+}
+
 export async function parseBackendResponse(response: Response) {
   const text = await response.text();
   return text ? JSON.parse(text) : null;

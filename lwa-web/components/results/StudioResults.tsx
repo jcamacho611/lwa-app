@@ -92,9 +92,9 @@ export function StudioResults({ result, isLoading, loadingStageIndex, error, onR
             </div>
             <div className="text-xs text-ink/60 space-x-4">
               <span className={loadingStageIndex >= 0 ? "text-blue-400" : ""}>Reading source</span>
-              <span>-></span>
+              <span>{"->"}</span>
               <span className={loadingStageIndex >= 1 ? "text-blue-400" : ""}>Finding clips</span>
-              <span>-></span>
+              <span>{"->"}</span>
               <span className={loadingStageIndex >= 2 ? "text-blue-400" : ""}>Preparing outputs</span>
             </div>
           </div>

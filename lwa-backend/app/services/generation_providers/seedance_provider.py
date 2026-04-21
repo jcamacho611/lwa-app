@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 from uuid import uuid4
 
-from ..generation_providers.base_provider import BaseGenerationProvider
+from .base_provider import BaseGenerationProvider
 from ...core.config import Settings
 from ...models.schemas import ClipResult, GenerationRequest, GenerationResponse
 
@@ -114,34 +114,41 @@ class SeedanceProvider(BaseGenerationProvider):
         """Normalize Seedance response to LWA-style output."""
         try:
             # Extract video URL and metadata
-            video_url = response.get("output_url")
+            video_url = response.get("output_url") or response.get("video_url") or response.get("asset_url")
             video_id = response.get("id", f"seedance_{uuid4().hex[:12]}")
+            duration = float(response.get("duration") or response.get("duration_seconds") or 30.0)
+            prompt = str(response.get("prompt") or response.get("title") or "Generated asset").strip()
+            title = str(response.get("title") or prompt or "Generated Video").strip()
+            caption = str(response.get("description") or response.get("caption") or prompt).strip()
             
             # Create LWA-style clip result
             clip = ClipResult(
                 id=video_id,
                 request_id=video_id,
-                title=response.get("title", "Generated Video"),
-                hook=response.get("prompt", "")[:100],  # First 100 chars as hook
-                caption=response.get("description", ""),
-                start_time=0.0,
-                end_time=float(response.get("duration", 30.0)),
+                title=title,
+                hook=prompt[:140] or title,
+                caption=caption,
+                start_time="0:00",
+                end_time=f"0:{int(duration):02d}" if duration < 60 else f"{int(duration // 60)}:{int(duration % 60):02d}",
+                duration=int(duration),
                 preview_url=video_url,
                 clip_url=video_url,
                 raw_clip_url=video_url,
                 thumbnail_url=response.get("thumbnail_url"),
-                render_status="ready",
-                status="ready",
-                score=1.0,
+                preview_image_url=response.get("thumbnail_url"),
+                render_status="ready" if video_url else "pending",
+                is_rendered=bool(video_url),
+                is_strategy_only=not bool(video_url),
+                score=86 if video_url else 72,
+                confidence_score=86 if video_url else 72,
+                confidence_label="Strong early signal" if video_url else "Worth testing",
                 confidence=1.0,
-                generation_type=generation_type,
-                generation_provider="seedance",
-                metadata={
-                    "seedance_response": response,
-                    "original_prompt": response.get("prompt"),
-                    "model": response.get("model"),
-                    "quality": response.get("quality"),
-                },
+                reason="Generated from your source direction with motion-ready packaging.",
+                why_this_matters="This gives you a generated asset path when no long-form source is needed.",
+                category="Generated",
+                format="9:16 generated",
+                platform_fit="TikTok, Reels, Shorts",
+                packaging_angle=response.get("style") or response.get("model") or "Generated concept",
             )
             
             return GenerationResponse(

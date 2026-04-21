@@ -7,7 +7,7 @@ from uuid import uuid4
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from ...core.config import get_settings
-from ...dependencies.auth import get_platform_store, require_user
+from ...dependencies.auth import get_optional_user, get_platform_store, require_user
 from ...models.schemas import UploadResponse
 from ...services.entitlements import UsageStore, get_plan_for_user
 
@@ -39,31 +39,32 @@ logger = logging.getLogger("uvicorn.error")
 
 @router.post("", response_model=UploadResponse)
 async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadResponse:
-    user = require_user(request)
-    logger.info("upload_received user_id=%s filename=%s", user.id, file.filename)
+    user = get_optional_user(request)
+    subject_id = user.id if user else resolve_guest_upload_id(request)
+    logger.info("upload_received subject_id=%s authenticated=%s filename=%s", subject_id, bool(user), file.filename)
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
-    plan = get_plan_for_user(settings=settings, user=user)
-    upload_limit = int(plan.feature_flags.max_uploads_per_day or 0)
+    plan = get_plan_for_user(settings=settings, user=user) if user else None
+    upload_limit = int(plan.feature_flags.max_uploads_per_day if plan else 2)
     usage_day: str | None = None
     if upload_limit >= 0:
         try:
             usage_day, _ = usage_store.reserve(
-                subject=f"upload:user:{user.id}",
+                subject=f"upload:{'user' if user else 'guest'}:{subject_id}",
                 daily_limit=upload_limit,
             )
         except HTTPException as error:
             raise HTTPException(
                 status_code=402,
                 detail=(
-                    "Daily upload limit reached for the current plan. "
-                    "Upgrade to Pro for more daily source uploads or Scale for higher throughput."
+                    "Daily first-use upload limit reached. Create an account when you want saved uploads, "
+                    "repeat usage, and higher throughput."
                 ),
             ) from error
 
-    destination_dir = Path(settings.uploads_dir) / user.id
+    destination_dir = Path(settings.uploads_dir) / subject_id
     destination_dir.mkdir(parents=True, exist_ok=True)
     stored_name = f"{uuid4().hex[:12]}{suffix}"
     stored_path = destination_dir / stored_name
@@ -83,16 +84,16 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
                 handle.write(chunk)
 
         base_url = (settings.api_base_url or str(request.base_url)).rstrip("/")
-        public_url = f"{base_url}/uploads/{user.id}/{stored_name}"
+        public_url = f"{base_url}/uploads/{subject_id}/{stored_name}"
         upload = platform_store.create_upload(
-            user_id=user.id,
+            user_id=subject_id,
             file_name=file.filename or stored_name,
             stored_path=str(stored_path),
             public_url=public_url,
             content_type=file.content_type,
             file_size=total_size,
         )
-        logger.info("upload_validated user_id=%s upload_id=%s size_bytes=%s", user.id, upload["id"], total_size)
+        logger.info("upload_validated subject_id=%s upload_id=%s size_bytes=%s", subject_id, upload["id"], total_size)
         return UploadResponse(
             file_id=upload["id"],
             filename=upload["file_name"],
@@ -104,8 +105,16 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
         )
     except Exception:
         if usage_day:
-            usage_store.release(subject=f"upload:user:{user.id}", usage_day=usage_day)
+            usage_store.release(subject=f"upload:{'user' if user else 'guest'}:{subject_id}", usage_day=usage_day)
         raise
+
+
+def resolve_guest_upload_id(request: Request) -> str:
+    client_id = (request.headers.get(settings.client_id_header_name) or "").strip()
+    if client_id:
+        safe_id = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in client_id)
+        return f"guest_{safe_id[:64]}"
+    return f"guest_{uuid4().hex[:12]}"
 
 
 @router.get("")
