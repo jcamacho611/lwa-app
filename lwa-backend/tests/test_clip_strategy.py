@@ -101,12 +101,25 @@ class ClipStrategyTests(unittest.TestCase):
             score=84,
             format="Hook First",
         )
+        thumbnail_only_clip = ClipResult(
+            id="clip_003",
+            title="Thumbnail only",
+            hook="Still image is not a playable preview.",
+            caption="Needs a video render.",
+            start_time="00:40",
+            end_time="00:54",
+            score=80,
+            format="Hook First",
+            preview_image_url="https://example.com/still.jpg",
+        )
 
         self.assertTrue(clip_has_rendered_media(rendered_clip))
         self.assertFalse(clip_has_rendered_media(strategy_only_clip))
+        self.assertFalse(clip_has_rendered_media(thumbnail_only_clip))
 
     def test_clip_record_needs_recovery_checks_missing_media(self) -> None:
         self.assertTrue(clip_record_needs_recovery({"preview_url": None, "clip_url": None}))
+        self.assertTrue(clip_record_needs_recovery({"preview_image_url": "https://example.com/still.jpg"}))
         self.assertFalse(clip_record_needs_recovery({"preview_url": "https://example.com/preview.mp4"}))
 
     def test_recovery_request_requires_reusable_source_reference(self) -> None:

@@ -1615,6 +1615,7 @@ class PlatformStore:
             else (int(round((row["confidence"] or 0) * 100)) if row["confidence"] is not None else None)
         )
         is_rendered = bool(preview_url)
+        render_status = "ready" if is_rendered else "pending"
         return {
             "record_id": row["id"],
             "request_id": row["request_id"],
@@ -1661,6 +1662,7 @@ class PlatformStore:
             "thumbnail_url": row["preview_image_url"],
             "is_rendered": is_rendered,
             "is_strategy_only": not is_rendered,
+            "render_status": render_status,
             "trim_start_seconds": row["trim_start_seconds"],
             "trim_end_seconds": row["trim_end_seconds"],
             "caption_style_override": row["caption_style_override"],

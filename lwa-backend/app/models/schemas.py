@@ -112,6 +112,9 @@ class ClipResult(BaseModel):
     thumbnail_url: Optional[str] = None
     is_rendered: Optional[bool] = None
     is_strategy_only: Optional[bool] = None
+    render_status: Optional[str] = None
+    render_error: Optional[str] = None
+    request_id: Optional[str] = None
 
 
 class FeatureFlags(BaseModel):

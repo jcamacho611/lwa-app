@@ -65,6 +65,8 @@ def normalize_clip(clip: Dict[str, Any], index: int) -> Dict[str, Any]:
         "download_url": clip.get("download_url"),
         "is_rendered": is_rendered(clip),
         "is_strategy_only": not is_rendered(clip),
+        "render_status": clip.get("render_status") or ("ready" if is_rendered(clip) else "pending"),
+        "request_id": clip.get("request_id"),
     }
     return enrich_confidence(normalized)
 

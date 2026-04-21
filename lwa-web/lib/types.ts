@@ -242,6 +242,8 @@ export type ClipResult = {
   preview_image_url?: string | null;
   is_rendered?: boolean;
   is_strategy_only?: boolean;
+  render_status?: "pending" | "rendering" | "ready" | "failed" | string | null;
+  render_error?: string | null;
   burned_caption?: string;
   export_package?: {
     title?: string;

@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from .api.routes.auth import router as auth_router
 from .api.routes.batches import router as batches_router
 from .api.routes.campaigns import router as campaigns_router
+from .api.routes.clip_status import router as clip_status_router
 from .api.routes.clips import router as clips_router
 from .api.routes.edit import router as edit_router
 from .api.routes.generate import router as generate_router
@@ -49,6 +50,7 @@ def create_app() -> FastAPI:
     app.include_router(wallet_router)
     app.include_router(posting_router)
     app.include_router(seedance_router)
+    app.include_router(clip_status_router)
     app.include_router(clips_router)
     app.include_router(edit_router)
     logger.info(

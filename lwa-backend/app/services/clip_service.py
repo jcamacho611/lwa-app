@@ -29,9 +29,11 @@ from ..models.schemas import (
 from ..models.user import UserRecord
 from ..services.ai_service import generate_clip_copy
 from ..services.attention_compiler import compile_attention
+from ..services.clip_status_store import register_clip_batch
 from ..services.confidence_engine import build_confidence_label, resolve_confidence_score
 from ..services.entitlements import EntitlementContext, UsageStore
 from ..services.platform_store import PlatformStore
+from ..services.render_jobs import queue_preview_render
 from ..services.seedance_service import seedance_available
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
 from ..style_engine import build_script_pack
@@ -282,6 +284,24 @@ async def build_clip_response(
         clips=clips,
         entitlement=entitlement,
     )
+    clips = [clip.model_copy(update={"request_id": request_id}) for clip in clips]
+    local_asset_paths = resolve_local_asset_paths(settings=settings, request_id=request_id, clips=clips)
+    register_clip_batch(request_id=request_id, clips=clips, local_asset_paths=local_asset_paths)
+    for clip in clips:
+        if clip.preview_url:
+            continue
+        local_asset_path = local_asset_paths.get(clip.id)
+        if not local_asset_path:
+            continue
+        queue_preview_render(
+            settings=settings,
+            request_id=request_id,
+            clip_id=clip.id,
+            public_base_url=public_base_url,
+            local_asset_path=local_asset_path,
+            title_text=clip.hook or clip.title,
+            subtitle_text=clip.transcript_excerpt or clip.caption,
+        )
 
     await emit_progress(progress_callback, "Finalizing ranked clip pack and delivery bundle.")
     processing_mode = source_context.processing_mode if source_context else "mock"
@@ -366,7 +386,7 @@ async def build_clip_response(
             user_id=current_user.id if current_user else entitlement.user_id,
             campaign_id=campaign_id,
             response=response,
-            local_asset_paths=resolve_local_asset_paths(settings=settings, request_id=request_id, clips=clips),
+            local_asset_paths=local_asset_paths,
         )
     return response
 
@@ -445,6 +465,7 @@ def apply_plan_feature_flags(
             cta_suggestion=cta_suggestion,
         )
         is_rendered = bool(preview_url)
+        render_status = clip.render_status or ("ready" if is_rendered else "pending")
 
         gated.append(
             clip.model_copy(
@@ -470,6 +491,7 @@ def apply_plan_feature_flags(
                     "thumbnail_url": clip.thumbnail_url or clip.preview_image_url,
                     "is_rendered": is_rendered,
                     "is_strategy_only": not is_rendered,
+                    "render_status": render_status,
                     "why_this_matters": why_this_matters,
                     "thumbnail_text": thumbnail_text,
                     "platform_fit": platform_fit,
@@ -624,8 +646,6 @@ def clip_has_rendered_media(clip) -> bool:
         or clip.edited_clip_url
         or clip.clip_url
         or clip.raw_clip_url
-        or clip.thumbnail_url
-        or clip.preview_image_url
     )
 
 
@@ -635,8 +655,6 @@ def clip_record_needs_recovery(clip_record: dict[str, object]) -> bool:
         or clip_record.get("edited_clip_url")
         or clip_record.get("clip_url")
         or clip_record.get("raw_clip_url")
-        or clip_record.get("thumbnail_url")
-        or clip_record.get("preview_image_url")
     )
 
 
