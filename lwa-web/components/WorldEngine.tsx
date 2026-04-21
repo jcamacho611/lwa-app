@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { resolveCharacterState, type WorldMode, type WorldSignal, type WorldState } from "../lib/world-state";
+import { resolveCharacterState, type WorldMode, type WorldPhase, type WorldSignal, type WorldState } from "../lib/world-state";
 import { WorldCharacter } from "./WorldCharacter";
 import { WorldEffects } from "./WorldEffects";
 
 type WorldEngineProps = {
   variant?: "workspace" | "home";
   worldState?: WorldState;
+  worldPhase?: WorldPhase;
   generationMode?: WorldMode;
   signal?: WorldSignal;
 };
@@ -23,6 +24,7 @@ const EVENT_SEQUENCE: Record<WorldSignal, Array<"scan" | "flare" | "surge">> = {
 export function WorldEngine({
   variant = "workspace",
   worldState = "idle",
+  worldPhase = "idle",
   generationMode = "quick",
   signal = "idle",
 }: WorldEngineProps) {
@@ -148,20 +150,38 @@ export function WorldEngine({
         variant === "home" ? "ai-background-home world-engine world-engine-home" : "ai-background-workspace world-engine world-engine-workspace",
       ].join(" ")}
       data-world-state={worldState}
+      data-world-phase={worldPhase}
       data-world-mode={generationMode}
       data-world-signal={signal}
       data-pointer-active={pointerActive ? "true" : "false"}
       aria-hidden="true"
     >
-      <WorldEffects variant={variant} eventKind={eventKind} eventEpoch={eventEpoch} />
+      <div className="world-source-art world-source-art-main">
+        <img src="/brand-source/world/Celestial gods and chatbot interface.png" alt="" />
+      </div>
+      <div className="world-source-art world-source-art-council">
+        <img src="/brand-source/characters/d394931b-1f61-48fb-984c-1258d72e5ab4.png" alt="" />
+      </div>
+      <div className="world-source-art world-source-art-command">
+        <img src="/brand-source/world/24083f08-e428-4b99-ac75-3a10d43579dd.png" alt="" />
+      </div>
+      <div className="world-source-art world-source-art-mask">
+        <img src="/brand-source/world/FullSizeRender.jpg" alt="" />
+      </div>
+      <WorldEffects variant={variant} phase={worldPhase} eventKind={eventKind} eventEpoch={eventEpoch} />
 
       {variant === "home" ? (
         <>
-          <WorldCharacter position="left" tone="magenta" state={resolveCharacterState(0, worldState)} />
-          <WorldCharacter position="right" tone="cyan" state={resolveCharacterState(1, worldState)} />
-          <WorldCharacter position="center" tone="crimson" state={resolveCharacterState(2, worldState)} />
+          <WorldCharacter position="left" tone="magenta" state={resolveCharacterState(0, worldState)} phase={worldPhase} />
+          <WorldCharacter position="right" tone="cyan" state={resolveCharacterState(1, worldState)} phase={worldPhase} />
+          <WorldCharacter position="center" tone="crimson" state={resolveCharacterState(2, worldState)} phase={worldPhase} />
         </>
-      ) : null}
+      ) : (
+        <>
+          <WorldCharacter position="left" tone="magenta" state={resolveCharacterState(0, worldState)} phase={worldPhase} />
+          <WorldCharacter position="right" tone="cyan" state={resolveCharacterState(1, worldState)} phase={worldPhase} />
+        </>
+      )}
     </div>
   );
 }

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     default: "LWA — AI Clipping Engine",
     template: "%s | LWA",
   },
-  description: "Turn one long-form source into a ranked clip stack with hooks, captions, timestamps, packaging, and short-form outputs built to move faster.",
+  description: "Turn one source into viral-ready clips with hooks, previews, post order, and export-ready packaging.",
   keywords: [
     "ai clipping engine",
     "opus clip alternative",
@@ -18,11 +18,11 @@ export const metadata: Metadata = {
     "podcast clip generator",
     "short form repurposing",
     "hooks captions timestamps",
-    "ranked clip stack",
+    "viral-ready clips",
   ],
   openGraph: {
     title: "LWA — AI Clipping Engine",
-    description: "Turn one long-form source into a ranked clip stack with hooks, captions, timestamps, packaging, and short-form outputs built to move faster.",
+    description: "Turn one source into viral-ready clips with hooks, previews, post order, and export-ready packaging.",
     url: siteUrl,
     siteName: "LWA",
     type: "website",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "LWA — AI Clipping Engine",
-    description: "Turn one long-form source into a ranked clip stack with hooks, captions, timestamps, packaging, and short-form outputs built to move faster.",
+    description: "Turn one source into viral-ready clips with hooks, previews, post order, and export-ready packaging.",
   },
   robots: {
     index: true,

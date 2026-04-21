@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ClipResult } from "../lib/types";
 
 type HeroClipProps = {
@@ -18,25 +18,25 @@ type HeroClipProps = {
 };
 
 function authorityLabel(rank?: number | null) {
-  if (rank === 1) return "🔥 POST FIRST";
-  if (rank === 2) return "⚡ POST SECOND";
-  if (rank === 3) return "🧠 TEST THIRD";
+  if (rank === 1) return "POST FIRST";
+  if (rank === 2) return "POST SECOND";
+  if (rank === 3) return "TEST THIRD";
   return "MOVE LATER";
 }
 
 function decisionInstruction(rank?: number | null, hasRenderProof?: boolean) {
   if (rank === 1 && hasRenderProof) {
-    return "Post this first — strongest interruption and highest retention probability.";
+    return "Post this first — clearest interruption and strongest opening momentum.";
   }
   if (rank === 2) {
-    return "Post this second — it deepens the stack after the opener lands.";
+    return "Post this next — it keeps the story moving after the opener lands.";
   }
   if (rank === 3) {
-    return "Test this third — useful angle once the first two establish the frame.";
+    return "Continuation clip — useful once the first two establish the frame.";
   }
   return hasRenderProof
-    ? "Use this next when you want another clip that is already distribution-ready."
-    : "Strong engagement signal, but treat it as leverage until render proof comes back.";
+    ? "Post this next when you want another cut that is already ready to move."
+    : "High viral potential — keep it in the stack until render proof comes back.";
 }
 
 function buildPackageText(clip: ClipResult) {
@@ -73,8 +73,6 @@ export default function HeroClip({
   const hasPlayablePreview = Boolean(previewUrl);
   const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
   const hasRenderProof = hasPlayablePreview || hasStillPreview;
-  const scoreLabel = useMemo(() => clip.virality_score ?? clip.score, [clip.score, clip.virality_score]);
-  const confidenceScore = clip.confidence_score ?? (typeof clip.confidence === "number" ? Math.round(clip.confidence * 100) : null);
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
   const postAuthority = authorityLabel(postRank);
   const decisionText = decisionInstruction(postRank, hasRenderProof);
@@ -125,8 +123,8 @@ export default function HeroClip({
   }
 
   return (
-    <section className="group relative overflow-hidden rounded-[38px] border border-yellow-400/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02)),linear-gradient(180deg,rgba(24,10,12,0.94),rgba(7,4,6,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_32px_96px_rgba(255,193,7,0.12)] sm:p-7 lg:p-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,214,102,0.16),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(255,0,102,0.12),transparent_32%)]" />
+    <section id="lead-clip" className="group relative overflow-hidden rounded-[42px] border border-cyan-300/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.018)),linear-gradient(180deg,rgba(8,12,34,0.95),rgba(3,5,16,0.98))] p-6 shadow-[0_28px_100px_rgba(0,0,0,0.44)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_36px_110px_rgba(56,189,248,0.16)] sm:p-7 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.18),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(0,231,255,0.13),transparent_32%),radial-gradient(circle_at_60%_84%,rgba(37,99,235,0.1),transparent_34%)]" />
 
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
         <div className="space-y-4">
@@ -153,11 +151,10 @@ export default function HeroClip({
 
             <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
-                <span className="status-chip status-approved">{hasRenderProof ? "Lead answer" : "Lead strategy"}</span>
-                <span className="status-chip status-submitted">Score {scoreLabel}</span>
-                {confidenceScore ? <span className="status-chip status-ready">{confidenceScore}% confidence</span> : null}
+                <span className="status-chip status-approved">{hasRenderProof ? "POST THIS FIRST" : "HIGH VIRAL POTENTIAL"}</span>
+                {clip.caption_style ? <span className="status-chip status-submitted">{clip.caption_style}</span> : null}
               </div>
-              <span className="rounded-full border border-yellow-300/25 bg-yellow-300/12 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-yellow-100">
+              <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-cyan-100">
                 {postAuthority}
               </span>
             </div>
@@ -173,7 +170,7 @@ export default function HeroClip({
                 Export lead clip
               </a>
             ) : (
-              <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-2.5 text-sm text-[#ffe4eb]">
+                <span className="rounded-full border border-accentCrimson/22 bg-[linear-gradient(135deg,rgba(122,16,42,0.24),rgba(124,58,237,0.1))] px-4 py-2.5 text-sm text-[#ffe4eb]">
                 Upgrade for export
               </span>
             )}
@@ -191,7 +188,7 @@ export default function HeroClip({
               onClick={() => onToggleQueue?.(clip)}
               className={[
                 "secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium",
-                queued ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.18),rgba(255,45,166,0.1))] text-white shadow-crimson" : "",
+                queued ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.12))] text-white shadow-cyan" : "",
               ].join(" ")}
             >
               {queued ? "Queued for post" : "Queue post"}
@@ -228,29 +225,24 @@ export default function HeroClip({
 
         <div className="space-y-5">
           <div className="space-y-3">
-            <p className="section-kicker">Lead decision</p>
+            <p className="section-kicker">Lead drop</p>
             <h2 className="text-2xl font-semibold leading-tight text-ink sm:text-[2.1rem]">{clip.title}</h2>
             <p className="text-lg leading-8 text-ink/88">{clip.hook}</p>
           </div>
 
-          <div className="rounded-[26px] border border-yellow-300/18 bg-[linear-gradient(180deg,rgba(255,214,102,0.1),rgba(255,214,102,0.04))] p-5">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-yellow-100/70">System call</p>
+          <div className="rounded-[26px] border border-cyan-300/18 bg-[linear-gradient(180deg,rgba(0,231,255,0.09),rgba(124,58,237,0.045))] p-5">
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-cyan-100/70">System call</p>
             <p className="text-base font-medium leading-7 text-white">{decisionText}</p>
-          </div>
-
-          <div className="signal-card rounded-[24px] p-4">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Why this lands</p>
-            <p className="text-sm leading-6 text-ink/82">{whyThisHits}</p>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="metric-tile rounded-[24px] p-4">
-              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Packaging angle</p>
-              <p className="text-sm font-medium text-ink">{clip.packaging_angle || "Value"}</p>
+              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Move</p>
+              <p className="text-sm font-medium text-ink">{postAuthority}</p>
             </div>
             <div className="metric-tile rounded-[24px] p-4">
-              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Caption style</p>
-              <p className="text-sm font-medium text-ink">{clip.caption_style || "Short-form native"}</p>
+              <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">High viral potential</p>
+              <p className="text-sm font-medium text-ink">{clip.packaging_angle || clip.platform_fit || "Built to travel fast"}</p>
             </div>
             <div className="metric-tile rounded-[24px] p-4">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Thumbnail line</p>
@@ -262,7 +254,10 @@ export default function HeroClip({
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+          <details className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+            <summary className="cursor-pointer list-none text-xs uppercase tracking-[0.24em] text-muted transition-colors duration-300 hover:text-ink/76">
+              Open package notes
+            </summary>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/80">{postAuthority}</span>
               {clip.platform_fit ? (
@@ -283,7 +278,8 @@ export default function HeroClip({
                 ))}
               </div>
             ) : null}
-          </div>
+            <p className="mt-4 text-sm leading-6 text-ink/76">{whyThisHits}</p>
+          </details>
 
           <div className="flex gap-2">
             <button
@@ -292,8 +288,8 @@ export default function HeroClip({
               className={[
                 "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                 feedbackVote === "good"
-                  ? "border-emerald-400/30 bg-emerald-400/12 text-emerald-200"
-                  : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-emerald-400/30 hover:bg-emerald-400/10 hover:text-emerald-200",
+                ? "border-cyan-300/30 bg-cyan-300/12 text-cyan-100"
+                : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-100",
               ].join(" ")}
             >
               Good

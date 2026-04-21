@@ -259,7 +259,7 @@ export function CampaignPanel({
       <div className="grid gap-6 xl:grid-cols-[0.92fr,1.08fr]">
         <div className="hero-card rounded-[32px] p-6 sm:p-8">
           <p className="section-kicker">Campaigns</p>
-          <h3 className="mt-2 text-3xl font-semibold text-ink">Turn ranked output into managed workflows</h3>
+          <h3 className="mt-2 text-3xl font-semibold text-ink">Turn outputs into managed workflows</h3>
           <p className="mt-4 text-sm leading-7 text-ink/64">
             Build the brief, assign full packs or selected clips, then move each asset through submission and payout-readiness state.
           </p>

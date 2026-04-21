@@ -76,7 +76,7 @@ export function SettingsPanel({ user, wallet, featureFlags, creditsRemaining, pl
         <h3 className="mt-2 text-2xl font-semibold text-ink">What this workspace unlocks</h3>
         <div className="mt-6 grid gap-3">
           {[
-            `${featureFlags.clip_limit || 0} ranked clips returned per run`,
+            `${featureFlags.clip_limit || 0} clips returned per run`,
             `${featureFlags.max_generations_per_day || 0} generation credits available each day`,
             `${featureFlags.max_uploads_per_day || 0} uploads available each day`,
             featureFlags.premium_exports ? "No watermark on exports" : "Free exports keep the watermark",

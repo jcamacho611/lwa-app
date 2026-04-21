@@ -127,7 +127,7 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
                     <span className={[
                       "rounded-full px-3 py-1.5 text-xs font-semibold tabular-nums",
                       entry.amount_cents >= 0
-                        ? "border border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                        ? "border border-cyan-300/20 bg-cyan-300/10 text-cyan-100"
                         : "border border-accentCrimson/24 bg-accentCrimson/10 text-rose-200",
                     ].join(" ")}>
                       {entry.amount_cents >= 0 ? "+" : "−"}

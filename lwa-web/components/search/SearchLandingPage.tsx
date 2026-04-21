@@ -10,7 +10,7 @@ type SearchLandingPageProps = {
 };
 
 const searchNavItems = [
-  { href: "/generate", label: "Forge Clips" },
+  { href: "/generate", label: "Generate Clips" },
   { href: "/compare/opus-clip-alternative", label: "Compare" },
   { href: "/use-cases/podcast-clipping", label: "Use Cases" },
 ] as const;
@@ -29,10 +29,10 @@ export function SearchLandingPage({ page, jsonLd }: SearchLandingPageProps) {
           rightSlot={
             <div className="flex items-center gap-2">
               <Link href="/generate" className="primary-button inline-flex rounded-full px-4 py-2.5 text-sm font-semibold">
-                Forge Clips
+                Generate Clips
               </Link>
               <Link href="/dashboard" className="secondary-button inline-flex rounded-full px-4 py-2.5 text-sm font-medium">
-                Open Control Room
+                Open Workspace
               </Link>
             </div>
           }
@@ -58,10 +58,10 @@ export function SearchLandingPage({ page, jsonLd }: SearchLandingPageProps) {
 
             <div className="flex flex-wrap gap-3">
               <Link href="/generate" className="primary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold">
-                Forge Clips
+                Generate Clips
               </Link>
               <Link href="/dashboard" className="secondary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-medium">
-                Open Control Room
+                Open Workspace
               </Link>
             </div>
 
@@ -72,7 +72,7 @@ export function SearchLandingPage({ page, jsonLd }: SearchLandingPageProps) {
                   className={[
                     "rounded-full border px-3 py-1.5 text-xs font-semibold",
                     index === 0
-                      ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
+                      ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
                       : "border-white/10 bg-white/[0.05] text-ink/72",
                   ].join(" ")}
                 >
@@ -127,17 +127,17 @@ export function SearchLandingPage({ page, jsonLd }: SearchLandingPageProps) {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <p className="section-kicker">Next move</p>
-              <h2 className="mt-3 text-3xl font-semibold text-ink">See the ranked stack live.</h2>
+              <h2 className="mt-3 text-3xl font-semibold text-ink">See the output stack live.</h2>
               <p className="mt-4 text-sm leading-7 text-subtext">
                 Drop a real source into the generator, open the lead clip first, then move the winners into queue, history, and campaigns.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Link href="/generate" className="primary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold">
-                Forge Clips
+                Generate Clips
               </Link>
               <Link href="/campaigns" className="secondary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-medium">
-                Open Missions
+                Open Campaigns
               </Link>
             </div>
           </div>

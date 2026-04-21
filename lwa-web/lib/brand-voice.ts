@@ -26,45 +26,44 @@ export const BRAND_VOICE = {
 } as const;
 
 export const HERO_COPY = {
-  kicker: "AI MEDIA OPERATING SYSTEM",
-  headline: "Turn one source into the clips people actually replay.",
-  subhead:
-    "Hooks, packaging, post order, and previews built to move fast, hit harder, and look ready before the scroll is over.",
-  primaryCta: "Forge Clips",
-  secondaryCta: "Open Control Room",
+  kicker: "CLIP DECISION ENGINE",
+  headline: "Clips worth posting. Decided fast.",
+  subhead: "Paste one source. LWA picks the lead cut, packages the stack, and gets you closer to posting.",
+  primaryCta: "Generate clips",
+  secondaryCta: "Open workspace",
 } as const;
 
 export const GENERATOR_COPY = {
-  title: "Forge a ranked clip stack",
-  subhead: "Source in. Ranked previews, sharper copy, and export-ready cuts back out.",
-  loading: "LWA is cutting the stack live.",
-  submit: "Forge Clips",
-  submitting: "Forging stack...",
-  outputReady: "Stack ready. Review first, queue next, export when it clears your plan.",
-  outputIdle: "Drop a link or local file and let the stack build.",
+  title: "Build clips worth posting",
+  subhead: "Source in. Previews, hooks, and post order back.",
+  loading: "LWA is cutting.",
+  submit: "Generate clips",
+  submitting: "Generating...",
+  outputReady: "Ready. Review, queue, export.",
+  outputIdle: "Drop one link or file.",
 } as const;
 
 export const RESULTS_COPY = {
-  kicker: "Clip stack live",
-  title: "Post order, packaging, and previews are ready.",
-  subhead: "Lead cut first. Ranked follow-ups after that.",
+  kicker: "Outputs ready",
+  title: "Post this first. Move the rest next.",
+  subhead: "Lead cut first. Follow-ups after.",
   sourceTruth: "Source intelligence",
   topClip: "Lead cut",
-  gridTitle: "Next clips worth posting",
+  gridTitle: "Next clips",
   outputTrust: "Output trust",
-  executionGuide: "Move the stack fast",
+  executionGuide: "Move fast",
 } as const;
 
 export function rewriteSurfaceLabel(label: string): string {
   const map: Record<string, string> = {
     Dashboard: "Control Room",
-    Generate: "Forge Clips",
-    Upload: "Drop Source",
+    Generate: "Generate",
+    Upload: "Upload",
     History: "Archive",
-    Batches: "Stacks",
-    Campaigns: "Missions",
-    Wallet: "Vault",
-    Settings: "Studio Settings",
+    Batches: "Batches",
+    Campaigns: "Campaigns",
+    Wallet: "Wallet",
+    Settings: "Settings",
   };
 
   return map[label] || label;

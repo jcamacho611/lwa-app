@@ -30,6 +30,11 @@ VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".m4v"}
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".oga", ".flac"}
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 
+MIN_TRANSCRIPT_CLIP_DURATION = 7.0
+MAX_TRANSCRIPT_CLIP_DURATION = 18.0
+TRANSCRIPT_LEAD_IN_SECONDS = 0.45
+TRANSCRIPT_TAIL_SECONDS = 1.2
+
 
 @dataclass
 class ClipSeed:
@@ -619,18 +624,23 @@ def build_transcript_segments(
         return []
 
     selected: List[TranscriptWindow] = []
+    min_start_gap = max(7.0, min(14.0, float(clip_length) * 0.55))
     for window in sorted(transcript_windows, key=lambda current: current.score, reverse=True):
-        if any(abs(window.start_seconds - existing.start_seconds) < 6 for existing in selected):
+        if any(is_duplicate_transcript_window(window, existing, min_start_gap=min_start_gap) for existing in selected):
             continue
         selected.append(window)
         if len(selected) == max_candidates:
             break
 
     planned = []
-    for index, window in enumerate(sorted(selected, key=lambda current: current.start_seconds), start=1):
-        padded_start = max(window.start_seconds - 1.0, 0.0)
-        base_duration = max(window.end_seconds - window.start_seconds + 2.0, 8.0)
-        duration = min(max(base_duration, float(clip_length)), 24.0)
+    for index, window in enumerate(sorted(selected, key=lambda current: (-current.score, current.start_seconds)), start=1):
+        padded_start = max(window.start_seconds - TRANSCRIPT_LEAD_IN_SECONDS, 0.0)
+        window_duration = max(window.end_seconds - window.start_seconds, 1.0)
+        duration_ceiling = min(MAX_TRANSCRIPT_CLIP_DURATION, max(float(clip_length), 12.0))
+        duration = min(
+            max(window_duration + TRANSCRIPT_LEAD_IN_SECONDS + TRANSCRIPT_TAIL_SECONDS, MIN_TRANSCRIPT_CLIP_DURATION),
+            duration_ceiling,
+        )
         planned.append(
             {
                 "start": round(padded_start, 2),
@@ -643,26 +653,70 @@ def build_transcript_segments(
     return planned
 
 
+def is_duplicate_transcript_window(candidate: TranscriptWindow, existing: TranscriptWindow, *, min_start_gap: float) -> bool:
+    if abs(candidate.start_seconds - existing.start_seconds) < min_start_gap:
+        return True
+
+    candidate_tokens = significant_tokens(candidate.excerpt)
+    existing_tokens = significant_tokens(existing.excerpt)
+    if not candidate_tokens or not existing_tokens:
+        return False
+
+    overlap = len(candidate_tokens & existing_tokens)
+    denominator = max(min(len(candidate_tokens), len(existing_tokens)), 1)
+    return (overlap / denominator) >= 0.72
+
+
+def significant_tokens(value: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9']+", value.lower())
+        if len(token) > 3
+        and token
+        not in {
+            "that",
+            "this",
+            "with",
+            "from",
+            "they",
+            "them",
+            "your",
+            "have",
+            "just",
+            "like",
+            "what",
+            "when",
+            "where",
+            "there",
+            "because",
+        }
+    }
+
+
 def dedupe_segments(segments: List[dict[str, float]]) -> List[dict[str, float]]:
     deduped = []
-    seen = set()
+    kept_starts: list[float] = []
     for segment in segments:
-        rounded_start = round(segment["start"])
-        if rounded_start in seen:
+        start = float(segment["start"])
+        duration = float(segment.get("duration", 0.0))
+        min_gap = max(4.0, min(10.0, duration * 0.45))
+        if any(abs(start - existing_start) < min_gap for existing_start in kept_starts):
             continue
-        seen.add(rounded_start)
+        kept_starts.append(start)
         deduped.append(segment)
     return deduped
 
 
 def choose_clip_length(duration_seconds: Optional[int]) -> int:
     if duration_seconds is None or duration_seconds <= 0:
-        return 15
+        return 14
     if duration_seconds <= 24:
         return max(6, duration_seconds // 2)
     if duration_seconds <= 60:
-        return max(8, duration_seconds // 4)
-    return 18
+        return max(8, min(14, duration_seconds // 4))
+    if duration_seconds <= 180:
+        return 15
+    return 16
 
 
 def create_clips(
@@ -1587,13 +1641,20 @@ def build_transcript_windows_from_cues(cues: List[tuple[float, float, str]]) -> 
         excerpt = normalize_caption_text(" ".join(parts))
         if len(excerpt.split()) < 6:
             continue
+        previous_end = cues[start_index - 1][1] if start_index > 0 else None
+        gap_before = max(window_start - previous_end, 0.0) if previous_end is not None else 0.0
+        duration = max(window_end - window_start, 0.1)
 
         windows.append(
             TranscriptWindow(
                 start_seconds=window_start,
                 end_seconds=window_end,
                 excerpt=excerpt,
-                score=score_excerpt(excerpt),
+                score=score_transcript_window(
+                    excerpt=excerpt,
+                    duration_seconds=duration,
+                    gap_before_seconds=gap_before,
+                ),
             )
         )
 
@@ -1642,4 +1703,31 @@ def score_excerpt(excerpt: str) -> int:
         if keyword in lower
     )
     punctuation_bonus = 3 if "?" in excerpt or "!" in excerpt else 0
-    return min(len(words), 35) + (keyword_hits * 4) + punctuation_bonus
+    payoff_bonus = 6 if any(keyword in lower for keyword in ["but", "then", "because", "finally", "realized", "changed"]) else 0
+    hook_bonus = 5 if words and words[0].lower().strip(".,!?") in {"stop", "why", "how", "this", "nobody", "never"} else 0
+    return min(len(words), 35) + (keyword_hits * 4) + punctuation_bonus + payoff_bonus + hook_bonus
+
+
+def score_transcript_window(*, excerpt: str, duration_seconds: float, gap_before_seconds: float) -> int:
+    words = excerpt.split()
+    speech_density = len(words) / max(duration_seconds, 0.1)
+    density_bonus = 0
+    if 2.2 <= speech_density <= 4.8:
+        density_bonus = 8
+    elif speech_density > 4.8:
+        density_bonus = 4
+
+    boundary_bonus = 4 if excerpt.rstrip().endswith((".", "!", "?")) else 0
+    reset_bonus = 3 if 0.25 <= gap_before_seconds <= 1.8 else 0
+    dead_space_penalty = 8 if gap_before_seconds > 3.0 else 0
+    short_window_penalty = 6 if len(words) < 10 else 0
+
+    return max(
+        0,
+        score_excerpt(excerpt)
+        + density_bonus
+        + boundary_bonus
+        + reset_bonus
+        - dead_space_penalty
+        - short_window_penalty,
+    )

@@ -80,7 +80,7 @@ export function AccountWorkspace({
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="glass-panel rounded-[28px] p-5">
           <p className="text-lg font-semibold text-ink">Saved Clip Packs</p>
-          <p className="mt-2 text-sm leading-7 text-ink/64">Recent ranked outputs.</p>
+          <p className="mt-2 text-sm leading-7 text-ink/64">Recent outputs.</p>
           <div className="mt-5 space-y-3">
             {clipPacks.length ? (
               clipPacks.slice(0, 5).map((item) => {

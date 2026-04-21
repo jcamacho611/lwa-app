@@ -278,6 +278,15 @@ export type GenerateResponse = {
     feature_flags?: FeatureFlags;
   };
   clips: ClipResult[];
+  scripts?: GeneratedScripts | null;
+};
+
+export type GeneratedScripts = {
+  main: string;
+  variants: string[];
+  hooks: string[];
+  titles: string[];
+  ctas: string[];
 };
 
 export type ClipRecoveryJob = {

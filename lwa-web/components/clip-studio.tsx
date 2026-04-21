@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { AIBackground } from "./AIBackground";
+import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { AccountWorkspace } from "./account-workspace";
 import { AuthPanel } from "./auth-panel";
 import { BatchPanel } from "./batch-panel";
+import { AIBackground } from "./AIBackground";
 import { CampaignPanel } from "./campaign-panel";
+import CharacterLayer from "./characters/CharacterLayer";
 import { ClipCard } from "./clip-card";
 import { ClipPackEditor, ClipPatchPayload } from "./clip-pack-editor";
 import { FeatureGatePanel } from "./feature-gate-panel";
@@ -87,8 +88,9 @@ import {
   upsertReadyQueueItem,
 } from "../lib/queue";
 import { GENERATOR_COPY, HERO_COPY, RESULTS_COPY, rewriteSurfaceLabel } from "../lib/brand-voice";
+import type { CharacterActionId } from "../lib/character-intelligence";
 import { getPlanSurface } from "../lib/plans";
-import { resolveWorldState, type WorldSignal } from "../lib/world-state";
+import { resolveWorldPhase, resolveWorldState, type WorldSignal } from "../lib/world-state";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 
@@ -190,12 +192,8 @@ export function ClipStudio({
   const [readyQueue, setReadyQueue] = useState<ReadyQueueItem[]>([]);
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null);
   const [loadingStageIndex, setLoadingStageIndex] = useState(0);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const [sourceInputFocused, setSourceInputFocused] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
   const [generatorHovered, setGeneratorHovered] = useState(false);
-  const [completionPulse, setCompletionPulse] = useState(false);
-  const homeStageRef = useRef<HTMLElement | null>(null);
-  const previousLoadingStateRef = useRef(false);
 
   const activeSourceLabel = useMemo(() => {
     if (selectedUpload?.file_name || selectedUpload?.filename) {
@@ -221,49 +219,49 @@ export function ClipStudio({
         return {
           label: "Dashboard",
           title: "Your control room",
-          description: "Runs, queue, campaigns, and account state in one place.",
+          description: "Runs, queue, campaigns, and account state.",
         };
       case "generate":
         return {
           label: "Generate",
-          title: "Build a ranked clip pack",
+          title: "Build your clip stack",
           description: "Paste a source. Get clips worth posting.",
         };
       case "upload":
         return {
           label: "Upload",
           title: "Bring your own file",
-          description: "Run the same flow with local video, audio, or images.",
+          description: "Run the same flow with local files.",
         };
       case "history":
         return {
           label: "History",
           title: "Reopen saved work",
-          description: "Review past packs and reopen what still hits.",
+          description: "Reopen past packs.",
         };
       case "batches":
         return {
           label: "Batches",
           title: "Queue multiple sources",
-          description: "Group links and uploads into one repeatable run.",
+          description: "Group sources into repeatable runs.",
         };
       case "campaigns":
         return {
           label: "Campaigns",
           title: "Run content pushes",
-          description: "Assign clips, track status, and keep ops moving.",
+          description: "Assign clips and track status.",
         };
       case "wallet":
         return {
           label: "Wallet",
           title: "Track value and payout state",
-          description: "See ledger movement, readiness, and payout requests.",
+          description: "See balance and payout state.",
         };
       case "settings":
         return {
           label: "Settings",
           title: "Manage account and workflow",
-          description: "Plan, credits, role, and unlocked workflow depth.",
+          description: "Plan, credits, and account controls.",
         };
       default:
         return null;
@@ -329,25 +327,6 @@ export function ClipStudio({
     }, 1400);
 
     return () => window.clearInterval(interval);
-  }, [isLoading]);
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReduceMotion(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
-    if (previousLoadingStateRef.current && !isLoading) {
-      setCompletionPulse(true);
-      const timeout = window.setTimeout(() => setCompletionPulse(false), 2600);
-      previousLoadingStateRef.current = isLoading;
-      return () => window.clearTimeout(timeout);
-    }
-
-    previousLoadingStateRef.current = isLoading;
   }, [isLoading]);
 
   useEffect(() => {
@@ -750,29 +729,6 @@ export function ClipStudio({
 
   const isHome = initialSection === "home";
   const hasSourceSelected = Boolean(videoUrl.trim() || selectedUpload?.file_id || selectedUpload?.source_ref?.upload_id);
-  const worldState = useMemo(
-    () =>
-      resolveWorldState({
-        variant: isHome ? "home" : "workspace",
-        generationMode,
-        inputFocused: sourceInputFocused,
-        generatorHovered,
-        isLoading,
-        hasResult: Boolean(result),
-        hasSource: hasSourceSelected,
-        completionPulse,
-      }),
-    [completionPulse, generationMode, generatorHovered, hasSourceSelected, isHome, isLoading, result, sourceInputFocused],
-  );
-  const worldSignal: WorldSignal = isLoading
-    ? "generating"
-    : completionPulse || Boolean(result)
-      ? "complete"
-      : sourceInputFocused
-        ? "focus"
-        : generatorHovered
-          ? "hover"
-          : "idle";
   const requiresAccount = !["home", "generate", "upload"].includes(initialSection);
   const showGenerator = ["home", "generate", "upload"].includes(initialSection);
   const showDashboard = ["dashboard"].includes(initialSection);
@@ -785,73 +741,73 @@ export function ClipStudio({
   const topAngles = (preferenceProfile.preferredAngles.length
     ? preferenceProfile.preferredAngles
     : orderedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
-  const featureProof = ["Best clip first", "Hooks + captions", "Queue-ready"];
-  const loadingStages = ["Analyzing video", "Finding viral moments", "Generating clips"];
+  const featureProof = ["Best clip first", "Hooks that hit", "Export-ready"];
+  const loadingStages = ["Reading source", "Finding clips", "Preparing outputs"];
   const deliveryMoments = [
-    {
-      label: "Paste once",
-      detail: "Start with one source. LWA recommends the first destination after analysis.",
+      {
+        label: "Source in",
+        detail: "Paste or upload once.",
     },
     {
-      label: "Review first",
-      detail: "See rendered clips first, then strategy-only recommendations that still need media proof.",
+      label: "Best first",
+      detail: "LWA puts the lead cut on top.",
     },
     {
-      label: "Move fast",
-      detail: "Export what is ready now and keep the rest in the stack for later.",
+      label: "Post faster",
+      detail: "Queue or export ready clips.",
     },
   ] as const;
   const idleRunSummary =
     generationMode === "quick"
-      ? "Paste one public source, let LWA recommend the first destination, then review rendered proof before strategy-only ideas."
-      : "Keep the destination on auto unless you already know the landing feed. Turn on local learning when you want tighter future packs.";
+      ? "Paste one source. LWA picks the first move."
+      : "Keep auto on. Use learning for tighter future packs.";
   const homeDiscoverySections = [
     {
       id: "why-lwa",
       kicker: "Why LWA",
-      title: "Built for source-to-post speed, not random clip dumps.",
-      body: "LWA is strongest when you need the best cut first, cleaner packaging, and a workflow that still holds together after generation.",
+      title: "Built for source-to-post speed.",
+      body: "LWA picks the next clip, packages it, and keeps the workflow moving.",
       bullets: [
-        "Lead clip authority with post order and packaging attached",
-        "Hooks, captions, timestamps, and previews in one review layer",
-        "Queue, archive, campaigns, and wallet surfaces already in the product",
+        "Lead clip authority",
+        "Hooks, captions, previews",
+        "Queue, archive, campaigns, wallet",
       ],
       links: [
-        { href: "/generate", label: "Forge clips" },
-        { href: "/dashboard", label: "Open Control Room" },
+        { href: "/generate", label: "Generate clips" },
+        { href: "/dashboard", label: "Open workspace" },
       ],
     },
     {
       id: "how-it-works",
       kicker: "How it works",
-      title: "One source in. Ranked stack out.",
-      body: "Drop a public link or upload a file. LWA processes the source, ranks the strongest cuts, and returns copy and output signals that help you move faster.",
+      title: "One source in. Post order out.",
+      body: "Drop a link or file. LWA chooses what to post first.",
       bullets: [
-        "Analyze source media and candidate moments",
-        "Rank clips, packaging, and post order",
-        "Review, queue, export, and reopen from history",
+        "Read source media",
+        "Choose the posting stack",
+        "Review, queue, export",
       ],
     },
     {
       id: "who-its-for",
       kicker: "Who it’s for",
-      title: "Creators, clippers, agencies, and operator-heavy teams.",
-      body: "This is for people already making long-form content and trying to turn one source into more chances to win without stacking more editing overhead.",
+      title: "For creators, clippers, and teams.",
+      body: "Turn long-form into more clips without adding editing overhead.",
       bullets: [
-        "Podcasters, streamers, interview shows, and creator brands",
-        "Clippers and agencies running throughput instead of one-off edits",
-        "Teams that care about ranking, packaging, and workflow trust",
+        "Podcasts, streams, interviews",
+        "Clippers and agencies",
+        "Teams that need output trust",
       ],
     },
     {
       id: "compare",
       kicker: "Compare",
-      title: "Use LWA when you want ranking and workflow, not just a clip pull.",
-      body: "The right comparison is not blog fluff. It is whether the product helps you decide what to post first and move the stack after generation.",
+      title: "Use LWA when the decision matters.",
+      body: "The value is knowing what to post first and moving it fast.",
       bullets: [
-        "Stronger review hierarchy than noisy clip dumps",
-        "More operator-ready than basic AI clipping tools",
-        "Built to sit between source ingest and posting workflow",
+        "Clear review hierarchy",
+        "Operator-ready workspace",
+        "Built between ingest and posting",
       ],
       links: [
         { href: "/compare/opus-clip-alternative", label: "Opus Clip alternative" },
@@ -861,12 +817,12 @@ export function ClipStudio({
     {
       id: "faq",
       kicker: "FAQ",
-      title: "Real product questions, not filler.",
-      body: "Use the product for faster output, better packaging, and clearer post order. It helps operators and creators move with more confidence, not with fake promises.",
+      title: "Built for real output.",
+      body: "Use LWA for faster clips, better packaging, and clearer post order.",
       bullets: [
-        "Free stays useful, but premium unlocks cleaner export and deeper workflow leverage",
-        "Uploads, history, queue, campaigns, and wallet surfaces stay in the same workspace",
-        "The goal is more clips worth posting from content you already own",
+        "Free proves value",
+        "Premium unlocks leverage",
+        "Everything stays in one workspace",
       ],
       links: [
         { href: "/use-cases/podcast-clipping", label: "Podcast clipping" },
@@ -894,6 +850,10 @@ export function ClipStudio({
   const platformRecommendationReason = result?.processing_summary?.platform_recommendation_reason || null;
   const renderedClipCount = renderedClips.length;
   const strategyOnlyClipCount = strategyOnlyClips.length;
+  const recoveryActive = useMemo(
+    () => Object.values(clipRecoveryStates).some((recovery) => recovery.status === "queued" || recovery.status === "processing"),
+    [clipRecoveryStates],
+  );
   const exportReadyCount = useMemo(() => orderedClips.filter((clip) => clip.download_url).length, [orderedClips]);
   const leadPreviewReady = Boolean(
     result?.preview_asset_url ||
@@ -903,14 +863,31 @@ export function ClipStudio({
       renderedHeroClip?.raw_clip_url,
   );
   const leadExportReady = Boolean(result?.download_asset_url || renderedHeroClip?.download_url);
-  const sourceTruthSummary = useMemo(() => {
-    const content = result?.transcript || result?.visual_summary || "This source was processed into ranked short-form outputs.";
-    if (!content) {
-      return null;
-    }
-    return content.length > 260 ? `${content.slice(0, 257).trimEnd()}...` : content;
-  }, [result?.transcript, result?.visual_summary]);
-
+  const worldPhase = resolveWorldPhase({
+    isLoading,
+    loadingStageIndex,
+    hasResult: Boolean(result),
+    hasSource: hasSourceSelected,
+  });
+  const worldState = resolveWorldState({
+    variant: isHome ? "home" : "workspace",
+    generationMode,
+    inputFocused,
+    generatorHovered,
+    isLoading,
+    loadingStageIndex,
+    hasResult: Boolean(result),
+    hasSource: hasSourceSelected,
+  });
+  const worldSignal: WorldSignal = isLoading
+    ? "generating"
+    : result
+      ? "complete"
+      : inputFocused
+        ? "focus"
+        : generatorHovered
+          ? "hover"
+          : "idle";
   function handleFeedbackVote(clip: GenerateResponse["clips"][number], vote: "good" | "bad") {
     setFeedbackRecords((current) => upsertFeedbackRecord(current, createFeedbackRecord(clip, vote, activeFeedbackPlatform)));
   }
@@ -1072,64 +1049,54 @@ export function ClipStudio({
     }
   }
 
-  function handleHomePointerMove(event: ReactPointerEvent<HTMLElement>) {
-    if (reduceMotion || !homeStageRef.current) {
+  function handleCharacterAction(action: CharacterActionId) {
+    if (action === "focus_source") {
+      const input = document.querySelector<HTMLInputElement>("[data-lwa-source-input='true']");
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
+      input?.focus();
       return;
     }
 
-    const bounds = homeStageRef.current.getBoundingClientRect();
-    const offsetX = event.clientX - bounds.left;
-    const offsetY = event.clientY - bounds.top;
-    const normalizedX = (offsetX / bounds.width) * 2 - 1;
-    const normalizedY = (offsetY / bounds.height) * 2 - 1;
-
-    homeStageRef.current.style.setProperty("--home-pointer-x", `${offsetX}px`);
-    homeStageRef.current.style.setProperty("--home-pointer-y", `${offsetY}px`);
-    homeStageRef.current.style.setProperty("--home-tilt-x", `${normalizedX * 16}px`);
-    homeStageRef.current.style.setProperty("--home-tilt-y", `${normalizedY * 12}px`);
-  }
-
-  function handleHomePointerLeave() {
-    if (!homeStageRef.current) {
+    if (action === "review_lead") {
+      document.getElementById("lead-clip")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
-    homeStageRef.current.style.setProperty("--home-pointer-x", "50%");
-    homeStageRef.current.style.setProperty("--home-pointer-y", "36%");
-    homeStageRef.current.style.setProperty("--home-tilt-x", "0px");
-    homeStageRef.current.style.setProperty("--home-tilt-y", "0px");
-  }
+    if (action === "queue_lead") {
+      const lead = orderedClips[0];
+      if (lead && !isQueued(lead)) {
+        handleToggleQueue(lead);
+      }
+      return;
+    }
 
-  function handleGeneratorPointerEnter() {
-    setGeneratorHovered(true);
-  }
+    if (action === "recover_strategy") {
+      const firstStrategyClip = strategyOnlyClips[0];
+      if (firstStrategyClip) {
+        void handleRecoverClip(firstStrategyClip);
+      }
+      return;
+    }
 
-  function handleGeneratorPointerLeave() {
-    setGeneratorHovered(false);
-  }
-
-  function handleSourceFocus() {
-    setSourceInputFocused(true);
-  }
-
-  function handleSourceBlur() {
-    setSourceInputFocused(false);
+    if (action === "copy_script" && result?.scripts?.main) {
+      void navigator.clipboard?.writeText(result.scripts.main);
+    }
   }
 
   const homeGeneratorSection = (
     <section
-      className="hero-card rounded-[34px] p-6 sm:p-8"
-      onPointerEnter={handleGeneratorPointerEnter}
-      onPointerLeave={handleGeneratorPointerLeave}
+      className="generator-command-card rounded-[38px] p-6 sm:p-8"
+      onMouseEnter={() => setGeneratorHovered(true)}
+      onMouseLeave={() => setGeneratorHovered(false)}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="section-kicker">Generate first</p>
-          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop one source. Leave with ranked clips.</h2>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/90">
+          <p className="section-kicker">Command input</p>
+          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop one source. Get the posting stack.</h2>
+          <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/82">
             {generationMode === "quick"
-              ? "One link in. Ranked clips, hooks, captions, and previews back."
-              : "Stay in the same workflow while LWA learns what you keep and tightens the next pack."}
+              ? "Lead clip, follow-ups, and export moves back."
+              : "LWA learns what you keep and tightens the next pack."}
           </p>
         </div>
         <StatPill tone="accent">{useManualPlatform ? platform : "Auto recommend"}</StatPill>
@@ -1159,29 +1126,28 @@ export function ClipStudio({
           <span className="mb-3 block text-sm font-medium text-ink/84">Source link</span>
           <input
             type="url"
+            data-lwa-source-input="true"
             value={videoUrl}
             onChange={(event) => setVideoUrl(event.target.value)}
-            onFocus={handleSourceFocus}
-            onBlur={handleSourceBlur}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             placeholder="Paste YouTube, MP4, or any public video URL"
-            className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
+            className="input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
           />
         </label>
 
         <div className="space-y-3">
-          <div className="metric-tile rounded-[24px] p-4">
+          <div className="operator-tile rounded-[24px] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-ink">Destination</p>
                 <p className="mt-2 text-sm leading-7 text-ink/72">
                   {useManualPlatform
                     ? `Manual override is on for ${platform}.`
-                    : "LWA will recommend the first destination after it scores the source and identifies the strongest clip style."}
+                    : "Auto stays on unless you already know the feed."}
                 </p>
                 <p className="mt-1 text-sm text-ink/50">
-                  {useManualPlatform
-                    ? "Use this only when you already know the landing feed."
-                    : "Manual override still exists, but it is secondary to the engine recommendation."}
+                  {useManualPlatform ? "Use this for fixed campaigns." : "Manual override is secondary."}
                 </p>
               </div>
               <button
@@ -1208,7 +1174,7 @@ export function ClipStudio({
                       className={[
                         "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
                         active
-                          ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
+                          ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
                           : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
                       ].join(" ")}
                     >
@@ -1222,8 +1188,8 @@ export function ClipStudio({
         </div>
 
         <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
-          <div className="metric-tile rounded-[24px] p-4">
-            <p className="text-sm font-medium text-ink">What happens first</p>
+          <div className="operator-tile rounded-[24px] p-4">
+            <p className="text-sm font-medium text-ink">Flow</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {deliveryMoments.map((item) => (
                 <div key={item.label} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
@@ -1294,9 +1260,9 @@ export function ClipStudio({
     <section className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),320px]">
         <section
-          className="hero-card rounded-[34px] p-6 sm:p-8"
-          onPointerEnter={handleGeneratorPointerEnter}
-          onPointerLeave={handleGeneratorPointerLeave}
+          className="generator-command-card rounded-[38px] p-6 sm:p-8"
+          onMouseEnter={() => setGeneratorHovered(true)}
+          onMouseLeave={() => setGeneratorHovered(false)}
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl">
@@ -1306,7 +1272,7 @@ export function ClipStudio({
               </h2>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">
                 {generationMode === "quick"
-                  ? "Keep the first run simple: paste a source, get the ranked pack, then decide what to post."
+                  ? "Keep the first run simple: paste a source, get the stack, then decide what to move."
                   : GENERATOR_COPY.subhead}
               </p>
             </div>
@@ -1340,29 +1306,28 @@ export function ClipStudio({
               <span className="mb-3 block text-sm font-medium text-ink/84">Source link</span>
               <input
                 type="url"
+                data-lwa-source-input="true"
                 value={videoUrl}
                 onChange={(event) => setVideoUrl(event.target.value)}
-                onFocus={handleSourceFocus}
-                onBlur={handleSourceBlur}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
                 placeholder="Paste YouTube, MP4, or any public video URL"
-                className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
+                className="input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
               />
             </label>
 
             <div className="space-y-3">
-              <div className="metric-tile rounded-[24px] p-4">
+              <div className="operator-tile rounded-[24px] p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-sm font-medium text-ink">Destination</p>
                     <p className="mt-2 text-sm leading-7 text-ink/72">
                       {useManualPlatform
-                        ? `Manual override is on for ${platform}.`
-                        : "Keep the first run on auto. LWA will recommend the likely best destination and output style after it scores the source."}
+                      ? `Manual override is on for ${platform}.`
+                      : "Auto stays on unless you already know the feed."}
                     </p>
                     <p className="mt-1 text-sm text-ink/50">
-                      {useManualPlatform
-                        ? "Use this when a campaign or feed target is already fixed."
-                        : "Only override the destination when you know the publishing requirement before the run."}
+                      {useManualPlatform ? "Use this for fixed campaigns." : "Manual override is secondary."}
                     </p>
                   </div>
                   <button
@@ -1389,7 +1354,7 @@ export function ClipStudio({
                           className={[
                             "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
                             active
-                              ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
+                              ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
                               : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
                           ].join(" ")}
                         >
@@ -1403,8 +1368,8 @@ export function ClipStudio({
             </div>
 
             <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
-              <div className="metric-tile rounded-[24px] p-4">
-                <p className="text-sm font-medium text-ink">What happens first</p>
+              <div className="operator-tile rounded-[24px] p-4">
+                <p className="text-sm font-medium text-ink">Flow</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   {deliveryMoments.map((item) => (
                     <div key={item.label} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
@@ -1420,14 +1385,14 @@ export function ClipStudio({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-sm font-medium text-ink">Tighten future packs</p>
-                      <p className="mt-1 text-sm text-ink/60">Bias new runs toward what you keep.</p>
+                      <p className="mt-1 text-sm text-ink/60">Learn from what you keep.</p>
                       {preferenceProfile.topPackagingAngle || preferenceProfile.topHookStyle ? (
                         <p className="mt-3 text-sm text-accent">
                           Favoring {preferenceProfile.topPackagingAngle || "strong"} packaging
                           {preferenceProfile.topHookStyle ? ` and ${preferenceProfile.topHookStyle} hooks` : ""}.
                         </p>
                       ) : (
-                        <p className="mt-3 text-sm text-ink/46">Mark what lands. The browser remembers.</p>
+                        <p className="mt-3 text-sm text-ink/46">Mark what lands.</p>
                       )}
                     </div>
                     <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
@@ -1493,13 +1458,13 @@ export function ClipStudio({
                 value={typeof creditsRemaining === "number" ? String(creditsRemaining) : String(planLimits.generationsPerDay)}
                 detail={typeof creditsRemaining === "number" ? "Available today" : "Daily run limit"}
               />
-              <MetricTile label="Clip access" value={String(planLimits.clipLimit)} detail="Visible ranked clips per run" />
+              <MetricTile label="Clip access" value={String(planLimits.clipLimit)} detail="Visible clips per run" />
               <MetricTile label="Uploads" value={String(planLimits.uploadsPerDay)} detail="Local source uploads today" />
             </div>
             <div className="mt-4 space-y-3">
               {!activeFeatureFlags.premium_exports ? (
                 <div className="metric-tile rounded-[24px] px-4 py-3 text-sm text-ink/72">
-                  Pro unlocks clean exports, 20 ranked clips, stronger hook coverage, and wallet visibility.
+                  Pro unlocks clean exports, 20 clips, stronger hook coverage, and wallet visibility.
                 </div>
               ) : null}
               {!activeFeatureFlags.campaign_mode || !activeFeatureFlags.posting_queue ? (
@@ -1514,7 +1479,7 @@ export function ClipStudio({
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Upload a source</p>
             <h3 className="mt-3 text-xl font-semibold text-ink">Run it from your own file</h3>
-            <p className="mt-3 text-sm leading-7 text-ink/60">{token ? "Video, audio, or image. Same ranking flow." : "Sign in to unlock uploads and saved source reuse."}</p>
+            <p className="mt-3 text-sm leading-7 text-ink/60">{token ? "Video, audio, or image. Same output flow." : "Sign in to unlock uploads and saved source reuse."}</p>
             <p className="mt-4 text-sm text-accent">{uploadingFileName ? `Uploading ${uploadingFileName}...` : activeSourceLabel}</p>
             <label className="secondary-button mt-5 inline-flex w-full cursor-pointer items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
               {token ? "Upload source file" : "Sign in to upload"}
@@ -1550,13 +1515,10 @@ export function ClipStudio({
             <p className="mt-4 text-sm leading-7 text-subtext">{RESULTS_COPY.subhead}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatPill tone="accent">{displayedClips.length} clips</StatPill>
             <StatPill tone="signal">{renderedClipCount} rendered</StatPill>
             {strategyOnlyClipCount ? <StatPill tone="neutral">{strategyOnlyClipCount} strategy-only</StatPill> : null}
-            <StatPill tone="neutral">{result.source_platform || "Upload"}</StatPill>
-            {result.source_type ? <StatPill tone="neutral">{result.source_type.replace("_", " ")}</StatPill> : null}
             <StatPill tone="accent">{effectiveTargetPlatform}</StatPill>
-            {platformDecision === "manual" ? <StatPill tone="neutral">Manual target</StatPill> : <StatPill tone="signal">Auto target</StatPill>}
+            {platformDecision === "manual" ? <StatPill tone="neutral">Manual</StatPill> : <StatPill tone="signal">Auto</StatPill>}
           </div>
         </div>
       </div>
@@ -1568,7 +1530,6 @@ export function ClipStudio({
               <div className="max-w-3xl">
                 <p className="section-kicker">LWA recommendation</p>
                 <h4 className="mt-3 text-2xl font-semibold text-ink">Post this first. Then move the stack.</h4>
-                <p className="mt-3 text-sm leading-7 text-ink/70">{sourceTruthSummary}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {recommendedPlatform ? <StatPill tone="accent">Recommended: {recommendedPlatform}</StatPill> : null}
                   {recommendedContentType ? <StatPill tone="signal">{recommendedContentType}</StatPill> : null}
@@ -1601,7 +1562,7 @@ export function ClipStudio({
                     Export lead asset
                   </a>
                 ) : (
-                  <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-2 text-sm text-[#ffe4eb]">
+                  <span className="rounded-full border border-accentCrimson/22 bg-[linear-gradient(135deg,rgba(122,16,42,0.24),rgba(124,58,237,0.1))] px-4 py-2 text-sm text-[#ffe4eb]">
                     Upgrade for export
                   </span>
                 )}
@@ -1611,7 +1572,7 @@ export function ClipStudio({
 
           {!renderedClipCount ? (
             <InlineAlert tone="violet" title="Strategy pack ready">
-              LWA returned ranking, hooks, captions, and post order, but this run did not produce rendered media. Review the strategy stack now, then retry with a longer or cleaner source if you need playable output.
+              LWA returned the package, hooks, captions, and posting order, but this run did not produce rendered media. Review the strategy stack now, then retry with a longer or cleaner source if you need playable output.
             </InlineAlert>
           ) : !previewReadyCount ? (
             <InlineAlert tone="violet" title="Playable preview pending">
@@ -1639,9 +1600,9 @@ export function ClipStudio({
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="section-kicker">Rendered lane</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">🎬 READY TO POST NOW</h4>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">READY TO POST NOW</h4>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-                    These clips are fully rendered and optimized for distribution.
+                    Rendered clips ready for distribution.
                   </p>
                 </div>
               </div>
@@ -1682,9 +1643,9 @@ export function ClipStudio({
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="section-kicker">Strategy lane</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">🧠 HIGH-LEVERAGE IDEAS</h4>
+                  <h4 className="mt-2 text-2xl font-semibold text-ink">HIGH-LEVERAGE IDEAS</h4>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-                    Not rendered yet — but strong engagement potential.
+                    Strong angles waiting on media proof.
                   </p>
                 </div>
               </div>
@@ -1788,7 +1749,29 @@ export function ClipStudio({
 
   return (
     <main className="app-shell-grid min-h-screen">
-      <AIBackground variant={isHome ? "home" : "workspace"} worldState={worldState} generationMode={generationMode} signal={worldSignal} />
+      <AIBackground
+        variant={isHome ? "home" : "workspace"}
+        worldState={worldState}
+        worldPhase={worldPhase}
+        generationMode={generationMode}
+        signal={worldSignal}
+      />
+      <CharacterLayer
+        isLoading={isLoading}
+        loadingStageIndex={loadingStageIndex}
+        hasSource={hasSourceSelected}
+        hasResult={Boolean(result)}
+        renderedClipCount={renderedClipCount}
+        strategyOnlyClipCount={strategyOnlyClipCount}
+        recoveryActive={recoveryActive}
+        result={result}
+        orderedClips={orderedClips}
+        renderedClips={renderedClips}
+        strategyOnlyClips={strategyOnlyClips}
+        readyQueue={readyQueue}
+        scripts={result?.scripts}
+        onAction={handleCharacterAction}
+      />
       <AuthPanel
         isOpen={authOpen}
         mode={authMode}
@@ -1839,7 +1822,7 @@ export function ClipStudio({
                       }}
                       className="primary-button inline-flex rounded-full px-4 py-2.5 text-sm font-semibold"
                     >
-                      Forge the stack
+                      Generate clips
                     </button>
                   </>
                 )}
@@ -1847,13 +1830,8 @@ export function ClipStudio({
             }
           />
 
-          <section
-            ref={homeStageRef}
-            onPointerMove={handleHomePointerMove}
-            onPointerLeave={handleHomePointerLeave}
-            className="home-stage grid gap-12 pb-10 pt-16 lg:grid-cols-[1.06fr,0.94fr] lg:items-start"
-          >
-            <div className="space-y-7">
+          <section className="home-stage grid gap-10 pb-10 pt-14 lg:grid-cols-[0.88fr,1.12fr] lg:items-start">
+            <div className="space-y-7 lg:sticky lg:top-28">
               <div className="home-stage-grid" aria-hidden="true">
                 <div className="home-stage-sigil" />
                 <div className="home-stage-constellation" />
@@ -1862,15 +1840,16 @@ export function ClipStudio({
 
               <div className="space-y-5">
                 <div className="inline-flex items-center gap-3">
-                  <span className="home-brand-mark flex h-11 w-11 items-center justify-center rounded-2xl border border-accentCrimson/24 bg-[rgba(255,255,255,0.03)] shadow-crimson">
+                  <span className="home-brand-mark flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/24 bg-[rgba(255,255,255,0.035)] shadow-cyan">
                     <img src="/brand/lwa-mark.svg" alt="LWA omega mark" className="h-7 w-7" />
                   </span>
                   <p className="section-kicker">{HERO_COPY.kicker}</p>
                 </div>
-                <h1 className="page-title max-w-5xl text-5xl font-semibold leading-[0.98] text-ink sm:text-6xl lg:text-7xl">
-                  Turn one source into the <span className="text-gradient">clips people actually replay.</span>
+                <h1 className="hero-headline max-w-5xl text-5xl font-semibold leading-[0.92] text-ink sm:text-7xl lg:text-[5.9rem]">
+                  <span className="text-gradient">Clips worth posting.</span>
+                  <span className="block text-white">Decided fast.</span>
                 </h1>
-                <p className="max-w-3xl text-base leading-8 text-subtext sm:text-lg">
+                <p className="max-w-2xl text-base leading-8 text-subtext sm:text-lg">
                   {HERO_COPY.subhead}
                 </p>
               </div>
@@ -1887,7 +1866,13 @@ export function ClipStudio({
                 </Link>
               </div>
 
-              <p className="text-sm uppercase tracking-[0.24em] text-ink/56">Built for creators, clippers, and operators</p>
+              <div className="world-identity-card rounded-[32px] p-5">
+                <p className="section-kicker">Live system</p>
+                <h2 className="mt-3 text-2xl font-semibold text-ink">A clip engine with a world around it.</h2>
+                <p className="mt-3 text-sm leading-7 text-ink/62">
+                  Edge entities react to source, processing, and results without blocking the product.
+                </p>
+              </div>
 
               <div className="flex flex-wrap gap-2">
                 {featureProof.map((item, index) => (
@@ -1903,7 +1888,7 @@ export function ClipStudio({
             </div>
           </section>
 
-          {!result && !isLoading ? <HomeDiscoveryAccordion sections={homeDiscoverySections} /> : null}
+          {!result && !isLoading ? <HomeDiscoveryGrid sections={homeDiscoverySections.slice(0, 3)} /> : null}
           {resultsSection ? <div className="space-y-6 pb-8">{resultsSection}</div> : null}
         </div>
       ) : (
@@ -1946,11 +1931,11 @@ export function ClipStudio({
               <div className="sticky top-28 space-y-4">
                 <WorkspaceRailCard
                   label="Studio pulse"
-                  title={user ? "Generate first. Move fast after." : "Premium workspace"}
+                  title={user ? "Generate first. Move fast." : "Premium workspace"}
                   description={
                     user
-                      ? "Move from generation to queue, assignments, and payout readiness without leaving the workspace."
-                      : "Sign in to unlock saved runs, campaigns, wallet views, and queue state."
+                      ? "Move from generation to queue, assignments, and payout readiness."
+                      : "Sign in for saved runs, campaigns, wallet, and queue state."
                   }
                 >
                   <div className="mt-5 flex flex-wrap gap-2">
@@ -1959,7 +1944,7 @@ export function ClipStudio({
                   </div>
                 </WorkspaceRailCard>
 
-                <WorkspaceRailCard label="Account" title={user ? user.email : "Guest mode"} description={user ? `Role ${user.role || "creator"}` : "Use account mode for uploads, history, campaigns, and wallet state."}>
+                <WorkspaceRailCard label="Account" title={user ? user.email : "Guest mode"} description={user ? `Role ${user.role || "creator"}` : "Sign in for uploads, history, campaigns, and wallet."}>
                   <div className="mt-5 grid gap-3">
                     <MetricTile label="Clip packs" value={String(clipPacks.length)} detail="Saved history" />
                     <MetricTile label="Uploads" value={String(uploads.length)} detail="Reusable sources" />
@@ -1970,7 +1955,7 @@ export function ClipStudio({
                 <WorkspaceRailCard
                   label="Next move"
                   title="Use the system in order"
-                  description="Generate first, queue the winners, then move them into campaign flow."
+                  description="Generate, queue winners, then move into campaign flow."
                 />
               </div>
             </aside>
@@ -2001,7 +1986,7 @@ export function ClipStudio({
               ) : null}
 
               {accountError ? (
-                <section className="rounded-[24px] border border-accentCrimson/24 bg-accentCrimson/10 px-5 py-4 text-sm text-rose-100">
+                <section className="rounded-[24px] border border-accentCrimson/22 bg-accentCrimson/8 px-5 py-4 text-sm text-rose-100">
                   {accountError}
                 </section>
               ) : null}
@@ -2208,9 +2193,9 @@ function StatPill({ children, tone = "neutral" }: { children: ReactNode; tone?: 
       className={[
         "rounded-full border px-3 py-1.5 text-xs font-semibold",
         tone === "accent"
-          ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
+          ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
           : tone === "signal"
-            ? "border-cyan-400/25 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(255,0,60,0.08))] text-white"
+            ? "border-cyan-400/25 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.08))] text-white"
             : "border-white/10 bg-white/[0.05] text-ink/72",
       ].join(" ")}
     >
@@ -2234,8 +2219,8 @@ function MarketingPreview({ user }: { user: UserProfile | null }) {
     <div className="grid gap-4 sm:grid-cols-2">
       {[
         {
-          title: "Ranked clip outputs",
-          detail: "Score, fit, and post order come back structured.",
+          title: "Viral-ready outputs",
+          detail: "Fit and post order come back structured.",
         },
         {
           title: "Packaging intelligence",
@@ -2265,7 +2250,7 @@ function MarketingPreview({ user }: { user: UserProfile | null }) {
   );
 }
 
-function HomeDiscoveryAccordion({
+function HomeDiscoveryGrid({
   sections,
 }: {
   sections: ReadonlyArray<{
@@ -2278,69 +2263,28 @@ function HomeDiscoveryAccordion({
   }>;
 }) {
   return (
-    <section className="space-y-4 pb-10">
-      <div className="hero-card rounded-[30px] p-6 sm:p-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="section-kicker">Learn more</p>
-            <h2 className="mt-3 text-3xl font-semibold text-ink">Open the full breakdown when you want it.</h2>
-            <p className="mt-4 text-sm leading-7 text-subtext">
-              The hero stays clean. The deeper workflow, comparison, and FAQ layers stay one tap away and fully readable.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <StatPill tone="neutral">Compare</StatPill>
-            <StatPill tone="signal">Workflow</StatPill>
-            <StatPill tone="neutral">FAQ</StatPill>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-3">
+    <section className="pb-10">
+      <div className="grid gap-4 lg:grid-cols-3">
         {sections.map((section, index) => (
-          <details
+          <article
             key={section.id}
-            className={index === 0 ? "home-proof-card home-proof-card-lead rounded-[26px] p-0" : "glass-panel rounded-[26px] p-0"}
-            open={index === 0}
+            className={index === 0 ? "home-proof-card home-proof-card-lead rounded-[30px] p-5" : "glass-panel rounded-[30px] p-5"}
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-5 marker:content-none">
-              <div className="min-w-0">
-                <p className="section-kicker">{section.kicker}</p>
-                <h3 className="mt-2 text-xl font-semibold text-ink" dir="auto">
-                  {section.title}
-                </h3>
-              </div>
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-ink/72">
-                Open
-              </span>
-            </summary>
-
-            <div className="border-t border-white/8 px-5 pb-5 pt-4">
-              <p className="max-w-3xl text-sm leading-7 text-subtext" dir="auto">
-                {section.body}
-              </p>
-              <div className="mt-4 grid gap-3">
-                {section.bullets.map((bullet) => (
-                  <div key={bullet} className="metric-tile rounded-[22px] px-4 py-3 text-sm text-ink/78" dir="auto">
-                    {bullet}
-                  </div>
-                ))}
-              </div>
-              {section.links?.length ? (
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {section.links.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
+            <p className="section-kicker">{section.kicker}</p>
+            <h3 className="mt-3 text-xl font-semibold text-ink" dir="auto">
+              {section.title}
+            </h3>
+            <p className="mt-3 text-sm leading-7 text-subtext" dir="auto">
+              {section.body}
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {section.bullets.slice(0, 2).map((bullet) => (
+                <span key={bullet} className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-medium text-ink/78" dir="auto">
+                  {bullet}
+                </span>
+              ))}
             </div>
-          </details>
+          </article>
         ))}
       </div>
     </section>
@@ -2355,9 +2299,9 @@ function ReviewOrderPanel({ clips }: { clips: ClipResult[] }) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="section-kicker">Post order</p>
-          <h4 className="mt-3 text-xl font-semibold text-ink">Best clip first</h4>
+          <h4 className="mt-3 text-xl font-semibold text-ink">Move this stack</h4>
         </div>
-        <StatPill tone="accent">{ordered.length} ranked</StatPill>
+        <StatPill tone="accent">{ordered.length} clips</StatPill>
       </div>
 
       <div className="mt-5 space-y-3">
@@ -2365,7 +2309,7 @@ function ReviewOrderPanel({ clips }: { clips: ClipResult[] }) {
           const order = clip.post_rank || clip.best_post_order || clip.rank || index + 1;
           const detail = clip.thumbnail_text || clip.cta_suggestion || clip.packaging_angle || "Ready for review";
           const active = index === 0;
-          const authority = order === 1 ? "🔥 POST FIRST" : order === 2 ? "⚡ POST SECOND" : order === 3 ? "🧠 TEST THIRD" : "MOVE LATER";
+          const authority = order === 1 ? "POST FIRST" : order === 2 ? "POST SECOND" : order === 3 ? "TEST THIRD" : "MOVE LATER";
 
           return (
             <div
@@ -2430,8 +2374,8 @@ function LoadingSequence({ stages, activeIndex }: { stages: string[]; activeInde
           <img src="/brand/lwa-mark.svg" alt="LWA" className="relative h-6 w-6 opacity-90" />
         </div>
         <div>
-          <p className="text-lg font-medium text-ink">LWA is compiling the pack</p>
-          <p className="text-sm text-ink/60">Real media in. Ranked clips, copy, and previews out.</p>
+          <p className="text-lg font-medium text-ink">LWA is building outputs</p>
+          <p className="text-sm text-ink/60">Real media in. Clips, copy, and previews out.</p>
         </div>
       </div>
 

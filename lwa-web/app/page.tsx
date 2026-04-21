@@ -4,10 +4,9 @@ import { buildPageMetadata } from "../lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "AI Clipping Engine",
-  description:
-    "Turn one long-form source into a ranked clip stack with hooks, captions, timestamps, packaging, and short-form-ready output.",
+  description: "Turn one source into viral-ready clips with hooks, previews, and post order.",
   path: "/",
-  keywords: ["ai clipping engine", "ranked clip stack", "short form repurposing", "creator workflow"],
+  keywords: ["ai clipping engine", "viral-ready clips", "short form repurposing", "creator workflow"],
 });
 
 export default function HomePage() {
