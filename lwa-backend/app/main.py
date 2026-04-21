@@ -12,13 +12,16 @@ from .api.routes.clip_status import router as clip_status_router
 from .api.routes.clips import router as clips_router
 from .api.routes.edit import router as edit_router
 from .api.routes.generate import router as generate_router
+from .api.routes.generation import router as generation_router
 from .api.routes.me import router as me_router
 from .api.routes.posting import router as posting_router
 from .api.routes.seedance import router as seedance_router
 from .api.routes.upload import router as upload_router
+from .api.routes.video_analysis import router as video_analysis_router
 from .api.routes.wallet import router as wallet_router
 from .core.config import get_settings
 from .services.clip_service import maybe_prune_generated_assets
+from .services.db_init import initialize_databases
 
 settings = get_settings()
 logger = logging.getLogger("uvicorn.error")
@@ -27,6 +30,7 @@ def create_app() -> FastAPI:
     Path(settings.generated_assets_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.uploads_dir).mkdir(parents=True, exist_ok=True)
     maybe_prune_generated_assets(settings, force=True)
+    initialize_databases(settings)
     app = FastAPI(
         title=settings.app_name,
         version="0.1.0",
@@ -42,6 +46,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(generate_router)
+    app.include_router(generation_router)
+    app.include_router(video_analysis_router)
     app.include_router(auth_router)
     app.include_router(upload_router)
     app.include_router(me_router)

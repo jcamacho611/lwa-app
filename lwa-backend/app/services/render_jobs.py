@@ -14,6 +14,7 @@ from ..processor import (
     resolve_ffmpeg_path,
 )
 from .clip_status_store import update_clip_status
+from .render_job_store import RenderJobStore
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -38,6 +39,8 @@ def queue_preview_render(
     title_text: str = "",
     subtitle_text: str = "",
 ) -> Thread | None:
+    job_store = RenderJobStore(settings)
+    
     if not local_asset_path:
         update_clip_status(
             clip_id=clip_id,
@@ -50,11 +53,19 @@ def queue_preview_render(
         )
         return None
 
+    # Create persistent render job
+    job = job_store.create_job(
+        clip_id=clip_id,
+        status="pending",
+        output_path=local_asset_path,
+    )
+    
     update_clip_status(
         clip_id=clip_id,
         request_id=request_id,
         updates={"render_status": "rendering", "status": "processing", "render_error": None},
     )
+    
     return run_background(
         _render_preview_job,
         settings=settings,
@@ -119,6 +130,15 @@ def _render_preview_job(
             clip_id,
             error,
         )
+        
+        # Update job status in persistent store
+        job_store = RenderJobStore(settings)
+        job_store.update_job(
+            job_id=job["id"],
+            status="failed" if not input_path.exists() else "ready",
+            error=str(error) if not input_path.exists() else None,
+        )
+        
         update_clip_status(
             clip_id=clip_id,
             request_id=request_id,

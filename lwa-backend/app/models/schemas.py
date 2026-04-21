@@ -75,25 +75,32 @@ class ClipResult(BaseModel):
     start_time: str
     end_time: str
     score: int
-    virality_score: Optional[int] = None
+    confidence_score: Optional[int] = None
     confidence: Optional[float] = None
     confidence_label: Optional[str] = None
-    rank: Optional[int] = None
     reason: Optional[str] = None
+    why_this_matters: Optional[str] = None
+    category: Optional[str] = None
     format: str
-    clip_url: Optional[str] = None
+    preview_url: Optional[str] = None
     raw_clip_url: Optional[str] = None
     edited_clip_url: Optional[str] = None
+    clip_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     preview_image_url: Optional[str] = None
+    render_status: Optional[str] = None
+    is_rendered: Optional[bool] = None
+    is_strategy_only: Optional[bool] = None
+    export_bundle: Optional[str] = None
+    post_rank: Optional[int] = None
+    best_post_order: Optional[int] = None
+    virality_score: Optional[int] = None
+    rank: Optional[int] = None
     transcript_excerpt: Optional[str] = None
     edit_profile: Optional[str] = None
     aspect_ratio: Optional[str] = None
-    why_this_matters: Optional[str] = None
-    confidence_score: Optional[int] = None
     thumbnail_text: Optional[str] = None
     cta_suggestion: Optional[str] = None
-    post_rank: Optional[int] = None
-    best_post_order: Optional[int] = None
     hook_variants: List[str] = Field(default_factory=list)
     caption_variants: dict[str, str] = Field(default_factory=dict)
     caption_style: Optional[str] = None
@@ -345,6 +352,28 @@ class ScheduledPostPatch(BaseModel):
     status: Optional[str] = None
     caption: Optional[str] = None
     scheduled_for: Optional[str] = None
+
+
+class GenerationRequest(BaseModel):
+    text_prompt: Optional[str] = None
+    image_path: Optional[str] = None
+    prompt: Optional[str] = None
+    provider: str = "seedance"
+    duration: Optional[float] = 30.0
+    style: Optional[str] = None
+    aspect_ratio: str = "9:16"
+    motion_strength: str = "medium"
+    user_id: Optional[str] = None
+
+
+class GenerationResponse(BaseModel):
+    clips: List[ClipResult]
+    request_id: str
+    generation_type: str
+    provider: str
+    total_clips: int
+    processing_summary: Dict[str, Any]
+    metadata: Dict[str, Any]
 
 
 class EditClipRequest(BaseModel):
