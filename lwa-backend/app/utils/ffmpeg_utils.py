@@ -39,6 +39,7 @@ def detect_duration(*, source_file: Path, ffmpeg_path: str) -> Optional[int]:
 
 def render_social_export(
     *,
+    settings: Settings,
     ffmpeg_path: str,
     input_path: Path,
     output_path: Path,
@@ -46,6 +47,7 @@ def render_social_export(
     subtitle_text: str,
 ) -> None:
     export_social_ready_clip(
+        settings=settings,
         ffmpeg_path=ffmpeg_path,
         input_path=input_path,
         output_path=output_path,
@@ -56,6 +58,7 @@ def render_social_export(
 
 def batch_social_exports(
     *,
+    settings: Settings,
     clip_results: List[Any],
     clip_seeds: List[ClipSeed],
     generated_dir: Path,
@@ -64,6 +67,7 @@ def batch_social_exports(
     ffmpeg_path: str,
 ) -> tuple[List[Any], int]:
     return create_social_exports(
+        settings=settings,
         clip_results=clip_results,
         clip_seeds=clip_seeds,
         generated_dir=generated_dir,
@@ -71,4 +75,3 @@ def batch_social_exports(
         public_base_url=public_base_url,
         ffmpeg_path=ffmpeg_path,
     )
-

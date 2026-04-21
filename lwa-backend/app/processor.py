@@ -1029,13 +1029,22 @@ def create_social_exports(
 
     for clip in clip_results:
         seed = seed_map.get(getattr(clip, "id", ""))
-        raw_clip_url = seed.raw_clip_url if seed else getattr(clip, "raw_clip_url", None) or getattr(clip, "clip_url", None)
+        existing_preview_url = getattr(clip, "preview_url", None)
+        existing_clip_url = getattr(clip, "clip_url", None)
+        raw_clip_url = seed.raw_clip_url if seed else getattr(clip, "raw_clip_url", None) or existing_clip_url
+        fallback_preview_url = existing_preview_url or raw_clip_url or existing_clip_url
+        fallback_preview_image_url = (
+            seed.preview_image_url if seed else getattr(clip, "preview_image_url", None)
+        ) or getattr(clip, "thumbnail_url", None)
 
         if not seed or not seed.asset_path.exists():
             exported_results.append(
                 clip.model_copy(
                     update={
+                        "clip_url": fallback_preview_url,
+                        "preview_url": fallback_preview_url,
                         "raw_clip_url": raw_clip_url,
+                        "preview_image_url": fallback_preview_image_url,
                         "edit_profile": "Source cut fallback",
                         "aspect_ratio": "source",
                     }
@@ -1057,6 +1066,7 @@ def create_social_exports(
                     getattr(clip, "transcript_excerpt", None) or getattr(clip, "caption", "")
                 ),
             )
+            ensure_clip_output(output_path)
             edited_url = f"{public_base_url}/generated/{request_id}/{quote(output_name)}"
             preview_output_name = f"{seed.id}_preview.jpg"
             preview_output_path = generated_dir / preview_output_name
@@ -1067,11 +1077,12 @@ def create_social_exports(
                 public_base_url=public_base_url,
                 request_id=request_id,
                 public_name=preview_output_name,
-            ) or seed.preview_image_url
+            ) or fallback_preview_image_url
             exported_results.append(
                 clip.model_copy(
                     update={
                         "clip_url": edited_url,
+                        "preview_url": edited_url,
                         "raw_clip_url": raw_clip_url,
                         "edited_clip_url": edited_url,
                         "preview_image_url": preview_image_url,
@@ -1081,13 +1092,20 @@ def create_social_exports(
                 )
             )
             edited_assets_created += 1
-        except Exception:
+        except Exception as error:
+            logger.warning(
+                "social_export_fallback request_id=%s clip_id=%s reason=%s",
+                request_id,
+                getattr(clip, "id", "unknown"),
+                error,
+            )
             exported_results.append(
                 clip.model_copy(
                     update={
-                        "clip_url": raw_clip_url or getattr(clip, "clip_url", None),
+                        "clip_url": fallback_preview_url,
+                        "preview_url": fallback_preview_url,
                         "raw_clip_url": raw_clip_url,
-                        "preview_image_url": seed.preview_image_url,
+                        "preview_image_url": fallback_preview_image_url,
                         "edit_profile": "Source cut fallback",
                         "aspect_ratio": "source",
                     }

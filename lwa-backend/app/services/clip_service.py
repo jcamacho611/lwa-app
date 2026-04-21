@@ -387,7 +387,7 @@ def apply_plan_feature_flags(
     visible = ranked[:clip_limit]
     gated = []
     for clip in visible:
-        preview_url = clip.edited_clip_url or clip.clip_url or clip.raw_clip_url
+        preview_url = clip.preview_url or clip.edited_clip_url or clip.clip_url or clip.raw_clip_url
         download_url = preview_url if exports_unlocked else None
         caption_variants = clip.caption_variants or {}
         if not alt_hooks_unlocked:
@@ -467,7 +467,7 @@ def apply_plan_feature_flags(
                     "cta_suggestion": cta_suggestion,
                     "preview_url": preview_url,
                     "download_url": download_url,
-                    "thumbnail_url": clip.preview_image_url,
+                    "thumbnail_url": clip.thumbnail_url or clip.preview_image_url,
                     "is_rendered": is_rendered,
                     "is_strategy_only": not is_rendered,
                     "why_this_matters": why_this_matters,
