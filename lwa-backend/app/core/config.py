@@ -79,6 +79,12 @@ class Settings:
             else os.path.join(os.getcwd(), "generated", "lwa-platform.sqlite3")
         )
         self.platform_db_path = os.getenv("LWA_PLATFORM_DB_PATH", default_platform_db)
+        default_clipping_db = (
+            os.path.join(railway_volume_mount_path, "lwa-clipping.sqlite3")
+            if railway_volume_mount_path
+            else os.path.join(os.getcwd(), "generated", "lwa-clipping.sqlite3")
+        )
+        self.clipping_db_path = os.getenv("LWA_CLIPPING_DB_PATH", default_clipping_db)
         self.max_upload_mb = int(os.getenv("MAX_UPLOAD_MB", "500"))
         self.jwt_secret = os.getenv("LWA_JWT_SECRET", "dev-secret-change-me")
         self.jwt_exp_minutes = int(os.getenv("LWA_JWT_EXP_MINUTES", "43200"))

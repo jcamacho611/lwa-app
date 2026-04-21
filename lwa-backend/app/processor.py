@@ -23,6 +23,9 @@ except Exception:  # pragma: no cover - optional dependency
 from yt_dlp import YoutubeDL
 
 from .config import Settings
+from .services.candidate_builder import build_candidate_clips, candidates_to_segment_plan
+from .services.silence_detector import detect_silence_regions
+from .services.speech_regions import invert_silence_to_speech
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -246,10 +249,25 @@ def process_video_source(
                     request_id,
                     source_file,
                 )
+        structure_segments: list[dict[str, float]] = []
+        if duration_seconds:
+            try:
+                silence_regions = detect_silence_regions(str(source_file), ffmpeg_path=ffmpeg_path)
+                speech_regions = invert_silence_to_speech(silence_regions, float(duration_seconds))
+                structure_candidates = build_candidate_clips(speech_regions, max_candidates=max_candidates)
+                structure_segments = candidates_to_segment_plan(structure_candidates)
+            except Exception as error:
+                logger.warning(
+                    "structure_segment_fallback request_id=%s reason=%s",
+                    request_id,
+                    error,
+                )
+
         segments, selection_strategy = build_segment_plan(
             duration_seconds=duration_seconds,
             chapters=info.get("chapters") or [],
             transcript_windows=transcript_windows,
+            structure_segments=structure_segments,
             max_candidates=max_candidates,
         )
         logger.info(
@@ -568,12 +586,16 @@ def build_segment_plan(
     duration_seconds: Optional[int],
     chapters: List[dict[str, Any]],
     transcript_windows: List[TranscriptWindow],
+    structure_segments: List[dict[str, float]] | None = None,
     max_candidates: int,
 ) -> tuple[List[dict[str, Any]], str]:
     clip_length = choose_clip_length(duration_seconds)
     transcript_segments = build_transcript_segments(transcript_windows, clip_length, max_candidates=max_candidates)
     if transcript_segments:
         return transcript_segments[:max_candidates], "transcript"
+
+    if structure_segments:
+        return dedupe_segments(structure_segments)[:max_candidates], "speech-structure"
 
     segments = build_chapter_segments(chapters=chapters, clip_length=clip_length, max_candidates=max_candidates)
     if segments:
