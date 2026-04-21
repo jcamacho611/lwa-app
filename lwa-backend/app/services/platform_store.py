@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from ..models.schemas import ClipBatchResponse
 from ..models.user import StoredUser, UserRecord
+from .confidence_engine import build_confidence_label
 
 
 def utcnow() -> str:
@@ -1608,6 +1609,12 @@ class PlatformStore:
     def _clip_payload_from_row(self, row: sqlite3.Row) -> dict[str, Any]:
         preview_url = self._row_value(row, "edited_clip_url") or self._row_value(row, "clip_url") or self._row_value(row, "raw_clip_url")
         download_url = self._row_value(row, "download_url")
+        confidence_score = (
+            self._row_value(row, "confidence_score")
+            if self._row_value(row, "confidence_score") is not None
+            else (int(round((row["confidence"] or 0) * 100)) if row["confidence"] is not None else None)
+        )
+        is_rendered = bool(preview_url)
         return {
             "record_id": row["id"],
             "request_id": row["request_id"],
@@ -1627,9 +1634,8 @@ class PlatformStore:
             "score": row["score"],
             "virality_score": row["virality_score"],
             "confidence": row["confidence"],
-            "confidence_score": self._row_value(row, "confidence_score")
-            if self._row_value(row, "confidence_score") is not None
-            else (int(round((row["confidence"] or 0) * 100)) if row["confidence"] is not None else None),
+            "confidence_score": confidence_score,
+            "confidence_label": build_confidence_label({"confidence_score": confidence_score, "score": row["score"]}),
             "rank": row["rank_value"],
             "reason": row["reason"],
             "why_this_matters": self._row_value(row, "why_this_matters") or row["reason"],
@@ -1653,6 +1659,8 @@ class PlatformStore:
             "preview_url": preview_url,
             "download_url": download_url,
             "thumbnail_url": row["preview_image_url"],
+            "is_rendered": is_rendered,
+            "is_strategy_only": not is_rendered,
             "trim_start_seconds": row["trim_start_seconds"],
             "trim_end_seconds": row["trim_end_seconds"],
             "caption_style_override": row["caption_style_override"],

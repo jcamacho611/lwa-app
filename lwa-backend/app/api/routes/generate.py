@@ -25,6 +25,7 @@ from ...services.clip_service import (
     run_job,
 )
 from ...services.entitlements import UsageStore, resolve_entitlement
+from ...services.export_bundle import create_export_bundle
 
 router = APIRouter()
 settings = get_settings()
@@ -185,6 +186,24 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
         status="queued",
         poll_url=f"{public_base_url}/v1/jobs/{job_id}",
         message="Job queued. Poll for results.",
+    )
+
+
+@router.post("/export-bundle")
+@router.post("/v1/export-bundle")
+async def export_clip_bundle(payload: dict, http_request: Request) -> dict[str, object]:
+    enforce_api_key(http_request, settings)
+    source_url = str(payload.get("source_url") or payload.get("video_url") or "")
+    clips = payload.get("clips") or []
+    if not isinstance(clips, list):
+        raise HTTPException(status_code=422, detail="clips must be a list")
+
+    public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
+    return create_export_bundle(
+        settings=settings,
+        public_base_url=public_base_url,
+        source_url=source_url,
+        clips=[clip for clip in clips if isinstance(clip, dict)],
     )
 
 

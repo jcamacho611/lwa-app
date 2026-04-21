@@ -77,6 +77,7 @@ class ClipResult(BaseModel):
     score: int
     virality_score: Optional[int] = None
     confidence: Optional[float] = None
+    confidence_label: Optional[str] = None
     rank: Optional[int] = None
     reason: Optional[str] = None
     format: str
@@ -109,6 +110,8 @@ class ClipResult(BaseModel):
     preview_url: Optional[str] = None
     download_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    is_rendered: Optional[bool] = None
+    is_strategy_only: Optional[bool] = None
 
 
 class FeatureFlags(BaseModel):

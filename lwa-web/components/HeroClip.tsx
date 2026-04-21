@@ -99,6 +99,7 @@ export default function HeroClip({
             <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
                 <span className="status-chip status-approved">{hasRenderProof ? "POST THIS FIRST" : "HIGH VIRAL POTENTIAL"}</span>
+                {clip.confidence_label ? <span className="status-chip status-submitted">{clip.confidence_label}</span> : null}
                 {clip.caption_style ? <span className="status-chip status-submitted">{clip.caption_style}</span> : null}
               </div>
               <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-cyan-100">
@@ -179,7 +180,7 @@ export default function HeroClip({
             </div>
             <div className="metric-tile rounded-[24px] p-4">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">High viral potential</p>
-              <p className="text-sm font-medium text-ink">{clip.packaging_angle || clip.platform_fit || "Built to travel fast"}</p>
+              <p className="text-sm font-medium text-ink">{clip.confidence_label || clip.packaging_angle || clip.platform_fit || "Built to travel fast"}</p>
             </div>
             <div className="metric-tile rounded-[24px] p-4">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Thumbnail line</p>

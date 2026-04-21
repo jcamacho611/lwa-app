@@ -215,6 +215,7 @@ export type ClipResult = {
   virality_score?: number | null;
   confidence?: number | null;
   confidence_score?: number | null;
+  confidence_label?: string | null;
   rank?: number | null;
   post_rank?: number | null;
   reason?: string | null;
@@ -250,6 +251,15 @@ export type ClipResult = {
     cta?: string;
     platform_fit?: string;
     post_rank?: number;
+  };
+  export_bundle?: {
+    post_order?: number | null;
+    post_sequence_label?: string | null;
+    packaging_angle?: string | null;
+    thumbnail_text?: string | null;
+    cta?: string | null;
+    preview_ready?: boolean;
+    download_ready?: boolean;
   };
   trim_start_seconds?: number | null;
   trim_end_seconds?: number | null;
@@ -299,6 +309,14 @@ export type GeneratedScripts = {
   hooks: string[];
   titles: string[];
   ctas: string[];
+};
+
+export type ExportBundleResponse = {
+  bundle_id: string;
+  download_url: string;
+  file_name: string;
+  clip_count: number;
+  created_at: string;
 };
 
 export type ClipRecoveryJob = {

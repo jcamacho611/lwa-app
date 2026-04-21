@@ -113,6 +113,11 @@ export default function VideoCard({
           <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
             {hasRenderProof ? "Ready now" : "High viral potential"}
           </span>
+          {clip.confidence_label ? (
+            <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs text-cyan-100">
+              {clip.confidence_label}
+            </span>
+          ) : null}
           {captionStyle ? (
             <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">{captionStyle}</span>
           ) : null}

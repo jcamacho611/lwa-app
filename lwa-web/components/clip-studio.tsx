@@ -46,6 +46,7 @@ import {
   createPayoutRequest,
   createPostingConnection,
   createScheduledPost,
+  exportClipBundle,
   generateClips,
   loadClipRecoveryJob,
   loadBatches,
@@ -189,6 +190,8 @@ export function ClipStudio({
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null);
   const [loadingStageIndex, setLoadingStageIndex] = useState(0);
   const [motionLocked, setMotionLocked] = useState(false);
+  const [bundleExportState, setBundleExportState] = useState<"idle" | "exporting" | "ready" | "failed">("idle");
+  const [bundleExportMessage, setBundleExportMessage] = useState<string | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
   const [generatorHovered, setGeneratorHovered] = useState(false);
   const stableResult = useStableResults(result);
@@ -930,6 +933,33 @@ export function ClipStudio({
 
   function handleClearQueue() {
     setReadyQueue(clearReadyQueue());
+  }
+
+  async function handleExportBundle() {
+    if (!activeResult?.clips?.length) {
+      return;
+    }
+
+    setBundleExportState("exporting");
+    setBundleExportMessage(null);
+
+    try {
+      const bundle = await exportClipBundle(
+        {
+          source_url: activeResult.video_url,
+          clips: activeResult.clips,
+        },
+        token,
+      );
+      setBundleExportState("ready");
+      setBundleExportMessage(`Bundle ready: ${bundle.file_name}`);
+      if (bundle.download_url) {
+        window.open(bundle.download_url, "_blank", "noopener,noreferrer");
+      }
+    } catch (bundleError) {
+      setBundleExportState("failed");
+      setBundleExportMessage(bundleError instanceof Error ? bundleError.message : "Unable to export bundle.");
+    }
   }
 
   function replaceClipInResult(updatedClip: ClipResult) {
@@ -1685,6 +1715,19 @@ export function ClipStudio({
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Packaging + export rail</p>
             <h4 className="mt-3 text-xl font-semibold text-ink">What is ready to move now</h4>
+            <button
+              type="button"
+              onClick={() => void handleExportBundle()}
+              disabled={bundleExportState === "exporting" || !activeResult?.clips?.length}
+              className="secondary-button mt-4 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {bundleExportState === "exporting" ? "Building bundle..." : "Export bundle"}
+            </button>
+            {bundleExportMessage ? (
+              <p className={["mt-3 text-sm", bundleExportState === "failed" ? "text-red-200" : "text-cyan-100"].join(" ")}>
+                {bundleExportMessage}
+              </p>
+            ) : null}
             <div className="mt-4 grid gap-3">
               <MetricTile
                 label={RESULT_COPY.finishedPreviews}

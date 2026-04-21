@@ -9,6 +9,7 @@ import {
   ClipRecoveryJob,
   ClipRecoveryStatus,
   ClipPackSummary,
+  ExportBundleResponse,
   GenerateResponse,
   PlatformOption,
   PayoutRequest,
@@ -95,6 +96,17 @@ function authHeaders(token?: string | null, contentType = true) {
 
 export async function generateClips(payload: GeneratePayload, token?: string | null): Promise<GenerateResponse> {
   return jsonRequest<GenerateResponse>("/api/generate", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function exportClipBundle(
+  payload: { source_url?: string; clips: GenerateResponse["clips"] },
+  token?: string | null,
+): Promise<ExportBundleResponse> {
+  return jsonRequest<ExportBundleResponse>("/api/export-bundle", {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(payload),

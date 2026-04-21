@@ -29,6 +29,7 @@ from ..models.schemas import (
 from ..models.user import UserRecord
 from ..services.ai_service import generate_clip_copy
 from ..services.attention_compiler import compile_attention
+from ..services.confidence_engine import build_confidence_label, resolve_confidence_score
 from ..services.entitlements import EntitlementContext, UsageStore
 from ..services.platform_store import PlatformStore
 from ..services.seedance_service import seedance_available
@@ -400,6 +401,14 @@ def apply_plan_feature_flags(
             or clip.reason
             or "Strong pacing, clear payoff, and creator-ready packaging."
         )
+        confidence_score = resolve_confidence_score(clip)
+        confidence_label = build_confidence_label(
+            {
+                "confidence_score": confidence_score,
+                "score": clip.score,
+                "confidence": clip.confidence,
+            }
+        )
         cta_suggestion = clip.cta_suggestion or "Prompt viewers to comment or follow."
         thumbnail_text = clip.thumbnail_text or clip.title or (clip.hook[:40] if clip.hook else "Best Clip")
         platform_fit = clip.platform_fit or "Optimized for fast short-form viewing."
@@ -435,10 +444,13 @@ def apply_plan_feature_flags(
             thumbnail_text=thumbnail_text,
             cta_suggestion=cta_suggestion,
         )
+        is_rendered = bool(preview_url)
 
         gated.append(
             clip.model_copy(
                 update={
+                    "confidence_score": confidence_score,
+                    "confidence_label": confidence_label,
                     "hook_variants": hook_variants,
                     "caption_variants": caption_variants,
                     "caption_style": caption_style,
@@ -456,6 +468,8 @@ def apply_plan_feature_flags(
                     "preview_url": preview_url,
                     "download_url": download_url,
                     "thumbnail_url": clip.preview_image_url,
+                    "is_rendered": is_rendered,
+                    "is_strategy_only": not is_rendered,
                     "why_this_matters": why_this_matters,
                     "thumbnail_text": thumbnail_text,
                     "platform_fit": platform_fit,
