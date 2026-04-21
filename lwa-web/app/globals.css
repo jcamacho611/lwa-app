@@ -1899,6 +1899,51 @@ textarea {
   position: relative;
 }
 
+.result-screen {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.result-screen--locked .ai-orb,
+.result-screen--locked .ai-orb-pulse,
+.result-screen--locked .ai-depth-field,
+.result-screen--locked .ai-grid,
+.result-screen--locked .ai-scan-line,
+.result-screen--locked .ai-particle-field,
+.result-screen--locked .world-particle-canvas,
+.result-screen--locked .ai-stars,
+.result-screen--locked .ai-fog,
+.result-screen--locked .ai-beam,
+.result-screen--locked .ai-shimmer,
+.result-screen--locked .world-sky,
+.result-screen--locked .world-ruins,
+.result-screen--locked .world-energy-field,
+.result-screen--locked .world-hud,
+.result-screen--locked .world-foreground-lights,
+.result-screen--locked .world-foreground-particles,
+.result-screen--locked .world-event,
+.result-screen--locked .world-character-shell,
+.result-screen--locked .world-character-body,
+.result-screen--locked .world-character-aura,
+.result-screen--locked .world-character-glow,
+.result-screen--locked .world-character-sigil,
+.result-screen--locked .world-character-crown,
+.result-screen--locked .world-character-core,
+.result-screen--locked .world-character-veil,
+.result-screen--locked .world-character-eyes {
+  animation-play-state: paused !important;
+}
+
+.results-motion-locked .ai-background *,
+.results-motion-locked .world-engine * {
+  animation-play-state: paused !important;
+}
+
+.result-screen video,
+.result-screen img {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
 @keyframes driftGlow {
   0% {
     transform: translate3d(-2%, -1%, 0) scale(1);

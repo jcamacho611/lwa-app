@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { ClipResult } from "../lib/types";
+import ClipPreview from "./results/ClipPreview";
+import { hasPreviewAsset, isRenderedClip } from "../lib/clip-utils";
+import { RESULT_COPY, buildLeadReason } from "../lib/result-copy";
 
 type HeroClipProps = {
   clip: ClipResult;
@@ -36,7 +39,7 @@ function decisionInstruction(rank?: number | null, hasRenderProof?: boolean) {
   }
   return hasRenderProof
     ? "Post this next when you want another cut that is already ready to move."
-    : "High viral potential — keep it in the stack until render proof comes back.";
+    : "High viral potential — keep this in your posting plan while the preview finishes.";
 }
 
 function buildPackageText(clip: ClipResult) {
@@ -63,54 +66,16 @@ export default function HeroClip({
   recoveryState = null,
   onRecover,
 }: HeroClipProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
   const [copiedPackage, setCopiedPackage] = useState(false);
 
-  const previewUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
-  const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url || null;
   const downloadUrl = clip.download_url || null;
-  const hasPlayablePreview = Boolean(previewUrl);
-  const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
-  const hasRenderProof = hasPlayablePreview || hasStillPreview;
+  const hasPlayablePreview = isRenderedClip(clip);
+  const hasRenderProof = hasPreviewAsset(clip);
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
   const postAuthority = authorityLabel(postRank);
   const decisionText = decisionInstruction(postRank, hasRenderProof);
-  const whyThisHits = clip.why_this_matters || clip.reason || "Clear setup, quick payoff, and packaging built to travel.";
+  const whyThisHits = buildLeadReason(clip.why_this_matters || clip.reason);
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 2);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !previewUrl) {
-      return;
-    }
-
-    video.muted = true;
-    const playPromise = video.play();
-    if (playPromise) {
-      void playPromise.then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-    }
-  }, [previewUrl]);
-
-  async function togglePlayback() {
-    const video = videoRef.current;
-    if (!video) {
-      return;
-    }
-
-    if (video.paused) {
-      try {
-        await video.play();
-        setIsPlaying(true);
-      } catch {
-        setIsPlaying(false);
-      }
-      return;
-    }
-
-    video.pause();
-    setIsPlaying(false);
-  }
 
   async function handleCopyPackage() {
     try {
@@ -129,25 +94,7 @@ export default function HeroClip({
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
         <div className="space-y-4">
           <div className="video-shell overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-[0_12px_44px_rgba(0,0,0,0.28)]">
-            {hasPlayablePreview ? (
-              <video
-                ref={videoRef}
-                src={previewUrl || undefined}
-                poster={thumbnailUrl || undefined}
-                className="aspect-[9/16] w-full bg-black object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="metadata"
-              />
-            ) : thumbnailUrl ? (
-              <img src={thumbnailUrl} alt={clip.hook} className="aspect-[9/16] w-full bg-black object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
-            ) : (
-              <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,30,86,0.24),transparent_44%),radial-gradient(circle_at_80%_20%,rgba(0,231,255,0.14),transparent_38%),linear-gradient(180deg,#040405,#0d080b)] text-sm text-ink/56">
-                Preview unavailable
-              </div>
-            )}
+            <ClipPreview clip={clip} className="aspect-[9/16] transition-transform duration-300 group-hover:scale-[1.02]" autoPlay />
 
             <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
@@ -194,16 +141,6 @@ export default function HeroClip({
               {queued ? "Queued for post" : "Queue post"}
             </button>
 
-            {hasPlayablePreview ? (
-              <button
-                type="button"
-                onClick={() => void togglePlayback()}
-                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
-              >
-                {isPlaying ? "Pause preview" : "Play preview"}
-              </button>
-            ) : null}
-
             {!hasRenderProof ? (
               <button
                 type="button"
@@ -216,8 +153,8 @@ export default function HeroClip({
                   : recoveryState?.status === "queued"
                     ? "Recovery queued"
                     : recoveryState?.status === "failed"
-                      ? "Retry render"
-                      : "Recover render"}
+                      ? RESULT_COPY.previewRetry
+                      : RESULT_COPY.previewRetry}
               </button>
             ) : null}
           </div>
@@ -231,7 +168,7 @@ export default function HeroClip({
           </div>
 
           <div className="rounded-[26px] border border-cyan-300/18 bg-[linear-gradient(180deg,rgba(0,231,255,0.09),rgba(124,58,237,0.045))] p-5">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-cyan-100/70">System call</p>
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-cyan-100/70">{RESULT_COPY.whyPicked}</p>
             <p className="text-base font-medium leading-7 text-white">{decisionText}</p>
           </div>
 

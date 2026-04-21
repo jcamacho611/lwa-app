@@ -88,21 +88,17 @@ import {
   upsertReadyQueueItem,
 } from "../lib/queue";
 import { GENERATOR_COPY, HERO_COPY, RESULTS_COPY, rewriteSurfaceLabel } from "../lib/brand-voice";
+import { hasPreviewAsset } from "../lib/clip-utils";
 import type { CharacterActionId } from "../lib/character-intelligence";
 import { getPlanSurface } from "../lib/plans";
+import { RESULT_COPY } from "../lib/result-copy";
 import { resolveWorldPhase, resolveWorldState, type WorldSignal } from "../lib/world-state";
+import { useStableResults } from "../hooks/useStableResults";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 
 function clipHasRenderedMedia(clip: ClipResult) {
-  return Boolean(
-    clip.preview_url ||
-      clip.edited_clip_url ||
-      clip.clip_url ||
-      clip.raw_clip_url ||
-      clip.thumbnail_url ||
-      clip.preview_image_url,
-  );
+  return hasPreviewAsset(clip);
 }
 
 type ClipRecoveryState = {
@@ -192,8 +188,11 @@ export function ClipStudio({
   const [readyQueue, setReadyQueue] = useState<ReadyQueueItem[]>([]);
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null);
   const [loadingStageIndex, setLoadingStageIndex] = useState(0);
+  const [motionLocked, setMotionLocked] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const [generatorHovered, setGeneratorHovered] = useState(false);
+  const stableResult = useStableResults(result);
+  const activeResult = stableResult ?? result;
 
   const activeSourceLabel = useMemo(() => {
     if (selectedUpload?.file_name || selectedUpload?.filename) {
@@ -328,6 +327,17 @@ export function ClipStudio({
 
     return () => window.clearInterval(interval);
   }, [isLoading]);
+
+  useEffect(() => {
+    if (!activeResult) {
+      setMotionLocked(false);
+      return;
+    }
+
+    setMotionLocked(false);
+    const timer = window.setTimeout(() => setMotionLocked(true), 900);
+    return () => window.clearTimeout(timer);
+  }, [activeResult?.request_id]);
 
   useEffect(() => {
     if (initialSection !== "campaigns" || !token || !campaigns.length || selectedCampaignId) {
@@ -671,8 +681,8 @@ export function ClipStudio({
 
   const preferenceProfile = useMemo(() => buildPreferenceProfile(feedbackRecords), [feedbackRecords]);
   const displayedClips = useMemo(
-    () => applyPreferenceBoost(result?.clips || [], preferenceProfile, improveResults),
-    [improveResults, preferenceProfile, result?.clips],
+    () => applyPreferenceBoost(activeResult?.clips || [], preferenceProfile, improveResults),
+    [activeResult?.clips, improveResults, preferenceProfile],
   );
   const feedbackByClipId = useMemo(
     () =>
@@ -683,8 +693,8 @@ export function ClipStudio({
     [feedbackRecords],
   );
   const planSurface = useMemo(
-    () => getPlanSurface(user?.plan_code, result?.processing_summary?.feature_flags as FeatureFlags | undefined),
-    [result?.processing_summary?.feature_flags, user?.plan_code],
+    () => getPlanSurface(user?.plan_code, activeResult?.processing_summary?.feature_flags as FeatureFlags | undefined),
+    [activeResult?.processing_summary?.feature_flags, user?.plan_code],
   );
   const activeFeatureFlags = planSurface.featureFlags;
   const visibleAppNavItems = useMemo(
@@ -705,15 +715,15 @@ export function ClipStudio({
     generationsPerDay: activeFeatureFlags.max_generations_per_day || 0,
     uploadsPerDay: activeFeatureFlags.max_uploads_per_day || 0,
   };
-  const creditsRemaining = result?.processing_summary?.credits_remaining;
+  const creditsRemaining = activeResult?.processing_summary?.credits_remaining;
   const editorUnlocked = Boolean(activeFeatureFlags.caption_editor || activeFeatureFlags.timeline_editor);
   const campaignsUnlocked = Boolean(activeFeatureFlags.campaign_mode);
   const walletUnlocked = Boolean(activeFeatureFlags.wallet_view);
   const postingQueueUnlocked = Boolean(activeFeatureFlags.posting_queue);
   const activeFeedbackPlatform = useMemo<PlatformOption>(() => {
-    const candidate = result?.processing_summary?.target_platform || platform;
+    const candidate = activeResult?.processing_summary?.target_platform || platform;
     return platforms.includes(candidate as PlatformOption) ? (candidate as PlatformOption) : "TikTok";
-  }, [platform, result?.processing_summary?.target_platform]);
+  }, [activeResult?.processing_summary?.target_platform, platform]);
   const orderedClips = useMemo(() => {
     return [...displayedClips].sort((left, right) => {
       const leftOrder = left.post_rank || left.best_post_order || left.rank || Number.MAX_SAFE_INTEGER;
@@ -842,12 +852,12 @@ export function ClipStudio({
   const renderedGridClips = renderedHeroClip ? renderedClips.slice(1) : renderedClips;
   const strategyHeroClip = !renderedHeroClip ? strategyOnlyClips[0] ?? null : null;
   const strategyGridClips = strategyHeroClip ? strategyOnlyClips.slice(1) : strategyOnlyClips;
-  const effectiveTargetPlatform = result?.processing_summary?.target_platform || (useManualPlatform ? platform : "Auto");
-  const recommendedPlatform = result?.processing_summary?.recommended_platform || result?.processing_summary?.target_platform || null;
-  const recommendedContentType = result?.processing_summary?.recommended_content_type || null;
-  const recommendedOutputStyle = result?.processing_summary?.recommended_output_style || null;
-  const platformDecision = result?.processing_summary?.platform_decision || (useManualPlatform ? "manual" : "auto");
-  const platformRecommendationReason = result?.processing_summary?.platform_recommendation_reason || null;
+  const effectiveTargetPlatform = activeResult?.processing_summary?.target_platform || (useManualPlatform ? platform : "Auto");
+  const recommendedPlatform = activeResult?.processing_summary?.recommended_platform || activeResult?.processing_summary?.target_platform || null;
+  const recommendedContentType = activeResult?.processing_summary?.recommended_content_type || null;
+  const recommendedOutputStyle = activeResult?.processing_summary?.recommended_output_style || null;
+  const platformDecision = activeResult?.processing_summary?.platform_decision || (useManualPlatform ? "manual" : "auto");
+  const platformRecommendationReason = activeResult?.processing_summary?.platform_recommendation_reason || null;
   const renderedClipCount = renderedClips.length;
   const strategyOnlyClipCount = strategyOnlyClips.length;
   const recoveryActive = useMemo(
@@ -856,17 +866,17 @@ export function ClipStudio({
   );
   const exportReadyCount = useMemo(() => orderedClips.filter((clip) => clip.download_url).length, [orderedClips]);
   const leadPreviewReady = Boolean(
-    result?.preview_asset_url ||
+    activeResult?.preview_asset_url ||
       renderedHeroClip?.preview_url ||
       renderedHeroClip?.edited_clip_url ||
       renderedHeroClip?.clip_url ||
       renderedHeroClip?.raw_clip_url,
   );
-  const leadExportReady = Boolean(result?.download_asset_url || renderedHeroClip?.download_url);
+  const leadExportReady = Boolean(activeResult?.download_asset_url || renderedHeroClip?.download_url);
   const worldPhase = resolveWorldPhase({
     isLoading,
     loadingStageIndex,
-    hasResult: Boolean(result),
+    hasResult: Boolean(activeResult),
     hasSource: hasSourceSelected,
   });
   const worldState = resolveWorldState({
@@ -876,12 +886,12 @@ export function ClipStudio({
     generatorHovered,
     isLoading,
     loadingStageIndex,
-    hasResult: Boolean(result),
+    hasResult: Boolean(activeResult),
     hasSource: hasSourceSelected,
   });
   const worldSignal: WorldSignal = isLoading
     ? "generating"
-    : result
+    : activeResult
       ? "complete"
       : inputFocused
         ? "focus"
@@ -906,7 +916,7 @@ export function ClipStudio({
     setReadyQueue((current) =>
       current.some((item) => item.clipId === clipId)
         ? removeReadyQueueItem(current, clipId)
-        : upsertReadyQueueItem(current, createReadyQueueItem(clip, result?.processing_summary?.target_platform || platform)),
+        : upsertReadyQueueItem(current, createReadyQueueItem(clip, activeResult?.processing_summary?.target_platform || platform)),
     );
   }
 
@@ -1078,8 +1088,8 @@ export function ClipStudio({
       return;
     }
 
-    if (action === "copy_script" && result?.scripts?.main) {
-      void navigator.clipboard?.writeText(result.scripts.main);
+    if (action === "copy_script" && activeResult?.scripts?.main) {
+      void navigator.clipboard?.writeText(activeResult.scripts.main);
     }
   }
 
@@ -1278,7 +1288,7 @@ export function ClipStudio({
             </div>
             <div className="flex flex-wrap gap-2">
               <StatPill tone="accent">{planSurface.name}</StatPill>
-              <StatPill tone="signal">{result ? "Live output" : "Premium review"}</StatPill>
+              <StatPill tone="signal">{activeResult ? "Live output" : "Premium review"}</StatPill>
             </div>
           </div>
 
@@ -1413,7 +1423,7 @@ export function ClipStudio({
               <p className="text-sm text-ink/60">
                 {isLoading
                   ? `${loadingStages[loadingStageIndex]}. ${GENERATOR_COPY.loading}`
-                  : result
+                  : activeResult
                     ? "Clip pack ready. Review first, queue next, export when it fits."
                     : idleRunSummary}
               </p>
@@ -1496,7 +1506,7 @@ export function ClipStudio({
             <p className="section-kicker">Flow</p>
             <div className="mt-4 space-y-3 text-sm leading-7 text-ink/68">
               <p>1. LWA finds the moments worth cutting and recommends the first destination.</p>
-              <p>2. Review rendered clips before you spend time on strategy-only cuts.</p>
+              <p>2. Review finished previews before you spend time on ideas-only cuts.</p>
               <p>3. Queue the winners and export the assets that are already ready.</p>
             </div>
           </div>
@@ -1505,8 +1515,8 @@ export function ClipStudio({
     </section>
   );
 
-  const resultsSection = result ? (
-    <section className="space-y-6">
+  const resultsSection = activeResult ? (
+    <section className={["result-screen space-y-6", motionLocked ? "result-screen--locked" : ""].join(" ")}>
       <div className="hero-card rounded-[32px] p-6 sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
@@ -1515,8 +1525,8 @@ export function ClipStudio({
             <p className="mt-4 text-sm leading-7 text-subtext">{RESULTS_COPY.subhead}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatPill tone="signal">{renderedClipCount} rendered</StatPill>
-            {strategyOnlyClipCount ? <StatPill tone="neutral">{strategyOnlyClipCount} strategy-only</StatPill> : null}
+            <StatPill tone="signal">{renderedClipCount} finished previews</StatPill>
+            {strategyOnlyClipCount ? <StatPill tone="neutral">{strategyOnlyClipCount} ideas only</StatPill> : null}
             <StatPill tone="accent">{effectiveTargetPlatform}</StatPill>
             {platformDecision === "manual" ? <StatPill tone="neutral">Manual</StatPill> : <StatPill tone="signal">Auto</StatPill>}
           </div>
@@ -1538,14 +1548,14 @@ export function ClipStudio({
                 {platformRecommendationReason ? (
                   <p className="mt-4 max-w-2xl text-sm leading-7 text-ink/58">{platformRecommendationReason}</p>
                 ) : null}
-                {result.processing_summary?.recommended_next_step ? (
-                  <p className="mt-3 text-sm font-medium text-ink/82">{result.processing_summary.recommended_next_step}</p>
+                {activeResult.processing_summary?.recommended_next_step ? (
+                  <p className="mt-3 text-sm font-medium text-ink/82">{activeResult.processing_summary.recommended_next_step}</p>
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-3">
                 {leadPreviewReady ? (
                   <a
-                    href={result.preview_asset_url || undefined}
+                    href={activeResult.preview_asset_url || undefined}
                     target="_blank"
                     rel="noreferrer"
                     className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
@@ -1555,7 +1565,7 @@ export function ClipStudio({
                 ) : null}
                 {leadExportReady ? (
                   <a
-                    href={result.download_asset_url || undefined}
+                    href={activeResult.download_asset_url || undefined}
                     download
                     className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
                   >
@@ -1571,12 +1581,12 @@ export function ClipStudio({
           </div>
 
           {!renderedClipCount ? (
-            <InlineAlert tone="violet" title="Strategy pack ready">
-              LWA returned the package, hooks, captions, and posting order, but this run did not produce rendered media. Review the strategy stack now, then retry with a longer or cleaner source if you need playable output.
+            <InlineAlert tone="violet" title="Ideas ready">
+              LWA returned the package, hooks, captions, and posting order, but this run did not produce preview media. Review the ideas now, then retry with a longer or cleaner source if you need playable output.
             </InlineAlert>
           ) : !previewReadyCount ? (
             <InlineAlert tone="violet" title="Playable preview pending">
-              This run returned rendered media, but not a playable preview for every cut. Review the media-ready clips first, then use the strategy-only stack to decide what is worth rerunning.
+              This run returned media, but not a playable preview for every cut. Review the ready clips first, then use the ideas-only stack to decide what is worth rerunning.
             </InlineAlert>
           ) : null}
 
@@ -1599,10 +1609,10 @@ export function ClipStudio({
             <div className="space-y-4">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="section-kicker">Rendered lane</p>
+                  <p className="section-kicker">{RESULT_COPY.finishedPreviews}</p>
                   <h4 className="mt-2 text-2xl font-semibold text-ink">READY TO POST NOW</h4>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-                    Rendered clips ready for distribution.
+                    Finished previews ready for distribution.
                   </p>
                 </div>
               </div>
@@ -1642,10 +1652,10 @@ export function ClipStudio({
             <div className="space-y-4">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="section-kicker">Strategy lane</p>
+                  <p className="section-kicker">{RESULT_COPY.ideasOnly}</p>
                   <h4 className="mt-2 text-2xl font-semibold text-ink">HIGH-LEVERAGE IDEAS</h4>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-                    Strong angles waiting on media proof.
+                    Strong angles waiting on preview.
                   </p>
                 </div>
               </div>
@@ -1677,14 +1687,14 @@ export function ClipStudio({
             <h4 className="mt-3 text-xl font-semibold text-ink">What is ready to move now</h4>
             <div className="mt-4 grid gap-3">
               <MetricTile
-                label="Rendered clips"
+                label={RESULT_COPY.finishedPreviews}
                 value={String(renderedClipCount)}
-                detail={renderedClipCount ? "These are ready to distribute right now" : "No rendered clip came back yet"}
+                detail={renderedClipCount ? "These are ready to distribute right now" : "No finished preview came back yet"}
               />
               <MetricTile
-                label="Strategy-only"
+                label={RESULT_COPY.ideasOnly}
                 value={String(strategyOnlyClipCount)}
-                detail={strategyOnlyClipCount ? "Use recovery when you want media proof retried" : "Every visible clip has media proof"}
+                detail={strategyOnlyClipCount ? "Retry preview when you want media generated" : "Every visible clip has a preview"}
               />
               <MetricTile
                 label="Export unlocked"
@@ -1727,7 +1737,7 @@ export function ClipStudio({
             <h4 className="mt-3 text-xl font-semibold text-ink">Decision rail</h4>
             <div className="mt-4 space-y-3 text-sm text-ink/72">
               <p>1. Post the lead clip first.</p>
-              <p>2. Export the ready-now cuts before you spend time on strategy-only ideas.</p>
+              <p>2. Export the ready-now cuts before you spend time on ideas-only cuts.</p>
               <p>3. Use the high-leverage lane for testing and rerender decisions.</p>
             </div>
             <p className="mt-4 text-sm text-accent">
@@ -1739,7 +1749,7 @@ export function ClipStudio({
     </section>
   ) : null;
 
-  const emptyGeneratorState = !result && !isLoading && showGenerator ? (
+  const emptyGeneratorState = !activeResult && !isLoading && showGenerator ? (
     <section className="glass-panel rounded-[28px] p-6 sm:p-8">
       <p className="section-kicker">Ready</p>
       <h3 className="mt-3 text-2xl font-semibold text-ink sm:text-3xl">Your next pack lands here</h3>
@@ -1748,7 +1758,7 @@ export function ClipStudio({
   ) : null;
 
   return (
-    <main className="app-shell-grid min-h-screen">
+    <main className={["app-shell-grid min-h-screen", motionLocked ? "results-motion-locked" : ""].join(" ")}>
       <AIBackground
         variant={isHome ? "home" : "workspace"}
         worldState={worldState}
@@ -1760,16 +1770,16 @@ export function ClipStudio({
         isLoading={isLoading}
         loadingStageIndex={loadingStageIndex}
         hasSource={hasSourceSelected}
-        hasResult={Boolean(result)}
+        hasResult={Boolean(activeResult)}
         renderedClipCount={renderedClipCount}
         strategyOnlyClipCount={strategyOnlyClipCount}
         recoveryActive={recoveryActive}
-        result={result}
+        result={activeResult}
         orderedClips={orderedClips}
         renderedClips={renderedClips}
         strategyOnlyClips={strategyOnlyClips}
         readyQueue={readyQueue}
-        scripts={result?.scripts}
+        scripts={activeResult?.scripts}
         onAction={handleCharacterAction}
       />
       <AuthPanel
@@ -1888,7 +1898,7 @@ export function ClipStudio({
             </div>
           </section>
 
-          {!result && !isLoading ? <HomeDiscoveryGrid sections={homeDiscoverySections.slice(0, 3)} /> : null}
+          {!activeResult && !isLoading ? <HomeDiscoveryGrid sections={homeDiscoverySections.slice(0, 3)} /> : null}
           {resultsSection ? <div className="space-y-6 pb-8">{resultsSection}</div> : null}
         </div>
       ) : (

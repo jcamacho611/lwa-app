@@ -240,6 +240,7 @@ export type ClipResult = {
   raw_clip_url?: string | null;
   preview_image_url?: string | null;
   is_rendered?: boolean;
+  is_strategy_only?: boolean;
   burned_caption?: string;
   export_package?: {
     title?: string;

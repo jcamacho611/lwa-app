@@ -1,7 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ClipResult } from "../lib/types";
+import ClipPreview from "./results/ClipPreview";
+import { hasPreviewAsset, isRenderedClip } from "../lib/clip-utils";
+import { RESULT_COPY, buildLeadReason } from "../lib/result-copy";
 
 export type VideoCardProps = {
   clip: ClipResult;
@@ -53,47 +56,17 @@ export default function VideoCard({
   recoveryState = null,
   onRecover,
 }: VideoCardProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isHovering, setIsHovering] = useState(false);
   const [copiedPackage, setCopiedPackage] = useState(false);
 
   const previewUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
-  const thumbnailUrl = clip.thumbnail_url || clip.preview_image_url || null;
   const downloadUrl = clip.download_url || null;
-  const hasPlayablePreview = Boolean(previewUrl);
-  const hasStillPreview = !hasPlayablePreview && Boolean(thumbnailUrl);
-  const hasRenderProof = hasPlayablePreview || hasStillPreview;
-  const whyThisHits = clip.why_this_matters || clip.reason || null;
+  const hasPlayablePreview = isRenderedClip(clip);
+  const hasRenderProof = hasPreviewAsset(clip);
+  const whyThisHits = buildLeadReason(clip.why_this_matters || clip.reason);
   const captionStyle = clip.caption_style || null;
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
   const authority = authorityLabel(postRank);
   const decision = decisionText(postRank, hasRenderProof);
-
-  async function handleEnter() {
-    setIsHovering(true);
-    const video = videoRef.current;
-    if (!video || !previewUrl) {
-      return;
-    }
-
-    try {
-      video.currentTime = 0;
-      await video.play();
-    } catch {
-      // ignore autoplay rejection
-    }
-  }
-
-  function handleLeave() {
-    setIsHovering(false);
-    const video = videoRef.current;
-    if (!video) {
-      return;
-    }
-
-    video.pause();
-    video.currentTime = 0;
-  }
 
   async function handleCopyPackage() {
     try {
@@ -113,28 +86,9 @@ export default function VideoCard({
           ? "border-cyan-300/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015)),linear-gradient(180deg,rgba(8,12,34,0.9),rgba(3,5,16,0.98))] hover:border-cyan-300/24"
           : "border-violet-300/14 bg-[linear-gradient(180deg,rgba(124,58,237,0.07),rgba(56,189,248,0.02)),linear-gradient(180deg,rgba(8,9,28,0.94),rgba(3,5,16,0.98))] opacity-88 hover:border-violet-300/24",
       ].join(" ")}
-      onMouseEnter={() => void handleEnter()}
-      onMouseLeave={handleLeave}
     >
       <div className="video-shell overflow-hidden rounded-[22px] border border-white/10 bg-black/60">
-        {hasPlayablePreview ? (
-          <video
-            ref={videoRef}
-            src={previewUrl || undefined}
-            poster={thumbnailUrl || undefined}
-            className="aspect-[9/16] w-full bg-black object-cover transition duration-300 group-hover:scale-[1.02]"
-            muted
-            loop
-            playsInline
-            preload="metadata"
-          />
-        ) : thumbnailUrl ? (
-          <img src={thumbnailUrl} alt={clip.hook} className="aspect-[9/16] w-full bg-black object-cover transition duration-300 group-hover:scale-[1.02]" />
-        ) : (
-          <div className="flex aspect-[9/16] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,214,102,0.12),transparent_44%),linear-gradient(180deg,#040405,#0d080b)] text-sm text-ink/56">
-            Preview unavailable
-          </div>
-        )}
+        <ClipPreview clip={clip} className="aspect-[9/16] transition duration-300 group-hover:scale-[1.02]" />
 
         <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 p-3">
           <div className="flex items-center justify-between gap-3">
@@ -147,7 +101,7 @@ export default function VideoCard({
               {hasRenderProof ? "READY NOW" : "HIGH LEVERAGE"}
             </span>
             <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/82 backdrop-blur">
-              {hasPlayablePreview ? (isHovering ? "Previewing" : "Hover to play") : hasStillPreview ? "Still preview" : "Strategy only"}
+              {hasPlayablePreview ? "Preview ready" : hasRenderProof ? RESULT_COPY.previewProcessing : RESULT_COPY.ideasOnly}
             </span>
           </div>
         </div>
@@ -237,8 +191,8 @@ export default function VideoCard({
                 : recoveryState?.status === "queued"
                   ? "Recovery queued"
                   : recoveryState?.status === "failed"
-                    ? "Retry render"
-                    : "Recover render"}
+                    ? RESULT_COPY.previewRetry
+                    : RESULT_COPY.previewRetry}
             </button>
           ) : null}
 

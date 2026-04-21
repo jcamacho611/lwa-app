@@ -146,7 +146,7 @@ function chooseDirective(intent: CharacterIntent, input: CharacterIntelligenceIn
   if (intent === "wait") return "Drop one source. I will call the first move.";
   if (intent === "intake") return "Source detected. Keep auto on unless this is a fixed campaign.";
   if (intent === "analyze") return "I am reading hook density, pacing, and payoff.";
-  if (intent === "recover") return "Media proof is the gap. Recover the strongest strategy cut.";
+  if (intent === "recover") return "Preview is the gap. Retry the strongest idea.";
   if (intent === "multiply") return "The clip stack is ready. Multiply the angle into the next script.";
   if (intent === "post") return "Queue is active. Move the ready stack next.";
 
@@ -165,7 +165,7 @@ function chooseInsight(intent: CharacterIntent, input: CharacterIntelligenceInpu
   if (intent === "wait") return "I stay quiet until there is a source to judge.";
   if (intent === "intake") return "One input is enough. The backend will recommend the destination.";
   if (intent === "analyze") return "I am waiting for real output before giving a posting call.";
-  if (intent === "recover") return "Do not treat a strategy card like a finished clip.";
+  if (intent === "recover") return "Do not treat an idea card like a finished clip.";
   if (intent === "multiply") return input.scripts?.hooks?.[0] || "A new script can extend the same winning frame.";
   if (intent === "post") return "Queued clips are now the working stack.";
 
@@ -192,7 +192,7 @@ function chooseActions(intent: CharacterIntent, input: CharacterIntelligenceInpu
   }
 
   if (hasStrategy) {
-    actions.push({ id: "recover_strategy", label: "Recover proof", priority: 4 });
+    actions.push({ id: "recover_strategy", label: "Retry preview", priority: 4 });
   }
 
   if (hasScript) {

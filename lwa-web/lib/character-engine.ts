@@ -71,7 +71,7 @@ export function getCharacterGuidance(state: CharacterState, input: CharacterEngi
   }
 
   if (state === "rendering" || state === "generating") {
-    return input.recoveryActive ? "Recovering media proof." : "Preparing the pack.";
+    return input.recoveryActive ? "Retrying preview." : "Preparing the pack.";
   }
 
   if (state === "success") {
