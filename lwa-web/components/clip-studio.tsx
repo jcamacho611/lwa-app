@@ -88,6 +88,7 @@ import {
   upsertReadyQueueItem,
 } from "../lib/queue";
 import { GENERATOR_COPY, HERO_COPY, RESULTS_COPY, rewriteSurfaceLabel } from "../lib/brand-voice";
+import type { CharacterActionId } from "../lib/character-intelligence";
 import { getPlanSurface } from "../lib/plans";
 import { resolveWorldPhase, resolveWorldState, type WorldSignal } from "../lib/world-state";
 
@@ -1048,6 +1049,40 @@ export function ClipStudio({
     }
   }
 
+  function handleCharacterAction(action: CharacterActionId) {
+    if (action === "focus_source") {
+      const input = document.querySelector<HTMLInputElement>("[data-lwa-source-input='true']");
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
+      input?.focus();
+      return;
+    }
+
+    if (action === "review_lead") {
+      document.getElementById("lead-clip")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    if (action === "queue_lead") {
+      const lead = orderedClips[0];
+      if (lead && !isQueued(lead)) {
+        handleToggleQueue(lead);
+      }
+      return;
+    }
+
+    if (action === "recover_strategy") {
+      const firstStrategyClip = strategyOnlyClips[0];
+      if (firstStrategyClip) {
+        void handleRecoverClip(firstStrategyClip);
+      }
+      return;
+    }
+
+    if (action === "copy_script" && result?.scripts?.main) {
+      void navigator.clipboard?.writeText(result.scripts.main);
+    }
+  }
+
   const homeGeneratorSection = (
     <section
       className="generator-command-card rounded-[38px] p-6 sm:p-8"
@@ -1091,6 +1126,7 @@ export function ClipStudio({
           <span className="mb-3 block text-sm font-medium text-ink/84">Source link</span>
           <input
             type="url"
+            data-lwa-source-input="true"
             value={videoUrl}
             onChange={(event) => setVideoUrl(event.target.value)}
             onFocus={() => setInputFocused(true)}
@@ -1270,6 +1306,7 @@ export function ClipStudio({
               <span className="mb-3 block text-sm font-medium text-ink/84">Source link</span>
               <input
                 type="url"
+                data-lwa-source-input="true"
                 value={videoUrl}
                 onChange={(event) => setVideoUrl(event.target.value)}
                 onFocus={() => setInputFocused(true)}
@@ -1727,7 +1764,13 @@ export function ClipStudio({
         renderedClipCount={renderedClipCount}
         strategyOnlyClipCount={strategyOnlyClipCount}
         recoveryActive={recoveryActive}
+        result={result}
+        orderedClips={orderedClips}
+        renderedClips={renderedClips}
+        strategyOnlyClips={strategyOnlyClips}
+        readyQueue={readyQueue}
         scripts={result?.scripts}
+        onAction={handleCharacterAction}
       />
       <AuthPanel
         isOpen={authOpen}

@@ -123,7 +123,7 @@ export default function HeroClip({
   }
 
   return (
-    <section className="group relative overflow-hidden rounded-[42px] border border-cyan-300/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.018)),linear-gradient(180deg,rgba(8,12,34,0.95),rgba(3,5,16,0.98))] p-6 shadow-[0_28px_100px_rgba(0,0,0,0.44)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_36px_110px_rgba(56,189,248,0.16)] sm:p-7 lg:p-8">
+    <section id="lead-clip" className="group relative overflow-hidden rounded-[42px] border border-cyan-300/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.018)),linear-gradient(180deg,rgba(8,12,34,0.95),rgba(3,5,16,0.98))] p-6 shadow-[0_28px_100px_rgba(0,0,0,0.44)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_36px_110px_rgba(56,189,248,0.16)] sm:p-7 lg:p-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.18),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(0,231,255,0.13),transparent_32%),radial-gradient(circle_at_60%_84%,rgba(37,99,235,0.1),transparent_34%)]" />
 
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
