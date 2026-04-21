@@ -239,6 +239,17 @@ export type ClipResult = {
   edited_clip_url?: string | null;
   raw_clip_url?: string | null;
   preview_image_url?: string | null;
+  is_rendered?: boolean;
+  burned_caption?: string;
+  export_package?: {
+    title?: string;
+    hook?: string;
+    caption?: string;
+    thumbnail_text?: string;
+    cta?: string;
+    platform_fit?: string;
+    post_rank?: number;
+  };
   trim_start_seconds?: number | null;
   trim_end_seconds?: number | null;
   caption_style_override?: string | null;
