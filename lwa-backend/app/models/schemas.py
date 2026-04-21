@@ -225,7 +225,7 @@ class ClipRecoveryStatusResponse(BaseModel):
     error: Optional[str] = None
 
 
-class SeedanceBackgroundRequest(BaseModel):
+class GenerationBackgroundRequest(BaseModel):
     prompt: str
     style_preset: Optional[str] = None
     motion_profile: Optional[str] = None
@@ -237,9 +237,9 @@ class SeedanceBackgroundRequest(BaseModel):
     source_asset_id: Optional[str] = None
 
 
-class SeedanceAssetResponse(BaseModel):
+class GenerationAssetResponse(BaseModel):
     asset_id: Optional[str] = None
-    provider: str = "seedance"
+    provider: str = "lwa"
     status: Optional[str] = None
     asset_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
@@ -251,24 +251,24 @@ class SeedanceAssetResponse(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class SeedanceJobResponse(BaseModel):
+class GenerationJobResponse(BaseModel):
     job_id: str
     provider_job_id: Optional[str] = None
     status: str
     message: str
     poll_url: str
-    asset: Optional[SeedanceAssetResponse] = None
+    asset: Optional[GenerationAssetResponse] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class SeedanceJobStatusResponse(BaseModel):
+class GenerationJobStatusResponse(BaseModel):
     job_id: str
     provider_job_id: Optional[str] = None
     status: str
     message: str
     created_at: str
     updated_at: str
-    asset: Optional[SeedanceAssetResponse] = None
+    asset: Optional[GenerationAssetResponse] = None
     error: Optional[str] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -376,7 +376,7 @@ class GenerationRequest(BaseModel):
     source_asset_id: Optional[str] = None
     text_prompt: Optional[str] = None
     image_path: Optional[str] = None
-    provider: str = "seedance"
+    provider: str = "lwa"
     duration: Optional[float] = 30.0
     style: Optional[str] = None
     aspect_ratio: str = "9:16"
