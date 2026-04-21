@@ -156,6 +156,18 @@ export function WorldEngine({
       data-pointer-active={pointerActive ? "true" : "false"}
       aria-hidden="true"
     >
+      <div className="world-source-art world-source-art-main">
+        <img src="/brand-source/world/Celestial gods and chatbot interface.png" alt="" />
+      </div>
+      <div className="world-source-art world-source-art-council">
+        <img src="/brand-source/characters/d394931b-1f61-48fb-984c-1258d72e5ab4.png" alt="" />
+      </div>
+      <div className="world-source-art world-source-art-command">
+        <img src="/brand-source/world/24083f08-e428-4b99-ac75-3a10d43579dd.png" alt="" />
+      </div>
+      <div className="world-source-art world-source-art-mask">
+        <img src="/brand-source/world/FullSizeRender.jpg" alt="" />
+      </div>
       <WorldEffects variant={variant} phase={worldPhase} eventKind={eventKind} eventEpoch={eventEpoch} />
 
       {variant === "home" ? (
@@ -164,7 +176,12 @@ export function WorldEngine({
           <WorldCharacter position="right" tone="cyan" state={resolveCharacterState(1, worldState)} phase={worldPhase} />
           <WorldCharacter position="center" tone="crimson" state={resolveCharacterState(2, worldState)} phase={worldPhase} />
         </>
-      ) : null}
+      ) : (
+        <>
+          <WorldCharacter position="left" tone="magenta" state={resolveCharacterState(0, worldState)} phase={worldPhase} />
+          <WorldCharacter position="right" tone="cyan" state={resolveCharacterState(1, worldState)} phase={worldPhase} />
+        </>
+      )}
     </div>
   );
 }

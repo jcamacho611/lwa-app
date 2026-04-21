@@ -5,6 +5,7 @@ import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from 
 import { AccountWorkspace } from "./account-workspace";
 import { AuthPanel } from "./auth-panel";
 import { BatchPanel } from "./batch-panel";
+import { AIBackground } from "./AIBackground";
 import { CampaignPanel } from "./campaign-panel";
 import CharacterLayer from "./characters/CharacterLayer";
 import { ClipCard } from "./clip-card";
@@ -88,6 +89,7 @@ import {
 } from "../lib/queue";
 import { GENERATOR_COPY, HERO_COPY, RESULTS_COPY, rewriteSurfaceLabel } from "../lib/brand-voice";
 import { getPlanSurface } from "../lib/plans";
+import { resolveWorldPhase, resolveWorldState, type WorldSignal } from "../lib/world-state";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 
@@ -189,6 +191,8 @@ export function ClipStudio({
   const [readyQueue, setReadyQueue] = useState<ReadyQueueItem[]>([]);
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null);
   const [loadingStageIndex, setLoadingStageIndex] = useState(0);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [generatorHovered, setGeneratorHovered] = useState(false);
 
   const activeSourceLabel = useMemo(() => {
     if (selectedUpload?.file_name || selectedUpload?.filename) {
@@ -858,14 +862,31 @@ export function ClipStudio({
       renderedHeroClip?.raw_clip_url,
   );
   const leadExportReady = Boolean(result?.download_asset_url || renderedHeroClip?.download_url);
-  const sourceTruthSummary = useMemo(() => {
-    const content = result?.transcript || result?.visual_summary || "This source was processed into a decisive short-form stack.";
-    if (!content) {
-      return null;
-    }
-    return content.length > 260 ? `${content.slice(0, 257).trimEnd()}...` : content;
-  }, [result?.transcript, result?.visual_summary]);
-
+  const worldPhase = resolveWorldPhase({
+    isLoading,
+    loadingStageIndex,
+    hasResult: Boolean(result),
+    hasSource: hasSourceSelected,
+  });
+  const worldState = resolveWorldState({
+    variant: isHome ? "home" : "workspace",
+    generationMode,
+    inputFocused,
+    generatorHovered,
+    isLoading,
+    loadingStageIndex,
+    hasResult: Boolean(result),
+    hasSource: hasSourceSelected,
+  });
+  const worldSignal: WorldSignal = isLoading
+    ? "generating"
+    : result
+      ? "complete"
+      : inputFocused
+        ? "focus"
+        : generatorHovered
+          ? "hover"
+          : "idle";
   function handleFeedbackVote(clip: GenerateResponse["clips"][number], vote: "good" | "bad") {
     setFeedbackRecords((current) => upsertFeedbackRecord(current, createFeedbackRecord(clip, vote, activeFeedbackPlatform)));
   }
@@ -1028,14 +1049,18 @@ export function ClipStudio({
   }
 
   const homeGeneratorSection = (
-    <section className="hero-card rounded-[34px] p-6 sm:p-8">
+    <section
+      className="generator-command-card rounded-[38px] p-6 sm:p-8"
+      onMouseEnter={() => setGeneratorHovered(true)}
+      onMouseLeave={() => setGeneratorHovered(false)}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="section-kicker">Generate first</p>
-          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop one source. Get clips worth posting.</h2>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/90">
+          <p className="section-kicker">Command input</p>
+          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop one source. Get the posting stack.</h2>
+          <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/82">
             {generationMode === "quick"
-              ? "Previews, hooks, and post order back."
+              ? "Lead clip, follow-ups, and export moves back."
               : "LWA learns what you keep and tightens the next pack."}
           </p>
         </div>
@@ -1068,13 +1093,15 @@ export function ClipStudio({
             type="url"
             value={videoUrl}
             onChange={(event) => setVideoUrl(event.target.value)}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             placeholder="Paste YouTube, MP4, or any public video URL"
-            className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
+            className="input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
           />
         </label>
 
         <div className="space-y-3">
-          <div className="metric-tile rounded-[24px] p-4">
+          <div className="operator-tile rounded-[24px] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-ink">Destination</p>
@@ -1111,7 +1138,7 @@ export function ClipStudio({
                       className={[
                         "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
                         active
-                          ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
+                          ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
                           : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
                       ].join(" ")}
                     >
@@ -1125,7 +1152,7 @@ export function ClipStudio({
         </div>
 
         <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
-          <div className="metric-tile rounded-[24px] p-4">
+          <div className="operator-tile rounded-[24px] p-4">
             <p className="text-sm font-medium text-ink">Flow</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {deliveryMoments.map((item) => (
@@ -1196,7 +1223,11 @@ export function ClipStudio({
   const generatorSection = (
     <section className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),320px]">
-        <section className="hero-card rounded-[34px] p-6 sm:p-8">
+        <section
+          className="generator-command-card rounded-[38px] p-6 sm:p-8"
+          onMouseEnter={() => setGeneratorHovered(true)}
+          onMouseLeave={() => setGeneratorHovered(false)}
+        >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl">
               <p className="section-kicker">{initialSection === "upload" ? "Upload + Generate" : rewriteSurfaceLabel("Generate")}</p>
@@ -1241,13 +1272,15 @@ export function ClipStudio({
                 type="url"
                 value={videoUrl}
                 onChange={(event) => setVideoUrl(event.target.value)}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
                 placeholder="Paste YouTube, MP4, or any public video URL"
-                className="input-surface w-full rounded-[24px] px-5 py-4 text-sm"
+                className="input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
               />
             </label>
 
             <div className="space-y-3">
-              <div className="metric-tile rounded-[24px] p-4">
+              <div className="operator-tile rounded-[24px] p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-sm font-medium text-ink">Destination</p>
@@ -1284,7 +1317,7 @@ export function ClipStudio({
                           className={[
                             "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
                             active
-                              ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
+                              ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
                               : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
                           ].join(" ")}
                         >
@@ -1298,7 +1331,7 @@ export function ClipStudio({
             </div>
 
             <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
-              <div className="metric-tile rounded-[24px] p-4">
+              <div className="operator-tile rounded-[24px] p-4">
                 <p className="text-sm font-medium text-ink">Flow</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   {deliveryMoments.map((item) => (
@@ -1445,13 +1478,10 @@ export function ClipStudio({
             <p className="mt-4 text-sm leading-7 text-subtext">{RESULTS_COPY.subhead}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatPill tone="accent">{displayedClips.length} clips</StatPill>
             <StatPill tone="signal">{renderedClipCount} rendered</StatPill>
             {strategyOnlyClipCount ? <StatPill tone="neutral">{strategyOnlyClipCount} strategy-only</StatPill> : null}
-            <StatPill tone="neutral">{result.source_platform || "Upload"}</StatPill>
-            {result.source_type ? <StatPill tone="neutral">{result.source_type.replace("_", " ")}</StatPill> : null}
             <StatPill tone="accent">{effectiveTargetPlatform}</StatPill>
-            {platformDecision === "manual" ? <StatPill tone="neutral">Manual target</StatPill> : <StatPill tone="signal">Auto target</StatPill>}
+            {platformDecision === "manual" ? <StatPill tone="neutral">Manual</StatPill> : <StatPill tone="signal">Auto</StatPill>}
           </div>
         </div>
       </div>
@@ -1463,7 +1493,6 @@ export function ClipStudio({
               <div className="max-w-3xl">
                 <p className="section-kicker">LWA recommendation</p>
                 <h4 className="mt-3 text-2xl font-semibold text-ink">Post this first. Then move the stack.</h4>
-                <p className="mt-3 text-sm leading-7 text-ink/70">{sourceTruthSummary}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {recommendedPlatform ? <StatPill tone="accent">Recommended: {recommendedPlatform}</StatPill> : null}
                   {recommendedContentType ? <StatPill tone="signal">{recommendedContentType}</StatPill> : null}
@@ -1496,7 +1525,7 @@ export function ClipStudio({
                     Export lead asset
                   </a>
                 ) : (
-                  <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-2 text-sm text-[#ffe4eb]">
+                  <span className="rounded-full border border-accentCrimson/22 bg-[linear-gradient(135deg,rgba(122,16,42,0.24),rgba(124,58,237,0.1))] px-4 py-2 text-sm text-[#ffe4eb]">
                     Upgrade for export
                   </span>
                 )}
@@ -1683,6 +1712,13 @@ export function ClipStudio({
 
   return (
     <main className="app-shell-grid min-h-screen">
+      <AIBackground
+        variant={isHome ? "home" : "workspace"}
+        worldState={worldState}
+        worldPhase={worldPhase}
+        generationMode={generationMode}
+        signal={worldSignal}
+      />
       <CharacterLayer
         isLoading={isLoading}
         loadingStageIndex={loadingStageIndex}
@@ -1751,8 +1787,8 @@ export function ClipStudio({
             }
           />
 
-          <section className="home-stage grid gap-12 pb-10 pt-16 lg:grid-cols-[1.06fr,0.94fr] lg:items-start">
-            <div className="space-y-7">
+          <section className="home-stage grid gap-10 pb-10 pt-14 lg:grid-cols-[0.88fr,1.12fr] lg:items-start">
+            <div className="space-y-7 lg:sticky lg:top-28">
               <div className="home-stage-grid" aria-hidden="true">
                 <div className="home-stage-sigil" />
                 <div className="home-stage-constellation" />
@@ -1761,15 +1797,16 @@ export function ClipStudio({
 
               <div className="space-y-5">
                 <div className="inline-flex items-center gap-3">
-                  <span className="home-brand-mark flex h-11 w-11 items-center justify-center rounded-2xl border border-accentCrimson/24 bg-[rgba(255,255,255,0.03)] shadow-crimson">
+                  <span className="home-brand-mark flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/24 bg-[rgba(255,255,255,0.035)] shadow-cyan">
                     <img src="/brand/lwa-mark.svg" alt="LWA omega mark" className="h-7 w-7" />
                   </span>
                   <p className="section-kicker">{HERO_COPY.kicker}</p>
                 </div>
-                <h1 className="page-title max-w-5xl text-5xl font-semibold leading-[0.98] text-ink sm:text-6xl lg:text-7xl">
-                  <span className="text-gradient">Viral-ready clips.</span> One source in.
+                <h1 className="hero-headline max-w-5xl text-5xl font-semibold leading-[0.92] text-ink sm:text-7xl lg:text-[5.9rem]">
+                  <span className="text-gradient">Clips worth posting.</span>
+                  <span className="block text-white">Decided fast.</span>
                 </h1>
-                <p className="max-w-3xl text-base leading-8 text-subtext sm:text-lg">
+                <p className="max-w-2xl text-base leading-8 text-subtext sm:text-lg">
                   {HERO_COPY.subhead}
                 </p>
               </div>
@@ -1786,7 +1823,13 @@ export function ClipStudio({
                 </Link>
               </div>
 
-              <p className="text-sm uppercase tracking-[0.24em] text-ink/56">For creators, clippers, and media teams</p>
+              <div className="world-identity-card rounded-[32px] p-5">
+                <p className="section-kicker">Live system</p>
+                <h2 className="mt-3 text-2xl font-semibold text-ink">A clip engine with a world around it.</h2>
+                <p className="mt-3 text-sm leading-7 text-ink/62">
+                  Edge entities react to source, processing, and results without blocking the product.
+                </p>
+              </div>
 
               <div className="flex flex-wrap gap-2">
                 {featureProof.map((item, index) => (
@@ -1802,7 +1845,7 @@ export function ClipStudio({
             </div>
           </section>
 
-          {!result && !isLoading ? <HomeDiscoveryAccordion sections={homeDiscoverySections} /> : null}
+          {!result && !isLoading ? <HomeDiscoveryGrid sections={homeDiscoverySections.slice(0, 3)} /> : null}
           {resultsSection ? <div className="space-y-6 pb-8">{resultsSection}</div> : null}
         </div>
       ) : (
@@ -1900,7 +1943,7 @@ export function ClipStudio({
               ) : null}
 
               {accountError ? (
-                <section className="rounded-[24px] border border-accentCrimson/24 bg-accentCrimson/10 px-5 py-4 text-sm text-rose-100">
+                <section className="rounded-[24px] border border-accentCrimson/22 bg-accentCrimson/8 px-5 py-4 text-sm text-rose-100">
                   {accountError}
                 </section>
               ) : null}
@@ -2107,9 +2150,9 @@ function StatPill({ children, tone = "neutral" }: { children: ReactNode; tone?: 
       className={[
         "rounded-full border px-3 py-1.5 text-xs font-semibold",
         tone === "accent"
-          ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.2),rgba(255,45,166,0.14),rgba(0,231,255,0.08))] text-white shadow-crimson"
+          ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
           : tone === "signal"
-            ? "border-cyan-400/25 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(255,0,60,0.08))] text-white"
+            ? "border-cyan-400/25 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.08))] text-white"
             : "border-white/10 bg-white/[0.05] text-ink/72",
       ].join(" ")}
     >
@@ -2164,7 +2207,7 @@ function MarketingPreview({ user }: { user: UserProfile | null }) {
   );
 }
 
-function HomeDiscoveryAccordion({
+function HomeDiscoveryGrid({
   sections,
 }: {
   sections: ReadonlyArray<{
@@ -2177,69 +2220,28 @@ function HomeDiscoveryAccordion({
   }>;
 }) {
   return (
-    <section className="space-y-4 pb-10">
-      <div className="hero-card rounded-[30px] p-6 sm:p-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="section-kicker">Learn more</p>
-            <h2 className="mt-3 text-3xl font-semibold text-ink">Open the full breakdown when you want it.</h2>
-            <p className="mt-4 text-sm leading-7 text-subtext">
-              The hero stays clean. The deeper workflow, comparison, and FAQ layers stay one tap away and fully readable.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <StatPill tone="neutral">Compare</StatPill>
-            <StatPill tone="signal">Workflow</StatPill>
-            <StatPill tone="neutral">FAQ</StatPill>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-3">
+    <section className="pb-10">
+      <div className="grid gap-4 lg:grid-cols-3">
         {sections.map((section, index) => (
-          <details
+          <article
             key={section.id}
-            className={index === 0 ? "home-proof-card home-proof-card-lead rounded-[26px] p-0" : "glass-panel rounded-[26px] p-0"}
-            open={index === 0}
+            className={index === 0 ? "home-proof-card home-proof-card-lead rounded-[30px] p-5" : "glass-panel rounded-[30px] p-5"}
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-5 marker:content-none">
-              <div className="min-w-0">
-                <p className="section-kicker">{section.kicker}</p>
-                <h3 className="mt-2 text-xl font-semibold text-ink" dir="auto">
-                  {section.title}
-                </h3>
-              </div>
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-ink/72">
-                Open
-              </span>
-            </summary>
-
-            <div className="border-t border-white/8 px-5 pb-5 pt-4">
-              <p className="max-w-3xl text-sm leading-7 text-subtext" dir="auto">
-                {section.body}
-              </p>
-              <div className="mt-4 grid gap-3">
-                {section.bullets.map((bullet) => (
-                  <div key={bullet} className="metric-tile rounded-[22px] px-4 py-3 text-sm text-ink/78" dir="auto">
-                    {bullet}
-                  </div>
-                ))}
-              </div>
-              {section.links?.length ? (
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {section.links.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
+            <p className="section-kicker">{section.kicker}</p>
+            <h3 className="mt-3 text-xl font-semibold text-ink" dir="auto">
+              {section.title}
+            </h3>
+            <p className="mt-3 text-sm leading-7 text-subtext" dir="auto">
+              {section.body}
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {section.bullets.slice(0, 2).map((bullet) => (
+                <span key={bullet} className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-medium text-ink/78" dir="auto">
+                  {bullet}
+                </span>
+              ))}
             </div>
-          </details>
+          </article>
         ))}
       </div>
     </section>

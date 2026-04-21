@@ -123,8 +123,8 @@ export default function HeroClip({
   }
 
   return (
-    <section className="group relative overflow-hidden rounded-[38px] border border-cyan-300/18 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.018)),linear-gradient(180deg,rgba(9,10,26,0.94),rgba(5,5,13,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.38)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_32px_96px_rgba(56,189,248,0.1)] sm:p-7 lg:p-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.14),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(0,231,255,0.1),transparent_32%),radial-gradient(circle_at_60%_80%,rgba(82,10,27,0.14),transparent_34%)]" />
+    <section className="group relative overflow-hidden rounded-[42px] border border-cyan-300/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.018)),linear-gradient(180deg,rgba(8,12,34,0.95),rgba(3,5,16,0.98))] p-6 shadow-[0_28px_100px_rgba(0,0,0,0.44)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_36px_110px_rgba(56,189,248,0.16)] sm:p-7 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.18),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(0,231,255,0.13),transparent_32%),radial-gradient(circle_at_60%_84%,rgba(37,99,235,0.1),transparent_34%)]" />
 
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
         <div className="space-y-4">
@@ -170,7 +170,7 @@ export default function HeroClip({
                 Export lead clip
               </a>
             ) : (
-              <span className="rounded-full border border-accentCrimson/24 bg-[linear-gradient(135deg,rgba(255,0,60,0.14),rgba(255,45,166,0.1))] px-4 py-2.5 text-sm text-[#ffe4eb]">
+                <span className="rounded-full border border-accentCrimson/22 bg-[linear-gradient(135deg,rgba(122,16,42,0.24),rgba(124,58,237,0.1))] px-4 py-2.5 text-sm text-[#ffe4eb]">
                 Upgrade for export
               </span>
             )}
@@ -188,7 +188,7 @@ export default function HeroClip({
               onClick={() => onToggleQueue?.(clip)}
               className={[
                 "secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium",
-                queued ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.18),rgba(255,45,166,0.1))] text-white shadow-crimson" : "",
+                queued ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.12))] text-white shadow-cyan" : "",
               ].join(" ")}
             >
               {queued ? "Queued for post" : "Queue post"}
@@ -288,8 +288,8 @@ export default function HeroClip({
               className={[
                 "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                 feedbackVote === "good"
-                  ? "border-emerald-400/30 bg-emerald-400/12 text-emerald-200"
-                  : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-emerald-400/30 hover:bg-emerald-400/10 hover:text-emerald-200",
+                ? "border-cyan-300/30 bg-cyan-300/12 text-cyan-100"
+                : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-100",
               ].join(" ")}
             >
               Good

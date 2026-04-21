@@ -26,9 +26,9 @@ export const BRAND_VOICE = {
 } as const;
 
 export const HERO_COPY = {
-  kicker: "AI CLIP ENGINE",
-  headline: "Viral-ready clips. One source in.",
-  subhead: "Hooks, previews, and post order built to move from source to post faster.",
+  kicker: "CLIP DECISION ENGINE",
+  headline: "Clips worth posting. Decided fast.",
+  subhead: "Paste one source. LWA picks the lead cut, packages the stack, and gets you closer to posting.",
   primaryCta: "Generate clips",
   secondaryCta: "Open workspace",
 } as const;

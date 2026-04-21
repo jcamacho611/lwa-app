@@ -110,8 +110,8 @@ export default function VideoCard({
       className={[
         "group rounded-[28px] border p-4 shadow-card transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
         hasRenderProof
-          ? "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015)),linear-gradient(180deg,rgba(18,7,10,0.9),rgba(8,4,6,0.98))] hover:border-white/18"
-          : "border-amber-400/14 bg-[linear-gradient(180deg,rgba(255,214,102,0.05),rgba(255,214,102,0.02)),linear-gradient(180deg,rgba(15,10,4,0.94),rgba(8,5,3,0.98))] opacity-90 hover:border-amber-300/24",
+          ? "border-cyan-300/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015)),linear-gradient(180deg,rgba(8,12,34,0.9),rgba(3,5,16,0.98))] hover:border-cyan-300/24"
+          : "border-violet-300/14 bg-[linear-gradient(180deg,rgba(124,58,237,0.07),rgba(56,189,248,0.02)),linear-gradient(180deg,rgba(8,9,28,0.94),rgba(3,5,16,0.98))] opacity-88 hover:border-violet-300/24",
       ].join(" ")}
       onMouseEnter={() => void handleEnter()}
       onMouseLeave={handleLeave}
@@ -141,7 +141,7 @@ export default function VideoCard({
             <span
               className={[
                 "rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-[0.16em]",
-                hasRenderProof ? "bg-emerald-400/12 text-emerald-200" : "bg-amber-300/12 text-amber-100",
+                hasRenderProof ? "bg-cyan-300/12 text-cyan-100" : "bg-violet-300/12 text-violet-100",
               ].join(" ")}
             >
               {hasRenderProof ? "READY NOW" : "HIGH LEVERAGE"}
@@ -200,7 +200,7 @@ export default function VideoCard({
             onClick={() => onToggleQueue?.(clip)}
             className={[
               "secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium",
-              queued ? "border-accentCrimson/35 bg-[linear-gradient(135deg,rgba(255,0,60,0.18),rgba(255,45,166,0.1))] text-white shadow-crimson" : "",
+              queued ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.12))] text-white shadow-cyan" : "",
             ].join(" ")}
           >
             {queued ? "Queued for post" : "Queue post"}
@@ -258,8 +258,8 @@ export default function VideoCard({
             className={[
               "rounded-full border px-3 py-1.5 text-xs font-medium transition",
               feedbackVote === "good"
-                ? "border-emerald-400/30 bg-emerald-400/12 text-emerald-200"
-                : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-emerald-400/30 hover:bg-emerald-400/10 hover:text-emerald-200",
+                ? "border-cyan-300/30 bg-cyan-300/12 text-cyan-100"
+                : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-100",
             ].join(" ")}
           >
             Good
