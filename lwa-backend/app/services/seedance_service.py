@@ -17,17 +17,25 @@ class SeedanceProviderError(RuntimeError):
     """Controlled provider error that must not break core LWA clipping."""
 
 
+class SeedanceDisabledError(SeedanceProviderError):
+    """Seedance is intentionally off or missing required configuration."""
+
+
+class SeedanceRequestError(SeedanceProviderError):
+    """Seedance was enabled, but the provider request failed."""
+
+
 def seedance_available(settings: Settings) -> bool:
     return bool(settings.seedance_enabled and settings.seedance_api_key and settings.seedance_base_url)
 
 
 def validate_seedance_config(settings: Settings) -> None:
     if not settings.seedance_enabled:
-        raise SeedanceProviderError("Seedance is disabled. LWA core clipping and exports continue without it.")
+        raise SeedanceDisabledError("Seedance is disabled. LWA core clipping and exports continue without it.")
     if not settings.seedance_api_key:
-        raise SeedanceProviderError("Seedance is enabled but SEEDANCE_API_KEY is missing.")
+        raise SeedanceDisabledError("Seedance is enabled but SEEDANCE_API_KEY is missing.")
     if not settings.seedance_base_url:
-        raise SeedanceProviderError("Seedance is enabled but SEEDANCE_BASE_URL is missing.")
+        raise SeedanceDisabledError("Seedance is enabled but SEEDANCE_BASE_URL is missing.")
 
 
 def build_seedance_payload(*, settings: Settings, request: SeedanceBackgroundRequest) -> dict[str, Any]:
@@ -65,10 +73,10 @@ async def submit_seedance_job(
             provider_payload = response.json()
     except httpx.HTTPStatusError as error:
         _mark_job_failed(settings=settings, job=state, error=f"Seedance submission failed: HTTP {error.response.status_code}")
-        raise SeedanceProviderError(f"Seedance submission failed with HTTP {error.response.status_code}.") from error
+        raise SeedanceRequestError(f"Seedance submission failed with HTTP {error.response.status_code}.") from error
     except Exception as error:
         _mark_job_failed(settings=settings, job=state, error=f"Seedance submission failed: {error}")
-        raise SeedanceProviderError(f"Seedance submission failed: {error}") from error
+        raise SeedanceRequestError(f"Seedance submission failed: {error}") from error
 
     normalized = _normalize_seedance_job(
         settings=settings,
@@ -104,10 +112,10 @@ async def poll_seedance_job(
             provider_payload = response.json()
     except httpx.HTTPStatusError as error:
         _mark_job_failed(settings=settings, job=state, error=f"Seedance polling failed: HTTP {error.response.status_code}")
-        raise SeedanceProviderError(f"Seedance polling failed with HTTP {error.response.status_code}.") from error
+        raise SeedanceRequestError(f"Seedance polling failed with HTTP {error.response.status_code}.") from error
     except Exception as error:
         _mark_job_failed(settings=settings, job=state, error=f"Seedance polling failed: {error}")
-        raise SeedanceProviderError(f"Seedance polling failed: {error}") from error
+        raise SeedanceRequestError(f"Seedance polling failed: {error}") from error
 
     normalized = _normalize_seedance_job(
         settings=settings,
@@ -130,10 +138,15 @@ async def download_seedance_asset(
     validate_seedance_config(settings)
     destination = Path(destination_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    async with httpx.AsyncClient(timeout=settings.seedance_timeout_seconds) as client:
-        response = await client.get(asset_url)
-        response.raise_for_status()
-        destination.write_bytes(response.content)
+    try:
+        async with httpx.AsyncClient(timeout=settings.seedance_timeout_seconds) as client:
+            response = await client.get(asset_url)
+            response.raise_for_status()
+            destination.write_bytes(response.content)
+    except httpx.HTTPStatusError as error:
+        raise SeedanceRequestError(f"Seedance asset download failed with HTTP {error.response.status_code}.") from error
+    except Exception as error:
+        raise SeedanceRequestError(f"Seedance asset download failed: {error}") from error
     return str(destination)
 
 

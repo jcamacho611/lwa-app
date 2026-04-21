@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from .generation_providers.seedance_provider import SeedanceProvider
 from .generation_providers.base_provider import BaseGenerationProvider
+from .seedance_service import seedance_available
 from ..core.config import Settings
 from ..models.schemas import GenerationRequest, GenerationResponse
 
@@ -24,11 +25,11 @@ class AssetGenerationService:
     def _initialize_providers(self) -> None:
         """Initialize available generation providers."""
         # Initialize Seedance provider
-        if self.settings.seedance_api_key:
+        if seedance_available(self.settings):
             self.providers["seedance"] = SeedanceProvider(self.settings)
             logger.info("seedance_provider_initialized")
         else:
-            logger.warning("seedance_provider_disabled_missing_api_key")
+            logger.warning("seedance_provider_disabled_or_misconfigured")
     
     async def generate_from_text(
         self,
@@ -197,10 +198,11 @@ class AssetGenerationService:
                 warnings.append("Image file is very large, processing may be slow")
         
         # Validate duration
-        if request.duration and request.duration > 120:
+        duration = request.duration or request.duration_seconds
+        if duration and duration > 120:
             warnings.append("Duration over 2 minutes may take significant time")
         
-        if request.duration and request.duration < 5:
+        if duration and duration < 5:
             warnings.append("Duration under 5 seconds may be too short")
         
         return {

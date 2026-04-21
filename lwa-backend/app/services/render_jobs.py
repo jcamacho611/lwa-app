@@ -69,6 +69,7 @@ def queue_preview_render(
     return run_background(
         _render_preview_job,
         settings=settings,
+        job_id=str(job["id"]),
         request_id=request_id,
         clip_id=clip_id,
         public_base_url=public_base_url,
@@ -81,6 +82,7 @@ def queue_preview_render(
 def _render_preview_job(
     *,
     settings: Settings,
+    job_id: str,
     request_id: str,
     clip_id: str,
     public_base_url: str,
@@ -123,6 +125,7 @@ def _render_preview_job(
                 "render_error": None,
             },
         )
+        RenderJobStore(settings).update_job(job_id=job_id, status="ready", output_path=str(output_path))
     except Exception as error:
         logger.warning(
             "async_preview_render_fallback request_id=%s clip_id=%s reason=%s",
@@ -134,7 +137,7 @@ def _render_preview_job(
         # Update job status in persistent store
         job_store = RenderJobStore(settings)
         job_store.update_job(
-            job_id=job["id"],
+            job_id=job_id,
             status="failed" if not input_path.exists() else "ready",
             error=str(error) if not input_path.exists() else None,
         )

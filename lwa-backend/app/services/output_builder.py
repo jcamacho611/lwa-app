@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import logging
 import json
+import logging
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,7 +18,7 @@ class OutputBuilder:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
     
-    def create_clip_bundle(
+    async def create_clip_bundle(
         self,
         *,
         request_id: str,
@@ -30,9 +30,9 @@ class OutputBuilder:
         try:
             bundle_id = f"bundle_{uuid4().hex[:12]}"
             created_at = datetime.now(timezone.utc).isoformat()
-            
-            # Create bundle directory
-            bundle_dir = Path(self.settings.generated_assets_dir) / request_id
+            generated_dir = Path(self.settings.generated_assets_dir)
+            request_bundle_dir = generated_dir / "bundles" / request_id
+            bundle_dir = request_bundle_dir / bundle_id
             bundle_dir.mkdir(parents=True, exist_ok=True)
             
             metadata = {
@@ -44,12 +44,21 @@ class OutputBuilder:
                 "clips": clips,
             }
 
-            bundle_path = bundle_dir / f"{bundle_id}.{bundle_format}"
+            metadata_path = bundle_dir / "metadata.json"
+            readme_path = bundle_dir / "README.md"
+            if include_metadata:
+                metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+            readme_path.write_text(
+                self._build_readme(request_id=request_id, bundle_id=bundle_id, clips=clips, created_at=created_at),
+                encoding="utf-8",
+            )
             
             if bundle_format.lower() == "zip":
+                bundle_path = request_bundle_dir / f"{bundle_id}.zip"
                 with zipfile.ZipFile(bundle_path, "w", zipfile.ZIP_DEFLATED) as bundle_zip:
-                    if include_metadata:
-                        bundle_zip.writestr("metadata.json", json.dumps(metadata, indent=2))
+                    for bundle_file in bundle_dir.iterdir():
+                        if bundle_file.is_file():
+                            bundle_zip.write(bundle_file, bundle_file.name)
 
                     for clip in clips:
                         clip_id = clip.get("id", "")
@@ -62,26 +71,8 @@ class OutputBuilder:
                         ):
                             asset_path = self._local_asset_path(clip.get(field_name))
                             if asset_path:
-                                bundle_zip.write(asset_path, f"{clip_id}_{suffix}{asset_path.suffix}")
-
-                    readme_content = f"""# Clip Bundle {bundle_id}
-
-Generated: {created_at}
-Clips: {len(clips)}
-Format: {bundle_format}
-
-## Usage
-1. Extract this bundle
-2. Review metadata.json for hooks, captions, timestamps, scores, and asset URLs
-3. Use included media files when local rendered assets were available
-
-## File Structure
-- metadata.json: Bundle metadata and clip information
-- Optional media files: Individual clip files in available formats
-
-This bundle was created by LWA for batch processing and distribution.
-"""
-                    bundle_zip.writestr("README.md", readme_content)
+                                safe_clip_id = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in str(clip_id or "clip"))
+                                bundle_zip.write(asset_path, f"media/{safe_clip_id}_{suffix}{asset_path.suffix}")
             else:
                 manifest_path = bundle_dir / f"{bundle_id}.json"
                 manifest_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
@@ -89,9 +80,12 @@ This bundle was created by LWA for batch processing and distribution.
             
             return {
                 "bundle_id": bundle_id,
-                "file_name": f"{bundle_id}.{bundle_format}",
+                "file_name": bundle_path.name,
                 "bundle_path": str(bundle_path),
-                "download_url": f"{self.settings.api_base_url or ''}/generated/{request_id}/{bundle_path.name}" if self.settings.api_base_url else "",
+                "bundle_dir": str(bundle_dir),
+                "metadata_path": str(metadata_path),
+                "readme_path": str(readme_path),
+                "download_url": self._public_generated_url(bundle_path),
                 "clip_count": len(clips),
                 "created_at": created_at,
                 "size_bytes": bundle_path.stat().st_size if bundle_path.exists() else 0,
@@ -111,6 +105,45 @@ This bundle was created by LWA for batch processing and distribution.
 
         path = Path(candidate)
         return path if path.exists() and path.is_file() else None
+
+    def _public_generated_url(self, path: Path) -> str:
+        generated_dir = Path(self.settings.generated_assets_dir).resolve()
+        try:
+            relative = path.resolve().relative_to(generated_dir)
+        except ValueError:
+            relative = path.name
+        public_path = f"/generated/{relative.as_posix() if isinstance(relative, Path) else relative}"
+        if self.settings.api_base_url:
+            return f"{self.settings.api_base_url.rstrip('/')}{public_path}"
+        return public_path
+
+    def _build_readme(self, *, request_id: str, bundle_id: str, clips: List[Dict[str, Any]], created_at: str) -> str:
+        lines = [
+            f"# Clip Bundle {bundle_id}",
+            "",
+            f"Request: {request_id}",
+            f"Generated: {created_at}",
+            f"Total clips: {len(clips)}",
+            "",
+            "## Usage",
+            "1. Review metadata.json for hooks, captions, timestamps, scores, and asset URLs.",
+            "2. Use media files when local rendered assets were available in this bundle.",
+            "3. Use the clip order and post rank fields to decide what ships first.",
+            "",
+        ]
+        for index, clip in enumerate(clips, start=1):
+            lines.extend(
+                [
+                    f"## Clip {index}",
+                    f"- Title: {clip.get('title', 'Untitled')}",
+                    f"- Hook: {clip.get('hook', '')}",
+                    f"- Caption: {clip.get('caption', '')}",
+                    f"- Score: {clip.get('score', '')}",
+                    f"- Post rank: {clip.get('post_rank', '')}",
+                    "",
+                ]
+            )
+        return "\n".join(lines)
     
     def create_export_manifest(
         self,
@@ -146,7 +179,7 @@ This bundle was created by LWA for batch processing and distribution.
                 "manifest_id": manifest_id,
                 "file_name": f"{manifest_id}.{export_format}",
                 "manifest_path": str(manifest_path),
-                "download_url": f"{self.settings.api_base_url or ''}/generated/{request_id}/{manifest_path.name}" if self.settings.api_base_url else "",
+                "download_url": self._public_generated_url(manifest_path),
                 "clip_count": len(clips),
                 "created_at": created_at,
             }

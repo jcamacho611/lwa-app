@@ -40,17 +40,14 @@ class GenerationStatusRequest(BaseModel):
     provider: str = Field(default="seedance", description="Generation provider")
 
 
-class MultimodalGenerationRequest(BaseModel):
-    mode: str = Field(..., description="Generation mode: image or idea")
-    prompt: Optional[str] = Field(default=None, max_length=1000)
-    text_prompt: Optional[str] = Field(default=None, max_length=1000)
-    upload_file_id: Optional[str] = None
-    provider: str = "seedance"
-    duration: Optional[float] = Field(default=30.0, ge=5.0, le=120.0)
-    style: Optional[str] = None
-    motion_strength: str = "medium"
-    aspect_ratio: str = "9:16"
-    target_platform: Optional[str] = None
+def route_generation_mode(payload: GenerationRequest) -> str:
+    if payload.mode == "video":
+        return "video"
+    if payload.mode == "image":
+        return "image"
+    if payload.mode == "idea":
+        return "idea"
+    raise ValueError(f"Unsupported mode: {payload.mode}")
 
 
 def require_generation_enabled(request: Request):
@@ -310,15 +307,21 @@ async def generate_from_image(
 
 @router.post("/multimodal", response_model=ClipBatchResponse)
 async def generate_multimodal(
-    payload: MultimodalGenerationRequest,
+    payload: GenerationRequest,
     request: Request,
 ) -> ClipBatchResponse:
     """First-use multimodal generation entrypoint for Image and Idea modes."""
     user, actor_id = generation_actor(request)
-    mode = payload.mode.strip().lower()
+    mode = route_generation_mode(payload)
     target_platform = payload.target_platform or "TikTok"
+    duration = float(payload.duration or payload.duration_seconds or 30.0)
+    style = payload.style or payload.style_preset
+    motion_strength = payload.motion_strength or payload.motion_profile or "medium"
 
     try:
+        if mode == "video":
+            raise HTTPException(status_code=400, detail="Video mode uses the clipping route: /process or /generate.")
+
         if not generation_service.is_provider_available(payload.provider):
             raise HTTPException(status_code=503, detail=f"Generation provider '{payload.provider}' is not configured.")
 
@@ -328,10 +331,13 @@ async def generate_multimodal(
                 raise HTTPException(status_code=422, detail="Describe the idea in at least 10 characters.")
 
             generation_request = GenerationRequest(
+                mode="idea",
                 text_prompt=prompt,
                 provider=payload.provider,
-                duration=payload.duration,
-                style=payload.style,
+                duration=duration,
+                duration_seconds=payload.duration_seconds,
+                style=style,
+                style_preset=payload.style_preset,
                 aspect_ratio=payload.aspect_ratio,
                 user_id=actor_id,
             )
@@ -342,8 +348,8 @@ async def generate_multimodal(
             response = await generation_service.generate_from_text(
                 text_prompt=prompt,
                 provider=payload.provider,
-                duration=payload.duration,
-                style=payload.style,
+                duration=duration,
+                style=style,
                 aspect_ratio=payload.aspect_ratio,
                 user_id=actor_id,
             )
@@ -371,11 +377,14 @@ async def generate_multimodal(
             image_path = Path(str(upload["stored_path"]))
             prompt = (payload.prompt or payload.text_prompt or "Animate this image into a short-form post-ready video.").strip()
             generation_request = GenerationRequest(
+                mode="image",
                 image_path=str(image_path),
                 prompt=prompt,
                 provider=payload.provider,
-                duration=payload.duration,
-                motion_strength=payload.motion_strength,
+                duration=duration,
+                duration_seconds=payload.duration_seconds,
+                motion_strength=motion_strength,
+                motion_profile=payload.motion_profile,
                 aspect_ratio=payload.aspect_ratio,
                 user_id=actor_id,
             )
@@ -387,8 +396,8 @@ async def generate_multimodal(
                 image_path=image_path,
                 provider=payload.provider,
                 prompt=prompt,
-                duration=payload.duration,
-                motion_strength=payload.motion_strength,
+                duration=duration,
+                motion_strength=motion_strength,
                 user_id=actor_id,
             )
             batch = build_generation_batch(
@@ -398,9 +407,6 @@ async def generate_multimodal(
                 target_platform=target_platform,
                 actor_id=actor_id,
             )
-
-        else:
-            raise HTTPException(status_code=400, detail="Mode must be image or idea. Video uses the clipping route.")
 
         if user:
             batch = platform_store.persist_clip_batch(

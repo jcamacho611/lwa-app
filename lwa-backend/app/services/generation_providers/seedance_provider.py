@@ -18,7 +18,7 @@ class SeedanceProvider(BaseGenerationProvider):
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.api_key = settings.seedance_api_key
-        self.base_url = settings.seedance_base_url or "https://api.seedance.ai/v1"
+        self.base_url = settings.seedance_base_url.rstrip("/")
     
     async def generate_from_text(
         self,
@@ -36,7 +36,7 @@ class SeedanceProvider(BaseGenerationProvider):
                 "prompt": text_prompt,
                 "duration": duration,
                 "aspect_ratio": aspect_ratio,
-                "model": "seedance-v2",
+                "model": self.settings.seedance_model,
                 "quality": "high",
                 "output_format": "mp4",
             }
@@ -73,7 +73,7 @@ class SeedanceProvider(BaseGenerationProvider):
                 "image_path": str(image_path),
                 "duration": duration,
                 "motion_strength": motion_strength,
-                "model": "seedance-v2",
+                "model": self.settings.seedance_model,
                 "quality": "high",
                 "output_format": "mp4",
             }

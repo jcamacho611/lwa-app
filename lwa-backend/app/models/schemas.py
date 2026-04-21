@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -72,8 +72,8 @@ class ClipResult(BaseModel):
     title: str
     hook: str
     caption: str
-    start_time: str
-    end_time: str
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
     score: int
     confidence_score: Optional[int] = None
     confidence: Optional[float] = None
@@ -81,7 +81,7 @@ class ClipResult(BaseModel):
     reason: Optional[str] = None
     why_this_matters: Optional[str] = None
     category: Optional[str] = None
-    format: str
+    format: Optional[str] = None
     preview_url: Optional[str] = None
     raw_clip_url: Optional[str] = None
     edited_clip_url: Optional[str] = None
@@ -361,15 +361,41 @@ class ScheduledPostPatch(BaseModel):
 
 
 class GenerationRequest(BaseModel):
+    mode: Literal["video", "image", "idea"] = "video"
+    prompt: Optional[str] = None
+    video_url: Optional[str] = None
+    image_url: Optional[str] = None
+    upload_file_id: Optional[str] = None
+    target_platform: Optional[str] = None
+    style_preset: Optional[str] = None
+    motion_profile: Optional[str] = None
+    duration_seconds: Optional[int] = 8
+    seed: Optional[int] = None
+    reference_image_url: Optional[str] = None
+    source_clip_url: Optional[str] = None
+    source_asset_id: Optional[str] = None
     text_prompt: Optional[str] = None
     image_path: Optional[str] = None
-    prompt: Optional[str] = None
     provider: str = "seedance"
     duration: Optional[float] = 30.0
     style: Optional[str] = None
     aspect_ratio: str = "9:16"
     motion_strength: str = "medium"
     user_id: Optional[str] = None
+
+
+class GeneratedAsset(BaseModel):
+    id: str
+    provider: str
+    asset_type: str
+    status: str
+    prompt: Optional[str] = None
+    preview_url: Optional[str] = None
+    video_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    source_refs: dict[str, str] = Field(default_factory=dict)
+    created_at: Optional[str] = None
+    error: Optional[str] = None
 
 
 class GenerationResponse(BaseModel):
