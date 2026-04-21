@@ -57,6 +57,12 @@ class Settings:
             else os.path.join(os.getcwd(), "generated")
         )
         self.generated_assets_dir = os.getenv("LWA_GENERATED_ASSETS_DIR", default_generated_dir)
+        self.generated_asset_store_path = os.getenv(
+            "LWA_GENERATED_ASSET_STORE_PATH",
+            os.path.join(railway_volume_mount_path, "lwa-generated-assets.sqlite3")
+            if railway_volume_mount_path
+            else os.path.join(os.getcwd(), "generated", "lwa-generated-assets.sqlite3"),
+        )
         self.generated_asset_retention_hours = int(os.getenv("LWA_GENERATED_ASSET_RETENTION_HOURS", "72"))
         self.generated_asset_prune_interval_seconds = int(os.getenv("LWA_GENERATED_ASSET_PRUNE_INTERVAL_SECONDS", "1800"))
         default_uploads_dir = (
@@ -99,12 +105,10 @@ class Settings:
         self.premium_reasoning_provider = os.getenv("LWA_PREMIUM_REASONING_PROVIDER", "anthropic").strip().lower() or "anthropic"
         self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "")
         self.ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2")
-        self.seedance_enabled = os.getenv("SEEDANCE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
-        self.seedance_api_key = os.getenv("SEEDANCE_API_KEY", "").strip()
-        self.seedance_base_url = os.getenv("SEEDANCE_BASE_URL", "").strip()
-        self.seedance_model = os.getenv("SEEDANCE_MODEL", "seedance-2.0").strip() or "seedance-2.0"
-        self.seedance_timeout_seconds = int(os.getenv("SEEDANCE_TIMEOUT_SECONDS", "180"))
-        self.seedance_poll_interval_seconds = int(os.getenv("SEEDANCE_POLL_INTERVAL_SECONDS", "3"))
+        self.visual_generation_enabled = os.getenv("LWA_VISUAL_GENERATION_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+        self.visual_generation_model = os.getenv("LWA_VISUAL_GENERATION_MODEL", "lwa-visual-v1").strip() or "lwa-visual-v1"
+        self.visual_generation_timeout_seconds = int(os.getenv("LWA_VISUAL_GENERATION_TIMEOUT_SECONDS", "180"))
+        self.visual_generation_poll_interval_seconds = int(os.getenv("LWA_VISUAL_GENERATION_POLL_INTERVAL_SECONDS", "3"))
         self.whop_api_key = os.getenv("WHOP_API_KEY", "")
         self.whop_company_id = os.getenv("WHOP_COMPANY_ID", "")
         self.google_api_key = os.getenv("GOOGLE_API_KEY", "")

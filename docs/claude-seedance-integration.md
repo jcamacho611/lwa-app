@@ -1,23 +1,32 @@
 # Claude And Seedance Integration
 
-This document describes the optional Seedance adapter layer in LWA. Seedance is not the LWA product, not the core clipping engine, and not required for normal clip generation.
+This document describes how Seedance is used inside LWA as an optional provider adapter. Seedance is not the LWA product, not the core clipping engine, and not required for normal clip generation.
+
+## Purpose
+
+Seedance can support:
+
+- image enhancement flows
+- idea-to-asset generation flows
+- optional background generation
+- optional clip enhancement
+
+Core LWA clipping remains:
+
+- FastAPI orchestration
+- FFmpeg pipeline
+- yt-dlp ingest
+- clip analysis
+- render queue
+- export bundle flow
 
 ## Core Rule
 
 - LWA-owned clipping, analysis, preview, and export flows continue when Seedance is disabled.
 - Seedance secrets stay backend-only.
-- Seedance is isolated behind `app/services/seedance_service.py`.
+- Seedance HTTP details stay isolated behind `app/services/seedance_service.py`.
 - Frontend surfaces must treat Seedance as an optional enhancement, never as a blocking dependency.
-
-## What Is Live Now
-
-- `/generate`, `/process`, `/v1/generate`, and `/v1/jobs` remain the normal clipping/runtime spine.
-- `/v1/seedance/background` submits optional background/visual jobs through the adapter.
-- `/v1/seedance/jobs/{job_id}` polls optional Seedance jobs through the adapter.
-- Seedance job state is stored under the existing generated-assets tree:
-  - `generated/seedance/jobs/*.json`
-  - `generated/seedance/assets/*` when downloadable assets are localized
-- Generated assets continue to use the existing `/generated/...` static mount.
+- Do not make Seedance a hard dependency of first-upload, clip generation, preview rendering, or exports.
 
 ## Environment Variables
 
@@ -32,31 +41,78 @@ Optional:
 - `SEEDANCE_MODEL=seedance-2.0`
 - `SEEDANCE_TIMEOUT_SECONDS=180`
 - `SEEDANCE_POLL_INTERVAL_SECONDS=3`
+- `LWA_GENERATED_ASSETS_DIR=...`
+- `LWA_GENERATED_ASSET_STORE_PATH=...`
 
 Do not expose these values to the frontend.
 
 ## Provider Routing Behavior
 
-Normal LWA generation does not route through Seedance.
+Normal LWA clipping does not route through Seedance.
 
 Current routing:
 
-- Video clipping: internal LWA clipping/runtime flow
-- Upload/analyze/export: internal LWA flow
-- Image/Idea generation: generation provider flow with clean disabled behavior
+- Video clipping: internal LWA clipping/runtime flow through `/generate`, `/process`, and `/v1/generate`
+- First-upload analyze/export: internal LWA flow
+- Image/Idea generation: provider generation flow with clean disabled behavior
 - Seedance background/enhancement: explicit `/v1/seedance/*` routes only
 
-If Seedance is disabled or misconfigured, the Seedance routes return controlled `503` responses and the rest of LWA keeps working.
+If Seedance is disabled or misconfigured, Seedance-specific routes return controlled `503` responses and the rest of LWA keeps working.
 
-## Fallback Behavior
+## Routes
 
-When Seedance is unavailable:
+### `POST /v1/seedance/background`
 
-- normal clip generation still works
-- first-upload flow still works
-- export bundle flow still works
-- frontend should preserve the existing UI and skip optional enhancement controls
-- provider health reports Seedance as disabled or misconfigured
+Submits an optional Seedance background generation job.
+
+### `GET /v1/seedance/jobs/{job_id}`
+
+Polls Seedance job state through the LWA adapter and updates generated asset persistence when a matching asset exists.
+
+### `POST /v1/seedance/jobs/{job_id}/download`
+
+Downloads a completed provider asset into LWA-managed generated storage when a downloadable asset URL exists.
+
+## Request Normalization
+
+LWA owns the canonical generation contract. Requests normalize around:
+
+- `mode`
+- `prompt`
+- `text_prompt`
+- `image_url`
+- `reference_image_url`
+- `source_clip_url`
+- `source_asset_id`
+- `style_preset`
+- `motion_profile`
+- `duration_seconds`
+- `aspect_ratio`
+- `provider`
+
+Video mode belongs to the clipping flow. Image and Idea mode belong to the provider generation flow.
+
+## Generated Asset Normalization
+
+Generated assets normalize around:
+
+- `id`
+- `provider`
+- `asset_type`
+- `status`
+- `prompt`
+- `preview_url`
+- `video_url`
+- `thumbnail_url`
+- `source_refs`
+- `local_path`
+- `provider_job_id`
+- `request_id`
+- `created_at`
+- `updated_at`
+- `error`
+
+Generated asset records are persisted in the generated asset store configured by `LWA_GENERATED_ASSET_STORE_PATH`.
 
 ## Adapter Contract
 
@@ -69,36 +125,39 @@ Default assumptions:
 - accepted job ids can be returned as `job_id`, `id`, `task_id`, or `generation_id`
 - assets can be returned as `asset_url`, `output_url`, `video_url`, `url`, `download_url`, or nested asset fields
 
-If the final Seedance vendor contract differs, update only `seedance_service.py`. Do not spread provider-specific code through routes, frontend components, or normal generation services.
+If the final Seedance vendor contract differs, update only `seedance_service.py`. Do not spread provider-specific code through routes, frontend components, or normal clipping services.
 
-## Normalized Job Shape
+## Safe Fallback Behavior
 
-Seedance jobs normalize to:
+When Seedance is unavailable:
 
-- `job_id`
-- `provider_job_id`
-- `provider`
-- `job_kind`
-- `status`
-- `message`
-- `created_at`
-- `updated_at`
-- `asset`
-- `error`
+- startup remains healthy
+- `/health` remains healthy
+- normal clip generation still works
+- first-upload flow still works
+- export bundle flow still works
+- multimodal provider generation returns a clear provider-disabled response
+- optional frontend enhancement controls should be hidden or disabled
 
-Asset records normalize to:
+## What Is Live Now
 
-- `asset_id`
-- `provider`
-- `status`
-- `asset_url`
-- `thumbnail_url`
-- `public_url`
-- `local_path`
-- `content_type`
-- `duration_seconds`
-- `aspect_ratio`
-- `metadata`
+Live or intended:
+
+- clipping pipeline
+- first-upload no-signup path
+- export bundle flow
+- provider-disabled safe handling
+- generated asset persistence
+- image / idea generation routing
+- explicit Seedance background and job polling routes
+
+Adapter-only or pending exact contract confirmation:
+
+- provider-specific model tuning
+- advanced background enhancement presets
+- provider-specific high-fidelity asset variants
+- final Seedance vendor status map and terminal state names
+- final signed asset download requirements
 
 ## How To Enable Safely
 
@@ -108,11 +167,14 @@ Asset records normalize to:
 4. Smoke test `/health` and confirm Seedance status is configured.
 5. Smoke test `POST /v1/seedance/background`.
 6. Smoke test `GET /v1/seedance/jobs/{job_id}`.
-7. Only then expose optional frontend enhancement controls.
+7. Smoke test `POST /v1/seedance/jobs/{job_id}/download` after a completed asset exists.
+8. Only then expose optional frontend enhancement controls.
 
-## What Remains Pending
+## Future Work Rules
 
-- Confirm the exact Seedance vendor submit/poll endpoint shape.
-- Confirm whether asset URLs need signed download headers.
-- Confirm final provider statuses and terminal states.
-- Add frontend enhancement controls only where they are non-blocking.
+- no duplicate generation schemas
+- no duplicate provider systems
+- no provider secrets in frontend
+- no making Seedance a hard dependency of clipping
+- no broad rewrites just to support one provider
+- keep first-upload no-signup clipping and export available even when Seedance is off

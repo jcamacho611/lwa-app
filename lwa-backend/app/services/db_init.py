@@ -27,6 +27,11 @@ def initialize_databases(settings: Settings) -> None:
         render_job_store = RenderJobStore(settings)
         render_job_store._init_db()
         logger.info(f"render_job_db_initialized path={settings.clipping_db_path}")
+
+        # Initialize generated asset store database
+        from ..services.generated_asset_store import GeneratedAssetStore
+        GeneratedAssetStore(settings.generated_asset_store_path)
+        logger.info(f"generated_asset_db_initialized path={settings.generated_asset_store_path}")
         
         # Ensure generated assets directory exists
         generated_dir = Path(settings.generated_assets_dir)
@@ -64,6 +69,11 @@ def migrate_databases(settings: Settings) -> None:
         render_job_store = RenderJobStore(settings)
         render_job_store._init_db()  # This handles schema migrations
         logger.info("render_job_db_migrations_completed")
+
+        # Generated asset store migrations
+        from ..services.generated_asset_store import GeneratedAssetStore
+        GeneratedAssetStore(settings.generated_asset_store_path)
+        logger.info("generated_asset_db_migrations_completed")
         
         logger.info("all_database_migrations_completed")
         

@@ -70,7 +70,32 @@ def generation_actor(request: Request) -> tuple[object | None, str]:
     if user:
         return user, user.id
     client_id = (request.headers.get(settings.client_id_header_name) or "").strip()
-    return None, f"guest_{client_id or 'first_use'}"
+    safe_id = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in client_id)
+    return None, f"guest_{safe_id[:64] or 'first_use'}"
+
+
+def validate_multimodal_payload(payload: GenerationRequest, mode: str) -> None:
+    if mode == "video":
+        raise HTTPException(status_code=400, detail="Video mode uses the clipping route: /process or /generate.")
+
+    if mode == "image":
+        has_image_source = any(
+            (
+                (payload.image_url or "").strip(),
+                (payload.reference_image_url or "").strip(),
+                (payload.upload_file_id or "").strip(),
+            )
+        )
+        if not has_image_source:
+            raise HTTPException(
+                status_code=400,
+                detail="Image mode requires image_url, reference_image_url, or upload_file_id.",
+            )
+
+    if mode == "idea":
+        prompt = (payload.prompt or payload.text_prompt or "").strip()
+        if not prompt:
+            raise HTTPException(status_code=400, detail="Idea mode requires prompt or text_prompt.")
 
 
 def build_generation_batch(
@@ -319,17 +344,13 @@ async def generate_multimodal(
     motion_strength = payload.motion_strength or payload.motion_profile or "medium"
 
     try:
-        if mode == "video":
-            raise HTTPException(status_code=400, detail="Video mode uses the clipping route: /process or /generate.")
+        validate_multimodal_payload(payload, mode)
 
         if not generation_service.is_provider_available(payload.provider):
             raise HTTPException(status_code=503, detail=f"Generation provider '{payload.provider}' is not configured.")
 
         if mode == "idea":
             prompt = (payload.text_prompt or payload.prompt or "").strip()
-            if len(prompt) < 10:
-                raise HTTPException(status_code=422, detail="Describe the idea in at least 10 characters.")
-
             generation_request = GenerationRequest(
                 mode="idea",
                 text_prompt=prompt,
@@ -363,7 +384,7 @@ async def generate_multimodal(
 
         elif mode == "image":
             if not payload.upload_file_id:
-                raise HTTPException(status_code=422, detail="Upload an image before running Image mode.")
+                raise HTTPException(status_code=422, detail="Upload an image before running provider-backed Image mode.")
             upload = platform_store.get_upload(payload.upload_file_id, user_id=user.id if user else None)
             if not upload:
                 raise HTTPException(status_code=404, detail="Upload not found")
