@@ -112,13 +112,9 @@ export async function exportVideoBundle(requestId: string, token?: string | null
 }
 
 export async function exportClipBundle(
-  payload: { request_id?: string; source_url?: string; clips: GenerateResponse["clips"] },
+  payload: { source_url?: string; clips: GenerateResponse["clips"] },
   token?: string | null,
 ): Promise<ExportBundleResponse> {
-  if (payload.request_id) {
-    return exportVideoBundle(payload.request_id, token);
-  }
-
   return jsonRequest<ExportBundleResponse>("/api/export-bundle", {
     method: "POST",
     headers: authHeaders(token),

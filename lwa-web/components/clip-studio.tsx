@@ -46,7 +46,7 @@ import {
   createPayoutRequest,
   createPostingConnection,
   createScheduledPost,
-  exportVideoBundle,
+  exportClipBundle,
   generateClips,
   loadClipRecoveryJob,
   loadBatches,
@@ -982,8 +982,13 @@ export function ClipStudio({
     setReadyQueue(clearReadyQueue());
   }
 
+  // Active first-use export contract:
+  // ClipStudio generate results currently export through /api/export-bundle
+  // because the live generate flow returns req_* packs from /api/generate.
+  // Do not swap this directly to /api/video-export/[videoId] unless the export
+  // identifier mapping is updated and verified end-to-end.
   async function handleExportBundle() {
-    if (!activeResult?.request_id || !activeResult?.clips?.length) {
+    if (!activeResult?.clips?.length) {
       return;
     }
 
@@ -991,7 +996,13 @@ export function ClipStudio({
     setBundleExportMessage(null);
 
     try {
-      const bundle = await exportVideoBundle(activeResult.request_id, token);
+      const bundle = await exportClipBundle(
+        {
+          source_url: activeResult.video_url,
+          clips: activeResult.clips,
+        },
+        token,
+      );
       setBundleExportState("ready");
       setBundleExportMessage(`Bundle ready: ${bundle.file_name}`);
       if (bundle.download_url) {
