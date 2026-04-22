@@ -132,7 +132,7 @@ class PremiumGuardTests(unittest.TestCase):
             files={"file": ("source.mp4", b"clip-bytes", "video/mp4")},
         )
         self.assertEqual(third_response.status_code, 402)
-        self.assertIn("Daily upload limit reached", third_response.json()["detail"])
+        self.assertIn("Daily first-use upload limit reached", third_response.json()["detail"])
 
 
 if __name__ == "__main__":

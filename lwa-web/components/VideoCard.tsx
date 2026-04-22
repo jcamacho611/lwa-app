@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ClipResult } from "../lib/types";
-import ClipPreview from "./results/ClipPreview";
+import { LiveClipPreview } from "./results/LiveClipPreview";
+import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { hasPreviewAsset, isRenderedClip } from "../lib/clip-utils";
 import { RESULT_COPY, buildLeadReason } from "../lib/result-copy";
 
@@ -88,7 +89,7 @@ export default function VideoCard({
       ].join(" ")}
     >
       <div className="video-shell overflow-hidden rounded-[22px] border border-white/10 bg-black/60">
-        <ClipPreview clip={clip} className="aspect-[9/16] transition duration-300 group-hover:scale-[1.02]" />
+        <LiveClipPreview clip={clip} className="aspect-[9/16] transition duration-300 group-hover:scale-[1.02]" />
 
         <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 p-3">
           <div className="flex items-center justify-between gap-3">
@@ -185,20 +186,17 @@ export default function VideoCard({
           ) : null}
 
           {!hasRenderProof ? (
-            <button
-              type="button"
-              onClick={() => onRecover?.(clip)}
+            <RetryPreviewButton
+              onRetry={() => onRecover?.(clip)}
               disabled={recoveryState?.status === "queued" || recoveryState?.status === "processing"}
-              className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {recoveryState?.status === "processing"
+              label={recoveryState?.status === "processing"
                 ? "Recovering..."
                 : recoveryState?.status === "queued"
                   ? "Recovery queued"
                   : recoveryState?.status === "failed"
                     ? RESULT_COPY.previewRetry
                     : RESULT_COPY.previewRetry}
-            </button>
+            />
           ) : null}
 
           <button

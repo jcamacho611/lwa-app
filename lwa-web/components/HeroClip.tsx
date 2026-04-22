@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ClipResult } from "../lib/types";
-import ClipPreview from "./results/ClipPreview";
+import { LiveClipPreview } from "./results/LiveClipPreview";
+import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { hasPreviewAsset, isRenderedClip } from "../lib/clip-utils";
 import { RESULT_COPY, buildLeadReason } from "../lib/result-copy";
 
@@ -94,7 +95,7 @@ export default function HeroClip({
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
         <div className="space-y-4">
           <div className="video-shell overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-[0_12px_44px_rgba(0,0,0,0.28)]">
-            <ClipPreview clip={clip} className="aspect-[9/16] transition-transform duration-300 group-hover:scale-[1.02]" autoPlay />
+            <LiveClipPreview clip={clip} className="aspect-[9/16] transition-transform duration-300 group-hover:scale-[1.02]" autoPlay />
 
             <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
@@ -143,20 +144,18 @@ export default function HeroClip({
             </button>
 
             {!hasRenderProof ? (
-              <button
-                type="button"
-                onClick={() => onRecover?.(clip)}
+              <RetryPreviewButton
+                onRetry={() => onRecover?.(clip)}
                 disabled={recoveryState?.status === "queued" || recoveryState?.status === "processing"}
-                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {recoveryState?.status === "processing"
+                className="px-5 py-3"
+                label={recoveryState?.status === "processing"
                   ? "Recovering..."
                   : recoveryState?.status === "queued"
                     ? "Recovery queued"
                     : recoveryState?.status === "failed"
                       ? RESULT_COPY.previewRetry
                       : RESULT_COPY.previewRetry}
-              </button>
+              />
             ) : null}
           </div>
         </div>

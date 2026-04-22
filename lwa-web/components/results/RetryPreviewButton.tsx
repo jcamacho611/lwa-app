@@ -2,21 +2,24 @@
 
 type RetryPreviewButtonProps = {
   onRetry: () => void;
+  disabled?: boolean;
+  label?: string;
   className?: string;
 };
 
-export function RetryPreviewButton({ onRetry, className = "" }: RetryPreviewButtonProps) {
+export function RetryPreviewButton({ onRetry, disabled = false, label = "Retry preview", className = "" }: RetryPreviewButtonProps) {
   return (
     <button
+      type="button"
       onClick={onRetry}
+      disabled={disabled}
       className={`
-        px-4 py-2 bg-red-500 text-white rounded-lg 
-        text-sm font-medium hover:bg-red-600 
-        transition-colors duration-200
+        secondary-button inline-flex items-center justify-center rounded-full px-4 py-2
+        text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60
         ${className}
       `}
     >
-      Retry Render
+      {label}
     </button>
   );
 }

@@ -38,7 +38,7 @@ export function useClipPreviewPolling<T extends PollableClip>(initialClip: T | n
 
     let attempts = 0;
     const query = clip.request_id ? `?request_id=${encodeURIComponent(clip.request_id)}` : "";
-    const statusUrl = `/api/clip-status/${encodeURIComponent(clip.id)}${query}`;
+    const statusUrl = `/api/clip-render/${encodeURIComponent(clip.id)}${query}`;
 
     const interval = window.setInterval(async () => {
       attempts += 1;
