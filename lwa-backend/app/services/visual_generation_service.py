@@ -1,158 +1,139 @@
 from __future__ import annotations
 
-import json
-import shutil
-from datetime import datetime, timezone
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
 from ..core.config import Settings
-from ..models.schemas import GenerationAssetResponse, GenerationBackgroundRequest
+from .generated_asset_store import GeneratedAssetStore
+from .generation_providers.lwa_provider import LWAGenerationProvider
 
 
-class VisualGenerationError(RuntimeError):
-    """Controlled local visual generation runtime error."""
+class VisualGenerationError(Exception):
+    pass
 
 
 class VisualGenerationDisabledError(VisualGenerationError):
     """LWA visual generation is intentionally disabled."""
 
 
-class VisualGenerationRequestError(VisualGenerationError):
-    """LWA visual generation request could not be completed."""
+@dataclass(frozen=True)
+class VisualGenerationRequest:
+    mode: str
+    prompt: str | None = None
+    image_url: str | None = None
+    reference_image_url: str | None = None
+    source_clip_url: str | None = None
+    source_asset_id: str | None = None
+    style_preset: str | None = None
+    motion_profile: str | None = None
+    duration_seconds: int = 8
+    aspect_ratio: str = "9:16"
+    seed: int | None = None
+    target_platform: str | None = None
 
 
-def visual_generation_available(settings: Settings) -> bool:
-    return bool(settings.visual_generation_enabled)
+class VisualGenerationService:
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+        self.provider = LWAGenerationProvider(settings)
+        self.asset_store = GeneratedAssetStore(
+            getattr(
+                settings,
+                "generated_asset_store_path",
+                f"{settings.generated_assets_dir}/generated-assets.sqlite3",
+            )
+        )
 
+    async def generate(self, request: VisualGenerationRequest, *, actor_id: str) -> dict[str, Any]:
+        if not self.settings.visual_generation_enabled:
+            raise VisualGenerationDisabledError("LWA visual generation is disabled. Core clipping and exports continue without it.")
 
-def validate_visual_generation_config(settings: Settings) -> None:
-    if not settings.visual_generation_enabled:
-        raise VisualGenerationDisabledError("LWA visual generation is disabled. Core clipping and exports continue without it.")
+        mode = request.mode.strip().lower()
+        if mode not in {"image", "idea"}:
+            raise VisualGenerationError("Visual generation supports 'image' and 'idea' only.")
 
+        if mode == "idea" and not request.prompt:
+            raise VisualGenerationError("Idea mode requires a prompt.")
 
-def build_visual_generation_payload(*, settings: Settings, request: GenerationBackgroundRequest) -> dict[str, Any]:
-    payload = {
-        "model": settings.visual_generation_model,
-        "prompt": request.prompt,
-        "style_preset": request.style_preset,
-        "motion_profile": request.motion_profile,
-        "duration_seconds": request.duration_seconds,
-        "aspect_ratio": request.aspect_ratio,
-        "seed": request.seed,
-        "reference_image_url": request.reference_image_url,
-        "source_clip_url": request.source_clip_url,
-        "source_asset_id": request.source_asset_id,
-    }
-    return {key: value for key, value in payload.items() if value is not None}
+        if mode == "image" and not (request.image_url or request.reference_image_url or request.prompt):
+            raise VisualGenerationError("Image mode requires an image_url, reference_image_url, or prompt.")
 
+        if mode == "idea":
+            provider_result = await self.provider.generate_from_text(
+                prompt=request.prompt or "",
+                style_preset=request.style_preset,
+                motion_profile=request.motion_profile,
+                duration_seconds=request.duration_seconds,
+                aspect_ratio=request.aspect_ratio,
+                seed=request.seed,
+                target_platform=request.target_platform,
+            )
+        else:
+            provider_result = await self.provider.generate_from_image(
+                image_url=request.image_url,
+                reference_image_url=request.reference_image_url,
+                prompt=request.prompt,
+                style_preset=request.style_preset,
+                motion_profile=request.motion_profile,
+                duration_seconds=request.duration_seconds,
+                aspect_ratio=request.aspect_ratio,
+                seed=request.seed,
+                target_platform=request.target_platform,
+            )
 
-async def submit_visual_generation_job(
-    *,
-    settings: Settings,
-    payload: dict[str, Any],
-    job_id: str | None = None,
-    job_kind: str = "background",
-) -> dict[str, Any]:
-    validate_visual_generation_config(settings)
-    local_job_id = job_id or f"lwa_gen_{uuid4().hex[:12]}"
-    now = _now()
-    job = {
-        "job_id": local_job_id,
-        "provider": "lwa",
-        "provider_job_id": local_job_id,
-        "job_kind": job_kind,
-        "status": "completed",
-        "message": "LWA visual generation request normalized.",
-        "created_at": now,
-        "updated_at": now,
-        "asset": _normalize_visual_asset(settings=settings, payload=payload, job_id=local_job_id).model_dump(),
-        "error": None,
-        "request_payload": payload,
-        "provider_payload": {"runtime": "lwa-owned"},
-    }
-    _save_visual_generation_job(settings=settings, job=job)
-    return job
+        request_id = provider_result.get("request_id") or f"vg_{uuid4().hex[:12]}"
+        asset_id = provider_result.get("asset_id") or f"asset_{uuid4().hex[:12]}"
 
+        source_refs: dict[str, str] = {}
+        if request.image_url:
+            source_refs["image_url"] = request.image_url
+        if request.reference_image_url:
+            source_refs["reference_image_url"] = request.reference_image_url
+        if request.source_clip_url:
+            source_refs["source_clip_url"] = request.source_clip_url
+        if request.source_asset_id:
+            source_refs["source_asset_id"] = request.source_asset_id
 
-async def poll_visual_generation_job(*, settings: Settings, job_id: str) -> dict[str, Any]:
-    validate_visual_generation_config(settings)
-    state = _load_visual_generation_job(settings=settings, job_id=job_id)
-    if not state:
-        raise VisualGenerationRequestError(f"LWA visual generation job not found: {job_id}")
-    return state
+        record = self.asset_store.create_asset(
+            asset_id=asset_id,
+            provider="lwa",
+            asset_type=provider_result.get("asset_type", "generated_visual"),
+            status=provider_result.get("status", "ready"),
+            prompt=request.prompt,
+            preview_url=provider_result.get("preview_url"),
+            video_url=provider_result.get("video_url"),
+            thumbnail_url=provider_result.get("thumbnail_url"),
+            provider_job_id=provider_result.get("provider_job_id"),
+            request_id=request_id,
+            source_refs=source_refs,
+            error=provider_result.get("error"),
+        )
 
-
-async def download_visual_generation_asset(
-    *,
-    settings: Settings,
-    asset_url: str,
-    destination_path: str,
-) -> str:
-    validate_visual_generation_config(settings)
-    if not asset_url:
-        raise VisualGenerationRequestError("No asset URL available for download.")
-
-    destination = Path(destination_path)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    source = Path(asset_url.replace("/generated/", str(Path(settings.generated_assets_dir)) + "/", 1))
-    if source.exists() and source.is_file():
-        shutil.copyfile(source, destination)
-        return str(destination)
-
-    raise VisualGenerationRequestError("LWA visual generation asset is not local yet.")
-
-
-async def generate_lwa_background(
-    *,
-    settings: Settings,
-    request: GenerationBackgroundRequest,
-) -> dict[str, Any]:
-    return await submit_visual_generation_job(
-        settings=settings,
-        payload=build_visual_generation_payload(settings=settings, request=request),
-        job_kind="background",
-    )
-
-
-async def enhance_clip_with_lwa_generation(
-    *,
-    settings: Settings,
-    request: GenerationBackgroundRequest,
-) -> dict[str, Any]:
-    return await submit_visual_generation_job(
-        settings=settings,
-        payload=build_visual_generation_payload(settings=settings, request=request),
-        job_kind="clip_enhancement",
-    )
-
-
-def _normalize_visual_asset(*, settings: Settings, payload: dict[str, Any], job_id: str) -> GenerationAssetResponse:
-    return GenerationAssetResponse(
-        asset_id=job_id,
-        provider="lwa",
-        status="completed",
-        asset_url=None,
-        thumbnail_url=None,
-        public_url=None,
-        local_path=None,
-        content_type="application/json",
-        duration_seconds=_optional_int(payload.get("duration_seconds")),
-        aspect_ratio=str(payload.get("aspect_ratio") or "9:16"),
-        metadata={
-            "prompt": payload.get("prompt"),
-            "model": settings.visual_generation_model,
-            "runtime": "lwa-owned",
-            "note": "Visual generation request normalized. Media synthesis can attach assets to this job when available.",
-        },
-    )
-
-
-def _jobs_dir(settings: Settings) -> Path:
-    path = Path(settings.generated_assets_dir) / "visual-generation" / "jobs"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+        return {
+            "request_id": request_id,
+            "status": record["status"],
+            "provider": "lwa",
+            "mode": mode,
+            "asset": {
+                "id": record["id"],
+                "provider": record["provider"],
+                "asset_type": record["asset_type"],
+                "status": record["status"],
+                "prompt": record.get("prompt"),
+                "preview_url": record.get("preview_url"),
+                "video_url": record.get("video_url"),
+                "thumbnail_url": record.get("thumbnail_url"),
+                "source_refs": record.get("source_refs") or {},
+                "created_at": record.get("created_at"),
+                "error": record.get("error"),
+            },
+            "feature_flags": {
+                "first_use_no_signup": True,
+                "premium_generation": True,
+            },
+            "actor_id": actor_id,
+        }
 
 
 def _job_path(*, settings: Settings, job_id: str) -> Path:

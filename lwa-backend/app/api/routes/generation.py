@@ -21,7 +21,7 @@ logger = logging.getLogger("uvicorn.error")
 
 class TextGenerationRequest(BaseModel):
     text_prompt: str = Field(..., min_length=10, max_length=1000, description="Text prompt for video generation")
-    provider: str = Field(default="seedance", description="Generation provider")
+    provider: str = Field(default="lwa", description="Generation provider")
     duration: Optional[float] = Field(default=30.0, ge=5.0, le=120.0, description="Video duration in seconds")
     style: Optional[str] = Field(default=None, description="Generation style")
     aspect_ratio: str = Field(default="9:16", description="Video aspect ratio")
@@ -29,7 +29,7 @@ class TextGenerationRequest(BaseModel):
 
 class ImageGenerationRequest(BaseModel):
     prompt: Optional[str] = Field(default=None, min_length=10, max_length=1000, description="Optional prompt for image-to-video")
-    provider: str = Field(default="seedance", description="Generation provider")
+    provider: str = Field(default="lwa", description="Generation provider")
     duration: Optional[float] = Field(default=30.0, ge=5.0, le=120.0, description="Video duration in seconds")
     motion_strength: str = Field(default="medium", description="Motion strength")
     aspect_ratio: str = Field(default="9:16", description="Video aspect ratio")
@@ -37,7 +37,7 @@ class ImageGenerationRequest(BaseModel):
 
 class GenerationStatusRequest(BaseModel):
     generation_id: str = Field(..., description="Generation ID to check status")
-    provider: str = Field(default="seedance", description="Generation provider")
+    provider: str = Field(default="lwa", description="Generation provider")
 
 
 def route_generation_mode(payload: GenerationRequest) -> str:

@@ -15,9 +15,9 @@ from .api.routes.generate import router as generate_router
 from .api.routes.generation import router as generation_router
 from .api.routes.me import router as me_router
 from .api.routes.posting import router as posting_router
-from .api.routes.seedance import router as seedance_router
 from .api.routes.upload import router as upload_router
 from .api.routes.video_analysis import router as video_analysis_router
+from .api.routes.visual_generation import router as visual_generation_router
 from .api.routes.wallet import router as wallet_router
 from .core.config import get_settings
 from .services.clip_service import maybe_prune_generated_assets
@@ -48,6 +48,7 @@ def create_app() -> FastAPI:
     app.include_router(generate_router)
     app.include_router(generation_router)
     app.include_router(video_analysis_router)
+    app.include_router(visual_generation_router)
     app.include_router(auth_router)
     app.include_router(upload_router)
     app.include_router(me_router)
@@ -55,7 +56,6 @@ def create_app() -> FastAPI:
     app.include_router(campaigns_router)
     app.include_router(wallet_router)
     app.include_router(posting_router)
-    app.include_router(seedance_router)
     app.include_router(clip_status_router)
     app.include_router(clips_router)
     app.include_router(edit_router)
