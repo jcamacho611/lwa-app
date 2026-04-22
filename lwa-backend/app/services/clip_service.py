@@ -34,8 +34,8 @@ from ..services.confidence_engine import build_confidence_label, resolve_confide
 from ..services.entitlements import EntitlementContext, UsageStore
 from ..services.platform_store import PlatformStore
 from ..services.render_jobs import queue_preview_render
-from ..services.seedance_service import seedance_available
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
+from ..services.visual_generation_service import visual_generation_available, visual_generation_status
 from ..style_engine import build_script_pack
 from ..trends import fetch_public_trends, trends_timestamp
 
@@ -66,8 +66,8 @@ def dependency_health(settings: Settings) -> dict[str, object]:
             or settings.facebook_page_access_token
             or settings.instagram_access_token
         ),
-        "seedance_enabled": bool(settings.seedance_enabled),
-        "seedance_configured": bool(settings.seedance_api_key and settings.seedance_base_url),
+        "visual_generation_enabled": bool(settings.visual_generation_enabled),
+        "visual_generation_configured": visual_generation_available(settings),
     }
 
 
@@ -86,31 +86,7 @@ def provider_health(settings: Settings) -> dict[str, dict[str, object]]:
             if settings.enable_anthropic and settings.anthropic_api_key
             else "disabled" if not settings.enable_anthropic else "missing-key",
         },
-        "seedance": seedance_status(settings),
-    }
-
-
-def seedance_status(settings: Settings) -> dict[str, object]:
-    configured = bool(settings.seedance_api_key and settings.seedance_base_url)
-    available = seedance_available(settings)
-    if not settings.seedance_enabled:
-        status = "disabled"
-        message = "Seedance is turned off. LWA uses the internal visual engine instead."
-    elif not configured:
-        status = "misconfigured"
-        message = "Seedance is enabled but missing required config. Internal visual engine remains active."
-    else:
-        status = "adapter-only"
-        message = "Seedance config is present as an optional adapter. Core clipping stays internal and independent."
-
-    return {
-        "enabled": bool(settings.seedance_enabled),
-        "configured": configured,
-        "available": available,
-        "adapter_only": True,
-        "core_clipping_dependency": False,
-        "status": status,
-        "message": message,
+        "visual_generation": visual_generation_status(settings),
     }
 
 

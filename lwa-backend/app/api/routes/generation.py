@@ -234,7 +234,7 @@ async def generate_from_text(
 async def generate_from_image(
     image_file: UploadFile = File(...),
     prompt: Optional[str] = Form(default=None),
-    provider: str = Form(default="seedance"),
+    provider: str = Form(default="lwa"),
     duration: Optional[float] = Form(default=30.0),
     motion_strength: str = Form(default="medium"),
     aspect_ratio: str = Form(default="9:16"),
@@ -451,7 +451,7 @@ async def generate_multimodal(
 @router.get("/status/{generation_id}")
 async def get_generation_status(
     generation_id: str,
-    provider: str = "seedance",
+    provider: str = "lwa",
     request: Request = None,
 ) -> Dict[str, Any]:
     """Get status of ongoing generation."""
@@ -478,7 +478,7 @@ async def get_generation_status(
 @router.post("/cancel/{generation_id}")
 async def cancel_generation(
     generation_id: str,
-    provider: str = "seedance",
+    provider: str = "lwa",
     request: Request = None,
 ) -> Dict[str, Any]:
     """Cancel ongoing generation."""

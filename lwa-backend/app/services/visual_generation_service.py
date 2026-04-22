@@ -14,7 +14,7 @@ class VisualGenerationError(Exception):
 
 
 class VisualGenerationDisabledError(VisualGenerationError):
-    """LWA visual generation is intentionally disabled."""
+    pass
 
 
 @dataclass(frozen=True)
@@ -33,6 +33,28 @@ class VisualGenerationRequest:
     target_platform: str | None = None
 
 
+def visual_generation_available(settings: Settings) -> bool:
+    return bool(getattr(settings, "visual_generation_enabled", True))
+
+
+def validate_visual_generation_config(settings: Settings) -> None:
+    if not visual_generation_available(settings):
+        raise VisualGenerationDisabledError("Visual generation is disabled.")
+
+
+def visual_generation_status(settings: Settings) -> dict[str, object]:
+    available = visual_generation_available(settings)
+    return {
+        "enabled": available,
+        "configured": available,
+        "available": available,
+        "provider": "lwa",
+        "status": "ready" if available else "disabled",
+        "core_clipping_dependency": False,
+        "message": "LWA-owned visual generation is available." if available else "LWA-owned visual generation is disabled.",
+    }
+
+
 class VisualGenerationService:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -46,8 +68,7 @@ class VisualGenerationService:
         )
 
     async def generate(self, request: VisualGenerationRequest, *, actor_id: str) -> dict[str, Any]:
-        if not self.settings.visual_generation_enabled:
-            raise VisualGenerationDisabledError("LWA visual generation is disabled. Core clipping and exports continue without it.")
+        validate_visual_generation_config(self.settings)
 
         mode = request.mode.strip().lower()
         if mode not in {"image", "idea"}:
@@ -60,30 +81,30 @@ class VisualGenerationService:
             raise VisualGenerationError("Image mode requires an image_url, reference_image_url, or prompt.")
 
         if mode == "idea":
-            provider_result = await self.provider.generate_from_text(
-                prompt=request.prompt or "",
-                style_preset=request.style_preset,
-                motion_profile=request.motion_profile,
-                duration_seconds=request.duration_seconds,
+            provider_response = await self.provider.generate_from_text(
+                text_prompt=request.prompt or "",
+                duration=float(request.duration_seconds),
+                style=request.style_preset,
                 aspect_ratio=request.aspect_ratio,
+                motion_profile=request.motion_profile,
                 seed=request.seed,
                 target_platform=request.target_platform,
             )
         else:
-            provider_result = await self.provider.generate_from_image(
-                image_url=request.image_url,
-                reference_image_url=request.reference_image_url,
+            image_ref = request.image_url or request.reference_image_url or "lwa-image-input"
+            provider_response = await self.provider.generate_from_image(
+                image_path=image_ref,
                 prompt=request.prompt,
-                style_preset=request.style_preset,
-                motion_profile=request.motion_profile,
-                duration_seconds=request.duration_seconds,
+                duration=float(request.duration_seconds),
+                motion_strength=request.motion_profile or "medium",
                 aspect_ratio=request.aspect_ratio,
                 seed=request.seed,
                 target_platform=request.target_platform,
             )
 
-        request_id = provider_result.get("request_id") or f"vg_{uuid4().hex[:12]}"
-        asset_id = provider_result.get("asset_id") or f"asset_{uuid4().hex[:12]}"
+        clip = provider_response.clips[0] if provider_response.clips else None
+        request_id = provider_response.request_id or f"vg_{uuid4().hex[:12]}"
+        asset_id = str(provider_response.metadata.get("asset_id") or (clip.id if clip else "") or f"asset_{uuid4().hex[:12]}")
 
         source_refs: dict[str, str] = {}
         if request.image_url:
@@ -94,20 +115,22 @@ class VisualGenerationService:
             source_refs["source_clip_url"] = request.source_clip_url
         if request.source_asset_id:
             source_refs["source_asset_id"] = request.source_asset_id
+        if actor_id:
+            source_refs["actor_id"] = actor_id
 
         record = self.asset_store.create_asset(
             asset_id=asset_id,
-            provider="lwa",
-            asset_type=provider_result.get("asset_type", "generated_visual"),
-            status=provider_result.get("status", "ready"),
+            provider=provider_response.provider,
+            asset_type="generated_visual",
+            status=str((clip.render_status if clip else None) or "pending"),
             prompt=request.prompt,
-            preview_url=provider_result.get("preview_url"),
-            video_url=provider_result.get("video_url"),
-            thumbnail_url=provider_result.get("thumbnail_url"),
-            provider_job_id=provider_result.get("provider_job_id"),
+            preview_url=clip.preview_url if clip else None,
+            video_url=(clip.clip_url or clip.raw_clip_url or clip.edited_clip_url) if clip else None,
+            thumbnail_url=clip.thumbnail_url if clip else None,
+            provider_job_id=str(provider_response.metadata.get("provider_job_id") or request_id),
             request_id=request_id,
             source_refs=source_refs,
-            error=provider_result.get("error"),
+            error=str(provider_response.metadata.get("error")) if provider_response.metadata.get("error") else None,
         )
 
         return {
@@ -134,34 +157,3 @@ class VisualGenerationService:
             },
             "actor_id": actor_id,
         }
-
-
-def _job_path(*, settings: Settings, job_id: str) -> Path:
-    safe_id = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in job_id)
-    return _jobs_dir(settings) / f"{safe_id}.json"
-
-
-def _save_visual_generation_job(*, settings: Settings, job: dict[str, Any]) -> None:
-    path = _job_path(settings=settings, job_id=str(job["job_id"]))
-    path.write_text(json.dumps(job, indent=2, sort_keys=True), encoding="utf-8")
-
-
-def _load_visual_generation_job(*, settings: Settings, job_id: str) -> dict[str, Any] | None:
-    path = _job_path(settings=settings, job_id=job_id)
-    if not path.exists():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-
-def _optional_int(value: Any) -> int | None:
-    try:
-        return int(float(value))
-    except (TypeError, ValueError):
-        return None
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
