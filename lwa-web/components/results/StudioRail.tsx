@@ -7,6 +7,8 @@ import { RetryPreviewButton } from "./RetryPreviewButton";
 type StudioRailProps = {
   clips: ClipResult[];
   onClipSelect?: (clip: ClipResult) => void;
+  onRetryClip?: (clip: ClipResult) => void;
+  onDownloadClip?: (clip: ClipResult) => void;
   selectedClipId?: string;
 };
 
@@ -28,7 +30,7 @@ function durationLabel(clip: ClipResult) {
   return `${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, "0")}`;
 }
 
-export function StudioRail({ clips, onClipSelect, selectedClipId }: StudioRailProps) {
+export function StudioRail({ clips, onClipSelect, onRetryClip, onDownloadClip, selectedClipId }: StudioRailProps) {
   return (
     <div className="flex flex-col gap-3 p-4 bg-ink/5 rounded-xl">
       <h3 className="text-lg font-semibold text-ink/90 mb-4">
@@ -44,6 +46,7 @@ export function StudioRail({ clips, onClipSelect, selectedClipId }: StudioRailPr
           const isPending = renderStatus === "pending";
           const isRendering = renderStatus === "rendering";
           const duration = durationLabel(clip);
+          const exportUrl = clip.download_url || clip.clip_url || clip.preview_url || undefined;
           
           return (
             <div
@@ -111,18 +114,29 @@ export function StudioRail({ clips, onClipSelect, selectedClipId }: StudioRailPr
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 mt-3">
-                  {isFailed && (
-                    <RetryPreviewButton onRetry={() => {/* Handle retry */}} />
-                  )}
+                  {isFailed && onRetryClip ? (
+                    <RetryPreviewButton onRetry={() => onRetryClip(clip)} />
+                  ) : null}
                   
-                  {isReady && (
+                  {isReady && onDownloadClip ? (
                     <button
+                      type="button"
                       className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-                      onClick={() => {/* Handle download/export */}}
+                      onClick={() => onDownloadClip(clip)}
                     >
                       Download
                     </button>
-                  )}
+                  ) : null}
+
+                  {isReady && !onDownloadClip && exportUrl ? (
+                    <button
+                      type="button"
+                      className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                      onClick={() => window.open(exportUrl, "_blank", "noopener,noreferrer")}
+                    >
+                      Download
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </div>

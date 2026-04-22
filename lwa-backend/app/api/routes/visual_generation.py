@@ -78,5 +78,3 @@ async def generate_visual(payload: VisualGenerationPayload, request: Request) ->
     except Exception as error:  # pragma: no cover
         logger.exception("visual_generation_failed actor_id=%s mode=%s", actor_id, payload.mode)
         raise HTTPException(status_code=500, detail=f"Visual generation failed: {error}") from error
-
-
