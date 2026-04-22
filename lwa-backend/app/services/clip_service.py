@@ -359,7 +359,7 @@ async def build_clip_response(
     if platform_store is not None:
         response = platform_store.persist_clip_batch(
             request_id=request_id,
-            user_id=current_user.id if current_user else entitlement.user_id,
+            user_id=current_user.id if current_user else entitlement.subject,
             campaign_id=campaign_id,
             response=response,
             local_asset_paths=local_asset_paths,

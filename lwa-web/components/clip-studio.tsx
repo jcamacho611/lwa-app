@@ -46,7 +46,7 @@ import {
   createPayoutRequest,
   createPostingConnection,
   createScheduledPost,
-  exportClipBundle,
+  exportVideoBundle,
   generateClips,
   loadClipRecoveryJob,
   loadBatches,
@@ -983,7 +983,7 @@ export function ClipStudio({
   }
 
   async function handleExportBundle() {
-    if (!activeResult?.clips?.length) {
+    if (!activeResult?.request_id || !activeResult?.clips?.length) {
       return;
     }
 
@@ -991,13 +991,7 @@ export function ClipStudio({
     setBundleExportMessage(null);
 
     try {
-      const bundle = await exportClipBundle(
-        {
-          source_url: activeResult.video_url,
-          clips: activeResult.clips,
-        },
-        token,
-      );
+      const bundle = await exportVideoBundle(activeResult.request_id, token);
       setBundleExportState("ready");
       setBundleExportMessage(`Bundle ready: ${bundle.file_name}`);
       if (bundle.download_url) {

@@ -53,6 +53,22 @@ def analysis_actor_id(request: Request) -> str:
     return f"guest_{safe_id[:64] or 'first_use'}"
 
 
+def export_lookup_subjects(request: Request) -> list[str]:
+    user = get_optional_user(request)
+    if user:
+        return [user.id]
+
+    client_id = (request.headers.get(settings.client_id_header_name) or "").strip()
+    if not client_id:
+        return []
+
+    safe_id = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in client_id)
+    subjects = [f"client:{client_id}"]
+    if safe_id:
+        subjects.append(f"guest_{safe_id[:64]}")
+    return subjects
+
+
 def resolve_analysis_source(payload: VideoAnalysisRequest, request: Request) -> str:
     if payload.video_url:
         return payload.video_url
@@ -189,8 +205,17 @@ async def get_queue_status(request: Request) -> dict[str, object]:
 
 @router.post("/export/{request_id}")
 async def export_bundle(request_id: str, request: Request) -> dict[str, object]:
-    """Export a bundle for a completed first-use analysis request."""
+    """Export a bundle for a completed first-use request."""
     clips = video_candidate_clips(settings=settings, video_id=request_id)
+
+    if not clips:
+        for subject in export_lookup_subjects(request):
+            clip_pack = platform_store.get_clip_pack(user_id=subject, request_id=request_id)
+            pack_clips = clip_pack.get("clips") or []
+            if pack_clips:
+                clips = pack_clips
+                break
+
     if not clips:
         raise HTTPException(status_code=404, detail="Analysis request not found")
 
@@ -208,5 +233,6 @@ async def export_bundle(request_id: str, request: Request) -> dict[str, object]:
         "file_name": bundle["file_name"],
         "download_url": bundle["download_url"],
         "clip_count": bundle["clip_count"],
+        "created_at": bundle["created_at"],
         "size_bytes": bundle["size_bytes"],
     }

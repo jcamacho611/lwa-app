@@ -104,10 +104,21 @@ export async function generateClips(payload: GeneratePayload, token?: string | n
   });
 }
 
+export async function exportVideoBundle(requestId: string, token?: string | null): Promise<ExportBundleResponse> {
+  return jsonRequest<ExportBundleResponse>(`/api/video-export/${encodeURIComponent(requestId)}`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
 export async function exportClipBundle(
-  payload: { source_url?: string; clips: GenerateResponse["clips"] },
+  payload: { request_id?: string; source_url?: string; clips: GenerateResponse["clips"] },
   token?: string | null,
 ): Promise<ExportBundleResponse> {
+  if (payload.request_id) {
+    return exportVideoBundle(payload.request_id, token);
+  }
+
   return jsonRequest<ExportBundleResponse>("/api/export-bundle", {
     method: "POST",
     headers: authHeaders(token),
