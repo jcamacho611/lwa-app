@@ -1,180 +1,113 @@
-# Claude And Seedance Integration
-
-This document describes how Seedance is used inside LWA as an optional provider adapter. Seedance is not the LWA product, not the core clipping engine, and not required for normal clip generation.
+# LWA Visual Generation Migration Notes
 
 ## Purpose
 
-Seedance can support:
+This document explains how LWA's visual generation stack is being migrated into fully LWA-owned architecture.
 
-- image enhancement flows
-- idea-to-asset generation flows
-- optional background generation
-- optional clip enhancement
+The goals are:
 
-Core LWA clipping remains:
+- preserve first-upload no-signup
+- preserve export flow
+- preserve multimodal routing
+- keep clipping stable while visual generation becomes LWA-owned
+- remove old provider-centered language from the product over time
 
-- FastAPI orchestration
-- FFmpeg pipeline
-- yt-dlp ingest
-- clip analysis
-- render queue
-- export bundle flow
+## Current Product Rule
 
-## Core Rule
+LWA owns the product.
 
-- LWA-owned clipping, analysis, preview, and export flows continue when Seedance is disabled.
-- Seedance secrets stay backend-only.
-- Seedance HTTP details stay isolated behind `app/services/seedance_service.py`.
-- Frontend surfaces must treat Seedance as an optional enhancement, never as a blocking dependency.
-- Do not make Seedance a hard dependency of first-upload, clip generation, preview rendering, or exports.
+That means the final system should be described as:
 
-## Environment Variables
+- LWA routes
+- LWA generation runtime
+- LWA visual generation
+- LWA generated asset persistence
+- LWA-owned UX and export flow
 
-Required to enable the adapter:
+Older provider-shaped naming may still appear temporarily in compatibility history, tests, or transitional references, but it is not the product center.
 
-- `SEEDANCE_ENABLED=true`
-- `SEEDANCE_API_KEY=...`
-- `SEEDANCE_BASE_URL=...`
+## What Is Already True
 
-Optional:
+The current active backend flow has already been moved toward LWA-native visual generation.
 
-- `SEEDANCE_MODEL=seedance-2.0`
-- `SEEDANCE_TIMEOUT_SECONDS=180`
-- `SEEDANCE_POLL_INTERVAL_SECONDS=3`
-- `LWA_GENERATED_ASSETS_DIR=...`
-- `LWA_GENERATED_ASSET_STORE_PATH=...`
+Verified areas include:
 
-Do not expose these values to the frontend.
+- compile passing on targeted backend files
+- startup passing
+- visual generation health route working
+- visual generation idea flow working
+- multimodal routing preserving video-to-clipping separation
 
-## Provider Routing Behavior
+## Migration Order
 
-Normal LWA clipping does not route through Seedance.
+The correct order is:
 
-Current routing:
+1. preserve working behavior
+2. absorb useful patterns into LWA-owned modules
+3. move logic behind LWA-owned interfaces
+4. verify parity or better behavior
+5. remove old provider-shaped remnants where safe
 
-- Video clipping: internal LWA clipping/runtime flow through `/generate`, `/process`, and `/v1/generate`
-- First-upload analyze/export: internal LWA flow
-- Image/Idea generation: provider generation flow with clean disabled behavior
-- Seedance background/enhancement: explicit `/v1/seedance/*` routes only
+This avoids regressions in:
 
-If Seedance is disabled or misconfigured, Seedance-specific routes return controlled `503` responses and the rest of LWA keeps working.
+- first-upload no-signup
+- export
+- clipping
+- multimodal routing
 
-## Routes
+## LWA-Owned Visual Generation Direction
 
-### `POST /v1/seedance/background`
+### LWA Clipping Remains Separate
 
-Submits an optional Seedance background generation job.
+Video clipping continues to use the clipping pipeline and should not be blocked by visual generation work.
 
-### `GET /v1/seedance/jobs/{job_id}`
+### LWA Visual Generation Owns Image And Idea Flows
 
-Polls Seedance job state through the LWA adapter and updates generated asset persistence when a matching asset exists.
+Visual generation now belongs under LWA-owned routes/services/runtime structure.
 
-### `POST /v1/seedance/jobs/{job_id}/download`
+That includes:
 
-Downloads a completed provider asset into LWA-managed generated storage when a downloadable asset URL exists.
-
-## Request Normalization
-
-LWA owns the canonical generation contract. Requests normalize around:
-
-- `mode`
-- `prompt`
-- `text_prompt`
-- `image_url`
-- `reference_image_url`
-- `source_clip_url`
-- `source_asset_id`
-- `style_preset`
-- `motion_profile`
-- `duration_seconds`
-- `aspect_ratio`
-- `provider`
-
-Video mode belongs to the clipping flow. Image and Idea mode belong to the provider generation flow.
-
-## Generated Asset Normalization
-
-Generated assets normalize around:
-
-- `id`
-- `provider`
-- `asset_type`
-- `status`
-- `prompt`
-- `preview_url`
-- `video_url`
-- `thumbnail_url`
-- `source_refs`
-- `local_path`
-- `provider_job_id`
-- `request_id`
-- `created_at`
-- `updated_at`
-- `error`
-
-Generated asset records are persisted in the generated asset store configured by `LWA_GENERATED_ASSET_STORE_PATH`.
-
-## Adapter Contract
-
-The adapter currently isolates the provider HTTP contract in `seedance_service.py`.
-
-Default assumptions:
-
-- submit: `POST {SEEDANCE_BASE_URL}/jobs`
-- poll: `GET {SEEDANCE_BASE_URL}/jobs/{provider_job_id}`
-- accepted job ids can be returned as `job_id`, `id`, `task_id`, or `generation_id`
-- assets can be returned as `asset_url`, `output_url`, `video_url`, `url`, `download_url`, or nested asset fields
-
-If the final Seedance vendor contract differs, update only `seedance_service.py`. Do not spread provider-specific code through routes, frontend components, or normal clipping services.
-
-## Safe Fallback Behavior
-
-When Seedance is unavailable:
-
-- startup remains healthy
-- `/health` remains healthy
-- normal clip generation still works
-- first-upload flow still works
-- export bundle flow still works
-- multimodal provider generation returns a clear provider-disabled response
-- optional frontend enhancement controls should be hidden or disabled
-
-## What Is Live Now
-
-Live or intended:
-
-- clipping pipeline
-- first-upload no-signup path
-- export bundle flow
-- provider-disabled safe handling
+- visual generation route handling
+- visual generation service logic
+- LWA provider abstraction
 - generated asset persistence
-- image / idea generation routing
-- explicit Seedance background and job polling routes
+- LWA-native language in docs/tests/logs over time
 
-Adapter-only or pending exact contract confirmation:
+## Compatibility Rule
 
-- provider-specific model tuning
-- advanced background enhancement presets
-- provider-specific high-fidelity asset variants
-- final Seedance vendor status map and terminal state names
-- final signed asset download requirements
+Do not delete compatibility paths too early.
 
-## How To Enable Safely
+Only remove remaining old branded remnants when:
 
-1. Set `SEEDANCE_ENABLED=true`.
-2. Set `SEEDANCE_API_KEY`.
-3. Set `SEEDANCE_BASE_URL`.
-4. Smoke test `/health` and confirm Seedance status is configured.
-5. Smoke test `POST /v1/seedance/background`.
-6. Smoke test `GET /v1/seedance/jobs/{job_id}`.
-7. Smoke test `POST /v1/seedance/jobs/{job_id}/download` after a completed asset exists.
-8. Only then expose optional frontend enhancement controls.
+1. compile/startup verification passes
+2. visual generation routes still work
+3. multimodal routing still works
+4. first-upload no-signup still works
+5. export remains intact where relevant
 
-## Future Work Rules
+## Remaining Cleanup Categories
 
-- no duplicate generation schemas
-- no duplicate provider systems
-- no provider secrets in frontend
-- no making Seedance a hard dependency of clipping
-- no broad rewrites just to support one provider
-- keep first-upload no-signup clipping and export available even when Seedance is off
+Typical remaining cleanup after backend migration may include:
+
+- old docs headings
+- old test file names
+- old provider-health assertions
+- old comments/log strings
+- historical references that no longer reflect active ownership
+
+These should be cleaned carefully, not blindly.
+
+## Final Target
+
+The final target is a repo where active product architecture is described as LWA-owned end to end:
+
+- routes
+- services
+- provider/runtime naming
+- generated assets
+- docs
+- tests
+- logs
+- UI labels
+
+At that point, the generation system is simply LWA.

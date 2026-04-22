@@ -1,126 +1,84 @@
-from __future__ import annotations
-
-import os
-import tempfile
 import unittest
-from unittest import mock
 
-from app.core.config import Settings
+from fastapi.testclient import TestClient
+
 from app.main import create_app
-from app.models.schemas import SeedanceBackgroundRequest
-from app.services.seedance_service import (
-    SeedanceProviderError,
-    build_seedance_payload,
-    generate_seedance_background,
-    seedance_available,
-    submit_seedance_job,
-)
 
 
-class FakeSeedanceResponse:
-    def __init__(self, payload: dict, status_code: int = 200) -> None:
-        self._payload = payload
-        self.status_code = status_code
+class TestVisualGenerationCompatibility(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(create_app())
+        self.headers = {"x-lwa-client-id": "visual-compat-test"}
 
-    def raise_for_status(self) -> None:
-        return None
+    def tearDown(self):
+        self.client.close()
 
-    def json(self) -> dict:
-        return self._payload
+    def test_visual_generation_health(self):
+        response = self.client.get("/v1/visual-generation/health", headers=self.headers)
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body.get("ok"), True)
+        self.assertEqual(body.get("provider"), "lwa")
+        self.assertEqual(body.get("service"), "visual_generation")
 
-
-class FakeSeedanceClient:
-    def __init__(self, *args, **kwargs) -> None:
-        pass
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc, traceback) -> None:
-        return None
-
-    async def post(self, *args, **kwargs):
-        return FakeSeedanceResponse(
-            {
-                "job_id": "provider_job_123",
-                "status": "submitted",
-                "message": "accepted",
-            }
+    def test_visual_generation_idea_requires_prompt(self):
+        response = self.client.post(
+            "/v1/visual-generation/generate",
+            headers=self.headers,
+            json={"mode": "idea"},
         )
+        self.assertEqual(response.status_code, 400)
 
-
-class SeedanceAdapterTests(unittest.IsolatedAsyncioTestCase):
-    def build_settings(self, **overrides: str) -> Settings:
-        base = {
-            "SEEDANCE_ENABLED": "false",
-            "SEEDANCE_API_KEY": "",
-            "SEEDANCE_BASE_URL": "",
-            "SEEDANCE_MODEL": "seedance-2.0",
-        }
-        base.update(overrides)
-        with mock.patch.dict(os.environ, base, clear=False):
-            return Settings()
-
-    async def test_seedance_is_disabled_by_default(self) -> None:
-        settings = self.build_settings()
-        self.assertFalse(seedance_available(settings))
-
-    async def test_build_seedance_payload_uses_configured_model(self) -> None:
-        settings = self.build_settings(
-            SEEDANCE_ENABLED="true",
-            SEEDANCE_API_KEY="seedance-key",
-            SEEDANCE_BASE_URL="https://seedance.example.com",
-            SEEDANCE_MODEL="seedance-2.0-pro",
+    def test_visual_generation_idea_succeeds_with_prompt(self):
+        response = self.client.post(
+            "/v1/visual-generation/generate",
+            headers=self.headers,
+            json={
+                "mode": "idea",
+                "prompt": "Create a premium short-form visual concept for a creator brand",
+                "provider": "lwa",
+            },
         )
-        payload = build_seedance_payload(
-            settings=settings,
-            request=SeedanceBackgroundRequest(
-                prompt="Mythic crimson background",
-                duration_seconds=8,
-                source_asset_id="asset_123",
-            ),
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body.get("provider"), "lwa")
+        self.assertEqual(body.get("mode"), "idea")
+        self.assertIn("asset", body)
+
+    def test_visual_generation_image_requires_source_or_prompt(self):
+        response = self.client.post(
+            "/v1/visual-generation/generate",
+            headers=self.headers,
+            json={"mode": "image"},
         )
-        self.assertEqual(payload["model"], "seedance-2.0-pro")
-        self.assertEqual(payload["prompt"], "Mythic crimson background")
-        self.assertEqual(payload["source_asset_id"], "asset_123")
-        self.assertNotIn("reference_image_url", payload)
+        self.assertEqual(response.status_code, 400)
 
-    async def test_seedance_background_generation_fails_cleanly_when_disabled(self) -> None:
-        settings = self.build_settings()
-        with self.assertRaises(SeedanceProviderError) as context:
-            await generate_seedance_background(
-                settings=settings,
-                request=SeedanceBackgroundRequest(prompt="Living mythic scene"),
-            )
-        self.assertIn("disabled", str(context.exception).lower())
+    def test_multimodal_video_stays_on_clipping_path(self):
+        response = self.client.post(
+            "/v1/generation/multimodal",
+            headers=self.headers,
+            json={"mode": "video", "provider": "lwa"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("clipping route", response.json().get("detail", "").lower())
 
-    async def test_submit_seedance_job_normalizes_and_persists_local_state(self) -> None:
-        with tempfile.TemporaryDirectory() as generated_dir:
-            settings = self.build_settings(
-                SEEDANCE_ENABLED="true",
-                SEEDANCE_API_KEY="seedance-key",
-                SEEDANCE_BASE_URL="https://seedance.example.com",
-                LWA_GENERATED_ASSETS_DIR=generated_dir,
-            )
-            with mock.patch("app.services.seedance_service.httpx.AsyncClient", FakeSeedanceClient):
-                job = await submit_seedance_job(
-                    settings=settings,
-                    payload={"prompt": "Living mythic scene"},
-                    job_id="seed_test",
-                )
-
-            self.assertEqual(job["job_id"], "seed_test")
-            self.assertEqual(job["provider_job_id"], "provider_job_123")
-            self.assertEqual(job["status"], "submitted")
-            self.assertTrue(os.path.exists(os.path.join(generated_dir, "seedance", "jobs", "seed_test.json")))
-
-
-class SeedanceRouterRegistrationTests(unittest.TestCase):
-    def test_seedance_routes_are_registered(self) -> None:
-        app = create_app()
-        route_paths = {route.path for route in app.routes}
-        self.assertIn("/v1/seedance/background", route_paths)
-        self.assertIn("/v1/seedance/jobs/{job_id}", route_paths)
+    def test_multimodal_idea_works(self):
+        response = self.client.post(
+            "/v1/generation/multimodal",
+            headers=self.headers,
+            json={
+                "mode": "idea",
+                "prompt": "Build a social-ready visual direction from this concept",
+                "provider": "lwa",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(
+            body.get("provider") == "lwa"
+            or body.get("asset", {}).get("provider") == "lwa"
+            or body.get("status") is not None
+        )
 
 
 if __name__ == "__main__":
