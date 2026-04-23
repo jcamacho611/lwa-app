@@ -108,8 +108,8 @@ def build_generation_batch(
 ) -> ClipBatchResponse:
     summary = {
         "plan_code": "first_use" if actor_id.startswith("guest_") else "pro",
-        "plan_name": "First run" if actor_id.startswith("guest_") else "Pro",
-        "credits_remaining": 1 if actor_id.startswith("guest_") else 999,
+        "plan_name": settings.default_plan_name if actor_id.startswith("guest_") else "Pro",
+        "credits_remaining": settings.default_credits_remaining if actor_id.startswith("guest_") else 999,
         "estimated_turnaround": "Generation provider runtime",
         "recommended_next_step": "Review the generated asset, then export the package that fits.",
         "ai_provider": response.provider,

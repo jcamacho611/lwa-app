@@ -531,7 +531,7 @@ export function ClipStudio({
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (sourceMode === "video" && !videoUrl.trim() && !selectedUploadId) {
-      setError("Paste a public source URL or upload a file to generate your clip pack.");
+      setError(isGuest ? "Paste a public source URL to generate your clip pack." : "Paste a public source URL or upload a file to generate your clip pack.");
       return;
     }
     if (sourceMode === "image" && !selectedUploadId) {
@@ -1912,7 +1912,7 @@ export function ClipStudio({
             <p className="section-kicker">Upload a source</p>
             <h3 className="mt-3 text-xl font-semibold text-ink">Run it from your own file</h3>
             <p className="mt-3 text-sm leading-7 text-ink/60">
-              Video keeps the clipping flow. Image moves through generation. Your first upload works before signup.
+              Video keeps the clipping flow. Image moves through generation. Upload when you want full source control.
             </p>
             <p className="mt-4 text-sm text-accent">{uploadingFileName ? `Uploading ${uploadingFileName}...` : activeSourceLabel}</p>
             <label className="secondary-button mt-5 inline-flex w-full cursor-pointer items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
