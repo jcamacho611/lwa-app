@@ -915,14 +915,16 @@ export function ClipStudio({
     [clipRecoveryStates],
   );
   const exportReadyCount = useMemo(() => orderedClips.filter((clip) => clip.download_url).length, [orderedClips]);
-  const leadPreviewReady = Boolean(
+  const leadPreviewUrl =
     activeResult?.preview_asset_url ||
       renderedHeroClip?.preview_url ||
       renderedHeroClip?.edited_clip_url ||
       renderedHeroClip?.clip_url ||
-      renderedHeroClip?.raw_clip_url,
-  );
-  const leadExportReady = Boolean(activeResult?.download_asset_url || renderedHeroClip?.download_url);
+      renderedHeroClip?.raw_clip_url ||
+      null;
+  const leadExportUrl = activeResult?.download_asset_url || renderedHeroClip?.download_url || null;
+  const leadPreviewReady = Boolean(leadPreviewUrl);
+  const leadExportReady = Boolean(leadExportUrl);
   const worldPhase = resolveWorldPhase({
     isLoading,
     loadingStageIndex,
@@ -1707,7 +1709,7 @@ export function ClipStudio({
               <div className="flex flex-wrap gap-3">
                 {leadPreviewReady ? (
                   <a
-                    href={activeResult.preview_asset_url || undefined}
+                    href={leadPreviewUrl || undefined}
                     target="_blank"
                     rel="noreferrer"
                     className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
@@ -1717,7 +1719,7 @@ export function ClipStudio({
                 ) : null}
                 {leadExportReady ? (
                   <a
-                    href={activeResult.download_asset_url || undefined}
+                    href={leadExportUrl || undefined}
                     download
                     className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
                   >
@@ -1725,7 +1727,7 @@ export function ClipStudio({
                   </a>
                 ) : (
                   <span className="rounded-full border border-accentCrimson/22 bg-[linear-gradient(135deg,rgba(122,16,42,0.24),rgba(124,58,237,0.1))] px-4 py-2 text-sm text-[#ffe4eb]">
-                    Upgrade for export
+                    Bundle export available below
                   </span>
                 )}
               </div>

@@ -120,7 +120,7 @@ export default function HeroClip({
               </a>
             ) : (
                 <span className="rounded-full border border-accentCrimson/22 bg-[linear-gradient(135deg,rgba(122,16,42,0.24),rgba(124,58,237,0.1))] px-4 py-2.5 text-sm text-[#ffe4eb]">
-                Upgrade for export
+                Bundle export below
               </span>
             )}
 
