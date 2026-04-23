@@ -107,12 +107,12 @@ export default function VideoCard({
       ) : null}
       <div className="video-shell overflow-hidden rounded-[22px] border border-white/10 bg-black/60">
         {compact && !hasRenderProof ? (
-          <div className="flex aspect-[9/16] min-h-[280px] flex-col items-start justify-end bg-gradient-to-b from-[#0d0d12] to-[#050508] px-5 pb-6">
-            <span className="mb-3 rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-xs font-semibold tracking-widest text-[var(--gold)]">
+          <div className="flex aspect-[9/16] min-h-[260px] flex-col items-start justify-end bg-gradient-to-b from-[#0d0d14] to-[#050508] px-5 pb-6">
+            <span className="mb-3 inline-block rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-xs font-bold tracking-widest text-[var(--gold)]">
               {authority}
             </span>
-            <p className="text-base font-semibold leading-7 text-white">{clip.hook || clip.title}</p>
-            <p className="mt-2 text-xs text-white/40">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
+            <p className="text-lg font-semibold leading-7 text-white">{clip.hook || clip.title}</p>
+            <p className="mt-2 text-xs text-white/35">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
           </div>
         ) : (
           <LiveClipPreview clip={clip} className="aspect-[9/16] transition duration-300 group-hover:scale-[1.02]" />

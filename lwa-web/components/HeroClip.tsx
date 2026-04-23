@@ -108,12 +108,12 @@ export default function HeroClip({
         <div className="space-y-4">
           <div className="video-shell overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-[0_12px_44px_rgba(0,0,0,0.28)]">
             {compact && !hasRenderProof ? (
-              <div className="flex aspect-[9/16] min-h-[360px] flex-col items-start justify-end bg-gradient-to-b from-[#0d0d12] to-[#050508] px-7 pb-8">
-                <span className="mb-4 rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs font-semibold tracking-widest text-[var(--gold)]">
+              <div className="flex aspect-[9/16] min-h-[360px] flex-col items-start justify-end bg-gradient-to-b from-[#0d0d14] to-[#050508] px-7 pb-8">
+                <span className="mb-4 inline-block rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs font-bold tracking-widest text-[var(--gold)]">
                   {postAuthority}
                 </span>
                 <p className="text-2xl font-semibold leading-8 text-white">{clip.hook || clip.title}</p>
-                <p className="mt-3 text-sm text-white/40">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
+                <p className="mt-3 text-xs text-white/35">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
               </div>
             ) : (
               <LiveClipPreview clip={clip} className="aspect-[9/16] transition-transform duration-300 group-hover:scale-[1.02]" autoPlay />
