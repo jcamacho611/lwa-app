@@ -48,6 +48,7 @@ import {
   createScheduledPost,
   exportClipBundle,
   generateClips,
+  loadClipRenderStatus,
   loadClipRecoveryJob,
   loadBatches,
   loadCampaign,
@@ -63,6 +64,7 @@ import {
   logOut,
   patchClip,
   recoverClip,
+  retryClipRender,
   updateCampaign,
   updateCampaignAssignment,
   updateScheduledPost,
@@ -1235,13 +1237,141 @@ export function ClipStudio({
     }
   }
 
+  async function pollGuestRenderStatus(clipId: string, requestId: string, attempt = 0) {
+    try {
+      const status = await loadClipRenderStatus(clipId, requestId, token);
+      if (hasPreviewAsset(status)) {
+        replaceClipInResult(status);
+        setClipRecoveryStates((current) => ({
+          ...current,
+          [clipId]: {
+            status: "recovered",
+            message: "Preview is ready.",
+            error: null,
+          },
+        }));
+        return;
+      }
+
+      if (status.render_status === "failed") {
+        setClipRecoveryStates((current) => ({
+          ...current,
+          [clipId]: {
+            status: "failed",
+            message: status.render_error || "Unable to render preview.",
+            error: status.render_error || "Unable to render preview.",
+          },
+        }));
+        return;
+      }
+
+      if (attempt >= 11) {
+        setClipRecoveryStates((current) => ({
+          ...current,
+          [clipId]: {
+            status: "failed",
+            message: "Preview is still pending. Try again in a moment.",
+            error: "Preview is still pending.",
+          },
+        }));
+        return;
+      }
+
+      setClipRecoveryStates((current) => ({
+        ...current,
+        [clipId]: {
+          status: "processing",
+          message: "Rendering preview...",
+          error: null,
+        },
+      }));
+
+      window.setTimeout(() => {
+        void pollGuestRenderStatus(clipId, requestId, attempt + 1);
+      }, 1800);
+    } catch (recoveryError) {
+      setClipRecoveryStates((current) => ({
+        ...current,
+        [clipId]: {
+          status: "failed",
+          message: recoveryError instanceof Error ? recoveryError.message : "Unable to load preview status.",
+          error: recoveryError instanceof Error ? recoveryError.message : "Unable to load preview status.",
+        },
+      }));
+    }
+  }
+
   async function handleRecoverClip(clip: ClipResult) {
+    const clipId = clip.record_id || clip.clip_id || clip.id;
+    const requestId = clip.request_id || activeResult?.request_id || null;
+
     if (!token) {
-      setAuthMode("login");
-      setAuthOpen(true);
+      if (!requestId) {
+        setClipRecoveryStates((current) => ({
+          ...current,
+          [clipId]: {
+            status: "failed",
+            message: "Missing request context for preview retry.",
+            error: "Missing request context for preview retry.",
+          },
+        }));
+        return;
+      }
+
+      setClipRecoveryStates((current) => ({
+        ...current,
+        [clipId]: {
+          status: "queued",
+          message: "Preview retry queued.",
+        },
+      }));
+      try {
+        const status = await retryClipRender(clipId, requestId, token);
+        if (hasPreviewAsset(status)) {
+          replaceClipInResult(status);
+          setClipRecoveryStates((current) => ({
+            ...current,
+            [clipId]: {
+              status: "recovered",
+              message: "Preview is ready.",
+              error: null,
+            },
+          }));
+          return;
+        }
+        if (status.render_status === "failed") {
+          setClipRecoveryStates((current) => ({
+            ...current,
+            [clipId]: {
+              status: "failed",
+              message: status.render_error || "Unable to render preview.",
+              error: status.render_error || "Unable to render preview.",
+            },
+          }));
+          return;
+        }
+        setClipRecoveryStates((current) => ({
+          ...current,
+          [clipId]: {
+            status: "processing",
+            message: "Rendering preview...",
+            error: null,
+          },
+        }));
+        void pollGuestRenderStatus(clipId, requestId);
+      } catch (recoveryError) {
+        setClipRecoveryStates((current) => ({
+          ...current,
+          [clipId]: {
+            status: "failed",
+            message: recoveryError instanceof Error ? recoveryError.message : "Unable to start preview retry.",
+            error: recoveryError instanceof Error ? recoveryError.message : "Unable to start preview retry.",
+          },
+        }));
+      }
       return;
     }
-    const clipId = clip.record_id || clip.clip_id || clip.id;
+
     setClipRecoveryStates((current) => ({
       ...current,
       [clipId]: {

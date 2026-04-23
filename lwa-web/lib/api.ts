@@ -8,6 +8,7 @@ import {
   ClipPackDetail,
   ClipRecoveryJob,
   ClipRecoveryStatus,
+  ClipResult,
   ClipPackSummary,
   ExportBundleResponse,
   GenerateResponse,
@@ -208,6 +209,21 @@ export async function recoverClip(token: string, clipId: string) {
 
 export async function loadClipRecoveryJob(token: string, jobId: string) {
   return jsonRequest<ClipRecoveryStatus>(`/api/me/recovery-jobs/${jobId}`, {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function retryClipRender(clipId: string, requestId?: string | null, token?: string | null) {
+  const query = requestId ? `?request_id=${encodeURIComponent(requestId)}` : "";
+  return jsonRequest<ClipResult>(`/api/clip-status/${encodeURIComponent(clipId)}${query}`, {
+    method: "POST",
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function loadClipRenderStatus(clipId: string, requestId?: string | null, token?: string | null) {
+  const query = requestId ? `?request_id=${encodeURIComponent(requestId)}` : "";
+  return jsonRequest<ClipResult>(`/api/clip-status/${encodeURIComponent(clipId)}${query}`, {
     headers: authHeaders(token, false),
   });
 }

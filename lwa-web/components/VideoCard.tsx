@@ -76,7 +76,7 @@ export default function VideoCard({
   const scoreValue = Math.round(clip.virality_score ?? clip.score ?? 0);
   const showScore = !compact && scoreValue >= 70;
   const showFeedback = !compact && Boolean(onVote);
-  const showRetryPreview = !compact && !hasRenderProof;
+  const showRetryPreview = Boolean(onRecover) && !hasRenderProof;
   const displayThumbnail = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
     ? clip.thumbnail_text
     : clip.hook?.slice(0, 40) || clip.title;

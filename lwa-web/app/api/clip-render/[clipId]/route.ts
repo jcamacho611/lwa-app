@@ -7,12 +7,14 @@ export async function GET(
 ) {
   try {
     const clipId = params.clipId;
+    const requestId = request.nextUrl.searchParams.get("request_id");
+    const query = requestId ? `?request_id=${encodeURIComponent(requestId)}` : "";
     
     const authorization = request.headers.get("authorization");
     const token = authorization?.toLowerCase().startsWith("bearer ") ? authorization.split(" ", 2)[1] : null;
 
     // Call backend to get clip render status
-    const response = await fetch(backendUrl(`/v1/clip-status/${clipId}`), {
+    const response = await fetch(backendUrl(`/v1/clip-status/${clipId}${query}`), {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
