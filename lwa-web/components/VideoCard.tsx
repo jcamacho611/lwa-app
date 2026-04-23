@@ -9,6 +9,7 @@ import { RESULT_COPY, buildLeadReason } from "../lib/result-copy";
 
 export type VideoCardProps = {
   clip: ClipResult;
+  compact?: boolean;
   feedbackVote?: "good" | "bad" | null;
   onVote?: (clip: ClipResult, vote: "good" | "bad") => void;
   queued?: boolean;
@@ -50,6 +51,7 @@ function decisionText(rank?: number | null, hasRenderProof?: boolean) {
 
 export default function VideoCard({
   clip,
+  compact = false,
   feedbackVote = null,
   onVote,
   queued = false,
@@ -68,6 +70,9 @@ export default function VideoCard({
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
   const authority = authorityLabel(postRank);
   const decision = decisionText(postRank, hasRenderProof);
+  const scoreValue = Math.round(clip.virality_score ?? clip.score ?? 0);
+  const showScore = !compact && scoreValue >= 70;
+  const showFeedback = !compact && Boolean(onVote);
 
   async function handleCopyPackage() {
     try {
@@ -95,9 +100,16 @@ export default function VideoCard({
         </div>
       ) : null}
       <div className="video-shell overflow-hidden rounded-[22px] border border-white/10 bg-black/60">
-        <LiveClipPreview clip={clip} className="aspect-[9/16] transition duration-300 group-hover:scale-[1.02]" />
+        {compact && !hasRenderProof ? (
+          <div className="flex aspect-[9/16] min-h-[280px] items-center justify-center bg-black/70 px-6 text-center">
+            <p className="text-sm leading-6 text-ink/62">Hooks and packaging ready.</p>
+          </div>
+        ) : (
+          <LiveClipPreview clip={clip} className="aspect-[9/16] transition duration-300 group-hover:scale-[1.02]" />
+        )}
 
-        <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 p-3">
+        {!compact ? (
+          <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 p-3">
           <div className="flex items-center justify-between gap-3">
             <span
               className={[
@@ -112,29 +124,36 @@ export default function VideoCard({
             </span>
           </div>
         </div>
+        ) : null}
       </div>
 
       <div className="mt-4 space-y-3">
         <div className="flex flex-wrap gap-2">
-          <span className="score-badge">{Math.round(clip.virality_score ?? clip.score ?? 0)}/10</span>
+          {showScore ? <span className="score-badge">{scoreValue}/10</span> : null}
           <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/82">{authority}</span>
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-            {hasRenderProof ? "Ready now" : "High viral potential"}
-          </span>
-          {clip.confidence_label ? (
-            <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs text-[var(--gold)]">
-              {clip.confidence_label}
-            </span>
-          ) : null}
-          {captionStyle ? (
-            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">{captionStyle}</span>
+          {!compact ? (
+            <>
+              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
+                {hasRenderProof ? "Ready now" : "Rendering available on Pro"}
+              </span>
+              {clip.confidence_label ? (
+                <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs text-[var(--gold)]">
+                  {clip.confidence_label}
+                </span>
+              ) : null}
+              {captionStyle ? (
+                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">{captionStyle}</span>
+              ) : null}
+            </>
           ) : null}
         </div>
 
         <div className="space-y-2">
-          <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-ink">{clip.title}</h3>
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/62">{decision}</p>
-          <p className="line-clamp-2 text-sm leading-6 text-ink/80">{clip.hook}</p>
+          {!compact ? <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-ink">{clip.title}</h3> : null}
+          {!compact ? <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/62">{decision}</p> : null}
+          <p className={compact ? "line-clamp-3 text-lg font-semibold leading-7 text-ink" : "line-clamp-2 text-sm leading-6 text-ink/80"}>
+            {clip.hook || clip.title}
+          </p>
         </div>
 
         <div className="grid gap-2">
@@ -152,7 +171,7 @@ export default function VideoCard({
           ) : null}
         </div>
 
-        {whyThisHits ? (
+        {!compact && whyThisHits ? (
           <details className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
             <summary className="cursor-pointer list-none text-[10px] uppercase tracking-[0.22em] text-muted transition-colors duration-300 hover:text-ink/76">
               Open package notes
@@ -173,7 +192,7 @@ export default function VideoCard({
             {queued ? "Queued" : "Add to Queue"}
           </button>
 
-          {downloadUrl ? (
+          {!compact && downloadUrl ? (
             <a
               href={downloadUrl}
               download
@@ -181,7 +200,7 @@ export default function VideoCard({
             >
               Download
             </a>
-          ) : hasPlayablePreview ? (
+          ) : !compact && hasPlayablePreview ? (
             <a
               href={previewUrl || undefined}
               target="_blank"
@@ -215,6 +234,7 @@ export default function VideoCard({
           </button>
         </div>
 
+        {showFeedback ? (
         <div className="flex gap-2">
           <button
             type="button"
@@ -241,6 +261,7 @@ export default function VideoCard({
             Bad
           </button>
         </div>
+        ) : null}
       </div>
     </article>
   );

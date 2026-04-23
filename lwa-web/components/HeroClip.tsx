@@ -9,6 +9,7 @@ import { RESULT_COPY, buildLeadReason } from "../lib/result-copy";
 
 type HeroClipProps = {
   clip: ClipResult;
+  compact?: boolean;
   queued?: boolean;
   feedbackVote?: "good" | "bad" | null;
   onToggleQueue?: (clip: ClipResult) => void;
@@ -60,6 +61,7 @@ function buildPackageText(clip: ClipResult) {
 
 export default function HeroClip({
   clip,
+  compact = false,
   queued = false,
   feedbackVote = null,
   onToggleQueue,
@@ -77,6 +79,7 @@ export default function HeroClip({
   const decisionText = decisionInstruction(postRank, hasRenderProof);
   const whyThisHits = buildLeadReason(clip.why_this_matters || clip.reason);
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 2);
+  const showFeedback = !compact && Boolean(onVote);
 
   async function handleCopyPackage() {
     try {
@@ -98,9 +101,16 @@ export default function HeroClip({
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
         <div className="space-y-4">
           <div className="video-shell overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-[0_12px_44px_rgba(0,0,0,0.28)]">
-            <LiveClipPreview clip={clip} className="aspect-[9/16] transition-transform duration-300 group-hover:scale-[1.02]" autoPlay />
+            {compact && !hasRenderProof ? (
+              <div className="flex aspect-[9/16] min-h-[360px] items-center justify-center bg-black/70 px-8 text-center">
+                <p className="text-base leading-7 text-ink/68">Hooks and packaging ready.</p>
+              </div>
+            ) : (
+              <LiveClipPreview clip={clip} className="aspect-[9/16] transition-transform duration-300 group-hover:scale-[1.02]" autoPlay />
+            )}
 
-            <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-4">
+            {!compact ? (
+              <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
                 <span className="status-chip status-approved">{hasRenderProof ? "POST THIS FIRST" : "HIGH VIRAL POTENTIAL"}</span>
                 {clip.confidence_label ? <span className="status-chip status-submitted">{clip.confidence_label}</span> : null}
@@ -110,10 +120,11 @@ export default function HeroClip({
                 {postAuthority}
               </span>
             </div>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {downloadUrl ? (
+            {!compact && downloadUrl ? (
               <a
                 href={downloadUrl}
                 download
@@ -121,11 +132,11 @@ export default function HeroClip({
               >
                 Export lead clip
               </a>
-            ) : (
+            ) : !compact ? (
                 <span className="rounded-full border border-accentCrimson/22 bg-[linear-gradient(135deg,rgba(122,16,42,0.24),rgba(124,58,237,0.1))] px-4 py-2.5 text-sm text-[#ffe4eb]">
                 Bundle export below
               </span>
-            )}
+            ) : null}
 
             <button
               type="button"
@@ -165,25 +176,37 @@ export default function HeroClip({
 
         <div className="space-y-5">
           <div className="space-y-3">
-            <p className="section-kicker">Lead drop</p>
-            <h2 className="text-2xl font-semibold leading-tight text-ink sm:text-[2.1rem]">{clip.title}</h2>
-            <p className="text-lg leading-8 text-ink/88">{clip.hook}</p>
+            {!compact ? <p className="section-kicker">Lead drop</p> : null}
+            {!compact ? <h2 className="text-2xl font-semibold leading-tight text-ink sm:text-[2.1rem]">{clip.title}</h2> : null}
+            <p className={compact ? "text-2xl font-semibold leading-tight text-ink sm:text-[2.7rem]" : "text-lg leading-8 text-ink/88"}>
+              {clip.hook || clip.title}
+            </p>
           </div>
 
-          <div className="rounded-[26px] border border-[var(--gold-border)] bg-[var(--gold-dim)] p-5">
+          {!compact ? (
+            <div className="rounded-[26px] border border-[var(--gold-border)] bg-[var(--gold-dim)] p-5">
             <p className="mb-2 text-xs uppercase tracking-[0.24em] text-[var(--gold)]">{RESULT_COPY.whyPicked}</p>
             <p className="text-base font-medium leading-7 text-white">{decisionText}</p>
           </div>
+          ) : (
+            <span className="inline-flex w-fit rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-4 py-2 text-xs font-semibold tracking-[0.18em] text-[var(--gold)]">
+              {postAuthority}
+            </span>
+          )}
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="metric-tile rounded-[24px] p-4">
+            {!compact ? (
+              <div className="metric-tile rounded-[24px] p-4">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Move</p>
               <p className="text-sm font-medium text-ink">{postAuthority}</p>
             </div>
-            <div className="metric-tile rounded-[24px] p-4">
+            ) : null}
+            {!compact ? (
+              <div className="metric-tile rounded-[24px] p-4">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">High viral potential</p>
               <p className="text-sm font-medium text-ink">{clip.confidence_label || clip.packaging_angle || clip.platform_fit || "Built to travel fast"}</p>
             </div>
+            ) : null}
             <div className="metric-tile rounded-[24px] p-4">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Thumbnail line</p>
               <p className="text-sm font-medium text-ink">{clip.thumbnail_text || "Best Clip"}</p>
@@ -194,7 +217,8 @@ export default function HeroClip({
             </div>
           </div>
 
-          <details className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+          {!compact ? (
+            <details className="rounded-[24px] border border-white/10 bg-black/20 p-4">
             <summary className="cursor-pointer list-none text-xs uppercase tracking-[0.24em] text-muted transition-colors duration-300 hover:text-ink/76">
               Open package notes
             </summary>
@@ -220,8 +244,10 @@ export default function HeroClip({
             ) : null}
             <p className="mt-4 text-sm leading-6 text-ink/76">{whyThisHits}</p>
           </details>
+          ) : null}
 
-          <div className="flex gap-2">
+          {showFeedback ? (
+            <div className="flex gap-2">
             <button
               type="button"
               onClick={() => onVote?.(clip, "good")}
@@ -247,6 +273,7 @@ export default function HeroClip({
               Bad
             </button>
           </div>
+          ) : null}
         </div>
       </div>
     </section>

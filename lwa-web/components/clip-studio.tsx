@@ -212,6 +212,7 @@ export function ClipStudio({
   const selectedUploadType = (selectedUpload?.content_type || "").toLowerCase();
   const selectedUploadIsImage =
     selectedUploadType.startsWith("image/") || /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(selectedUploadName);
+  const isGuest = !user;
 
   const activeSourceLabel = useMemo(() => {
     if (sourceMode === "idea") {
@@ -797,6 +798,12 @@ export function ClipStudio({
         ? Boolean(selectedUploadId)
         : Boolean(videoUrl.trim() || selectedUploadId);
   useEffect(() => {
+    if (isGuest && generationMode !== "quick") {
+      setGenerationMode("quick");
+    }
+  }, [generationMode, isGuest]);
+
+  useEffect(() => {
     if (!hasSourceSelected) {
       return;
     }
@@ -947,6 +954,9 @@ export function ClipStudio({
   const platformRecommendationReason = activeResult?.processing_summary?.platform_recommendation_reason || null;
   const renderedClipCount = renderedClips.length;
   const strategyOnlyClipCount = strategyOnlyClips.length;
+  const hasStrategyOnlyWithoutPreview = strategyOnlyClips.some(
+    (clip) => Boolean(clip.is_strategy_only) && !clip.preview_url && !clipHasRenderedMedia(clip),
+  );
   const recoveryActive = useMemo(
     () => Object.values(clipRecoveryStates).some((recovery) => recovery.status === "queued" || recovery.status === "processing"),
     [clipRecoveryStates],
@@ -1327,24 +1337,26 @@ export function ClipStudio({
       </div>
 
       <form onSubmit={onSubmit} className="mt-7 space-y-5">
-        <div className="mode-switch inline-flex rounded-full p-1">
-          {[
-            { value: "quick", label: "Quick mode" },
-            { value: "pro", label: "Pro mode" },
-          ].map((option) => {
-            const active = generationMode === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setGenerationMode(option.value as "quick" | "pro")}
-                className={["mode-pill rounded-full px-4 py-2 text-sm font-medium", active ? "mode-pill-active" : ""].join(" ")}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
+        {!isGuest ? (
+          <div className="mode-switch inline-flex rounded-full p-1">
+            {[
+              { value: "quick", label: "Quick mode" },
+              { value: "pro", label: "Pro mode" },
+            ].map((option) => {
+              const active = generationMode === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setGenerationMode(option.value as "quick" | "pro")}
+                  className={["mode-pill rounded-full px-4 py-2 text-sm font-medium", active ? "mode-pill-active" : ""].join(" ")}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
 
         {renderSourceModeControls()}
 
@@ -1401,6 +1413,7 @@ export function ClipStudio({
           ) : null}
         </div>
 
+        {!isGuest ? (
         <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
           <div className="operator-tile rounded-[24px] p-4">
             <p className="text-sm font-medium text-ink">Flow</p>
@@ -1434,6 +1447,7 @@ export function ClipStudio({
             </div>
           ) : null}
         </div>
+        ) : null}
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-ink/60">
@@ -1472,7 +1486,7 @@ export function ClipStudio({
 
   const generatorSection = (
     <section className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),320px]">
+      <div className={["grid gap-6", isGuest ? "" : "xl:grid-cols-[minmax(0,1fr),320px]"].join(" ")}>
         <section
           className="generator-command-card source-command-card rounded-[38px] p-6 sm:p-8"
           onMouseEnter={() => setGeneratorHovered(true)}
@@ -1497,24 +1511,26 @@ export function ClipStudio({
           </div>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-6">
-            <div className="mode-switch inline-flex rounded-full p-1">
-              {[
-                { value: "quick", label: "Quick mode" },
-                { value: "pro", label: "Pro mode" },
-              ].map((option) => {
-                const active = generationMode === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setGenerationMode(option.value as "quick" | "pro")}
-                    className={["mode-pill rounded-full px-4 py-2 text-sm font-medium", active ? "mode-pill-active" : ""].join(" ")}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
+            {!isGuest ? (
+              <div className="mode-switch inline-flex rounded-full p-1">
+                {[
+                  { value: "quick", label: "Quick mode" },
+                  { value: "pro", label: "Pro mode" },
+                ].map((option) => {
+                  const active = generationMode === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setGenerationMode(option.value as "quick" | "pro")}
+                      className={["mode-pill rounded-full px-4 py-2 text-sm font-medium", active ? "mode-pill-active" : ""].join(" ")}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
 
             {renderSourceModeControls()}
 
@@ -1571,6 +1587,7 @@ export function ClipStudio({
               ) : null}
             </div>
 
+            {!isGuest ? (
             <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
               <div className="operator-tile rounded-[24px] p-4">
                 <p className="text-sm font-medium text-ink">Flow</p>
@@ -1612,6 +1629,7 @@ export function ClipStudio({
                 </div>
               ) : null}
             </div>
+            ) : null}
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <p className="text-sm text-ink/60">
@@ -1652,6 +1670,7 @@ export function ClipStudio({
           </form>
         </section>
 
+        {!isGuest ? (
         <aside className="space-y-4">
           <div className="glass-panel rounded-[28px] p-5">
             <p className="section-kicker">Plan status</p>
@@ -1707,6 +1726,7 @@ export function ClipStudio({
             </div>
           </div>
         </aside>
+        ) : null}
       </div>
     </section>
   );
@@ -1729,7 +1749,7 @@ export function ClipStudio({
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),340px]">
+      <div className={["grid gap-6", isGuest ? "" : "xl:grid-cols-[minmax(0,1fr),340px]"].join(" ")}>
         <div className="space-y-6">
           <div className="glass-panel rounded-[28px] p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -1767,16 +1787,34 @@ export function ClipStudio({
                   >
                     Export lead asset
                   </a>
+                ) : isGuest ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleExportBundle()}
+                    disabled={bundleExportState === "exporting" || !activeResult?.clips?.length}
+                    className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {bundleExportState === "exporting" ? "Building bundle..." : "Export bundle"}
+                  </button>
                 ) : (
                   <span className="rounded-full border border-accentCrimson/22 bg-[linear-gradient(135deg,rgba(122,16,42,0.24),rgba(124,58,237,0.1))] px-4 py-2 text-sm text-[#ffe4eb]">
                     Bundle export available below
                   </span>
                 )}
               </div>
+              {isGuest && bundleExportMessage ? (
+                <p className={["mt-3 text-sm", bundleExportState === "failed" ? "text-red-200" : "text-[var(--gold)]"].join(" ")}>
+                  {bundleExportMessage}
+                </p>
+              ) : null}
             </div>
           </div>
 
-          {!renderedClipCount ? (
+          {isGuest && hasStrategyOnlyWithoutPreview ? (
+            <InlineAlert tone="violet">
+              Hooks and packaging are ready. Preview video requires a standard uploaded YouTube video — not a live stream.
+            </InlineAlert>
+          ) : !renderedClipCount ? (
             <InlineAlert tone="violet" title="Ideas ready">
               LWA returned the package, hooks, captions, and posting order, but this run did not produce preview media. Review the ideas now, then retry with a longer or cleaner source if you need playable output.
             </InlineAlert>
@@ -1788,11 +1826,12 @@ export function ClipStudio({
 
           {renderedHeroClip ? (
             <div className="space-y-3">
-              <p className="section-kicker">Lead answer</p>
+              {!isGuest ? <p className="section-kicker">Lead answer</p> : null}
               <HeroClip
                 clip={renderedHeroClip}
-                feedbackVote={feedbackByClipId[renderedHeroClip.record_id || renderedHeroClip.clip_id || renderedHeroClip.id] || null}
-                onVote={handleFeedbackVote}
+                compact={isGuest}
+                feedbackVote={!isGuest ? feedbackByClipId[renderedHeroClip.record_id || renderedHeroClip.clip_id || renderedHeroClip.id] || null : null}
+                onVote={!isGuest ? handleFeedbackVote : undefined}
                 queued={isQueued(renderedHeroClip)}
                 onToggleQueue={handleToggleQueue}
                 recoveryState={clipRecoveryStates[resolveClipQueueId(renderedHeroClip)] || null}
@@ -1803,6 +1842,7 @@ export function ClipStudio({
 
           {renderedGridClips.length ? (
             <div className="space-y-4">
+              {!isGuest ? (
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="section-kicker">{RESULT_COPY.finishedPreviews}</p>
@@ -1812,13 +1852,15 @@ export function ClipStudio({
                   </p>
                 </div>
               </div>
-              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              ) : null}
+              <div className={["grid gap-5 md:grid-cols-2", isGuest ? "" : "xl:grid-cols-3"].join(" ")}>
                 {renderedGridClips.map((clip) => (
                   <ClipCard
                     key={clip.id}
                     clip={clip}
-                    feedbackVote={feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null}
-                    onVote={handleFeedbackVote}
+                    compact={isGuest}
+                    feedbackVote={!isGuest ? feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null : null}
+                    onVote={!isGuest ? handleFeedbackVote : undefined}
                     queued={isQueued(clip)}
                     onToggleQueue={handleToggleQueue}
                     recoveryState={clipRecoveryStates[resolveClipQueueId(clip)] || null}
@@ -1831,11 +1873,12 @@ export function ClipStudio({
 
           {strategyHeroClip ? (
             <div className="space-y-3">
-              <p className="section-kicker">Top high-leverage idea</p>
+              {!isGuest ? <p className="section-kicker">Top high-leverage idea</p> : null}
               <HeroClip
                 clip={strategyHeroClip}
-                feedbackVote={feedbackByClipId[strategyHeroClip.record_id || strategyHeroClip.clip_id || strategyHeroClip.id] || null}
-                onVote={handleFeedbackVote}
+                compact={isGuest}
+                feedbackVote={!isGuest ? feedbackByClipId[strategyHeroClip.record_id || strategyHeroClip.clip_id || strategyHeroClip.id] || null : null}
+                onVote={!isGuest ? handleFeedbackVote : undefined}
                 queued={isQueued(strategyHeroClip)}
                 onToggleQueue={handleToggleQueue}
                 recoveryState={clipRecoveryStates[resolveClipQueueId(strategyHeroClip)] || null}
@@ -1846,6 +1889,7 @@ export function ClipStudio({
 
           {strategyGridClips.length ? (
             <div className="space-y-4">
+              {!isGuest ? (
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="section-kicker">{RESULT_COPY.ideasOnly}</p>
@@ -1855,13 +1899,15 @@ export function ClipStudio({
                   </p>
                 </div>
               </div>
-              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              ) : null}
+              <div className={["grid gap-5 md:grid-cols-2", isGuest ? "" : "xl:grid-cols-3"].join(" ")}>
                 {strategyGridClips.map((clip) => (
                   <ClipCard
                     key={clip.id}
                     clip={clip}
-                    feedbackVote={feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null}
-                    onVote={handleFeedbackVote}
+                    compact={isGuest}
+                    feedbackVote={!isGuest ? feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null : null}
+                    onVote={!isGuest ? handleFeedbackVote : undefined}
                     queued={isQueued(clip)}
                     onToggleQueue={handleToggleQueue}
                     recoveryState={clipRecoveryStates[resolveClipQueueId(clip)] || null}
@@ -1873,6 +1919,7 @@ export function ClipStudio({
           ) : null}
         </div>
 
+        {!isGuest ? (
         <div className="space-y-5">
           <ReadyQueuePanel items={readyQueue} onMove={handleMoveQueue} onRemove={handleRemoveQueue} onClear={handleClearQueue} />
 
@@ -1954,6 +2001,7 @@ export function ClipStudio({
             </p>
           </div>
         </div>
+        ) : null}
       </div>
     </section>
   ) : null;
@@ -2153,34 +2201,52 @@ export function ClipStudio({
           <div className="mt-8 grid gap-6 xl:grid-cols-[280px,minmax(0,1fr)]">
             <aside className="hidden xl:block">
               <div className="sticky top-28 space-y-4">
-                <WorkspaceRailCard
-                  label="Studio pulse"
-                  title={user ? "Generate first. Move fast." : "Premium workspace"}
-                  description={
-                    user
-                      ? "Move from generation to queue, assignments, and payout readiness."
-                      : "Sign in for saved runs, campaigns, wallet, and queue state."
-                  }
-                >
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    <StatPill tone="accent">{planSurface.name}</StatPill>
-                    <StatPill tone="neutral">{readyQueue.length} in queue</StatPill>
+                {isGuest ? (
+                  <div className="glass-panel rounded-[28px] p-5">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--gold-border)] bg-[var(--gold-dim)]">
+                      <img src="/brand-source/omega-mark.png" alt="LWA" className="h-8 w-8 object-contain" />
+                    </div>
+                    <h3 className="mt-5 text-2xl font-semibold text-ink">Generate clips.</h3>
+                    <p className="mt-3 text-sm leading-7 text-ink/62">Drop a source. Get what to post first.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode("login");
+                        setAuthOpen(true);
+                      }}
+                      className="secondary-button mt-5 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+                    >
+                      Sign in for history, queue, and campaigns
+                    </button>
                   </div>
-                </WorkspaceRailCard>
+                ) : (
+                  <>
+                    <WorkspaceRailCard
+                      label="Studio pulse"
+                      title="Generate first. Move fast."
+                      description="Move from generation to queue, assignments, and payout readiness."
+                    >
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        <StatPill tone="accent">{planSurface.name}</StatPill>
+                        <StatPill tone="neutral">{readyQueue.length} in queue</StatPill>
+                      </div>
+                    </WorkspaceRailCard>
 
-                <WorkspaceRailCard label="Account" title={user ? user.email : "Guest mode"} description={user ? `Role ${user.role || "creator"}` : "Sign in for uploads, history, campaigns, and wallet."}>
-                  <div className="mt-5 grid gap-3">
-                    <MetricTile label="Clip packs" value={String(clipPacks.length)} detail="Saved history" />
-                    <MetricTile label="Uploads" value={String(uploads.length)} detail="Reusable sources" />
-                    <MetricTile label="Credits" value={typeof creditsRemaining === "number" ? String(creditsRemaining) : String(planLimits.generationsPerDay)} detail="Generation capacity" />
-                  </div>
-                </WorkspaceRailCard>
+                    <WorkspaceRailCard label="Account" title={user?.email || "Account"} description={`Role ${user?.role || "creator"}`}>
+                      <div className="mt-5 grid gap-3">
+                        <MetricTile label="Clip packs" value={String(clipPacks.length)} detail="Saved history" />
+                        <MetricTile label="Uploads" value={String(uploads.length)} detail="Reusable sources" />
+                        <MetricTile label="Credits" value={typeof creditsRemaining === "number" ? String(creditsRemaining) : String(planLimits.generationsPerDay)} detail="Generation capacity" />
+                      </div>
+                    </WorkspaceRailCard>
 
-                <WorkspaceRailCard
-                  label="Next move"
-                  title="Use the system in order"
-                  description="Generate, queue winners, then move into campaign flow."
-                />
+                    <WorkspaceRailCard
+                      label="Next move"
+                      title="Use the system in order"
+                      description="Generate, queue winners, then move into campaign flow."
+                    />
+                  </>
+                )}
               </div>
             </aside>
 
