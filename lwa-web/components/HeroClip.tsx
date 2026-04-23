@@ -47,7 +47,7 @@ function decisionInstruction(rank?: number | null, hasRenderProof?: boolean) {
 function buildPackageText(clip: ClipResult) {
   const thumbnailText = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
     ? clip.thumbnail_text
-    : clip.hook?.slice(0, 40) || clip.title;
+    : clip.hook?.slice(0, 42) || clip.title;
   return [
     `Title: ${clip.title}`,
     `Hook: ${clip.hook}`,
@@ -85,7 +85,7 @@ export default function HeroClip({
   const showFeedback = !compact && Boolean(onVote);
   const displayThumbnail = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
     ? clip.thumbnail_text
-    : clip.hook?.slice(0, 40) || clip.title;
+    : clip.hook?.slice(0, 42) || clip.title;
 
   async function handleCopyPackage() {
     try {

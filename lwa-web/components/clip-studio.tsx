@@ -592,10 +592,9 @@ export function ClipStudio({
       } else if (submitError instanceof ApiError && submitError.status === 502) {
         setError("Backend is starting up. Wait 10 seconds and try again.");
       } else if (submitError instanceof ApiError && submitError.status === 504) {
-        setError("Video took too long to process. Try a shorter video under 10 minutes.");
+        setError("Video took too long. Try a shorter video under 10 minutes.");
       } else {
-        const message = submitError instanceof Error ? submitError.message : "Unable to generate clips right now.";
-        setError(message.includes("localhost") ? "Backend connection issue. Contact support." : message);
+        setError(submitError instanceof Error ? submitError.message : "Unable to generate clips right now.");
       }
     } finally {
       setIsLoading(false);
@@ -1494,9 +1493,8 @@ export function ClipStudio({
           </p>
           ) : null}
           {isLiveStreamUrl ? (
-            <div className="rounded-[14px] border border-red-400/25 bg-red-400/8 px-4 py-3">
-              <p className="text-sm font-medium text-red-300">Live streams can't be clipped.</p>
-              <p className="mt-1 text-xs text-red-300/60">Paste a regular uploaded YouTube video URL.</p>
+            <div className="rounded-[14px] border border-red-400/25 bg-red-400/8 px-4 py-3 text-sm text-red-300">
+              Live streams can't be clipped. Paste a regular uploaded YouTube video URL.
             </div>
           ) : null}
           <button
@@ -1711,9 +1709,8 @@ export function ClipStudio({
               </p>
               ) : null}
               {isLiveStreamUrl ? (
-                <div className="rounded-[14px] border border-red-400/25 bg-red-400/8 px-4 py-3">
-                  <p className="text-sm font-medium text-red-300">Live streams can't be clipped.</p>
-                  <p className="mt-1 text-xs text-red-300/60">Paste a regular uploaded YouTube video URL.</p>
+                <div className="rounded-[14px] border border-red-400/25 bg-red-400/8 px-4 py-3 text-sm text-red-300">
+                  Live streams can't be clipped. Paste a regular uploaded YouTube video URL.
                 </div>
               ) : null}
               <button
