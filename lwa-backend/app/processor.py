@@ -526,13 +526,13 @@ def process_image_source(
 
 
 def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request_id: str) -> dict[str, Any]:
+    is_live = "youtube.com/live/" in video_url or "/live/" in video_url
     options = {
         "quiet": True,
         "no_warnings": False,
         "noprogress": True,
         "noplaylist": True,
         "outtmpl": str(work_dir / "source.%(ext)s"),
-        "format": "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
         "merge_output_format": "mp4",
         "overwrites": True,
         "retries": 5,
@@ -549,6 +549,13 @@ def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request
         "subtitlesformat": "vtt/best",
         "logger": YTDLPLogProxy(request_id),
     }
+
+    if is_live:
+        options["format"] = "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
+        options["live_from_start"] = False
+        options["wait_for_video"] = None
+    else:
+        options["format"] = "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"
 
     logger.info(
         "source_download_start request_id=%s video_url=%s work_dir=%s format=%s",

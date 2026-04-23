@@ -518,10 +518,6 @@ export function ClipStudio({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isLiveStreamUrl) {
-      setError("Live streams can't be clipped. Paste a regular YouTube video URL instead.");
-      return;
-    }
     if (sourceMode === "video" && !videoUrl.trim() && !selectedUploadId) {
       setError("Paste a public source URL or upload a file to generate your clip pack.");
       return;
@@ -825,10 +821,6 @@ export function ClipStudio({
       : sourceMode === "image"
         ? Boolean(selectedUploadId)
         : Boolean(videoUrl.trim() || selectedUploadId);
-  const isLiveStreamUrl = Boolean(videoUrl) && (
-    /youtube\.com\/live\//i.test(videoUrl) ||
-    /youtu\.be\/.*live/i.test(videoUrl)
-  );
   useEffect(() => {
     if (isGuest && generationMode !== "quick") {
       setGenerationMode("quick");
@@ -1492,11 +1484,6 @@ export function ClipStudio({
             {isLoading ? `${loadingStages[loadingStageIndex]}. ${GENERATOR_COPY.loading}` : idleRunSummary}
           </p>
           ) : null}
-          {isLiveStreamUrl ? (
-            <div className="rounded-[14px] border border-red-400/25 bg-red-400/8 px-4 py-3 text-sm text-red-300">
-              Live streams can't be clipped. Paste a regular uploaded YouTube video URL.
-            </div>
-          ) : null}
           <button
             type="submit"
             onClick={(event) => {
@@ -1505,7 +1492,7 @@ export function ClipStudio({
                 setError("Paste a YouTube or TikTok URL to get started.");
               }
             }}
-            disabled={isLoading || isLiveStreamUrl}
+            disabled={isLoading}
             className={
               isGuest
                 ? "primary-button w-full rounded-full px-6 py-4 text-base font-semibold disabled:opacity-50"
@@ -1708,11 +1695,6 @@ export function ClipStudio({
                     : idleRunSummary}
               </p>
               ) : null}
-              {isLiveStreamUrl ? (
-                <div className="rounded-[14px] border border-red-400/25 bg-red-400/8 px-4 py-3 text-sm text-red-300">
-                  Live streams can't be clipped. Paste a regular uploaded YouTube video URL.
-                </div>
-              ) : null}
               <button
                 type="submit"
                 onClick={(event) => {
@@ -1721,7 +1703,7 @@ export function ClipStudio({
                     setError("Paste a YouTube or TikTok URL to get started.");
                   }
                 }}
-                disabled={isLoading || isLiveStreamUrl}
+                disabled={isLoading}
                 className={
                   isGuest
                     ? "primary-button w-full rounded-full px-6 py-4 text-base font-semibold disabled:opacity-50"
