@@ -691,18 +691,18 @@ def build_source_grounded_hook(
     post_rank: int,
 ) -> str:
     focus = compact_phrase(source_phrase)
-    trend = lead_trend or focus
+    trend = compact_phrase(lead_trend or focus)
 
     if packaging_angle == "controversy":
-        return f"Most creators still frame {trend} the wrong way. This cut gets to the point fast."
+        return "The safer version misses the point. This cut gives the sharper take first."
     if packaging_angle == "story":
-        return f"This is the moment {trend} actually turns into a clip worth posting."
+        return f"This is the payoff behind {focus}."
     if packaging_angle == "shock":
         return f"Stop scrolling. This {target_platform} cut gets the payoff on screen immediately."
     if packaging_angle == "curiosity":
-        return f"Here is the {trend} moment most people skip before the payoff hits."
+        return f"Here is the {focus} detail most people skip before the payoff hits."
     if post_rank == 1:
-        return f"If you post one {target_platform} clip first, make it the {trend} cut."
+        return f"If you post one {target_platform} clip first, make it the {focus} cut."
     return f"This {target_platform} clip keeps the {trend} angle moving without extra setup."
 
 
@@ -833,20 +833,20 @@ def default_hook_variants(
     packaging_angle: str,
     transcript_excerpt: object = None,
 ) -> List[str]:
-    focus = selected_trend or compact_phrase(str(transcript_excerpt or title or hook))
+    focus = compact_phrase(str(transcript_excerpt or "")) or selected_trend or compact_phrase(title or hook)
     platform_label = platform_display_name(target_platform)
     angle = packaging_angle.replace("-", " ")
     if packaging_angle == "controversy":
         return [
-            f"Most people are still wrong about {focus}.",
-            f"The {focus} disagreement starts here.",
-            f"Post this when you want the comments to split.",
+            "The safe version misses the real point.",
+            "Post the sharper take before the obvious one.",
+            "Use this when you want the comments to split.",
         ]
     if packaging_angle == "story":
         return [
-            f"This is where {focus} turns.",
-            f"Watch the payoff build in one cut.",
-            f"The moment that makes the story worth posting.",
+            f"The payoff behind {focus} starts here.",
+            "Use this cut when the story needs proof.",
+            "This is the follow-up beat worth posting.",
         ]
     if packaging_angle == "shock":
         return [
@@ -904,7 +904,7 @@ def default_why_this_matters(
             f"then gives the {platform} stack a cleaner follow-up beat."
         )
     return (
-        f"Hold this for later because the {transcript_focus} moment works best after viewers understand the angle "
+        f"Hold this for later because the {transcript_focus} beat works best after viewers understand the angle "
         f"and are ready to comment, save, or follow through on {platform}."
     )
 
@@ -922,6 +922,8 @@ def default_thumbnail_text(
     post_rank: int | None = None,
 ) -> str:
     source = hook if len(hook.strip()) >= len(title.strip()) else title
+    if ":" in title:
+        source = title.split(":", 1)[0]
     words = signal_words(source, limit=3)
     if not words:
         if packaging_angle == "controversy":
@@ -1029,7 +1031,7 @@ def default_packaging_angle(*, title: str, hook: str, transcript_excerpt: object
             str(transcript_excerpt or "").lower(),
         ]
     )
-    if any(keyword in content for keyword in {"wrong", "never", "nobody", "skip", "myth"}):
+    if any(keyword in content for keyword in {"wrong", "never", "nobody", "skip", "myth", "safe version", "sharp take", "disagree", "comments"}):
         return "controversy"
     if any(keyword in content for keyword in {"story", "moment", "started", "then", "when"}):
         return "story"
@@ -1075,6 +1077,8 @@ STOP_WORDS = {
     "after",
     "again",
     "also",
+    "and",
+    "are",
     "because",
     "before",
     "breakdown",
@@ -1087,18 +1091,25 @@ STOP_WORDS = {
     "like",
     "make",
     "most",
+    "people",
     "post",
     "really",
+    "shorts",
     "short",
     "that",
+    "the",
     "their",
     "there",
+    "they",
     "this",
+    "too",
     "video",
     "watch",
     "when",
+    "where",
     "with",
     "would",
+    "youtube",
     "your",
 }
 
