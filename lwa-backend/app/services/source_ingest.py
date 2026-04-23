@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ..core.config import Settings
@@ -26,6 +27,12 @@ class SourceIngestService:
                 'no_warnings': True,
                 'extract_flat': False,
             }
+            cookiefile = getattr(self.settings, "yt_dlp_cookiefile", None)
+            if cookiefile and Path(cookiefile).exists():
+                ydl_opts["cookiefile"] = cookiefile
+                logger.info("source_ingest_cookiefile_loaded path=%s", cookiefile)
+            else:
+                logger.warning("source_ingest_cookiefile_missing youtube_may_block_server_requests=true")
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(video_url, download=False)
