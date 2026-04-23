@@ -148,6 +148,7 @@ type StudioSection =
 
 type ClipStudioProps = {
   initialSection?: StudioSection;
+  initialUrl?: string;
   autoOpenAuth?: boolean;
   initialAuthMode?: "login" | "signup";
   pageLabel?: string;
@@ -157,13 +158,14 @@ type ClipStudioProps = {
 
 export function ClipStudio({
   initialSection = "home",
+  initialUrl = "",
   autoOpenAuth = false,
   initialAuthMode = "login",
   pageLabel,
   pageTitle,
   pageDescription,
 }: ClipStudioProps) {
-  const [videoUrl, setVideoUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState(initialUrl);
   const [sourceMode, setSourceMode] = useState<SourceMode>("video");
   const [ideaPrompt, setIdeaPrompt] = useState("");
   const [platform, setPlatform] = useState<PlatformOption>("TikTok");

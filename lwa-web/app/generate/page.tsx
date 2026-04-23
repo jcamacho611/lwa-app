@@ -9,6 +9,14 @@ export const metadata: Metadata = buildPageMetadata({
   keywords: ["generate clips", "clip generator", "hooks captions timestamps", "viral-ready clips"],
 });
 
-export default function GeneratePage() {
-  return <ClipStudio initialSection="generate" />;
+type GeneratePageProps = {
+  searchParams?: {
+    url?: string | string[];
+  };
+};
+
+export default function GeneratePage({ searchParams }: GeneratePageProps) {
+  const queryUrl = Array.isArray(searchParams?.url) ? searchParams?.url[0] : searchParams?.url;
+
+  return <ClipStudio initialSection="generate" initialUrl={queryUrl || ""} />;
 }

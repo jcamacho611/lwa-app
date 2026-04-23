@@ -55,7 +55,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="bg-bgDark text-white antialiased">
         <BackgroundCanvas />
         <CharacterStage />
-        <div className="lwa-ui-layer">{children}</div>
+        <div className="lwa-ui-layer" style={{ position: "relative", zIndex: 10 }}>
+          {children}
+        </div>
       </body>
     </html>
   );
