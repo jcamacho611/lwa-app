@@ -40,7 +40,7 @@ export const GENERATOR_COPY = {
   submit: "Generate clips",
   submitting: "Finding clips...",
   outputReady: "Ready. Review, queue, export.",
-  outputIdle: "Drop one link or file.",
+  outputIdle: "Drop one source.",
 } as const;
 
 export const RESULTS_COPY = {

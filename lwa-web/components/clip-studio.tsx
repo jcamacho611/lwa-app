@@ -610,7 +610,7 @@ export function ClipStudio({
         const isTimeout = lowered.includes("timeout") || lowered.includes("too long");
 
         if (isBot) setError("This video couldn't be accessed. Try a different YouTube URL or a TikTok link.");
-        else if (isLive) setError("Live streams can't be clipped yet. Paste a regular uploaded video.");
+        else if (isLive) setError("Live streams can't be clipped yet. Paste a regular YouTube video.");
         else if (isTimeout) setError("Video took too long. Try a shorter video under 10 minutes.");
         else setError("Could not process that source. Try a different video URL.");
       }
@@ -2021,7 +2021,7 @@ export function ClipStudio({
 
           {isGuest && hasStrategyOnlyWithoutPreview ? (
             <InlineAlert tone="violet">
-              Hooks and packaging are ready. Preview video requires a standard uploaded YouTube video — not a live stream.
+              Hooks and packaging are ready. Preview video requires a standard YouTube video — not a live stream.
             </InlineAlert>
           ) : !renderedClipCount ? (
             <InlineAlert tone="violet" title="Ideas ready">
