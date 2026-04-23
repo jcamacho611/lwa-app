@@ -17,6 +17,10 @@ def _default_ffmpeg_path() -> str:
     return "/usr/bin/ffmpeg"
 
 
+def _env_bool(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
 class Settings:
     def __init__(self) -> None:
         origins = os.getenv("LWA_ALLOWED_ORIGINS") or os.getenv("ALLOWED_ORIGINS", "*")
@@ -96,8 +100,11 @@ class Settings:
         self.jwt_exp_minutes = int(os.getenv("LWA_JWT_EXP_MINUTES", "43200"))
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-        self.ai_provider = os.getenv("LWA_AI_PROVIDER", "auto")
-        self.enable_anthropic = os.getenv("LWA_ENABLE_ANTHROPIC", "true").strip().lower() in {"1", "true", "yes", "on"}
+        self.ai_provider = os.getenv("LWA_AI_PROVIDER") or os.getenv("AI_PROVIDER", "auto")
+        self.enable_anthropic = _env_bool(
+            "LWA_ENABLE_ANTHROPIC",
+            os.getenv("ENABLE_ANTHROPIC", "true"),
+        )
         self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
         self.anthropic_model_opus = os.getenv("ANTHROPIC_MODEL_OPUS", "claude-opus-4-7")
         self.anthropic_model_sonnet = os.getenv("ANTHROPIC_MODEL_SONNET", "claude-sonnet-4-6")

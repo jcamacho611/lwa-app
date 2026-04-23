@@ -391,12 +391,6 @@ def apply_plan_feature_flags(
         elif not packaging_profiles_unlocked:
             caption_variants = {"viral": caption_variants.get("viral") or clip.caption}
 
-        # Ensure all intelligence fields are always populated with meaningful fallbacks
-        why_this_matters = (
-            clip.why_this_matters
-            or clip.reason
-            or "Strong pacing, clear payoff, and creator-ready packaging."
-        )
         confidence_score = resolve_confidence_score(clip)
         confidence_label = build_confidence_label(
             {
@@ -405,13 +399,34 @@ def apply_plan_feature_flags(
                 "confidence": clip.confidence,
             }
         )
-        cta_suggestion = clip.cta_suggestion or "Prompt viewers to comment or follow."
-        thumbnail_text = clip.thumbnail_text or clip.title or (clip.hook[:40] if clip.hook else "Best Clip")
-        platform_fit = clip.platform_fit or "Optimized for fast short-form viewing."
         packaging_angle = clip.packaging_angle or "value"
         caption_style = clip.caption_style or "Short-form native"
         post_order = clip.post_rank or clip.best_post_order or clip.rank or 1
-        hook_variants = clip.hook_variants if clip.hook_variants else [clip.hook]
+        # Ensure all intelligence fields are always populated with meaningful fallbacks.
+        why_this_matters = (
+            clip.why_this_matters
+            or clip.reason
+            or build_plan_fallback_why_this_matters(
+                clip=clip,
+                post_order=post_order,
+                packaging_angle=packaging_angle,
+            )
+        )
+        cta_suggestion = clip.cta_suggestion or build_plan_fallback_cta(
+            clip=clip,
+            post_order=post_order,
+            packaging_angle=packaging_angle,
+        )
+        thumbnail_text = clip.thumbnail_text or build_plan_fallback_thumbnail(clip)
+        platform_fit = clip.platform_fit or build_plan_fallback_platform_fit(
+            clip=clip,
+            packaging_angle=packaging_angle,
+        )
+        hook_variants = clip.hook_variants if clip.hook_variants else build_plan_fallback_hook_variants(
+            clip=clip,
+            post_order=post_order,
+            packaging_angle=packaging_angle,
+        )
         if not alt_hooks_unlocked:
             hook_variants = hook_variants[:1]
         if not caption_variants:
@@ -543,6 +558,133 @@ def build_export_bundle(
         preview_ready=bool(preview_url),
         download_ready=bool(download_url),
     )
+
+
+def build_plan_fallback_why_this_matters(*, clip, post_order: int, packaging_angle: str) -> str:
+    focus = compact_clip_focus(clip.transcript_excerpt or clip.hook or clip.title)
+    if post_order == 1:
+        return f"Post this first because the {focus} payoff is the clearest opener and gives the pack a strong {packaging_angle} frame."
+    if post_order == 2:
+        return f"Use this second because it extends the {focus} angle after the lead clip earns attention."
+    return f"Use this later because the {focus} moment works best once viewers understand the angle and are ready to act."
+
+
+def build_plan_fallback_cta(*, clip, post_order: int, packaging_angle: str) -> str:
+    platform = infer_clip_platform(clip)
+    if post_order == 1 and platform == "youtube":
+        return "End by pointing viewers to the full breakdown."
+    if post_order == 1 and platform == "instagram":
+        return "End by asking viewers to save it before they forget the move."
+    if post_order == 1 and platform == "tiktok":
+        return "End by asking viewers if they want part two."
+    if packaging_angle == "controversy":
+        return "Close by asking viewers which side they agree with."
+    if packaging_angle == "story":
+        return "Close by asking viewers if they want the next part."
+    return "Close by asking viewers what they want broken down next."
+
+
+def build_plan_fallback_thumbnail(clip) -> str:
+    words = clip_signal_words(clip.hook or clip.title or "", limit=3)
+    if not words:
+        return "Post First" if (clip.post_rank or clip.rank or 1) == 1 else "Best Clip"
+    return " ".join(words).title()
+
+
+def build_plan_fallback_platform_fit(*, clip, packaging_angle: str) -> str:
+    platform = infer_clip_platform(clip)
+    if platform == "youtube":
+        return f"Shorts-ready structure with a clear {packaging_angle} setup and fast context."
+    if platform == "instagram":
+        return f"Reels-ready packaging with a polished {packaging_angle} frame and saveable payoff."
+    if platform == "tiktok":
+        return f"TikTok-friendly pacing with a {packaging_angle} opener and immediate payoff."
+    return f"Short-form native packaging built around a {packaging_angle} angle."
+
+
+def build_plan_fallback_hook_variants(*, clip, post_order: int, packaging_angle: str) -> list[str]:
+    focus = compact_clip_focus(clip.transcript_excerpt or clip.hook or clip.title)
+    if packaging_angle == "controversy":
+        return [
+            clip.hook,
+            f"Most viewers are still wrong about {focus}.",
+            f"The {focus} disagreement starts here.",
+        ]
+    if packaging_angle == "curiosity":
+        return [
+            clip.hook,
+            f"The skipped detail behind {focus}.",
+            "Most viewers miss this before the payoff.",
+        ]
+    if packaging_angle == "story":
+        return [
+            clip.hook,
+            f"This is where {focus} turns.",
+            "The payoff makes the whole story worth posting.",
+        ]
+    return [
+        clip.hook,
+        f"The useful part of {focus} starts here.",
+        "Save this before posting the full breakdown.",
+    ]
+
+
+def infer_clip_platform(clip) -> str:
+    text = " ".join(
+        str(value or "").lower()
+        for value in [clip.platform_fit, clip.caption_style, clip.title, clip.caption]
+    )
+    if "tiktok" in text:
+        return "tiktok"
+    if "instagram" in text or "reels" in text:
+        return "instagram"
+    if "youtube" in text or "shorts" in text:
+        return "youtube"
+    if "facebook" in text:
+        return "facebook"
+    return "short-form"
+
+
+CLIP_STOP_WORDS = {
+    "about",
+    "after",
+    "again",
+    "because",
+    "before",
+    "breakdown",
+    "clip",
+    "from",
+    "have",
+    "into",
+    "just",
+    "post",
+    "that",
+    "this",
+    "video",
+    "watch",
+    "when",
+    "with",
+    "your",
+}
+
+
+def compact_clip_focus(value: str) -> str:
+    words = clip_signal_words(value, limit=3)
+    return " ".join(words).lower() if words else "this angle"
+
+
+def clip_signal_words(value: str, *, limit: int) -> list[str]:
+    words: list[str] = []
+    for word in re.findall(r"[A-Za-z0-9']+", value):
+        normalized = word.strip("'").lower()
+        if len(normalized) < 3 or normalized in CLIP_STOP_WORDS:
+            continue
+        if normalized in words:
+            continue
+        words.append(normalized)
+        if len(words) >= limit:
+            break
+    return words
 
 
 def shorten_caption(value: str, limit: int = 90) -> str:

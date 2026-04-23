@@ -308,7 +308,13 @@ def parse_generated_clips(
                 ),
                 thumbnail_text=str_or_fallback(
                     clip.get("thumbnail_text"),
-                    default_thumbnail_text(title=title, hook=hook),
+                    default_thumbnail_text(
+                        title=title,
+                        hook=hook,
+                        packaging_angle=packaging_angle,
+                        target_platform=target_platform,
+                        post_rank=index,
+                    ),
                 ),
                 cta_suggestion=str_or_fallback(
                     clip.get("cta_suggestion"),
@@ -327,6 +333,7 @@ def parse_generated_clips(
                     selected_trend=selected_trend,
                     target_platform=target_platform,
                     packaging_angle=packaging_angle,
+                    transcript_excerpt=seed.transcript_excerpt if seed else clip.get("transcript_excerpt"),
                 ),
                 caption_variants=parse_caption_variants(
                     clip.get("caption_variants"),
@@ -469,12 +476,23 @@ def build_source_grounded_fallback_clips(
             seed.transcript_excerpt,
             source_context.visual_summary or source_context.description or source_context.title,
         )
-        title_focus = default_thumbnail_text(title=source_context.title or target_platform, hook=source_phrase)
-        title = f"{title_focus} Clip"
         packaging_angle = preferred_angle if preferred_angle in {"shock", "story", "value", "curiosity", "controversy"} else default_packaging_angle(
-            title=title,
+            title=source_context.title or target_platform,
             hook=source_phrase,
             transcript_excerpt=source_phrase,
+        )
+        title_focus = default_thumbnail_text(
+            title=source_context.title or target_platform,
+            hook=source_phrase,
+            packaging_angle=packaging_angle,
+            target_platform=target_platform,
+            post_rank=index,
+        )
+        title = build_source_grounded_title(
+            title_focus=title_focus,
+            target_platform=target_platform,
+            packaging_angle=packaging_angle,
+            post_rank=index,
         )
         score = clamp_score(None, fallback=max(64, 95 - ((index - 1) * 3)))
         confidence = clamp_confidence(None, fallback=max(min(score / 100.0, 0.96), 0.58))
@@ -530,7 +548,13 @@ def build_source_grounded_fallback_clips(
                     transcript_excerpt=source_phrase,
                     source_context=source_context,
                 ),
-                thumbnail_text=default_thumbnail_text(title=title, hook=hook),
+                thumbnail_text=default_thumbnail_text(
+                    title=title,
+                    hook=hook,
+                    packaging_angle=packaging_angle,
+                    target_platform=target_platform,
+                    post_rank=index,
+                ),
                 cta_suggestion=default_cta_suggestion(
                     target_platform=target_platform,
                     post_rank=index,
@@ -544,6 +568,7 @@ def build_source_grounded_fallback_clips(
                     selected_trend=lead_trend,
                     target_platform=target_platform,
                     packaging_angle=packaging_angle,
+                    transcript_excerpt=source_phrase,
                 ),
                 caption_variants={
                     "viral": caption,
@@ -666,18 +691,18 @@ def build_source_grounded_hook(
     post_rank: int,
 ) -> str:
     focus = compact_phrase(source_phrase)
-    trend = lead_trend or focus
+    trend = compact_phrase(lead_trend or focus)
 
     if packaging_angle == "controversy":
-        return f"Most creators still frame {trend} the wrong way. This cut gets to the point fast."
+        return "The safer version misses the point. This cut gives the sharper take first."
     if packaging_angle == "story":
-        return f"This is the moment {trend} actually turns into a clip worth posting."
+        return f"This is the payoff behind {focus}."
     if packaging_angle == "shock":
         return f"Stop scrolling. This {target_platform} cut gets the payoff on screen immediately."
     if packaging_angle == "curiosity":
-        return f"Here is the {trend} moment most people skip before the payoff hits."
+        return f"Here is the {focus} detail most people skip before the payoff hits."
     if post_rank == 1:
-        return f"If you post one {target_platform} clip first, make it the {trend} cut."
+        return f"If you post one {target_platform} clip first, make it the {focus} cut."
     return f"This {target_platform} clip keeps the {trend} angle moving without extra setup."
 
 
@@ -705,6 +730,27 @@ def build_source_grounded_reason(
     if post_rank == 1:
         return f"This is the strongest opener because the {focus} payoff lands quickly with a clear {packaging_angle} frame for {target_platform}."
     return f"This works later in the stack because it keeps the {focus} angle moving with a cleaner {packaging_angle} follow-through for {target_platform}."
+
+
+def build_source_grounded_title(
+    *,
+    title_focus: str,
+    target_platform: str,
+    packaging_angle: str,
+    post_rank: int,
+) -> str:
+    platform = platform_display_name(target_platform)
+    if post_rank == 1:
+        return f"{title_focus}: Lead {platform} Cut"
+    if packaging_angle == "curiosity":
+        return f"{title_focus}: Curiosity Cut"
+    if packaging_angle == "controversy":
+        return f"{title_focus}: Tension Cut"
+    if packaging_angle == "story":
+        return f"{title_focus}: Payoff Cut"
+    if packaging_angle == "shock":
+        return f"{title_focus}: Interrupt Cut"
+    return f"{title_focus}: Value Cut"
 
 
 def parse_int(value: object, fallback: int) -> int:
@@ -738,6 +784,7 @@ def parse_hook_variants(
     selected_trend: Optional[str],
     target_platform: str,
     packaging_angle: str,
+    transcript_excerpt: object = None,
 ) -> List[str]:
     if isinstance(value, list):
         variants = [str(item).strip() for item in value if str(item).strip()]
@@ -749,6 +796,7 @@ def parse_hook_variants(
         selected_trend=selected_trend,
         target_platform=target_platform,
         packaging_angle=packaging_angle,
+        transcript_excerpt=transcript_excerpt,
     )
 
 
@@ -783,14 +831,39 @@ def default_hook_variants(
     selected_trend: Optional[str],
     target_platform: str,
     packaging_angle: str,
+    transcript_excerpt: object = None,
 ) -> List[str]:
-    focus = selected_trend or compact_phrase(title or hook)
-    platform_label = target_platform or "short-form"
+    focus = compact_phrase(str(transcript_excerpt or "")) or selected_trend or compact_phrase(title or hook)
+    platform_label = platform_display_name(target_platform)
     angle = packaging_angle.replace("-", " ")
+    if packaging_angle == "controversy":
+        return [
+            "The safe version misses the real point.",
+            "Post the sharper take before the obvious one.",
+            "Use this when you want the comments to split.",
+        ]
+    if packaging_angle == "story":
+        return [
+            f"The payoff behind {focus} starts here.",
+            "Use this cut when the story needs proof.",
+            "This is the follow-up beat worth posting.",
+        ]
+    if packaging_angle == "shock":
+        return [
+            f"Stop scrolling before this moment passes.",
+            f"The payoff hits faster than the setup.",
+            f"This is the interrupt cut for {platform_label}.",
+        ]
+    if packaging_angle == "curiosity":
+        return [
+            f"The skipped detail behind {focus}.",
+            f"Most viewers miss this before the payoff.",
+            f"Here is why this moment holds attention.",
+        ]
     return [
-        f"Why {focus} is the highest-upside {platform_label} {angle} angle right now.",
-        f"The {focus} moment most creators skip is the one driving this clip.",
-        f"If you post one {angle} clip for {platform_label}, start with this one.",
+        f"The useful part of {focus} starts here.",
+        f"Save this cut before posting the full breakdown.",
+        f"Use this {angle} cut first on {platform_label}.",
     ]
 
 
@@ -800,7 +873,7 @@ def default_caption_variants(
     target_platform: str,
     packaging_angle: str,
 ) -> dict[str, str]:
-    platform_label = target_platform or "short-form"
+    platform_label = platform_display_name(target_platform)
     return {
         "viral": caption,
         "story": f"{caption} Built to travel as a cleaner {packaging_angle} story for {platform_label}.",
@@ -819,19 +892,20 @@ def default_why_this_matters(
 ) -> str:
     packaging = (packaging_angle or "value").replace("_", " ")
     transcript_focus = compact_phrase(str(transcript_excerpt or title))
+    platform = platform_display_name(target_platform)
     if post_rank == 1:
         return (
-            f"Lead with this because the {transcript_focus} payoff lands fast and gives {target_platform} viewers "
-            f"the clearest first impression with a {packaging} frame."
+            f"Post this first because the {transcript_focus} payoff lands fast, sets the {packaging} frame, "
+            f"and gives {platform} viewers the clearest reason to keep watching."
         )
     if post_rank == 2:
         return (
-            f"Use this second because it deepens the {packaging} angle after the opener has already earned attention "
-            f"and keeps the {target_platform} stack coherent."
+            f"Use this second because it extends the {packaging} angle after the opener earns attention, "
+            f"then gives the {platform} stack a cleaner follow-up beat."
         )
     return (
-        f"Hold this for later in the stack because the {transcript_focus} moment works better once viewers already "
-        f"understand the angle and are ready to comment, save, or follow through on {target_platform}."
+        f"Hold this for later because the {transcript_focus} beat works best after viewers understand the angle "
+        f"and are ready to comment, save, or follow through on {platform}."
     )
 
 
@@ -839,28 +913,48 @@ def default_reason(*, title: str, target_platform: str, packaging_angle: str) ->
     return f"{title} works for {target_platform} because the {packaging_angle} framing is easy to understand and fast to react to."
 
 
-def default_thumbnail_text(*, title: str, hook: str) -> str:
+def default_thumbnail_text(
+    *,
+    title: str,
+    hook: str,
+    packaging_angle: str | None = None,
+    target_platform: str | None = None,
+    post_rank: int | None = None,
+) -> str:
     source = hook if len(hook.strip()) >= len(title.strip()) else title
-    words = [
-        word
-        for word in re.findall(r"[A-Za-z0-9']+", source)
-        if word.lower() not in {"the", "and", "that", "with", "this", "your", "from", "into"}
-    ]
+    if ":" in title:
+        source = title.split(":", 1)[0]
+    words = signal_words(source, limit=3)
     if not words:
+        if packaging_angle == "controversy":
+            return "Wrong Take"
+        if packaging_angle == "curiosity":
+            return "Hidden Detail"
+        if packaging_angle == "shock":
+            return "Watch This"
+        if post_rank == 1:
+            return "Post First"
         return "Best Clip"
 
-    return " ".join(words[:4]).title()
+    text = " ".join(words).title()
+    if post_rank == 1 and len(words) <= 2:
+        return f"{text} First"
+    return text
 
 
 def default_cta_suggestion(*, target_platform: str, post_rank: int, packaging_angle: str | None = None) -> str:
-    platform = target_platform.lower()
+    platform = normalize_platform(target_platform)
     packaging = (packaging_angle or "").lower()
     if post_rank == 1:
-        return (
-            "End by asking viewers if they want the full breakdown next."
-            if platform == "youtube"
-            else "End by asking viewers if they want part two."
-        )
+        if platform == "youtube":
+            return "End by asking viewers to watch the full breakdown next."
+        if platform == "instagram":
+            return "End by asking viewers to save it before they forget the move."
+        if platform == "tiktok":
+            return "End by asking viewers if they want part two."
+        if platform == "facebook":
+            return "End by asking viewers which part they agree with most."
+        return "End by asking viewers what they want broken down next."
     if packaging == "controversy":
         return "Close by asking viewers which side they agree with and why."
     if packaging == "story":
@@ -873,7 +967,7 @@ def default_cta_suggestion(*, target_platform: str, post_rank: int, packaging_an
 
 
 def default_caption_style(target_platform: str, packaging_angle: str | None = None) -> str:
-    normalized = target_platform.lower()
+    normalized = normalize_platform(target_platform)
     packaging = (packaging_angle or "").lower()
     if packaging == "controversy":
         return "Tension-led contrarian"
@@ -895,7 +989,7 @@ def default_caption_style(target_platform: str, packaging_angle: str | None = No
 
 
 def default_platform_fit(*, target_platform: str, packaging_angle: str) -> str:
-    normalized = target_platform.lower()
+    normalized = normalize_platform(target_platform)
     if normalized == "tiktok":
         return f"TikTok-friendly pacing with a {packaging_angle} opening and fast payoff."
     if normalized == "instagram":
@@ -937,7 +1031,7 @@ def default_packaging_angle(*, title: str, hook: str, transcript_excerpt: object
             str(transcript_excerpt or "").lower(),
         ]
     )
-    if any(keyword in content for keyword in {"wrong", "never", "nobody", "skip", "myth"}):
+    if any(keyword in content for keyword in {"wrong", "never", "nobody", "skip", "myth", "safe version", "sharp take", "disagree", "comments"}):
         return "controversy"
     if any(keyword in content for keyword in {"story", "moment", "started", "then", "when"}):
         return "story"
@@ -972,7 +1066,93 @@ def fallback_confidence_score(
 
 
 def compact_phrase(value: str) -> str:
-    words = re.findall(r"[A-Za-z0-9']+", value)
+    words = signal_words(value, limit=3)
     if not words:
         return "this angle"
-    return " ".join(words[:3]).lower()
+    return " ".join(words).lower()
+
+
+STOP_WORDS = {
+    "about",
+    "after",
+    "again",
+    "also",
+    "and",
+    "are",
+    "because",
+    "before",
+    "breakdown",
+    "clip",
+    "could",
+    "from",
+    "have",
+    "into",
+    "just",
+    "like",
+    "make",
+    "most",
+    "people",
+    "post",
+    "really",
+    "shorts",
+    "short",
+    "that",
+    "the",
+    "their",
+    "there",
+    "they",
+    "this",
+    "too",
+    "video",
+    "watch",
+    "when",
+    "where",
+    "with",
+    "would",
+    "youtube",
+    "your",
+}
+
+
+def signal_words(value: str, *, limit: int) -> list[str]:
+    words: list[str] = []
+    for word in re.findall(r"[A-Za-z0-9']+", value):
+        normalized = word.strip("'").lower()
+        if len(normalized) < 3 or normalized in STOP_WORDS:
+            continue
+        if normalized in words:
+            continue
+        words.append(normalized)
+        if len(words) >= limit:
+            break
+    return words
+
+
+def normalize_platform(value: str) -> str:
+    normalized = (value or "").strip().lower()
+    if "tiktok" in normalized:
+        return "tiktok"
+    if "instagram" in normalized or "reels" in normalized:
+        return "instagram"
+    if "youtube" in normalized or "shorts" in normalized:
+        return "youtube"
+    if "facebook" in normalized:
+        return "facebook"
+    if "linkedin" in normalized:
+        return "linkedin"
+    return "short-form"
+
+
+def platform_display_name(value: str) -> str:
+    normalized = normalize_platform(value)
+    if normalized == "tiktok":
+        return "TikTok"
+    if normalized == "instagram":
+        return "Instagram Reels"
+    if normalized == "youtube":
+        return "YouTube Shorts"
+    if normalized == "facebook":
+        return "Facebook"
+    if normalized == "linkedin":
+        return "LinkedIn"
+    return "short-form"
