@@ -45,6 +45,9 @@ function decisionInstruction(rank?: number | null, hasRenderProof?: boolean) {
 }
 
 function buildPackageText(clip: ClipResult) {
+  const thumbnailText = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
+    ? clip.thumbnail_text
+    : clip.hook?.slice(0, 40) || clip.title;
   return [
     `Title: ${clip.title}`,
     `Hook: ${clip.hook}`,
@@ -52,7 +55,7 @@ function buildPackageText(clip: ClipResult) {
     `Why this matters: ${clip.why_this_matters || clip.reason || "Not available"}`,
     `Post order: ${authorityLabel(clip.post_rank || clip.best_post_order || clip.rank || null)}`,
     `Packaging angle: ${clip.packaging_angle || "value"}`,
-    `Thumbnail text: ${clip.thumbnail_text || "Best Clip"}`,
+    `Thumbnail text: ${thumbnailText}`,
     `CTA: ${clip.cta_suggestion || "Ask viewers to comment or follow."}`,
     `Caption style: ${clip.caption_style || "Short-form native"}`,
     `Hook variants: ${(clip.hook_variants || []).join(" | ") || "Not available"}`,
@@ -80,6 +83,9 @@ export default function HeroClip({
   const whyThisHits = buildLeadReason(clip.why_this_matters || clip.reason);
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 2);
   const showFeedback = !compact && Boolean(onVote);
+  const displayThumbnail = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
+    ? clip.thumbnail_text
+    : clip.hook?.slice(0, 40) || clip.title;
 
   async function handleCopyPackage() {
     try {
@@ -102,8 +108,12 @@ export default function HeroClip({
         <div className="space-y-4">
           <div className="video-shell overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-[0_12px_44px_rgba(0,0,0,0.28)]">
             {compact && !hasRenderProof ? (
-              <div className="flex aspect-[9/16] min-h-[360px] items-center justify-center bg-black/70 px-8 text-center">
-                <p className="text-base leading-7 text-ink/68">Hooks and packaging ready.</p>
+              <div className="flex aspect-[9/16] min-h-[360px] flex-col items-start justify-end bg-gradient-to-b from-[#0d0d12] to-[#050508] px-7 pb-8">
+                <span className="mb-4 rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs font-semibold tracking-widest text-[var(--gold)]">
+                  {postAuthority}
+                </span>
+                <p className="text-2xl font-semibold leading-8 text-white">{clip.hook || clip.title}</p>
+                <p className="mt-3 text-sm text-white/40">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
               </div>
             ) : (
               <LiveClipPreview clip={clip} className="aspect-[9/16] transition-transform duration-300 group-hover:scale-[1.02]" autoPlay />
@@ -209,7 +219,7 @@ export default function HeroClip({
             ) : null}
             <div className="metric-tile rounded-[24px] p-4">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">Thumbnail line</p>
-              <p className="text-sm font-medium text-ink">{clip.thumbnail_text || "Best Clip"}</p>
+              <p className="text-sm font-medium text-ink">{displayThumbnail}</p>
             </div>
             <div className="metric-tile rounded-[24px] p-4">
               <p className="mb-2 text-xs uppercase tracking-[0.24em] text-muted">CTA</p>

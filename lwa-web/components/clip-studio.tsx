@@ -507,6 +507,13 @@ export function ClipStudio({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const isBlockedLiveStream =
+      sourceMode === "video" &&
+      (/youtube\.com\/live\//i.test(videoUrl) || /youtu\.be\/.*\?.*live/i.test(videoUrl));
+    if (isBlockedLiveStream) {
+      setError("Live streams can't be clipped. Paste a regular YouTube video URL instead.");
+      return;
+    }
     if (sourceMode === "video" && !videoUrl.trim() && !selectedUploadId) {
       setError("Paste a public source URL or upload a file to generate your clip pack.");
       return;
@@ -797,6 +804,9 @@ export function ClipStudio({
       : sourceMode === "image"
         ? Boolean(selectedUploadId)
         : Boolean(videoUrl.trim() || selectedUploadId);
+  const isLiveStreamUrl =
+    sourceMode === "video" &&
+    (/youtube\.com\/live\//i.test(videoUrl) || /youtu\.be\/.*\?.*live/i.test(videoUrl));
   useEffect(() => {
     if (isGuest && generationMode !== "quick") {
       setGenerationMode("quick");
@@ -1052,8 +1062,14 @@ export function ClipStudio({
         },
         token,
       );
+      const link = document.createElement("a");
+      link.href = bundle.download_url;
+      link.download = bundle.file_name || "lwa-clip-bundle.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       setBundleExportState("ready");
-      setBundleExportMessage(`Bundle ready: ${bundle.file_name}`);
+      setBundleExportMessage("Bundle downloaded.");
       void fireGodTrigger("first_download", {
         route: window.location.pathname,
         lastClipScore: orderedClips[0]?.score,
@@ -1061,12 +1077,9 @@ export function ClipStudio({
         creditsRemaining,
         platform: activeResult.processing_summary?.target_platform || platform,
       });
-      if (bundle.download_url) {
-        window.open(bundle.download_url, "_blank", "noopener,noreferrer");
-      }
     } catch (bundleError) {
       setBundleExportState("failed");
-      setBundleExportMessage(bundleError instanceof Error ? bundleError.message : "Unable to export bundle.");
+      setBundleExportMessage(bundleError instanceof Error ? bundleError.message : "Export failed. Try again.");
     }
   }
 
@@ -1362,6 +1375,7 @@ export function ClipStudio({
 
         {renderSourceInput()}
 
+        {!isGuest ? (
         <div className="space-y-3">
           <div className="operator-tile rounded-[24px] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1412,6 +1426,7 @@ export function ClipStudio({
             </div>
           ) : null}
         </div>
+        ) : null}
 
         {!isGuest ? (
         <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
@@ -1453,9 +1468,14 @@ export function ClipStudio({
           <p className="text-sm text-ink/60">
             {isLoading ? `${loadingStages[loadingStageIndex]}. ${GENERATOR_COPY.loading}` : idleRunSummary}
           </p>
+          {isLiveStreamUrl ? (
+            <div className="rounded-[16px] border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+              Live streams can't be clipped. Paste a regular YouTube video URL instead.
+            </div>
+          ) : null}
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isLiveStreamUrl}
             className="primary-button inline-flex min-w-[220px] items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? GENERATOR_COPY.submitting : GENERATOR_COPY.submit}
@@ -1466,19 +1486,20 @@ export function ClipStudio({
 
         {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
         {paywallMessage ? (
-          <InlineAlert tone="violet" title="Out of credits">
-            <div className="space-y-3">
-              <p>{paywallMessage}</p>
-              <div className="flex flex-wrap gap-3">
-                <Link href="/settings" className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold">
-                  Review plan
-                </Link>
-                <Link href="/wallet" className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
-                  Open wallet
-                </Link>
-              </div>
-            </div>
-          </InlineAlert>
+          <div className="rounded-[20px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
+            <p className="text-sm font-semibold text-[var(--gold)]">You're out of credits.</p>
+            <p className="mt-1 text-sm text-white/60">Sign in to keep generating and save your clips.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("login");
+                setAuthOpen(true);
+              }}
+              className="mt-3 inline-flex rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black"
+            >
+              Sign in
+            </button>
+          </div>
         ) : null}
       </form>
     </section>
@@ -1536,6 +1557,7 @@ export function ClipStudio({
 
             {renderSourceInput()}
 
+            {!isGuest ? (
             <div className="space-y-3">
               <div className="operator-tile rounded-[24px] p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1586,6 +1608,7 @@ export function ClipStudio({
                 </div>
               ) : null}
             </div>
+            ) : null}
 
             {!isGuest ? (
             <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
@@ -1639,9 +1662,14 @@ export function ClipStudio({
                     ? "Clip pack ready. Review first, queue next, export when it fits."
                     : idleRunSummary}
               </p>
+              {isLiveStreamUrl ? (
+                <div className="rounded-[16px] border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                  Live streams can't be clipped. Paste a regular YouTube video URL instead.
+                </div>
+              ) : null}
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isLiveStreamUrl}
                 className="primary-button inline-flex min-w-[240px] items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? GENERATOR_COPY.submitting : GENERATOR_COPY.submit}
@@ -1653,19 +1681,20 @@ export function ClipStudio({
             {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
 
             {paywallMessage ? (
-              <InlineAlert tone="violet" title="Out of credits">
-                <div className="space-y-3">
-                  <p>{paywallMessage}</p>
-                  <div className="flex flex-wrap gap-3">
-                    <Link href="/settings" className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold">
-                      Review plan
-                    </Link>
-                    <Link href="/wallet" className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
-                      Open wallet
-                    </Link>
-                  </div>
-                </div>
-              </InlineAlert>
+              <div className="rounded-[20px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
+                <p className="text-sm font-semibold text-[var(--gold)]">You're out of credits.</p>
+                <p className="mt-1 text-sm text-white/60">Sign in to keep generating and save your clips.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("login");
+                    setAuthOpen(true);
+                  }}
+                  className="mt-3 inline-flex rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black"
+                >
+                  Sign in
+                </button>
+              </div>
             ) : null}
           </form>
         </section>

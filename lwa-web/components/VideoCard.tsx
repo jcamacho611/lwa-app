@@ -30,6 +30,9 @@ function authorityLabel(rank?: number | null) {
 }
 
 function buildPackageText(clip: ClipResult) {
+  const thumbnailText = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
+    ? clip.thumbnail_text
+    : clip.hook?.slice(0, 40) || clip.title;
   return [
     `Title: ${clip.title}`,
     `Hook: ${clip.hook}`,
@@ -37,7 +40,7 @@ function buildPackageText(clip: ClipResult) {
     `Why this matters: ${clip.why_this_matters || clip.reason || "Not available"}`,
     `Post order: ${authorityLabel(clip.post_rank || clip.best_post_order || clip.rank || null)}`,
     `Packaging angle: ${clip.packaging_angle || "value"}`,
-    `Thumbnail text: ${clip.thumbnail_text || "Best Clip"}`,
+    `Thumbnail text: ${thumbnailText}`,
     `CTA: ${clip.cta_suggestion || "Ask viewers to comment or follow."}`,
   ].join("\n");
 }
@@ -73,6 +76,9 @@ export default function VideoCard({
   const scoreValue = Math.round(clip.virality_score ?? clip.score ?? 0);
   const showScore = !compact && scoreValue >= 70;
   const showFeedback = !compact && Boolean(onVote);
+  const displayThumbnail = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
+    ? clip.thumbnail_text
+    : clip.hook?.slice(0, 40) || clip.title;
 
   async function handleCopyPackage() {
     try {
@@ -101,8 +107,12 @@ export default function VideoCard({
       ) : null}
       <div className="video-shell overflow-hidden rounded-[22px] border border-white/10 bg-black/60">
         {compact && !hasRenderProof ? (
-          <div className="flex aspect-[9/16] min-h-[280px] items-center justify-center bg-black/70 px-6 text-center">
-            <p className="text-sm leading-6 text-ink/62">Hooks and packaging ready.</p>
+          <div className="flex aspect-[9/16] min-h-[280px] flex-col items-start justify-end bg-gradient-to-b from-[#0d0d12] to-[#050508] px-5 pb-6">
+            <span className="mb-3 rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-xs font-semibold tracking-widest text-[var(--gold)]">
+              {authority}
+            </span>
+            <p className="text-base font-semibold leading-7 text-white">{clip.hook || clip.title}</p>
+            <p className="mt-2 text-xs text-white/40">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
           </div>
         ) : (
           <LiveClipPreview clip={clip} className="aspect-[9/16] transition duration-300 group-hover:scale-[1.02]" />
@@ -151,16 +161,16 @@ export default function VideoCard({
         <div className="space-y-2">
           {!compact ? <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-ink">{clip.title}</h3> : null}
           {!compact ? <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/62">{decision}</p> : null}
-          <p className={compact ? "line-clamp-3 text-lg font-semibold leading-7 text-ink" : "line-clamp-2 text-sm leading-6 text-ink/80"}>
+          <p className={compact ? "text-xl font-semibold leading-7 text-white" : "line-clamp-2 text-sm leading-6 text-ink/80"}>
             {clip.hook || clip.title}
           </p>
         </div>
 
         <div className="grid gap-2">
-          {clip.thumbnail_text ? (
+          {displayThumbnail ? (
             <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Thumbnail</p>
-              <p className="mt-1 text-xs font-medium text-ink/82">{clip.thumbnail_text}</p>
+              <p className="mt-1 text-xs font-medium text-ink/82">{displayThumbnail}</p>
             </div>
           ) : null}
           {clip.cta_suggestion ? (
