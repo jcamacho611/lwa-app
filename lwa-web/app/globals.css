@@ -322,6 +322,7 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   letter-spacing: -0.01em;
+  isolation: isolate;
 }
 
 /* ─── Animated AI background orbs ───────────────────────────────────────── */
@@ -2028,7 +2029,8 @@ textarea {
 /* ─── LWA gold cinematic layer overrides ───────────────────────────────── */
 .lwa-bg-canvas {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
   z-index: 0;
   width: 100vw;
   height: 100vh;
@@ -2049,6 +2051,7 @@ textarea {
 .lwa-ui-layer {
   position: relative;
   z-index: 10;
+  isolation: isolate;
   min-height: 100vh;
 }
 

@@ -34,6 +34,15 @@ export function BackgroundCanvas() {
       ref={canvasRef}
       className="lwa-bg-canvas"
       aria-hidden="true"
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        zIndex: 0,
+        pointerEvents: "none",
+      }}
     />
   );
 }
