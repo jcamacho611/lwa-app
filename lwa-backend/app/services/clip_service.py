@@ -340,6 +340,7 @@ async def build_clip_response(
             sources_considered=sorted({item.source for item in trend_context}),
             processing_mode=processing_mode,
             selection_strategy=selection_strategy,
+            fallback_reason=fallback_reason,
             source_title=source_title,
             source_type=source_type,
             source_duration_seconds=source_duration_seconds,

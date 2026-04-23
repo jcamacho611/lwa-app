@@ -329,6 +329,7 @@ def process_source(
     source_type: str | None = None,
     upload_content_type: str | None = None,
 ) -> SourceContext:
+    warn_if_localhost_public_base_url(public_base_url=public_base_url)
     resolved_type = determine_source_type(
         source_type=source_type,
         source_path=source_path,
@@ -361,6 +362,13 @@ def process_source(
         max_candidates=max_candidates,
         source_type=resolved_type,
     )
+
+
+def warn_if_localhost_public_base_url(*, public_base_url: str) -> None:
+    if public_base_url and "localhost" in public_base_url:
+        logger.warning(
+            "clip_url_warning public_base_url contains localhost - clips will not be accessible from browser",
+        )
 
 
 def determine_source_type(
@@ -524,14 +532,15 @@ def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request
         "noprogress": True,
         "noplaylist": True,
         "outtmpl": str(work_dir / "source.%(ext)s"),
-        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        "format": "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
         "merge_output_format": "mp4",
         "overwrites": True,
-        "retries": 2,
-        "fragment_retries": 2,
+        "retries": 5,
+        "fragment_retries": 5,
         "extractor_retries": 2,
         "file_access_retries": 2,
-        "socket_timeout": 20,
+        "socket_timeout": 60,
+        "http_chunk_size": 10485760,
         "concurrent_fragment_downloads": 1,
         "ffmpeg_location": str(Path(ffmpeg_path).parent),
         "writesubtitles": True,

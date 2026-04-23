@@ -561,6 +561,15 @@ export function ClipStudio({
         },
         token,
       );
+      const allStrategyOnly = data.clips.length > 0 && data.clips.every((clip) => clip.is_strategy_only === true);
+      const fallbackReason = (data.processing_summary as { fallback_reason?: string } | undefined)?.fallback_reason;
+
+      if (allStrategyOnly && fallbackReason) {
+        setError(`Could not process video: ${fallbackReason}. Try a different YouTube URL.`);
+        setResult(null);
+        return;
+      }
+
       setResult(data);
       setClipRecoveryStates({});
       setPaywallMessage(null);
@@ -580,8 +589,13 @@ export function ClipStudio({
       if (submitError instanceof ApiError && submitError.status === 402) {
         setError(null);
         setPaywallMessage(submitError.message);
+      } else if (submitError instanceof ApiError && submitError.status === 502) {
+        setError("Backend is starting up. Wait 10 seconds and try again.");
+      } else if (submitError instanceof ApiError && submitError.status === 504) {
+        setError("Video took too long to process. Try a shorter video under 10 minutes.");
       } else {
-        setError(submitError instanceof Error ? submitError.message : "Unable to generate clips right now.");
+        const message = submitError instanceof Error ? submitError.message : "Unable to generate clips right now.";
+        setError(message.includes("localhost") ? "Backend connection issue. Contact support." : message);
       }
     } finally {
       setIsLoading(false);

@@ -152,6 +152,7 @@ class ProcessingSummary(BaseModel):
     sources_considered: List[str]
     processing_mode: str
     selection_strategy: str
+    fallback_reason: Optional[str] = None
     source_title: Optional[str] = None
     source_type: Optional[str] = None
     source_duration_seconds: Optional[int] = None
