@@ -5,7 +5,6 @@ import json
 from functools import lru_cache
 from dataclasses import dataclass
 import logging
-import os
 import platform
 import re
 from pathlib import Path
@@ -23,7 +22,7 @@ except Exception:  # pragma: no cover - optional dependency
 
 from yt_dlp import YoutubeDL
 
-from .config import Settings, get_settings
+from .config import Settings
 from .services.candidate_builder import build_candidate_clips, candidates_to_segment_plan
 from .services.silence_detector import detect_silence_regions
 from .services.speech_regions import invert_silence_to_speech
@@ -548,6 +547,11 @@ def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request
         "writeautomaticsub": True,
         "subtitleslangs": ["en", "en-US", "en-GB", "en.*"],
         "subtitlesformat": "vtt/best",
+        "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        },
         "logger": YTDLPLogProxy(request_id),
     }
 
@@ -557,14 +561,6 @@ def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request
         options["wait_for_video"] = None
     else:
         options["format"] = "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"
-
-    settings = get_settings()
-    cookiefile = getattr(settings, "yt_dlp_cookiefile", None) or os.environ.get("YT_DLP_COOKIEFILE")
-    if cookiefile and Path(cookiefile).exists():
-        options["cookiefile"] = cookiefile
-        logger.info("yt_dlp_cookiefile_loaded request_id=%s path=%s", request_id, cookiefile)
-    else:
-        logger.warning("yt_dlp_cookiefile_missing request_id=%s youtube_may_block_server_requests=true", request_id)
 
     logger.info(
         "source_download_start request_id=%s video_url=%s work_dir=%s format=%s",

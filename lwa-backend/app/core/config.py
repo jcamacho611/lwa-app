@@ -22,8 +22,6 @@ def _env_bool(name: str, default: str = "false") -> bool:
 
 
 class Settings:
-    yt_dlp_cookiefile: str = ""
-
     def __init__(self) -> None:
         origins = os.getenv("LWA_ALLOWED_ORIGINS") or os.getenv("ALLOWED_ORIGINS", "*")
         self.allowed_origins = [origin.strip() for origin in origins.split(",") if origin.strip()]
@@ -56,7 +54,6 @@ class Settings:
         self.ffmpeg_path = os.getenv("FFMPEG_PATH", _default_ffmpeg_path())
         self.video_encoder = os.getenv("LWA_VIDEO_ENCODER", "libx264").strip().lower() or "libx264"
         self.yt_dlp_temp_dir = os.getenv("YT_DLP_TEMP_DIR", "/tmp")
-        self.yt_dlp_cookiefile = os.getenv("YT_DLP_COOKIEFILE", "").strip()
         railway_volume_mount_path = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
         default_generated_dir = (
             os.path.join(railway_volume_mount_path, "lwa-generated")
