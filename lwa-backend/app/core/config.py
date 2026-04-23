@@ -36,7 +36,7 @@ class Settings:
         self.api_key_secret = os.getenv("LWA_API_KEY_SECRET", "").strip()
         self.client_id_header_name = os.getenv("LWA_CLIENT_ID_HEADER_NAME", "x-lwa-client-id").strip() or "x-lwa-client-id"
         self.default_plan_name = os.getenv("LWA_DEFAULT_PLAN_NAME", "Starter Trial")
-        self.default_credits_remaining = int(os.getenv("LWA_DEFAULT_CREDITS_REMAINING", "2"))
+        self.default_credits_remaining = int(os.getenv("LWA_DEFAULT_CREDITS_REMAINING", "10"))
         self.default_turnaround = os.getenv("LWA_DEFAULT_TURNAROUND", "45 seconds")
         self.free_daily_limit = int(os.getenv("LWA_FREE_DAILY_LIMIT", str(self.default_credits_remaining)))
         self.pro_daily_limit = int(os.getenv("LWA_PRO_DAILY_LIMIT", "25"))
