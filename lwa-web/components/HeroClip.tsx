@@ -83,6 +83,7 @@ export default function HeroClip({
   const whyThisHits = buildLeadReason(clip.why_this_matters || clip.reason);
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 2);
   const showFeedback = !compact && Boolean(onVote);
+  const showRetryPreview = !compact && !hasRenderProof;
   const displayThumbnail = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
     ? clip.thumbnail_text
     : clip.hook?.slice(0, 42) || clip.title;
@@ -167,7 +168,7 @@ export default function HeroClip({
               {queued ? "Queued for post" : "Queue post"}
             </button>
 
-            {!hasRenderProof ? (
+            {showRetryPreview ? (
               <RetryPreviewButton
                 onRetry={() => onRecover?.(clip)}
                 disabled={recoveryState?.status === "queued" || recoveryState?.status === "processing"}

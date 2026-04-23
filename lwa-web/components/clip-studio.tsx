@@ -599,7 +599,7 @@ export function ClipStudio({
       setResult(null);
       if (submitError instanceof ApiError && submitError.status === 402) {
         setError(null);
-        setPaywallMessage(submitError.message);
+        setPaywallMessage(user ? submitError.message : "guest_limit");
       } else {
         const raw = submitError instanceof Error ? submitError.message : "Unable to generate clips.";
         const lowered = raw.toLowerCase();
@@ -1041,6 +1041,34 @@ export function ClipStudio({
         : generatorHovered
           ? "hover"
           : "idle";
+  const paywallCard = paywallMessage ? (
+    <div className="rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
+      <p className="text-sm font-semibold text-[var(--gold)]">
+        {user ? "Out of credits." : "Guest limit reached."}
+      </p>
+      <p className="mt-1 text-sm text-white/55">
+        {user ? "Upgrade to keep generating." : "Try again later. Sign in to save history, queue, and campaigns."}
+      </p>
+      <div className="mt-3">
+        {!user ? (
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMode("login");
+              setAuthOpen(true);
+            }}
+            className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black"
+          >
+            Sign in
+          </button>
+        ) : (
+          <Link href="/settings" className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black">
+            Upgrade plan
+          </Link>
+        )}
+      </div>
+    </div>
+  ) : null;
   function handleFeedbackVote(clip: GenerateResponse["clips"][number], vote: "good" | "bad") {
     setFeedbackRecords((current) => upsertFeedbackRecord(current, createFeedbackRecord(clip, vote, activeFeedbackPlatform)));
   }
@@ -1530,32 +1558,7 @@ export function ClipStudio({
         {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} /> : null}
 
         {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
-        {paywallMessage ? (
-          <div className="rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
-            <p className="text-sm font-semibold text-[var(--gold)]">Out of credits.</p>
-            <p className="mt-1 text-sm text-white/55">
-              {user ? "Upgrade to keep generating." : "Sign in free to keep generating and save your clips."}
-            </p>
-            <div className="mt-3">
-              {!user ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode("login");
-                    setAuthOpen(true);
-                  }}
-                  className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black"
-                >
-                  Sign in free
-                </button>
-              ) : (
-                <Link href="/settings" className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black">
-                  Upgrade plan
-                </Link>
-              )}
-            </div>
-          </div>
-        ) : null}
+        {paywallCard}
       </form>
     </section>
   );
@@ -1742,32 +1745,7 @@ export function ClipStudio({
 
             {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
 
-            {paywallMessage ? (
-              <div className="rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
-                <p className="text-sm font-semibold text-[var(--gold)]">Out of credits.</p>
-                <p className="mt-1 text-sm text-white/55">
-                  {user ? "Upgrade to keep generating." : "Sign in free to keep generating and save your clips."}
-                </p>
-                <div className="mt-3">
-                  {!user ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthMode("login");
-                        setAuthOpen(true);
-                      }}
-                      className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black"
-                    >
-                      Sign in free
-                    </button>
-                  ) : (
-                    <Link href="/settings" className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black">
-                      Upgrade plan
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ) : null}
+            {paywallCard}
           </form>
         </section>
 

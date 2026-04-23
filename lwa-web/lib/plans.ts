@@ -12,7 +12,7 @@ type PlanSurface = {
 const PLAN_SURFACES: Record<KnownPlanCode, PlanSurface> = {
   free: {
     code: "free",
-    name: "Starter Trial",
+    name: "Guest access",
     watermark: true,
     featureFlags: {
       clip_limit: 3,
