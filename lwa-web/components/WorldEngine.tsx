@@ -174,7 +174,6 @@ export function WorldEngine({
         <>
           <WorldCharacter position="left" tone="magenta" state={resolveCharacterState(0, worldState)} phase={worldPhase} />
           <WorldCharacter position="right" tone="cyan" state={resolveCharacterState(1, worldState)} phase={worldPhase} />
-          <WorldCharacter position="center" tone="crimson" state={resolveCharacterState(2, worldState)} phase={worldPhase} />
         </>
       ) : (
         <>

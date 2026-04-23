@@ -82,12 +82,18 @@ export default function VideoCard({
   return (
     <article
       className={[
-        "group rounded-[28px] border p-4 shadow-card transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
+        "clip-card result-clip-card group rounded-[28px] border p-4 shadow-card transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
+        postRank === 1 ? "top-pick" : "",
         hasRenderProof
-          ? "border-cyan-300/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015)),linear-gradient(180deg,rgba(8,12,34,0.9),rgba(3,5,16,0.98))] hover:border-cyan-300/24"
-          : "border-violet-300/14 bg-[linear-gradient(180deg,rgba(124,58,237,0.07),rgba(56,189,248,0.02)),linear-gradient(180deg,rgba(8,9,28,0.94),rgba(3,5,16,0.98))] opacity-88 hover:border-violet-300/24",
+          ? "hover:border-[var(--gold-border)]"
+          : "opacity-88 hover:border-[var(--gold-border)]",
       ].join(" ")}
     >
+      {postRank === 1 ? (
+        <div className="-mx-4 -mt-4 mb-4 bg-[var(--gold)] px-4 py-2 text-[10px] font-bold tracking-[0.14em] text-black">
+          #1 PICK — POST FIRST
+        </div>
+      ) : null}
       <div className="video-shell overflow-hidden rounded-[22px] border border-white/10 bg-black/60">
         <LiveClipPreview clip={clip} className="aspect-[9/16] transition duration-300 group-hover:scale-[1.02]" />
 
@@ -96,10 +102,10 @@ export default function VideoCard({
             <span
               className={[
                 "rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-[0.16em]",
-                hasRenderProof ? "bg-cyan-300/12 text-cyan-100" : "bg-violet-300/12 text-violet-100",
+                hasRenderProof ? "bg-[var(--gold-dim)] text-[var(--gold)]" : "bg-[var(--crimson-dim)] text-red-100",
               ].join(" ")}
             >
-              {hasRenderProof ? "READY NOW" : "HIGH LEVERAGE"}
+              {hasRenderProof ? "READY NOW" : "RENDERING AVAILABLE ON PRO"}
             </span>
             <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/82 backdrop-blur">
               {hasPlayablePreview ? "Preview ready" : hasRenderProof ? RESULT_COPY.previewProcessing : RESULT_COPY.ideasOnly}
@@ -110,12 +116,13 @@ export default function VideoCard({
 
       <div className="mt-4 space-y-3">
         <div className="flex flex-wrap gap-2">
+          <span className="score-badge">{Math.round(clip.virality_score ?? clip.score ?? 0)}/10</span>
           <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/82">{authority}</span>
           <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
             {hasRenderProof ? "Ready now" : "High viral potential"}
           </span>
           {clip.confidence_label ? (
-            <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs text-cyan-100">
+            <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs text-[var(--gold)]">
               {clip.confidence_label}
             </span>
           ) : null}
@@ -160,10 +167,10 @@ export default function VideoCard({
             onClick={() => onToggleQueue?.(clip)}
             className={[
               "secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium",
-              queued ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.12))] text-white shadow-cyan" : "",
+              queued ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]" : "",
             ].join(" ")}
           >
-            {queued ? "Queued for post" : "Queue post"}
+            {queued ? "Queued" : "Add to Queue"}
           </button>
 
           {downloadUrl ? (
@@ -172,7 +179,7 @@ export default function VideoCard({
               download
               className="primary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold"
             >
-              Export clip
+              Download
             </a>
           ) : hasPlayablePreview ? (
             <a
@@ -215,8 +222,8 @@ export default function VideoCard({
             className={[
               "rounded-full border px-3 py-1.5 text-xs font-medium transition",
               feedbackVote === "good"
-                ? "border-cyan-300/30 bg-cyan-300/12 text-cyan-100"
-                : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-100",
+                ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]"
+                : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-[var(--gold-border)] hover:bg-[var(--gold-dim)] hover:text-[var(--gold)]",
             ].join(" ")}
           >
             Good

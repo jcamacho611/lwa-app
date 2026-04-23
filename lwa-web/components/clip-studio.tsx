@@ -69,6 +69,8 @@ import {
   uploadSource,
 } from "../lib/api";
 import { clearStoredToken, readStoredToken, storeToken } from "../lib/auth";
+import { fireGodTrigger } from "../lib/character-ai";
+import { emitLWACharacterEvent } from "../lib/character-controller";
 import {
   applyPreferenceBoost,
   buildPreferenceProfile,
@@ -524,6 +526,12 @@ export function ClipStudio({
     setIsLoading(true);
     setError(null);
     setPaywallMessage(null);
+    emitLWACharacterEvent({ state: "react", trigger: "generation_start" });
+    void fireGodTrigger("generation_start", {
+      route: window.location.pathname,
+      platform: useManualPlatform ? platform : "Auto",
+      creditsRemaining,
+    });
 
     try {
       const data = await generateClips(
@@ -540,6 +548,14 @@ export function ClipStudio({
       setResult(data);
       setClipRecoveryStates({});
       setPaywallMessage(null);
+      const leadClip = data.clips?.[0];
+      void fireGodTrigger("generation_complete", {
+        route: window.location.pathname,
+        lastClipScore: leadClip?.score,
+        lastClipHook: leadClip?.hook,
+        creditsRemaining: data.processing_summary?.credits_remaining,
+        platform: data.processing_summary?.target_platform || platform,
+      });
       if (token) {
         await refreshAccount(token);
       }
@@ -780,6 +796,27 @@ export function ClipStudio({
       : sourceMode === "image"
         ? Boolean(selectedUploadId)
         : Boolean(videoUrl.trim() || selectedUploadId);
+  useEffect(() => {
+    if (!hasSourceSelected) {
+      return;
+    }
+
+    emitLWACharacterEvent({ state: "alert", trigger: "user_action" });
+    void fireGodTrigger("url_pasted", {
+      route: window.location.pathname,
+      platform: useManualPlatform ? platform : "Auto",
+    });
+  }, [hasSourceSelected, platform, useManualPlatform]);
+
+  useEffect(() => {
+    if (typeof creditsRemaining === "number" && creditsRemaining <= 1) {
+      void fireGodTrigger("low_credits", {
+        route: window.location.pathname,
+        creditsRemaining,
+        platform: activeResult?.processing_summary?.target_platform || platform,
+      });
+    }
+  }, [activeResult?.processing_summary?.target_platform, creditsRemaining, platform]);
   const requiresAccount = !["home", "generate", "upload"].includes(initialSection);
   const showGenerator = ["home", "generate", "upload"].includes(initialSection);
   const showDashboard = ["dashboard"].includes(initialSection);
@@ -1007,6 +1044,13 @@ export function ClipStudio({
       );
       setBundleExportState("ready");
       setBundleExportMessage(`Bundle ready: ${bundle.file_name}`);
+      void fireGodTrigger("first_download", {
+        route: window.location.pathname,
+        lastClipScore: orderedClips[0]?.score,
+        lastClipHook: orderedClips[0]?.hook,
+        creditsRemaining,
+        platform: activeResult.processing_summary?.target_platform || platform,
+      });
       if (bundle.download_url) {
         window.open(bundle.download_url, "_blank", "noopener,noreferrer");
       }
@@ -1179,8 +1223,8 @@ export function ClipStudio({
 
   function renderSourceModeControls() {
     return (
-      <div>
-        <span className="mb-3 block text-sm font-medium text-ink/84">Input type</span>
+      <div className="source-mode-controls">
+        <span className="source-command-label mb-3 block">Mode</span>
         <div className="grid gap-2 sm:grid-cols-3">
           {sourceModeOptions.map((option) => {
             const active = sourceMode === option.value;
@@ -1190,10 +1234,8 @@ export function ClipStudio({
                 type="button"
                 onClick={() => setSourceMode(option.value)}
                 className={[
-                  "rounded-[20px] border px-4 py-3 text-left transition",
-                  active
-                    ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
-                    : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
+                  "source-mode-option rounded-[20px] border px-4 py-3 text-left transition",
+                  active ? "source-mode-option-active" : "",
                 ].join(" ")}
               >
                 <span className="block text-sm font-semibold">{option.label}</span>
@@ -1209,17 +1251,17 @@ export function ClipStudio({
   function renderSourceInput() {
     if (sourceMode === "idea") {
       return (
-        <label className="block">
-          <span className="mb-3 block text-sm font-medium text-ink/84">Idea prompt</span>
+        <label className="source-command-field block">
+          <span className="source-command-label mb-3 block">Idea</span>
           <textarea
             data-lwa-source-input="true"
             value={ideaPrompt}
             onChange={(event) => setIdeaPrompt(event.target.value)}
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
-            placeholder="Describe the short-form asset you want LWA to generate"
+            placeholder="Describe the clip angle..."
             rows={4}
-            className="input-surface input-command w-full resize-none rounded-[28px] px-5 py-5 text-base"
+            className="source-command-input input-surface input-command w-full resize-none rounded-[28px] px-5 py-5 text-base"
           />
         </label>
       );
@@ -1232,16 +1274,16 @@ export function ClipStudio({
           <p className="mt-2 text-sm leading-7 text-ink/68">
             {selectedUploadIsImage
               ? `Ready: ${selectedUploadName}`
-              : "Upload an image in the source panel. LWA will send it through the generation provider flow."}
+              : "Upload an image first."}
           </p>
           <label className="mt-4 block">
-            <span className="mb-3 block text-sm font-medium text-ink/84">Optional direction</span>
+            <span className="source-command-label mb-3 block">Angle</span>
             <textarea
               value={ideaPrompt}
               onChange={(event) => setIdeaPrompt(event.target.value)}
-              placeholder="Add motion, style, or platform direction for this image"
+              placeholder="Motion, style, or platform..."
               rows={3}
-              className="input-surface input-command w-full resize-none rounded-[24px] px-5 py-4 text-base"
+              className="source-command-input input-surface input-command w-full resize-none rounded-[24px] px-5 py-4 text-base"
             />
           </label>
         </div>
@@ -1249,8 +1291,8 @@ export function ClipStudio({
     }
 
     return (
-      <label className="block">
-        <span className="mb-3 block text-sm font-medium text-ink/84">Source link</span>
+      <label className="source-command-field block">
+        <span className="source-command-label mb-3 block">Source</span>
         <input
           type="url"
           data-lwa-source-input="true"
@@ -1258,8 +1300,8 @@ export function ClipStudio({
           onChange={(event) => setVideoUrl(event.target.value)}
           onFocus={() => setInputFocused(true)}
           onBlur={() => setInputFocused(false)}
-          placeholder="Paste YouTube, MP4, or any public video URL"
-          className="input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
+          placeholder="Paste a video URL..."
+          className="source-command-input input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
         />
       </label>
     );
@@ -1267,18 +1309,18 @@ export function ClipStudio({
 
   const homeGeneratorSection = (
     <section
-      className="generator-command-card rounded-[38px] p-6 sm:p-8"
+      className="generator-command-card source-command-card rounded-[38px] p-6 sm:p-8"
       onMouseEnter={() => setGeneratorHovered(true)}
       onMouseLeave={() => setGeneratorHovered(false)}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="section-kicker">Command input</p>
-          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop one source. Get the posting stack.</h2>
+          <p className="section-kicker">Source command</p>
+          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop in. Get clips.</h2>
           <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/82">
             {generationMode === "quick"
-              ? "Lead clip, follow-ups, and export moves back."
-              : "LWA learns what you keep and tightens the next pack."}
+              ? "Paste once. Post-ready stack."
+              : "Learn what you keep."}
           </p>
         </div>
         <StatPill tone="accent">{useManualPlatform ? platform : "Auto recommend"}</StatPill>
@@ -1346,7 +1388,7 @@ export function ClipStudio({
                       className={[
                         "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
                         active
-                          ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
+                          ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]"
                           : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
                       ].join(" ")}
                     >
@@ -1384,7 +1426,7 @@ export function ClipStudio({
                     type="checkbox"
                     checked={improveResults}
                     onChange={(event) => setImproveResults(event.target.checked)}
-                    className="h-4 w-4 accent-cyan-400"
+                    className="h-4 w-4 accent-[var(--gold)]"
                   />
                   Improve results
                 </label>
@@ -1432,7 +1474,7 @@ export function ClipStudio({
     <section className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),320px]">
         <section
-          className="generator-command-card rounded-[38px] p-6 sm:p-8"
+          className="generator-command-card source-command-card rounded-[38px] p-6 sm:p-8"
           onMouseEnter={() => setGeneratorHovered(true)}
           onMouseLeave={() => setGeneratorHovered(false)}
         >
@@ -1444,7 +1486,7 @@ export function ClipStudio({
               </h2>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">
                 {generationMode === "quick"
-                  ? "Keep the first run simple: paste a source, get the stack, then decide what to move."
+                  ? "Paste source. Get ranked clips."
                   : GENERATOR_COPY.subhead}
               </p>
             </div>
@@ -1516,7 +1558,7 @@ export function ClipStudio({
                           className={[
                             "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
                             active
-                              ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
+                              ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]"
                               : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
                           ].join(" ")}
                         >
@@ -1562,7 +1604,7 @@ export function ClipStudio({
                         type="checkbox"
                         checked={improveResults}
                         onChange={(event) => setImproveResults(event.target.checked)}
-                        className="h-4 w-4 accent-cyan-400"
+                        className="h-4 w-4 accent-[var(--gold)]"
                       />
                       Improve results
                     </label>
@@ -1848,7 +1890,7 @@ export function ClipStudio({
               {bundleExportState === "exporting" ? "Building bundle..." : "Export bundle"}
             </button>
             {bundleExportMessage ? (
-              <p className={["mt-3 text-sm", bundleExportState === "failed" ? "text-red-200" : "text-cyan-100"].join(" ")}>
+              <p className={["mt-3 text-sm", bundleExportState === "failed" ? "text-red-200" : "text-[var(--gold)]"].join(" ")}>
                 {bundleExportMessage}
               </p>
             ) : null}
@@ -1975,12 +2017,17 @@ export function ClipStudio({
                     <Link href="/dashboard" className="secondary-button inline-flex rounded-full px-4 py-2.5 text-sm font-medium">
                       {HERO_COPY.secondaryCta}
                     </Link>
-                    <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-ink/72 sm:inline-flex">
-                      {planSurface.name}
+                    <span className="credits-bar hidden sm:inline-flex">
+                      <span className="credits-count">{typeof creditsRemaining === "number" ? creditsRemaining : planLimits.generationsPerDay}</span>
+                      credits
                     </span>
                   </>
                 ) : (
                   <>
+                    <span className="credits-bar hidden sm:inline-flex">
+                      <span className="credits-count">{planLimits.generationsPerDay || 1}</span>
+                      credits
+                    </span>
                     <button
                       type="button"
                       onClick={() => {
@@ -2007,8 +2054,8 @@ export function ClipStudio({
             }
           />
 
-          <section className="home-stage grid gap-10 pb-10 pt-14 lg:grid-cols-[0.88fr,1.12fr] lg:items-start">
-            <div className="space-y-7 lg:sticky lg:top-28">
+          <section className="home-stage mx-auto grid max-w-5xl gap-8 pb-10 pt-14 lg:items-start">
+            <div className="space-y-6 text-center">
               <div className="home-stage-grid" aria-hidden="true">
                 <div className="home-stage-sigil" />
                 <div className="home-stage-constellation" />
@@ -2016,22 +2063,21 @@ export function ClipStudio({
               </div>
 
               <div className="space-y-5">
-                <div className="inline-flex items-center gap-3">
-                  <span className="home-brand-mark flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/24 bg-[rgba(255,255,255,0.035)] shadow-cyan">
-                    <img src="/brand/lwa-mark.svg" alt="LWA omega mark" className="h-7 w-7" />
+                <div className="inline-flex items-center justify-center gap-3">
+                  <span className="home-brand-mark flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--gold-border)] bg-[var(--gold-dim)]">
+                    <img src="/brand-source/omega-mark.png" alt="LWA omega mark" className="h-7 w-7 object-contain" />
                   </span>
                   <p className="section-kicker">{HERO_COPY.kicker}</p>
                 </div>
-                <h1 className="hero-headline max-w-5xl text-5xl font-semibold leading-[0.92] text-ink sm:text-7xl lg:text-[5.9rem]">
-                  <span className="text-gradient">Clips worth posting.</span>
-                  <span className="block text-white">Decided fast.</span>
+                <h1 className="hero-headline mx-auto max-w-5xl text-5xl font-semibold leading-[0.92] text-ink sm:text-7xl lg:text-[5.9rem]">
+                  <span className="text-gradient">{HERO_COPY.headline}</span>
                 </h1>
-                <p className="max-w-2xl text-base leading-8 text-subtext sm:text-lg">
+                <p className="mx-auto max-w-2xl text-base leading-8 text-subtext sm:text-lg">
                   {HERO_COPY.subhead}
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap justify-center gap-3">
                 <Link href="/generate" className="primary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold">
                   {HERO_COPY.primaryCta}
                 </Link>
@@ -2043,7 +2089,7 @@ export function ClipStudio({
                 </Link>
               </div>
 
-              <div className="world-identity-card rounded-[32px] p-5">
+              <div className="world-identity-card mx-auto max-w-2xl rounded-[32px] p-5 text-left">
                 <p className="section-kicker">Live system</p>
                 <h2 className="mt-3 text-2xl font-semibold text-ink">A clip engine with a world around it.</h2>
                 <p className="mt-3 text-sm leading-7 text-ink/62">
@@ -2051,7 +2097,7 @@ export function ClipStudio({
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 {featureProof.map((item, index) => (
                   <StatPill key={item} tone={index === 1 ? "signal" : "neutral"}>
                     {item}
@@ -2060,7 +2106,7 @@ export function ClipStudio({
               </div>
             </div>
 
-            <div className="space-y-5">
+            <div className="home-command-wrap space-y-5">
               {homeGeneratorSection}
             </div>
           </section>
@@ -2077,8 +2123,9 @@ export function ClipStudio({
             rightSlot={
               user ? (
                 <div className="flex items-center gap-2">
-                  <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-ink/72 lg:inline-flex">
-                    {planSurface.name}
+                  <span className="credits-bar hidden lg:inline-flex">
+                    <span className="credits-count">{typeof creditsRemaining === "number" ? creditsRemaining : planLimits.generationsPerDay}</span>
+                    credits
                   </span>
                   <button
                     type="button"
@@ -2370,9 +2417,9 @@ function StatPill({ children, tone = "neutral" }: { children: ReactNode; tone?: 
       className={[
         "rounded-full border px-3 py-1.5 text-xs font-semibold",
         tone === "accent"
-          ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
+          ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]"
           : tone === "signal"
-            ? "border-cyan-400/25 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.08))] text-white"
+            ? "border-[var(--gold-border)] bg-black/30 text-[var(--text-primary)]"
             : "border-white/10 bg-white/[0.05] text-ink/72",
       ].join(" ")}
     >
@@ -2585,8 +2632,8 @@ function InlineAlert({
 }) {
   const toneClass =
     tone === "error"
-      ? "border-red-400/20 bg-red-400/8 text-red-100"
-      : "border-neonPurple/20 bg-neonPurple/10 text-ink";
+      ? "border-[rgba(139,0,0,0.35)] bg-[var(--crimson-dim)] text-red-100"
+      : "border-[var(--gold-border)] bg-[var(--gold-dim)] text-ink";
 
   return (
     <div className={["rounded-[24px] border px-5 py-4 text-sm", toneClass].join(" ")}>

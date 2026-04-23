@@ -27,6 +27,10 @@ export default function Navbar({
   variant = "workspace",
 }: NavbarProps) {
   const pathname = usePathname();
+  const primaryItems = ["/generate", "/dashboard", "/campaigns", "/wallet"]
+    .map((href) => items.find((item) => item.href === href))
+    .filter(Boolean) as NavItem[];
+  const visibleItems = primaryItems.length ? primaryItems : items.slice(0, 4);
 
   return (
     <header
@@ -39,8 +43,9 @@ export default function Navbar({
         <Logo compact={compactLogo} showTagline={showTagline} animated={variant === "home"} />
 
         <nav className="order-3 flex w-full gap-1.5 overflow-x-auto pb-1 md:order-2 md:w-auto md:flex-1 md:justify-center md:pb-0">
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const active = pathname === item.href;
+            const label = item.href === "/dashboard" ? "Queue" : rewriteSurfaceLabel(item.label);
             return (
               <Link
                 key={item.href}
@@ -50,7 +55,7 @@ export default function Navbar({
                   active ? "nav-pill-active" : "",
                 ].join(" ")}
               >
-                {rewriteSurfaceLabel(item.label)}
+                {label}
               </Link>
             );
           })}

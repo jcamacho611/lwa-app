@@ -89,8 +89,11 @@ export default function HeroClip({
   }
 
   return (
-    <section id="lead-clip" className="group relative overflow-hidden rounded-[42px] border border-cyan-300/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.018)),linear-gradient(180deg,rgba(8,12,34,0.95),rgba(3,5,16,0.98))] p-6 shadow-[0_28px_100px_rgba(0,0,0,0.44)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_36px_110px_rgba(56,189,248,0.16)] sm:p-7 lg:p-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.18),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(0,231,255,0.13),transparent_32%),radial-gradient(circle_at_60%_84%,rgba(37,99,235,0.1),transparent_34%)]" />
+    <section id="lead-clip" className="lead-clip-card clip-card top-pick group relative overflow-hidden rounded-[42px] border p-6 shadow-[0_28px_100px_rgba(0,0,0,0.44)] transition-all duration-300 hover:scale-[1.01] sm:p-7 lg:p-8">
+      <div className="-mx-6 -mt-6 mb-6 bg-[var(--gold)] px-6 py-2 text-[10px] font-bold tracking-[0.14em] text-black sm:-mx-7 sm:-mt-7 lg:-mx-8 lg:-mt-8">
+        #1 PICK — POST FIRST
+      </div>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(201,162,39,0.12),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(201,162,39,0.08),transparent_32%)]" />
 
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
         <div className="space-y-4">
@@ -103,7 +106,7 @@ export default function HeroClip({
                 {clip.confidence_label ? <span className="status-chip status-submitted">{clip.confidence_label}</span> : null}
                 {clip.caption_style ? <span className="status-chip status-submitted">{clip.caption_style}</span> : null}
               </div>
-              <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-cyan-100">
+              <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-4 py-2 text-xs font-semibold tracking-[0.18em] text-[var(--gold)]">
                 {postAuthority}
               </span>
             </div>
@@ -137,7 +140,7 @@ export default function HeroClip({
               onClick={() => onToggleQueue?.(clip)}
               className={[
                 "secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium",
-                queued ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.12))] text-white shadow-cyan" : "",
+                queued ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]" : "",
               ].join(" ")}
             >
               {queued ? "Queued for post" : "Queue post"}
@@ -167,8 +170,8 @@ export default function HeroClip({
             <p className="text-lg leading-8 text-ink/88">{clip.hook}</p>
           </div>
 
-          <div className="rounded-[26px] border border-cyan-300/18 bg-[linear-gradient(180deg,rgba(0,231,255,0.09),rgba(124,58,237,0.045))] p-5">
-            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-cyan-100/70">{RESULT_COPY.whyPicked}</p>
+          <div className="rounded-[26px] border border-[var(--gold-border)] bg-[var(--gold-dim)] p-5">
+            <p className="mb-2 text-xs uppercase tracking-[0.24em] text-[var(--gold)]">{RESULT_COPY.whyPicked}</p>
             <p className="text-base font-medium leading-7 text-white">{decisionText}</p>
           </div>
 
@@ -225,8 +228,8 @@ export default function HeroClip({
               className={[
                 "rounded-full border px-3 py-1.5 text-xs font-medium transition",
                 feedbackVote === "good"
-                ? "border-cyan-300/30 bg-cyan-300/12 text-cyan-100"
-                : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-100",
+                ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]"
+                : "border-white/12 bg-white/[0.05] text-ink/76 hover:border-[var(--gold-border)] hover:bg-[var(--gold-dim)] hover:text-[var(--gold)]",
               ].join(" ")}
             >
               Good

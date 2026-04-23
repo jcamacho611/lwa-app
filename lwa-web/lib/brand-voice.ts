@@ -26,19 +26,19 @@ export const BRAND_VOICE = {
 } as const;
 
 export const HERO_COPY = {
-  kicker: "CLIP DECISION ENGINE",
-  headline: "Clips worth posting. Decided fast.",
-  subhead: "Paste one source. LWA picks the lead cut, packages the stack, and gets you closer to posting.",
+  kicker: "LWA",
+  headline: "Drop in. Get clips.",
+  subhead: "One source. Ranked short-form. Ready to post.",
   primaryCta: "Generate clips",
-  secondaryCta: "Open workspace",
+  secondaryCta: "Open queue",
 } as const;
 
 export const GENERATOR_COPY = {
-  title: "Build clips worth posting",
-  subhead: "Source in. Previews, hooks, and post order back.",
-  loading: "LWA is cutting.",
+  title: "Paste your source URL",
+  subhead: "Hooks, previews, post order.",
+  loading: "Finding your best moments...",
   submit: "Generate clips",
-  submitting: "Generating...",
+  submitting: "Finding clips...",
   outputReady: "Ready. Review, queue, export.",
   outputIdle: "Drop one link or file.",
 } as const;

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { BackgroundCanvas } from "../components/BackgroundCanvas";
+import { CharacterStage } from "../components/CharacterStage";
 import { resolveDirection, resolveLocale } from "../lib/intl";
 import { siteUrl } from "../lib/seo";
 import "./globals.css";
@@ -50,7 +52,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
   return (
     <html lang={locale} dir={direction} className="dark" suppressHydrationWarning>
-      <body className="bg-bgDark text-white antialiased">{children}</body>
+      <body className="bg-bgDark text-white antialiased">
+        <BackgroundCanvas />
+        <CharacterStage />
+        <div className="lwa-ui-layer">{children}</div>
+      </body>
     </html>
   );
 }
