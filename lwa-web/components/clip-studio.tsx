@@ -107,6 +107,14 @@ const sourceModeOptions: Array<{ value: SourceMode; label: string; detail: strin
   { value: "idea", label: "Idea", detail: "Create from prompt" },
 ];
 
+function normalizeUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
+  return `https://${trimmed}`;
+}
+
 function clipHasRenderedMedia(clip: ClipResult) {
   return hasPreviewAsset(clip);
 }
@@ -537,6 +545,11 @@ export function ClipStudio({
       return;
     }
 
+    const normalizedVideoUrl = sourceMode === "video" ? normalizeUrl(videoUrl) : "";
+    if (sourceMode === "video" && normalizedVideoUrl && normalizedVideoUrl !== videoUrl) {
+      setVideoUrl(normalizedVideoUrl);
+    }
+
     setIsLoading(true);
     setError(null);
     setPaywallMessage(null);
@@ -551,7 +564,7 @@ export function ClipStudio({
       const data = await generateClips(
         {
           mode: sourceMode,
-          url: sourceMode === "video" ? videoUrl.trim() || undefined : undefined,
+          url: sourceMode === "video" ? normalizedVideoUrl || undefined : undefined,
           platform: useManualPlatform ? platform : undefined,
           uploadFileId: sourceMode === "idea" ? undefined : selectedUploadId || undefined,
           contentAngle: improveResults ? preferenceProfile.topPackagingAngle : undefined,
@@ -587,12 +600,17 @@ export function ClipStudio({
       if (submitError instanceof ApiError && submitError.status === 402) {
         setError(null);
         setPaywallMessage(submitError.message);
-      } else if (submitError instanceof ApiError && submitError.status === 502) {
-        setError("Backend is starting up. Wait 10 seconds and try again.");
-      } else if (submitError instanceof ApiError && submitError.status === 504) {
-        setError("Video took too long. Try a shorter video under 10 minutes.");
       } else {
-        setError(submitError instanceof Error ? submitError.message : "Unable to generate clips right now.");
+        const raw = submitError instanceof Error ? submitError.message : "Unable to generate clips.";
+        const lowered = raw.toLowerCase();
+        const isBot = lowered.includes("sign in to confirm") || lowered.includes("not a bot");
+        const isLive = lowered.includes("live") || lowered.includes("premiere");
+        const isTimeout = lowered.includes("timeout") || lowered.includes("too long");
+
+        if (isBot) setError("This video couldn't be accessed. Try a different YouTube URL or a TikTok link.");
+        else if (isLive) setError("Live streams can't be clipped yet. Paste a regular uploaded video.");
+        else if (isTimeout) setError("Video took too long. Try a shorter video under 10 minutes.");
+        else setError("Could not process that source. Try a different video URL.");
       }
     } finally {
       setIsLoading(false);
@@ -1333,7 +1351,11 @@ export function ClipStudio({
       <label className="source-command-field block">
         <span className="source-command-label mb-3 block">Source</span>
         <input
-          type="url"
+          type="text"
+          inputMode="url"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           data-lwa-source-input="true"
           value={videoUrl}
           onChange={(event) => setVideoUrl(event.target.value)}
@@ -1512,9 +1534,9 @@ export function ClipStudio({
           <div className="rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
             <p className="text-sm font-semibold text-[var(--gold)]">Out of credits.</p>
             <p className="mt-1 text-sm text-white/55">
-              {user ? "Upgrade your plan to keep generating." : "Sign in to keep generating and save your clips."}
+              {user ? "Upgrade to keep generating." : "Sign in free to keep generating and save your clips."}
             </p>
-            <div className="mt-3 flex gap-3">
+            <div className="mt-3">
               {!user ? (
                 <button
                   type="button"
@@ -1724,9 +1746,9 @@ export function ClipStudio({
               <div className="rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
                 <p className="text-sm font-semibold text-[var(--gold)]">Out of credits.</p>
                 <p className="mt-1 text-sm text-white/55">
-                  {user ? "Upgrade your plan to keep generating." : "Sign in to keep generating and save your clips."}
+                  {user ? "Upgrade to keep generating." : "Sign in free to keep generating and save your clips."}
                 </p>
-                <div className="mt-3 flex gap-3">
+                <div className="mt-3">
                   {!user ? (
                     <button
                       type="button"
@@ -2094,7 +2116,7 @@ export function ClipStudio({
   ) : null;
 
   return (
-    <main className={["app-shell-grid min-h-screen", motionLocked ? "results-motion-locked" : ""].join(" ")}>
+    <section className={["app-shell-grid min-h-screen", motionLocked ? "results-motion-locked" : ""].join(" ")}>
       <AIBackground
         variant={isHome ? "home" : "workspace"}
         worldState={worldState}
@@ -2552,7 +2574,7 @@ export function ClipStudio({
           </div>
         </div>
       )}
-    </main>
+    </section>
   );
 }
 

@@ -1,6 +1,6 @@
 export const RESULT_COPY = {
   whyPicked: "Why this was picked",
-  previewProcessing: "Preview still processing",
+  previewProcessing: "Preview available on Pro",
   previewRetry: "Retry preview",
   ideasOnly: "Ideas only",
   finishedPreviews: "Finished previews",
