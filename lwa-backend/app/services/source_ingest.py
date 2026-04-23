@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ..core.config import Settings
@@ -19,6 +18,9 @@ class SourceIngestService:
         """Ingest video from URL and return metadata."""
         try:
             import yt_dlp
+
+            if video_url and not video_url.startswith("http"):
+                video_url = f"https://{video_url}"
             
             # Configure yt-dlp options
             ydl_opts = {
@@ -26,13 +28,12 @@ class SourceIngestService:
                 'quiet': True,
                 'no_warnings': True,
                 'extract_flat': False,
+                "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
+                "http_headers": {
+                    "User-Agent": "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
             }
-            cookiefile = getattr(self.settings, "yt_dlp_cookiefile", None)
-            if cookiefile and Path(cookiefile).exists():
-                ydl_opts["cookiefile"] = cookiefile
-                logger.info("source_ingest_cookiefile_loaded path=%s", cookiefile)
-            else:
-                logger.warning("source_ingest_cookiefile_missing youtube_may_block_server_requests=true")
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(video_url, download=False)

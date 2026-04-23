@@ -24,6 +24,9 @@ export default function HomePage() {
         <h1 className="mt-10 text-4xl font-semibold leading-tight text-ink sm:text-6xl">
           Viral-ready clips. One source in.
         </h1>
+        <p className="mt-4 max-w-2xl text-base leading-8 text-subtext sm:text-lg">
+          Paste a link. LWA picks the best moments.
+        </p>
 
         <form action="/generate" method="get" className="mt-10 w-full space-y-4">
           <input

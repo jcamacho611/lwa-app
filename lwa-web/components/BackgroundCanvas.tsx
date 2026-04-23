@@ -30,7 +30,7 @@ export function BackgroundCanvas() {
 
   return (
     <canvas
-      id="lwa-bg"
+      id="lwa-bg-canvas"
       ref={canvasRef}
       className="lwa-bg-canvas"
       aria-hidden="true"

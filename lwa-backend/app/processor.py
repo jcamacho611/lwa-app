@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 import textwrap
 from typing import Any, List, Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 try:
     import imageio_ffmpeg  # type: ignore
@@ -571,8 +571,26 @@ def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request
         work_dir,
         options["format"],
     )
-    with YoutubeDL(options) as ydl:
-        info = ydl.extract_info(video_url, download=True)
+    try:
+        with YoutubeDL(options) as ydl:
+            info = ydl.extract_info(video_url, download=True)
+    except Exception as error:
+        hostname = urlparse(video_url).netloc.lower()
+        is_youtube_source = "youtube" in hostname or "youtu.be" in hostname
+        if not is_youtube_source:
+            raise
+
+        retry_options = {
+            **options,
+            "extractor_args": {"youtube": {"player_client": ["ios"]}},
+        }
+        logger.warning(
+            "source_download_retry request_id=%s player_client=ios reason=%s",
+            request_id,
+            error,
+        )
+        with YoutubeDL(retry_options) as ydl:
+            info = ydl.extract_info(video_url, download=True)
     logger.info(
         "source_download_complete request_id=%s title=%s duration=%s webpage_url=%s",
         request_id,

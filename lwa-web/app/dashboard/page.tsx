@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ClipStudio } from "../../components/clip-studio";
+import { RoutePlaceholder } from "../../components/RoutePlaceholder";
 import { buildPageMetadata } from "../../lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -10,5 +10,5 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default function DashboardPage() {
-  return <ClipStudio initialSection="dashboard" />;
+  return <RoutePlaceholder title="Dashboard" />;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AccountWorkspace } from "./account-workspace";
 import { AuthPanel } from "./auth-panel";
 import { BatchPanel } from "./batch-panel";
@@ -69,6 +69,7 @@ import {
   updateCampaignAssignment,
   updateScheduledPost,
   uploadSource,
+  normalizeUrl,
 } from "../lib/api";
 import { clearStoredToken, readStoredToken, storeToken } from "../lib/auth";
 import { fireGodTrigger } from "../lib/character-ai";
@@ -109,14 +110,6 @@ const sourceModeOptions: Array<{ value: SourceMode; label: string; detail: strin
   { value: "idea", label: "Idea", detail: "Create from prompt" },
 ];
 
-function normalizeUrl(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return trimmed;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (trimmed.startsWith("//")) return `https:${trimmed}`;
-  return `https://${trimmed}`;
-}
-
 function clipHasRenderedMedia(clip: ClipResult) {
   return hasPreviewAsset(clip);
 }
@@ -141,9 +134,10 @@ const appNavItems = [
 
 const marketingNavItems = [
   { href: "/generate", label: rewriteSurfaceLabel("Generate") },
-  { href: "/history", label: rewriteSurfaceLabel("History") },
   { href: "/campaigns", label: rewriteSurfaceLabel("Campaigns") },
 ] as const;
+
+const VIDEO_LOADING_STAGES = ["Downloading", "Transcribing", "Analyzing", "Scoring", "Packaging"];
 
 type StudioSection =
   | "home"
@@ -175,6 +169,7 @@ export function ClipStudio({
   pageTitle,
   pageDescription,
 }: ClipStudioProps) {
+  const generationControllerRef = useRef<AbortController | null>(null);
   const [videoUrl, setVideoUrl] = useState(initialUrl);
   const [sourceMode, setSourceMode] = useState<SourceMode>("video");
   const [ideaPrompt, setIdeaPrompt] = useState("");
@@ -225,6 +220,12 @@ export function ClipStudio({
   const selectedUploadIsImage =
     selectedUploadType.startsWith("image/") || /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(selectedUploadName);
   const isGuest = !user;
+  const loadingStages =
+    sourceMode === "idea"
+      ? ["Reading prompt", "Generating motion", "Analyzing", "Scoring", "Packaging"]
+      : sourceMode === "image"
+        ? ["Reading image", "Generating motion", "Analyzing", "Scoring", "Packaging"]
+        : VIDEO_LOADING_STAGES;
 
   const activeSourceLabel = useMemo(() => {
     if (sourceMode === "idea") {
@@ -357,11 +358,11 @@ export function ClipStudio({
     }
 
     const interval = window.setInterval(() => {
-      setLoadingStageIndex((current) => (current + 1) % 3);
+      setLoadingStageIndex((current) => (current + 1) % Math.max(loadingStages.length, 1));
     }, 1400);
 
     return () => window.clearInterval(interval);
-  }, [isLoading]);
+  }, [isLoading, loadingStages.length]);
 
   useEffect(() => {
     if (!activeResult) {
@@ -552,6 +553,9 @@ export function ClipStudio({
       setVideoUrl(normalizedVideoUrl);
     }
 
+    generationControllerRef.current?.abort();
+    const controller = new AbortController();
+    generationControllerRef.current = controller;
     setIsLoading(true);
     setError(null);
     setPaywallMessage(null);
@@ -573,6 +577,7 @@ export function ClipStudio({
           ideaPrompt: sourceMode === "idea" || sourceMode === "image" ? ideaPrompt.trim() || undefined : undefined,
         },
         token,
+        { signal: controller.signal },
       );
       const allStrategyOnly = data.clips.length > 0 && data.clips.every((clip) => clip.is_strategy_only === true);
       const fallbackReason = (data.processing_summary as { fallback_reason?: string } | undefined)?.fallback_reason;
@@ -598,23 +603,32 @@ export function ClipStudio({
         await refreshAccount(token);
       }
     } catch (submitError) {
+      if (submitError instanceof DOMException && submitError.name === "AbortError") {
+        setError("Generation cancelled. Try another URL.");
+        return;
+      }
       setResult(null);
       if (submitError instanceof ApiError && submitError.status === 402) {
         setError(null);
         setPaywallMessage(user ? submitError.message : "guest_limit");
       } else {
         const raw = submitError instanceof Error ? submitError.message : "Unable to generate clips.";
-        const lowered = raw.toLowerCase();
-        const isBot = lowered.includes("sign in to confirm") || lowered.includes("not a bot");
-        const isLive = lowered.includes("live") || lowered.includes("premiere");
-        const isTimeout = lowered.includes("timeout") || lowered.includes("too long");
+        const lower = raw.toLowerCase();
+        const isBot = lower.includes("sign in to confirm") || lower.includes("not a bot") || lower.includes("bot");
+        const isLive = lower.includes("live") || lower.includes("premiere");
+        const isTimeout = lower.includes("timeout") || lower.includes("too long") || lower.includes("504");
+        const isUnavailable = lower.includes("unavailable") || lower.includes("private") || lower.includes("removed");
 
         if (isBot) setError("This video couldn't be accessed. Try a different YouTube URL or a TikTok link.");
-        else if (isLive) setError("Live streams can't be clipped yet. Paste a regular YouTube video.");
+        else if (isLive) setError("Live streams can't be clipped yet. Paste a regular uploaded video.");
         else if (isTimeout) setError("Video took too long. Try a shorter video under 10 minutes.");
+        else if (isUnavailable) setError("This video is private, removed, or region-locked. Try another URL.");
         else setError("Could not process that source. Try a different video URL.");
       }
     } finally {
+      if (generationControllerRef.current === controller) {
+        generationControllerRef.current = null;
+      }
       setIsLoading(false);
     }
   }
@@ -659,6 +673,14 @@ export function ClipStudio({
       setUploadingFileName(null);
       event.target.value = "";
     }
+  }
+
+  function handleCancelGeneration() {
+    generationControllerRef.current?.abort();
+    generationControllerRef.current = null;
+    setIsLoading(false);
+    setLoadingStageIndex(0);
+    emitLWACharacterEvent({ state: "breathe", trigger: "generation_cancelled" });
   }
 
   async function handleBatchCreate(payload: {
@@ -879,16 +901,11 @@ export function ClipStudio({
   const showWallet = initialSection === "wallet";
   const showSettings = initialSection === "settings";
   const showPostingOnDashboard = initialSection === "dashboard";
+  const showPageIntro = Boolean(pageIntro) && !(isGuest && initialSection === "generate");
   const topAngles = (preferenceProfile.preferredAngles.length
     ? preferenceProfile.preferredAngles
     : orderedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
   const featureProof = ["Best clip first", "Hooks that hit", "Export-ready"];
-  const loadingStages =
-    sourceMode === "idea"
-      ? ["Reading idea", "Generating motion", "Preparing output"]
-      : sourceMode === "image"
-        ? ["Reading image", "Generating motion", "Preparing output"]
-        : ["Reading source", "Finding clips", "Preparing outputs"];
   const deliveryMoments = [
       {
         label: "Source in",
@@ -1046,10 +1063,10 @@ export function ClipStudio({
   const paywallCard = paywallMessage ? (
     <div className="rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
       <p className="text-sm font-semibold text-[var(--gold)]">
-        {user ? "Out of credits." : "Guest limit reached."}
+        Out of credits.
       </p>
       <p className="mt-1 text-sm text-white/55">
-        {user ? "Upgrade to keep generating." : "Try again later. Sign in to save history, queue, and campaigns."}
+        {user ? "Upgrade to keep generating." : "Sign in free to keep generating and save your clips."}
       </p>
       <div className="mt-3">
         {!user ? (
@@ -1059,12 +1076,12 @@ export function ClipStudio({
               setAuthMode("login");
               setAuthOpen(true);
             }}
-            className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black"
+            className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black hover:opacity-90"
           >
-            Sign in
+            Sign in free
           </button>
         ) : (
-          <Link href="/settings" className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black">
+          <Link href="/settings" className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black hover:opacity-90">
             Upgrade plan
           </Link>
         )}
@@ -1678,14 +1695,14 @@ export function ClipStudio({
             className={
               isGuest
                 ? "primary-button w-full rounded-full px-6 py-4 text-base font-semibold disabled:opacity-50"
-                : "primary-button inline-flex min-w-[220px] items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                : "primary-button inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:min-w-[220px] md:w-auto"
             }
           >
             {isGuest ? (isLoading ? "Finding clips..." : "Generate clips") : isLoading ? GENERATOR_COPY.submitting : GENERATOR_COPY.submit}
           </button>
         </div>
 
-        {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} /> : null}
+        {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} onCancel={handleCancelGeneration} /> : null}
 
         {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
         {paywallCard}
@@ -1714,8 +1731,12 @@ export function ClipStudio({
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <StatPill tone="accent">{planSurface.name}</StatPill>
-              <StatPill tone="signal">{activeResult ? "Live output" : "Premium review"}</StatPill>
+              {!isGuest ? (
+                <>
+                  <StatPill tone="accent">{planSurface.name}</StatPill>
+                  <StatPill tone="signal">{activeResult ? "Live output" : "Premium review"}</StatPill>
+                </>
+              ) : null}
             </div>
           </div>
 
@@ -1863,15 +1884,15 @@ export function ClipStudio({
                 disabled={isLoading}
                 className={
                   isGuest
-                    ? "primary-button w-full rounded-full px-6 py-4 text-base font-semibold disabled:opacity-50"
-                    : "primary-button inline-flex min-w-[240px] items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                  ? "primary-button w-full rounded-full px-6 py-4 text-base font-semibold disabled:opacity-50"
+                    : "primary-button inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:min-w-[240px] md:w-auto"
                 }
               >
                 {isGuest ? (isLoading ? "Finding clips..." : "Generate clips") : isLoading ? GENERATOR_COPY.submitting : GENERATOR_COPY.submit}
               </button>
             </div>
 
-            {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} /> : null}
+            {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} onCancel={handleCancelGeneration} /> : null}
 
             {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
 
@@ -2410,25 +2431,7 @@ export function ClipStudio({
           <div className="mt-8 grid gap-6 xl:grid-cols-[280px,minmax(0,1fr)]">
             <aside className="hidden xl:block">
               <div className="sticky top-28 space-y-4">
-                {isGuest ? (
-                  <div className="glass-panel rounded-[28px] p-5">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--gold-border)] bg-[var(--gold-dim)]">
-                      <img src="/brand-source/omega-mark.png" alt="LWA" className="h-8 w-8 object-contain" />
-                    </div>
-                    <h3 className="mt-5 text-2xl font-semibold text-ink">Generate clips.</h3>
-                    <p className="mt-3 text-sm leading-7 text-ink/62">Drop a source. Get what to post first.</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthMode("login");
-                        setAuthOpen(true);
-                      }}
-                      className="secondary-button mt-5 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
-                    >
-                      Sign in for history, queue, and campaigns
-                    </button>
-                  </div>
-                ) : (
+                {!isGuest ? (
                   <>
                     <WorkspaceRailCard
                       label="Studio pulse"
@@ -2455,13 +2458,13 @@ export function ClipStudio({
                       description="Generate, queue winners, then move into campaign flow."
                     />
                   </>
-                )}
+                ) : null}
               </div>
             </aside>
 
             <div className="space-y-6">
 
-              {pageIntro ? (
+              {showPageIntro && pageIntro ? (
                 <section className="hero-card rounded-[34px] p-6 sm:p-8">
                   <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                     <div className="max-w-3xl">
@@ -2864,21 +2867,54 @@ function WorkspaceRailCard({
   );
 }
 
-function LoadingSequence({ stages, activeIndex }: { stages: string[]; activeIndex: number }) {
+function LoadingSequence({
+  stages,
+  activeIndex,
+  onCancel,
+}: {
+  stages: string[];
+  activeIndex: number;
+  onCancel?: () => void;
+}) {
+  const safeLength = Math.max(stages.length, 1);
+  const progress = Math.min(((activeIndex + 1) / safeLength) * 100, 100);
+  const etaSeconds = Math.max((safeLength - activeIndex - 1) * 8, 6);
+
   return (
     <div className="panel-subtle rounded-[24px] px-5 py-6">
-      <div className="mb-5 flex items-center gap-3">
-        <div className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
-          <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
-          <img src="/brand/lwa-mark.svg" alt="LWA" className="relative h-6 w-6 opacity-90" />
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+            <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
+            <img src="/brand/lwa-mark.svg" alt="LWA" className="relative h-6 w-6 opacity-90" />
+          </div>
+          <div>
+            <p className="text-lg font-medium text-ink">LWA is building outputs</p>
+            <p className="text-sm text-ink/60">{stages.join(" → ")}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-lg font-medium text-ink">LWA is building outputs</p>
-          <p className="text-sm text-ink/60">Real media in. Clips, copy, and previews out.</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-ink/60">ETA ~{etaSeconds}s</p>
+          {onCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="secondary-button inline-flex min-h-[44px] items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium"
+            >
+              Cancel
+            </button>
+          ) : null}
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="mb-5 h-2 overflow-hidden rounded-full bg-white/[0.08]">
+        <div
+          className="h-full rounded-full bg-[linear-gradient(90deg,rgba(201,162,39,0.7),rgba(201,162,39,1))] transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-5">
         {stages.map((stage, index) => (
           <div
             key={stage}

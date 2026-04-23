@@ -17,6 +17,10 @@ type ClipPreviewProps = {
     | "preview_image_url"
     | "title"
     | "hook"
+    | "caption"
+    | "score"
+    | "virality_score"
+    | "platform_fit"
     | "start_time"
     | "end_time"
     | "render_status"
@@ -39,6 +43,10 @@ export default function ClipPreview({ clip, className = "aspect-[9/16]", autoPla
   const playable = liveClip.preview_url || liveClip.edited_clip_url || liveClip.clip_url || liveClip.raw_clip_url;
   const thumbnail = liveClip.thumbnail_url || liveClip.preview_image_url;
   const shellClassName = `relative h-full w-full overflow-hidden rounded-[inherit] ${className}`;
+  const scoreValue = Math.round(liveClip.virality_score ?? liveClip.score ?? 0);
+  const showScore = scoreValue >= 70;
+  const platformTag = liveClip.platform_fit || "Short-form";
+  const captionPreview = liveClip.caption || liveClip.hook || RESULT_COPY.previewProcessing;
 
   if (playable) {
     return (
@@ -60,27 +68,33 @@ export default function ClipPreview({ clip, className = "aspect-[9/16]", autoPla
     return (
       <div className={shellClassName}>
         <img src={thumbnail} alt={liveClip.title || liveClip.hook || "Clip preview"} className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-black/35" />
-        <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 backdrop-blur-md">
-          <p className="text-xs uppercase tracking-[0.24em] text-cyan-300/70">{RESULT_COPY.previewProcessing}</p>
-          <p className="mt-2 text-sm text-white/80">
-            {formatTime(liveClip.start_time)} - {formatTime(liveClip.end_time)}
-          </p>
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,6,10,0.18),rgba(6,6,10,0.86))]" />
+        <div className="absolute inset-x-4 bottom-4 rounded-[24px] border border-[var(--gold-border)] bg-black/45 px-4 py-4 backdrop-blur-md">
+          <div className="flex flex-wrap gap-2">
+            {showScore ? <span className="score-badge">{scoreValue}/10</span> : null}
+            <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-[11px] font-semibold text-[var(--gold)]">
+              {platformTag}
+            </span>
+          </div>
+          <p className="mt-3 text-lg font-semibold leading-7 text-[var(--gold)]">{liveClip.hook || liveClip.title}</p>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/76">{captionPreview}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`${shellClassName} flex min-h-[280px] items-center justify-center border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(90,40,180,0.28),_rgba(3,8,28,0.94)_58%)]`}>
-      <div className="absolute inset-0 opacity-60">
-        <div className="absolute left-[12%] top-[14%] h-20 w-20 rounded-full bg-fuchsia-500/18 blur-2xl" />
-        <div className="absolute bottom-[10%] right-[12%] h-24 w-24 rounded-full bg-cyan-400/18 blur-2xl" />
-      </div>
-
-      <div className="relative z-10 rounded-[24px] border border-white/12 bg-black/25 px-6 py-5 text-center backdrop-blur-xl">
-        <p className="text-xs uppercase tracking-[0.28em] text-cyan-300/70">{RESULT_COPY.previewProcessing}</p>
-        <p className="mt-3 text-sm text-white/80">
+    <div className={`${shellClassName} flex min-h-[280px] items-end border border-[var(--gold-border)] bg-[radial-gradient(circle_at_top,rgba(201,162,39,0.18),transparent_26%),linear-gradient(180deg,#0d0d14_0%,#050508_100%)] p-5`}>
+      <div className="w-full rounded-[24px] border border-[var(--gold-border)] bg-black/35 px-5 py-5 backdrop-blur-md">
+        <div className="flex flex-wrap gap-2">
+          {showScore ? <span className="score-badge">{scoreValue}/10</span> : null}
+          <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-[11px] font-semibold text-[var(--gold)]">
+            {platformTag}
+          </span>
+        </div>
+        <p className="mt-4 text-xl font-semibold leading-7 text-[var(--gold)]">{liveClip.hook || liveClip.title}</p>
+        <p className="mt-3 line-clamp-2 text-sm leading-6 text-white/76">{captionPreview}</p>
+        <p className="mt-3 text-xs text-white/40">
           {formatTime(liveClip.start_time)} - {formatTime(liveClip.end_time)}
         </p>
       </div>

@@ -84,6 +84,10 @@ export default function HeroClip({
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 2);
   const showFeedback = !compact && Boolean(onVote);
   const showRetryPreview = Boolean(onRecover) && !hasRenderProof;
+  const showQueue = !compact && Boolean(onToggleQueue);
+  const scoreValue = Math.round(clip.virality_score ?? clip.score ?? 0);
+  const showScore = scoreValue >= 70;
+  const platformTag = clip.platform_fit || "Short-form";
   const displayThumbnail = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
     ? clip.thumbnail_text
     : clip.hook?.slice(0, 42) || clip.title;
@@ -109,11 +113,18 @@ export default function HeroClip({
         <div className="space-y-4">
           <div className="video-shell overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-[0_12px_44px_rgba(0,0,0,0.28)]">
             {compact && !hasRenderProof ? (
-              <div className="flex aspect-[9/16] min-h-[360px] flex-col items-start justify-end bg-gradient-to-b from-[#0d0d14] to-[#050508] px-7 pb-8">
-                <span className="mb-4 inline-block rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs font-bold tracking-widest text-[var(--gold)]">
-                  {postAuthority}
-                </span>
-                <p className="text-2xl font-semibold leading-8 text-white">{clip.hook || clip.title}</p>
+              <div className="flex aspect-[9/16] min-h-[360px] flex-col items-start justify-end bg-[radial-gradient(circle_at_top,rgba(201,162,39,0.18),transparent_28%),linear-gradient(180deg,#0d0d14_0%,#050508_100%)] px-7 pb-8">
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-block rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs font-bold tracking-widest text-[var(--gold)]">
+                    {postAuthority}
+                  </span>
+                  {showScore ? <span className="score-badge">{scoreValue}/10</span> : null}
+                  <span className="rounded-full border border-[var(--gold-border)] bg-black/25 px-3 py-1.5 text-xs font-medium text-white/76">
+                    {platformTag}
+                  </span>
+                </div>
+                <p className="mt-4 text-2xl font-semibold leading-8 text-[var(--gold)]">{clip.hook || clip.title}</p>
+                <p className="mt-3 line-clamp-2 text-sm leading-6 text-white/76">{clip.caption}</p>
                 <p className="mt-3 text-xs text-white/35">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
               </div>
             ) : (
@@ -134,12 +145,12 @@ export default function HeroClip({
             ) : null}
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {!compact && downloadUrl ? (
               <a
                 href={downloadUrl}
                 download
-                className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
+                className="primary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold sm:w-auto"
               >
                 Export lead clip
               </a>
@@ -152,27 +163,29 @@ export default function HeroClip({
             <button
               type="button"
               onClick={() => void handleCopyPackage()}
-              className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+              className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium sm:w-auto"
             >
               {copiedPackage ? "Package copied" : "Copy package"}
             </button>
 
-            <button
-              type="button"
-              onClick={() => onToggleQueue?.(clip)}
-              className={[
-                "secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium",
-                queued ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]" : "",
-              ].join(" ")}
-            >
-              {queued ? "Queued for post" : "Queue post"}
-            </button>
+            {showQueue ? (
+              <button
+                type="button"
+                onClick={() => onToggleQueue?.(clip)}
+                className={[
+                  "secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium sm:w-auto",
+                  queued ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]" : "",
+                ].join(" ")}
+              >
+                {queued ? "Queued for post" : "Queue post"}
+              </button>
+            ) : null}
 
             {showRetryPreview ? (
               <RetryPreviewButton
                 onRetry={() => onRecover?.(clip)}
                 disabled={recoveryState?.status === "queued" || recoveryState?.status === "processing"}
-                className="px-5 py-3"
+                className="w-full px-5 py-3 sm:w-auto"
                 label={recoveryState?.status === "processing"
                   ? "Recovering..."
                   : recoveryState?.status === "queued"

@@ -32,6 +32,12 @@ export class ApiError extends Error {
   }
 }
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
+if (!BASE_URL && typeof window !== "undefined") {
+  console.error("[LWA_CONFIG] NEXT_PUBLIC_API_BASE_URL missing");
+}
+
 type GeneratePayload = {
   mode?: "video" | "image" | "idea";
   url?: string;
@@ -79,15 +85,41 @@ type ScheduledPostPatchPayload = {
   scheduled_for?: string;
 };
 
+function logApiError(endpoint: string, status: number | undefined, message: string) {
+  console.error("[LWA_API_ERROR]", {
+    endpoint,
+    status,
+    message,
+    timestamp: new Date().toISOString(),
+  });
+}
+
 async function jsonRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, init);
-  const data = (await response.json()) as T & { detail?: string; error?: string };
+  let response: Response | undefined;
 
-  if (!response.ok) {
-    throw new ApiError(data.detail || data.error || "Request failed.", response.status);
+  try {
+    response = await fetch(path, init);
+    const text = await response.text();
+    const data = (text ? JSON.parse(text) : {}) as T & { detail?: string; error?: string; message?: string };
+
+    if (!response.ok) {
+      const message = data.detail || data.error || data.message || "Request failed.";
+      logApiError(path, response.status, message);
+      throw new ApiError(message, response.status);
+    }
+
+    return data as T;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : "Request failed.";
+    logApiError(path, response?.status, message);
+    throw error;
   }
-
-  return data;
 }
 
 function authHeaders(token?: string | null, contentType = true) {
@@ -97,7 +129,7 @@ function authHeaders(token?: string | null, contentType = true) {
   };
 }
 
-function normalizeUrl(raw: string): string {
+export function normalizeUrl(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return trimmed;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
@@ -105,7 +137,11 @@ function normalizeUrl(raw: string): string {
   return `https://${trimmed}`;
 }
 
-export async function generateClips(payload: GeneratePayload, token?: string | null): Promise<GenerateResponse> {
+export async function generateClips(
+  payload: GeneratePayload,
+  token?: string | null,
+  options?: { signal?: AbortSignal },
+): Promise<GenerateResponse> {
   const normalizedPayload = payload.url
     ? {
         ...payload,
@@ -117,6 +153,7 @@ export async function generateClips(payload: GeneratePayload, token?: string | n
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(normalizedPayload),
+    signal: options?.signal,
   });
 }
 

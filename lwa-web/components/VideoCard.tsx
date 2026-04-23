@@ -77,6 +77,7 @@ export default function VideoCard({
   const showScore = !compact && scoreValue >= 70;
   const showFeedback = !compact && Boolean(onVote);
   const showRetryPreview = Boolean(onRecover) && !hasRenderProof;
+  const showQueue = !compact && Boolean(onToggleQueue);
   const displayThumbnail = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
     ? clip.thumbnail_text
     : clip.hook?.slice(0, 40) || clip.title;
@@ -108,11 +109,18 @@ export default function VideoCard({
       ) : null}
       <div className="video-shell overflow-hidden rounded-[22px] border border-white/10 bg-black/60">
         {compact && !hasRenderProof ? (
-          <div className="flex aspect-[9/16] min-h-[260px] flex-col items-start justify-end bg-gradient-to-b from-[#0d0d14] to-[#050508] px-5 pb-6">
-            <span className="mb-3 inline-block rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-xs font-bold tracking-widest text-[var(--gold)]">
-              {authority}
-            </span>
-            <p className="text-lg font-semibold leading-7 text-white">{clip.hook || clip.title}</p>
+          <div className="flex aspect-[9/16] min-h-[260px] flex-col items-start justify-end bg-[radial-gradient(circle_at_top,rgba(201,162,39,0.18),transparent_26%),linear-gradient(180deg,#0d0d14_0%,#050508_100%)] px-5 pb-6">
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-block rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-xs font-bold tracking-widest text-[var(--gold)]">
+                {authority}
+              </span>
+              {scoreValue >= 70 ? <span className="score-badge">{scoreValue}/10</span> : null}
+              <span className="rounded-full border border-[var(--gold-border)] bg-black/25 px-3 py-1 text-xs font-medium text-white/76">
+                {clip.platform_fit || "Short-form"}
+              </span>
+            </div>
+            <p className="mt-4 text-lg font-semibold leading-7 text-[var(--gold)]">{clip.hook || clip.title}</p>
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/76">{clip.caption}</p>
             <p className="mt-2 text-xs text-white/35">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
           </div>
         ) : (
@@ -191,23 +199,25 @@ export default function VideoCard({
           </details>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onToggleQueue?.(clip)}
-            className={[
-              "secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium",
-              queued ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]" : "",
-            ].join(" ")}
-          >
-            {queued ? "Queued" : "Add to Queue"}
-          </button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          {showQueue ? (
+            <button
+              type="button"
+              onClick={() => onToggleQueue?.(clip)}
+              className={[
+                "secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium sm:w-auto",
+                queued ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]" : "",
+              ].join(" ")}
+            >
+              {queued ? "Queued" : "Add to Queue"}
+            </button>
+          ) : null}
 
           {!compact && downloadUrl ? (
             <a
               href={downloadUrl}
               download
-              className="primary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold"
+              className="primary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold sm:w-auto"
             >
               Download
             </a>
@@ -216,7 +226,7 @@ export default function VideoCard({
               href={previewUrl || undefined}
               target="_blank"
               rel="noreferrer"
-              className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium"
+              className="secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium sm:w-auto"
             >
               Open preview
             </a>
@@ -226,6 +236,7 @@ export default function VideoCard({
             <RetryPreviewButton
               onRetry={() => onRecover?.(clip)}
               disabled={recoveryState?.status === "queued" || recoveryState?.status === "processing"}
+              className="w-full sm:w-auto"
               label={recoveryState?.status === "processing"
                 ? "Recovering..."
                 : recoveryState?.status === "queued"
@@ -239,7 +250,7 @@ export default function VideoCard({
           <button
             type="button"
             onClick={() => void handleCopyPackage()}
-            className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium"
+            className="secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium sm:w-auto"
           >
             {copiedPackage ? "Package copied" : "Copy package"}
           </button>
