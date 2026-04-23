@@ -526,6 +526,8 @@ def process_image_source(
 
 
 def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request_id: str) -> dict[str, Any]:
+    if video_url and not video_url.startswith("http"):
+        video_url = "https://" + video_url
     is_live = "youtube.com/live/" in video_url or "/live/" in video_url
     options = {
         "quiet": True,

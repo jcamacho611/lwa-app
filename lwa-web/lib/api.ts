@@ -96,11 +96,26 @@ function authHeaders(token?: string | null, contentType = true) {
   };
 }
 
+function normalizeUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
+  return `https://${trimmed}`;
+}
+
 export async function generateClips(payload: GeneratePayload, token?: string | null): Promise<GenerateResponse> {
+  const normalizedPayload = payload.url
+    ? {
+        ...payload,
+        url: normalizeUrl(payload.url),
+      }
+    : payload;
+
   return jsonRequest<GenerateResponse>("/api/generate", {
     method: "POST",
     headers: authHeaders(token),
-    body: JSON.stringify(payload),
+    body: JSON.stringify(normalizedPayload),
   });
 }
 
