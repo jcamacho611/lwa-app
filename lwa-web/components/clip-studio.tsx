@@ -623,7 +623,7 @@ export function ClipStudio({
         else if (isLive) setError("Live streams can't be clipped yet. Paste a regular uploaded video.");
         else if (isTimeout) setError("Video took too long. Try a shorter video under 10 minutes.");
         else if (isUnavailable) setError("This video is private, removed, or region-locked. Try another URL.");
-        else setError("Could not process that source. Try a different video URL.");
+        else setError(raw === "Unable to generate clips." ? "Could not process that source. Try a different video URL." : raw);
       }
     } finally {
       if (generationControllerRef.current === controller) {

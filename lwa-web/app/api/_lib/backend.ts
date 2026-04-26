@@ -47,7 +47,34 @@ export function guestHeaders(guestId: string | null | undefined): Record<string,
   };
 }
 
+function normalizeBackendFallbackMessage(response: Response, text: string) {
+  const trimmed = text.replace(/\s+/g, " ").trim();
+  if (!trimmed) {
+    return response.statusText || "Backend returned an empty response.";
+  }
+
+  if (/^<!doctype html/i.test(trimmed) || /^<html/i.test(trimmed)) {
+    const titleMatch = trimmed.match(/<title>(.*?)<\/title>/i);
+    const title = titleMatch?.[1]?.trim();
+    return title ? `Backend returned HTML instead of JSON: ${title}` : "Backend returned HTML instead of JSON.";
+  }
+
+  return trimmed.slice(0, 4000);
+}
+
 export async function parseBackendResponse(response: Response) {
   const text = await response.text();
-  return text ? JSON.parse(text) : null;
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    const message = normalizeBackendFallbackMessage(response, text);
+    return {
+      detail: message,
+      error: message,
+    };
+  }
 }
