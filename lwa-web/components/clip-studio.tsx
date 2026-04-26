@@ -2027,7 +2027,7 @@ export function ClipStudio({
                     {bundleExportState === "exporting" ? "Building bundle..." : "Export bundle"}
                   </button>
                 ) : (
-                  <span className="rounded-full border border-accentCrimson/22 bg-[linear-gradient(135deg,rgba(122,16,42,0.24),rgba(124,58,237,0.1))] px-4 py-2 text-sm text-[#ffe4eb]">
+                  <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-4 py-2 text-sm text-[var(--gold)]">
                     Bundle export available below
                   </span>
                 )}
@@ -2909,7 +2909,7 @@ function LoadingSequence({
 
       <div className="mb-5 h-2 overflow-hidden rounded-full bg-white/[0.08]">
         <div
-          className="h-full rounded-full bg-[linear-gradient(90deg,rgba(201,162,39,0.7),rgba(201,162,39,1))] transition-all duration-500"
+          className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent-soft),var(--gold))] transition-all duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -2943,7 +2943,7 @@ function InlineAlert({
 }) {
   const toneClass =
     tone === "error"
-      ? "border-[rgba(139,0,0,0.35)] bg-[var(--crimson-dim)] text-red-100"
+      ? "border-[var(--danger)] bg-[var(--surface-danger)] text-[var(--danger)]"
       : "border-[var(--gold-border)] bg-[var(--gold-dim)] text-ink";
 
   return (

@@ -68,8 +68,8 @@ export default function ClipPreview({ clip, className = "aspect-[9/16]", autoPla
     return (
       <div className={shellClassName}>
         <img src={thumbnail} alt={liveClip.title || liveClip.hook || "Clip preview"} className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,6,10,0.18),rgba(6,6,10,0.86))]" />
-        <div className="absolute inset-x-4 bottom-4 rounded-[24px] border border-[var(--gold-border)] bg-black/45 px-4 py-4 backdrop-blur-md">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--surface-veil)_0%,var(--surface-veil-heavy)_100%)]" />
+        <div className="absolute inset-x-4 bottom-4 rounded-[24px] border border-[var(--gold-border)] bg-[var(--surface-veil-strong)] px-4 py-4 backdrop-blur-md">
           <div className="flex flex-wrap gap-2">
             {showScore ? <span className="score-badge">{scoreValue}/10</span> : null}
             <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-[11px] font-semibold text-[var(--gold)]">
@@ -77,15 +77,15 @@ export default function ClipPreview({ clip, className = "aspect-[9/16]", autoPla
             </span>
           </div>
           <p className="mt-3 text-lg font-semibold leading-7 text-[var(--gold)]">{liveClip.hook || liveClip.title}</p>
-          <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/76">{captionPreview}</p>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--ink-mid)]">{captionPreview}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`${shellClassName} flex min-h-[280px] items-end border border-[var(--gold-border)] bg-[radial-gradient(circle_at_top,rgba(201,162,39,0.18),transparent_26%),linear-gradient(180deg,#0d0d14_0%,#050508_100%)] p-5`}>
-      <div className="w-full rounded-[24px] border border-[var(--gold-border)] bg-black/35 px-5 py-5 backdrop-blur-md">
+    <div className={`${shellClassName} flex min-h-[280px] items-end border border-[var(--gold-border)] bg-[radial-gradient(circle_at_top,var(--surface-gold-glow),transparent_26%),linear-gradient(180deg,var(--bg-card)_0%,var(--bg)_100%)] p-5`}>
+      <div className="w-full rounded-[24px] border border-[var(--gold-border)] bg-[var(--surface-veil)] px-5 py-5 backdrop-blur-md">
         <div className="flex flex-wrap gap-2">
           {showScore ? <span className="score-badge">{scoreValue}/10</span> : null}
           <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-[11px] font-semibold text-[var(--gold)]">
@@ -93,8 +93,8 @@ export default function ClipPreview({ clip, className = "aspect-[9/16]", autoPla
           </span>
         </div>
         <p className="mt-4 text-xl font-semibold leading-7 text-[var(--gold)]">{liveClip.hook || liveClip.title}</p>
-        <p className="mt-3 line-clamp-2 text-sm leading-6 text-white/76">{captionPreview}</p>
-        <p className="mt-3 text-xs text-white/40">
+        <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--ink-mid)]">{captionPreview}</p>
+        <p className="mt-3 text-xs text-[var(--ink-faint)]">
           {formatTime(liveClip.start_time)} - {formatTime(liveClip.end_time)}
         </p>
       </div>

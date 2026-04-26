@@ -103,29 +103,29 @@ export default function HeroClip({
   }
 
   return (
-    <section id="lead-clip" className="lead-clip-card clip-card top-pick group relative overflow-hidden rounded-[42px] border p-6 shadow-[0_28px_100px_rgba(0,0,0,0.44)] transition-all duration-300 hover:scale-[1.01] sm:p-7 lg:p-8">
+    <section id="lead-clip" className="lead-clip-card clip-card top-pick group relative overflow-hidden rounded-[42px] border p-6 shadow-card transition-all duration-300 hover:scale-[1.01] sm:p-7 lg:p-8">
       <div className="-mx-6 -mt-6 mb-6 bg-[var(--gold)] px-6 py-2 text-[10px] font-bold tracking-[0.14em] text-black sm:-mx-7 sm:-mt-7 lg:-mx-8 lg:-mt-8">
         #1 PICK — POST FIRST
       </div>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(201,162,39,0.12),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(201,162,39,0.08),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,var(--surface-gold-ghost),transparent_36%),radial-gradient(circle_at_80%_20%,var(--gold-dim),transparent_32%)]" />
 
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
         <div className="space-y-4">
-          <div className="video-shell overflow-hidden rounded-[30px] border border-white/10 bg-black/55 shadow-[0_12px_44px_rgba(0,0,0,0.28)]">
+          <div className="video-shell overflow-hidden rounded-[30px] border border-[var(--divider)] bg-[var(--surface-veil-strong)] shadow-[var(--shadow-preview)]">
             {compact && !hasRenderProof ? (
-              <div className="flex aspect-[9/16] min-h-[360px] flex-col items-start justify-end bg-[radial-gradient(circle_at_top,rgba(201,162,39,0.18),transparent_28%),linear-gradient(180deg,#0d0d14_0%,#050508_100%)] px-7 pb-8">
+              <div className="flex aspect-[9/16] min-h-[360px] flex-col items-start justify-end bg-[radial-gradient(circle_at_top,var(--surface-gold-glow),transparent_28%),linear-gradient(180deg,var(--bg-card)_0%,var(--bg)_100%)] px-7 pb-8">
                 <div className="flex flex-wrap gap-2">
                   <span className="inline-block rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs font-bold tracking-widest text-[var(--gold)]">
                     {postAuthority}
                   </span>
                   {showScore ? <span className="score-badge">{scoreValue}/10</span> : null}
-                  <span className="rounded-full border border-[var(--gold-border)] bg-black/25 px-3 py-1.5 text-xs font-medium text-white/76">
+                  <span className="rounded-full border border-[var(--gold-border)] bg-[var(--surface-veil)] px-3 py-1.5 text-xs font-medium text-[var(--ink-mid)]">
                     {platformTag}
                   </span>
                 </div>
                 <p className="mt-4 text-2xl font-semibold leading-8 text-[var(--gold)]">{clip.hook || clip.title}</p>
-                <p className="mt-3 line-clamp-2 text-sm leading-6 text-white/76">{clip.caption}</p>
-                <p className="mt-3 text-xs text-white/35">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
+                <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--ink-mid)]">{clip.caption}</p>
+                <p className="mt-3 text-xs text-[var(--ink-faint)]">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
               </div>
             ) : (
               <LiveClipPreview clip={clip} className="aspect-[9/16] transition-transform duration-300 group-hover:scale-[1.02]" autoPlay />
@@ -155,7 +155,7 @@ export default function HeroClip({
                 Export lead clip
               </a>
             ) : !compact ? (
-                <span className="rounded-full border border-accentCrimson/22 bg-[linear-gradient(135deg,rgba(122,16,42,0.24),rgba(124,58,237,0.1))] px-4 py-2.5 text-sm text-[#ffe4eb]">
+                <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-4 py-2.5 text-sm text-[var(--gold)]">
                 Bundle export below
               </span>
             ) : null}
@@ -242,17 +242,17 @@ export default function HeroClip({
           </div>
 
           {!compact ? (
-            <details className="rounded-[24px] border border-white/10 bg-black/20 p-4">
-            <summary className="cursor-pointer list-none text-xs uppercase tracking-[0.24em] text-muted transition-colors duration-300 hover:text-ink/76">
+            <details className="rounded-[24px] border border-[var(--divider)] bg-[var(--surface-veil)] p-4">
+            <summary className="cursor-pointer list-none text-xs uppercase tracking-[0.24em] text-muted transition-colors duration-300 hover:text-[var(--ink-mid)]">
               Open package notes
             </summary>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/80">{postAuthority}</span>
+              <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/80">{postAuthority}</span>
               {clip.platform_fit ? (
-                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/80">{clip.platform_fit}</span>
+                <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/80">{clip.platform_fit}</span>
               ) : null}
               {clip.start_time && clip.end_time ? (
-                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/80">
+                <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/80">
                   {clip.start_time} - {clip.end_time}
                 </span>
               ) : null}

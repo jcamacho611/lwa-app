@@ -127,7 +127,7 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
                     <button
                       type="button"
                       onClick={() => onRemove(item.clipId)}
-                      className="rounded-full border border-[rgba(143,29,54,0.36)] bg-[rgba(92,19,37,0.32)] px-4 py-2 text-sm font-medium text-red-100 transition hover:border-[rgba(143,29,54,0.56)] hover:bg-[rgba(92,19,37,0.52)] active:scale-95"
+                      className="rounded-full border border-[var(--danger)] bg-[var(--surface-danger)] px-4 py-2 text-sm font-medium text-[var(--danger)] transition hover:bg-[var(--surface-danger-strong)] active:scale-95"
                     >
                       Remove
                     </button>
@@ -156,7 +156,7 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
           </div>
         </>
       ) : (
-        <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.03] p-6">
+        <div className="mt-6 rounded-[24px] border border-[var(--divider)] bg-[var(--surface-soft)] p-6">
           <p className="text-sm font-medium text-ink/72">Queue is empty</p>
           <p className="mt-2 text-sm leading-7 text-ink/46">
             Mark clips ready from Generate to build the next posting stack. The queue persists across sessions.

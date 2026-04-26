@@ -107,21 +107,21 @@ export default function VideoCard({
           #1 PICK — POST FIRST
         </div>
       ) : null}
-      <div className="video-shell overflow-hidden rounded-[22px] border border-white/10 bg-black/60">
+      <div className="video-shell overflow-hidden rounded-[22px] border border-[var(--divider)] bg-[var(--surface-veil-strong)]">
         {compact && !hasRenderProof ? (
-          <div className="flex aspect-[9/16] min-h-[260px] flex-col items-start justify-end bg-[radial-gradient(circle_at_top,rgba(201,162,39,0.18),transparent_26%),linear-gradient(180deg,#0d0d14_0%,#050508_100%)] px-5 pb-6">
+          <div className="flex aspect-[9/16] min-h-[260px] flex-col items-start justify-end bg-[radial-gradient(circle_at_top,var(--surface-gold-glow),transparent_26%),linear-gradient(180deg,var(--bg-card)_0%,var(--bg)_100%)] px-5 pb-6">
             <div className="flex flex-wrap gap-2">
               <span className="inline-block rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-xs font-bold tracking-widest text-[var(--gold)]">
                 {authority}
               </span>
               {scoreValue >= 70 ? <span className="score-badge">{scoreValue}/10</span> : null}
-              <span className="rounded-full border border-[var(--gold-border)] bg-black/25 px-3 py-1 text-xs font-medium text-white/76">
+              <span className="rounded-full border border-[var(--gold-border)] bg-[var(--surface-veil)] px-3 py-1 text-xs font-medium text-[var(--ink-mid)]">
                 {clip.platform_fit || "Short-form"}
               </span>
             </div>
             <p className="mt-4 text-lg font-semibold leading-7 text-[var(--gold)]">{clip.hook || clip.title}</p>
-            <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/76">{clip.caption}</p>
-            <p className="mt-2 text-xs text-white/35">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--ink-mid)]">{clip.caption}</p>
+            <p className="mt-2 text-xs text-[var(--ink-faint)]">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
           </div>
         ) : (
           <LiveClipPreview clip={clip} className="aspect-[9/16] transition duration-300 group-hover:scale-[1.02]" />
@@ -149,22 +149,22 @@ export default function VideoCard({
       <div className="mt-4 space-y-3">
         <div className="flex flex-wrap gap-2">
           {showScore ? <span className="score-badge">{scoreValue}/10</span> : null}
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/82">{authority}</span>
-          {!compact ? (
-            <>
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">
-                {hasRenderProof ? "Ready now" : "Rendering available on Pro"}
-              </span>
-              {clip.confidence_label ? (
-                <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs text-[var(--gold)]">
-                  {clip.confidence_label}
-                </span>
+              <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/82">{authority}</span>
+              {!compact ? (
+                <>
+                  <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/76">
+                    {hasRenderProof ? "Ready now" : "Rendering available on Pro"}
+                  </span>
+                  {clip.confidence_label ? (
+                    <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs text-[var(--gold)]">
+                      {clip.confidence_label}
+                    </span>
+                  ) : null}
+                  {captionStyle ? (
+                    <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/76">{captionStyle}</span>
+                  ) : null}
+                </>
               ) : null}
-              {captionStyle ? (
-                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-ink/76">{captionStyle}</span>
-              ) : null}
-            </>
-          ) : null}
         </div>
 
         <div className="space-y-2">
@@ -177,13 +177,13 @@ export default function VideoCard({
 
         <div className="grid gap-2">
           {displayThumbnail ? (
-            <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
+            <div className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Thumbnail</p>
               <p className="mt-1 text-xs font-medium text-ink/82">{displayThumbnail}</p>
             </div>
           ) : null}
           {clip.cta_suggestion ? (
-            <div className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
+            <div className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Move</p>
               <p className="mt-1 text-xs font-medium text-ink/82">{clip.cta_suggestion}</p>
             </div>
@@ -191,8 +191,8 @@ export default function VideoCard({
         </div>
 
         {!compact && whyThisHits ? (
-          <details className="rounded-[18px] border border-white/8 bg-white/[0.04] px-3 py-2.5">
-            <summary className="cursor-pointer list-none text-[10px] uppercase tracking-[0.22em] text-muted transition-colors duration-300 hover:text-ink/76">
+          <details className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">
+            <summary className="cursor-pointer list-none text-[10px] uppercase tracking-[0.22em] text-muted transition-colors duration-300 hover:text-[var(--ink-mid)]">
               Open package notes
             </summary>
             <p className="mt-2 text-xs leading-6 text-ink/62">{whyThisHits}</p>

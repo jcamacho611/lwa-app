@@ -72,8 +72,8 @@ export function SearchLandingPage({ page, jsonLd }: SearchLandingPageProps) {
                   className={[
                     "rounded-full border px-3 py-1.5 text-xs font-semibold",
                     index === 0
-                      ? "border-cyan-300/35 bg-[linear-gradient(135deg,rgba(0,231,255,0.16),rgba(124,58,237,0.14))] text-white shadow-cyan"
-                      : "border-white/10 bg-white/[0.05] text-ink/72",
+                      ? "border-[var(--gold-border)] bg-[linear-gradient(135deg,var(--surface-gold-glow),var(--gold-dim))] text-[var(--gold)] shadow-cyan"
+                      : "border-[var(--divider)] bg-[var(--surface-soft)] text-ink/72",
                   ].join(" ")}
                 >
                   {item}

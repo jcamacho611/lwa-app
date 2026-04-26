@@ -50,7 +50,7 @@ export default function HomePage() {
         {proofPoints.map((item) => (
           <div
             key={item}
-            className="rounded-[24px] border border-[var(--gold-border)] bg-black/30 px-5 py-5 text-sm font-medium text-ink/84 backdrop-blur-sm"
+            className="metric-tile rounded-[24px] px-5 py-5 text-sm font-medium text-ink/84 backdrop-blur-sm"
           >
             {item}
           </div>

@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { Poppins } from "next/font/google";
 import { BackgroundCanvas } from "../components/BackgroundCanvas";
 import { CharacterStage } from "../components/CharacterStage";
 import { resolveDirection, resolveLocale } from "../lib/intl";
 import { siteUrl } from "../lib/seo";
 import "./globals.css";
+
+const poppinsBody = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400"],
+  variable: "--font-poppins-body",
+  display: "swap",
+});
+
+const poppinsDisplay = Poppins({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-poppins-display",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -52,7 +67,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
   return (
     <html lang={locale} dir={direction} className="dark" suppressHydrationWarning>
-      <body className="bg-bgDark text-white antialiased">
+      <body className={`${poppinsBody.variable} ${poppinsDisplay.variable} bg-bgDark text-white antialiased`}>
         <BackgroundCanvas />
         <CharacterStage />
         <main className="lwa-ui-layer" style={{ position: "relative", zIndex: 10 }}>
