@@ -562,7 +562,7 @@ def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request
         options["live_from_start"] = False
         options["wait_for_video"] = None
     else:
-        options["format"] = "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"
+        options["format"] = "bestvideo+bestaudio/best[height<=720]/best"
 
     logger.info(
         "source_download_start request_id=%s video_url=%s work_dir=%s format=%s",
