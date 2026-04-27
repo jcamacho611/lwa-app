@@ -34,6 +34,10 @@ class SourceIngestService:
                     "Accept-Language": "en-US,en;q=0.9",
                 },
             }
+            from ..processor import resolve_yt_cookie_file
+            cookie_path = resolve_yt_cookie_file(self.settings)
+            if cookie_path:
+                ydl_opts["cookiefile"] = cookie_path
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(video_url, download=False)

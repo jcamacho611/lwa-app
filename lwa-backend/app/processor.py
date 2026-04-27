@@ -233,6 +233,7 @@ def process_video_source(
                 work_dir=work_dir,
                 ffmpeg_path=ffmpeg_path,
                 request_id=request_id,
+                cookiefile=resolve_yt_cookie_file(settings),
             )
             source_file = locate_source_file(work_dir)
         transcript_windows = load_transcript_windows(work_dir)
@@ -525,7 +526,19 @@ def process_image_source(
     )
 
 
-def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request_id: str) -> dict[str, Any]:
+def resolve_yt_cookie_file(settings: Settings) -> Optional[str]:
+    raw = getattr(settings, "yt_cookies_b64", "").strip()
+    if not raw:
+        return None
+    cookie_path = Path("/tmp/lwa_yt_cookies.txt")
+    try:
+        cookie_path.write_bytes(base64.b64decode(raw))
+        return str(cookie_path)
+    except Exception:
+        return None
+
+
+def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request_id: str, cookiefile: Optional[str] = None) -> dict[str, Any]:
     if video_url and not video_url.startswith("http"):
         video_url = "https://" + video_url
     is_live = "youtube.com/live/" in video_url or "/live/" in video_url
@@ -556,6 +569,9 @@ def download_source(*, video_url: str, work_dir: Path, ffmpeg_path: str, request
         },
         "logger": YTDLPLogProxy(request_id),
     }
+
+    if cookiefile:
+        options["cookiefile"] = cookiefile
 
     if is_live:
         options["format"] = "bestvideo[height<=720]+bestaudio/best[height<=720]/best"

@@ -25,8 +25,6 @@ def determine_provider(settings: Settings) -> str:
     provider = settings.ai_provider.lower()
 
     if provider == "auto":
-        if anthropic_available(settings):
-            return "anthropic"
         if settings.openai_api_key:
             return "openai"
         if settings.ollama_base_url:
@@ -64,7 +62,8 @@ async def generate_clips(
             logger.info("clip_intelligence_mode mode=%s clips_scored=%s", used_provider, len(clips))
             return clips, used_provider
         except Exception as error:
-            logger.warning("clip_intelligence_fallback mode=anthropic reason=%s", error)
+            logger.warning("clip_intelligence_fallback mode=anthropic reason=%s — cascading to openai", error)
+            provider = "openai"
 
     if provider == "openai" and settings.openai_api_key:
         try:
