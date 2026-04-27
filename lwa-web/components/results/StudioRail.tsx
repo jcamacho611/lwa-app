@@ -41,9 +41,10 @@ export function StudioRail({ clips, onClipSelect, onRetryClip, onDownloadClip, s
         {clips.map((clip, index) => {
           const isSelected = selectedClipId === clip.id || selectedClipId === clip.clip_id;
           const renderStatus = clip.render_status || "pending";
-          const isReady = renderStatus === "ready";
+          const isStrategyOnly = Boolean(clip.is_strategy_only) && !clip.preview_url && !clip.clip_url;
+          const isReady = renderStatus === "ready" && !isStrategyOnly;
           const isFailed = renderStatus === "failed";
-          const isPending = renderStatus === "pending";
+          const isPending = !isStrategyOnly && renderStatus === "pending";
           const isRendering = renderStatus === "rendering";
           const duration = durationLabel(clip);
           const exportUrl = clip.download_url || clip.clip_url || clip.preview_url || undefined;
@@ -56,7 +57,7 @@ export function StudioRail({ clips, onClipSelect, onRetryClip, onDownloadClip, s
                 ${isSelected ? "ring-2 ring-blue-500" : "hover:ring-2 hover:ring-ink/30"}
                 p-4 rounded-lg border border-ink/20
                 ${isSelected ? "bg-ink/10" : "bg-white"}
-                ${isFailed ? "border-red-200" : isReady ? "border-green-200" : ""}
+                ${isStrategyOnly ? "border-accent/20" : isFailed ? "border-red-200" : isReady ? "border-green-200" : ""}
               `}
               onClick={() => onClipSelect?.(clip)}
             >
@@ -78,15 +79,17 @@ export function StudioRail({ clips, onClipSelect, onRetryClip, onDownloadClip, s
                   
                   {/* Status Badge */}
                   <div className={`
-                    px-2 py-1 rounded-full text-xs font-medium
-                    ${isReady ? "bg-green-100 text-green-800" : 
-                      isFailed ? "bg-red-100 text-red-800" : 
-                      isRendering ? "bg-yellow-100 text-yellow-800" : 
-                      "bg-gray-100 text-gray-800"}
+                    px-2 py-1 rounded-full text-xs font-semibold tracking-wide
+                    ${isStrategyOnly ? "bg-accent/15 text-accent border border-accent/30" :
+                      isReady ? "bg-green-100 text-green-800" :
+                      isFailed ? "bg-red-100 text-red-800" :
+                      isRendering ? "bg-yellow-100 text-yellow-800" :
+                      "bg-gray-100 text-gray-600"}
                   `}>
-                    {isReady ? "Ready" : 
-                      isFailed ? "Failed" : 
-                      isRendering ? "Rendering" : 
+                    {isStrategyOnly ? "Ideas only" :
+                      isReady ? "Ready" :
+                      isFailed ? "Failed" :
+                      isRendering ? "Rendering" :
                       "Pending"}
                   </div>
                 </div>
