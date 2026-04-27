@@ -71,6 +71,23 @@ async def health_check() -> dict[str, object]:
     }
 
 
+@router.get("/test-openai")
+async def test_openai() -> dict[str, object]:
+    if not settings.openai_api_key:
+        return {"ok": False, "error": "OPENAI_API_KEY not set"}
+    try:
+        from openai import OpenAI as _OAI
+        client = _OAI(api_key=settings.openai_api_key)
+        resp = client.chat.completions.create(
+            model=settings.openai_model,
+            messages=[{"role": "user", "content": "Reply with the single word: ready"}],
+            max_tokens=5,
+        )
+        return {"ok": True, "model": settings.openai_model, "reply": resp.choices[0].message.content}
+    except Exception as exc:
+        return {"ok": False, "error": type(exc).__name__, "detail": str(exc)}
+
+
 @router.get("/v1/trends", response_model=TrendsResponse)
 async def get_trends(http_request: Request) -> TrendsResponse:
     enforce_api_key(http_request, settings)
