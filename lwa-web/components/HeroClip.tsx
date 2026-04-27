@@ -6,6 +6,7 @@ import { LiveClipPreview } from "./results/LiveClipPreview";
 import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { hasPreviewAsset, isRenderedClip } from "../lib/clip-utils";
 import { RESULT_COPY, buildLeadReason } from "../lib/result-copy";
+import { ClipViewer } from "./ClipViewer";
 
 type HeroClipProps = {
   clip: ClipResult;
@@ -73,6 +74,8 @@ export default function HeroClip({
   onRecover,
 }: HeroClipProps) {
   const [copiedPackage, setCopiedPackage] = useState(false);
+  const [copiedHook, setCopiedHook] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const downloadUrl = clip.download_url || null;
   const hasPlayablePreview = isRenderedClip(clip);
@@ -86,11 +89,21 @@ export default function HeroClip({
   const showRetryPreview = Boolean(onRecover) && !hasRenderProof;
   const showQueue = !compact && Boolean(onToggleQueue);
   const scoreValue = Math.round(clip.virality_score ?? clip.score ?? 0);
-  const showScore = scoreValue >= 70;
+  const showScore = scoreValue >= 50;
   const platformTag = clip.platform_fit || "Short-form";
   const displayThumbnail = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
     ? clip.thumbnail_text
     : clip.hook?.slice(0, 42) || clip.title;
+
+  async function handleCopyHook() {
+    try {
+      await navigator.clipboard.writeText(clip.hook || clip.title || "");
+      setCopiedHook(true);
+      window.setTimeout(() => setCopiedHook(false), 1600);
+    } catch {
+      setCopiedHook(false);
+    }
+  }
 
   async function handleCopyPackage() {
     try {
@@ -103,6 +116,8 @@ export default function HeroClip({
   }
 
   return (
+    <>
+      <ClipViewer clip={clip} isOpen={viewerOpen} onClose={() => setViewerOpen(false)} />
     <section id="lead-clip" className="lead-clip-card clip-card top-pick group relative overflow-hidden rounded-[42px] border p-6 shadow-card transition-all duration-300 hover:scale-[1.01] sm:p-7 lg:p-8">
       <div className="-mx-6 -mt-6 mb-6 bg-[var(--gold)] px-6 py-2 text-[10px] font-bold tracking-[0.14em] text-black sm:-mx-7 sm:-mt-7 lg:-mx-8 lg:-mt-8">
         #1 PICK — POST FIRST
@@ -111,7 +126,18 @@ export default function HeroClip({
 
       <div className="relative grid gap-6 xl:grid-cols-[minmax(0,0.62fr),minmax(340px,0.38fr)] xl:items-start">
         <div className="space-y-4">
-          <div className="video-shell overflow-hidden rounded-[30px] border border-[var(--divider)] bg-[var(--surface-veil-strong)] shadow-[var(--shadow-preview)]">
+          <div className="video-shell relative overflow-hidden rounded-[30px] border border-[var(--divider)] bg-[var(--surface-veil-strong)] shadow-[var(--shadow-preview)]">
+            {/* Omega expand */}
+            <button
+              type="button"
+              onClick={() => setViewerOpen(true)}
+              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 backdrop-blur-sm transition hover:border-[var(--gold-border)] hover:bg-[var(--gold-dim)] hover:text-[var(--gold)]"
+              aria-label="Expand clip"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 16 16">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2 10v4h4M14 6V2h-4M10 6l4-4M6 10l-4 4" />
+              </svg>
+            </button>
             {compact && !hasRenderProof ? (
               <div className="flex aspect-[9/16] min-h-[360px] flex-col items-start justify-end bg-[radial-gradient(circle_at_top,var(--surface-gold-glow),transparent_28%),linear-gradient(180deg,var(--bg-card)_0%,var(--bg)_100%)] px-7 pb-8">
                 <div className="flex flex-wrap gap-2">
@@ -144,6 +170,26 @@ export default function HeroClip({
             </div>
             ) : null}
           </div>
+
+          {/* Omega quick-copy strip */}
+          {!compact && clip.hook ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void handleCopyHook()}
+                className="inline-flex items-center rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-4 py-2 text-xs font-semibold text-[var(--gold)] transition hover:bg-[var(--gold)] hover:text-black"
+              >
+                {copiedHook ? "Copied!" : "Copy hook"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewerOpen(true)}
+                className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-medium text-white/60 transition hover:border-white/20 hover:text-white/90"
+              >
+                Full screen
+              </button>
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {!compact && downloadUrl ? (
@@ -301,5 +347,6 @@ export default function HeroClip({
         </div>
       </div>
     </section>
+    </>
   );
 }
