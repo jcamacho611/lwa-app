@@ -159,11 +159,12 @@ async def generate_with_openai(
 ) -> tuple[List[ClipResult], str]:
     prompt = build_generation_prompt(video_url, target_platform, selected_trend, content_angle, trend_context, source_context)
     client = OpenAI(api_key=settings.openai_api_key)
-    response = client.responses.create(
+    response = client.chat.completions.create(
         model=settings.openai_model,
-        input=prompt,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
     )
-    raw = response.output_text
+    raw = response.choices[0].message.content or ""
     return parse_generated_clips(
         raw,
         video_url,
