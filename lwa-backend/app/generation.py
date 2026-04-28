@@ -25,6 +25,8 @@ def determine_provider(settings: Settings) -> str:
     provider = settings.ai_provider.lower()
 
     if provider == "auto":
+        if anthropic_available(settings):
+            return "anthropic"
         if settings.openai_api_key:
             return "openai"
         if settings.ollama_base_url:
