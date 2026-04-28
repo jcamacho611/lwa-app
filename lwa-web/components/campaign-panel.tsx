@@ -261,7 +261,7 @@ export function CampaignPanel({
           <p className="section-kicker">Campaigns</p>
           <h3 className="mt-2 text-3xl font-semibold text-ink">Turn outputs into managed workflows</h3>
           <p className="mt-4 text-sm leading-7 text-ink/64">
-            Build the brief, assign full packs or selected clips, then move each asset through submission and payout-readiness state.
+            Build the brief, assign full packs or selected clips, then move each asset through manual submission and payout-readiness review.
           </p>
 
           <div className="mt-6 space-y-5">
@@ -384,7 +384,7 @@ export function CampaignPanel({
               <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-6">
                 <p className="text-sm font-medium text-ink/72">No campaigns yet</p>
                 <p className="mt-2 text-sm leading-7 text-ink/46">
-                  Create a campaign above to turn clip output into a real operating workflow with briefs, assignments, and payout tracking.
+                  Create a campaign above to turn clip output into a real operating workflow with briefs, assignments, and manual payout readiness.
                 </p>
               </div>
             )}

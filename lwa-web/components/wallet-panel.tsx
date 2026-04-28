@@ -30,7 +30,7 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
     try {
       const payout = await onRequestPayout(amountCents);
       setPayoutAmount("");
-      setMessage(`Payout request ${payout.id} created.`);
+      setMessage(`Payout review request ${payout.id} created.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to request payout.");
     } finally {
@@ -53,7 +53,7 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
       <div className="grid gap-6 xl:grid-cols-[0.92fr,1.08fr]">
         <div className="glass-panel rounded-[32px] p-6 sm:p-8">
         <p className="section-kicker">Payout readiness</p>
-        <h3 className="mt-2 text-3xl font-semibold text-ink">Request a payout</h3>
+        <h3 className="mt-2 text-3xl font-semibold text-ink">Request payout review</h3>
         <p className="mt-4 text-sm leading-7 text-ink/64">
           Review the ledger. Approved submissions unlock payout readiness. Transfers stay manual until payout rails are wired.
         </p>
@@ -91,7 +91,7 @@ export function WalletPanel({ wallet, ledgerEntries, onRequestPayout }: WalletPa
               onClick={handlePayoutRequest}
               className="primary-button rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSaving ? "Submitting..." : "Request Payout"}
+              {isSaving ? "Submitting..." : "Request review"}
             </button>
             {message ? <span className="text-sm text-accent">{message}</span> : null}
           </div>

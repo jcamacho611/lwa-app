@@ -71,7 +71,7 @@ export default function ClipPreview({ clip, className = "aspect-[9/16]", autoPla
         <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--surface-veil)_0%,var(--surface-veil-heavy)_100%)]" />
         <div className="absolute inset-x-4 bottom-4 rounded-[24px] border border-[var(--gold-border)] bg-[var(--surface-veil-strong)] px-4 py-4 backdrop-blur-md">
           <div className="flex flex-wrap gap-2">
-            {showScore ? <span className="score-badge">{scoreValue}/10</span> : null}
+            {showScore ? <span className="score-badge">Score {scoreValue}</span> : null}
             <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-[11px] font-semibold text-[var(--gold)]">
               {platformTag}
             </span>
@@ -87,7 +87,7 @@ export default function ClipPreview({ clip, className = "aspect-[9/16]", autoPla
     <div className={`${shellClassName} flex min-h-[280px] items-end border border-[var(--gold-border)] bg-[radial-gradient(circle_at_top,var(--surface-gold-glow),transparent_26%),linear-gradient(180deg,var(--bg-card)_0%,var(--bg)_100%)] p-5`}>
       <div className="w-full rounded-[24px] border border-[var(--gold-border)] bg-[var(--surface-veil)] px-5 py-5 backdrop-blur-md">
         <div className="flex flex-wrap gap-2">
-          {showScore ? <span className="score-badge">{scoreValue}/10</span> : null}
+          {showScore ? <span className="score-badge">Score {scoreValue}</span> : null}
           <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-[11px] font-semibold text-[var(--gold)]">
             {platformTag}
           </span>

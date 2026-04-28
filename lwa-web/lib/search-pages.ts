@@ -35,8 +35,8 @@ export const comparisonPages: SearchLandingData[] = [
       "LWA is built for creators, clippers, and teams that need clips worth posting, packaging intelligence, post order, and workflow depth in one control room.",
     metaTitle: "Best Opus Clip Alternative",
     metaDescription:
-      "Compare LWA vs Opus Clip for viral-ready clip stacks, hooks, captions, timestamps, packaging, queue flow, and creator workflow depth.",
-    keywords: ["opus clip alternative", "best opus clip alternative", "opus clip vs lwa", "viral-ready clip stack"],
+      "Compare LWA vs Opus Clip for ranked clip stacks, hooks, captions, timestamps, packaging, queue flow, and creator workflow depth.",
+    keywords: ["opus clip alternative", "best opus clip alternative", "opus clip vs lwa", "ranked clip stack"],
     proofPoints: ["Best clip first", "Packaging + CTA", "Queue + campaign flow"],
     sections: [
       {
@@ -93,7 +93,7 @@ export const comparisonPages: SearchLandingData[] = [
         bullets: [
           "Podcast, stream, interview, and webinar repurposing",
           "Fast review of the best clip first",
-          "Upgrade path into campaigns, queue, and payout-readiness",
+          "Upgrade path into campaigns, queue, and manual payout readiness",
         ],
       },
     ],
@@ -152,12 +152,12 @@ export const useCasePages: SearchLandingData[] = [
     kicker: "Use case",
     title: "Built for clipping workflows, content rewards, and fast submission stacks.",
     description:
-      "LWA fits Whop-style clipping work by helping operators move from source to clips worth posting, queue, campaigns, and payout-readiness faster.",
+      "LWA fits Whop-style clipping work by helping operators move from source to clips worth posting, queue, campaigns, and manual payout readiness faster.",
     metaTitle: "Best Tool for Whop Clipping",
     metaDescription:
-      "Use LWA for viral-ready clip stacks, packaging, queue flow, and creator/operator workflows built for clipping campaigns and content rewards.",
+      "Use LWA for ranked clip stacks, packaging, queue flow, and creator/operator workflows built for clipping campaigns and content rewards.",
     keywords: ["best tool for whop clipping", "how to make money clipping on whop", "content rewards clipping software", "clipping campaign workflow"],
-    proofPoints: ["Campaign-ready", "Queue control", "Payout-ready flow"],
+    proofPoints: ["Manual campaign prep", "Queue control", "Payout-readiness flow"],
     sections: [
       {
         title: "Why it maps to clipping campaigns",
@@ -165,7 +165,7 @@ export const useCasePages: SearchLandingData[] = [
         bullets: [
           "Best clip first review flow",
           "Queue and campaign surfaces already in the product",
-          "Wallet and payout-readiness scaffolding for operator trust",
+          "Wallet and payout-readiness review scaffolding for operator trust",
         ],
       },
       {
@@ -194,7 +194,7 @@ export const useCasePages: SearchLandingData[] = [
       "LWA is built for creators who already have long-form content and want a faster path from source to short-form output, queue, and review.",
     metaTitle: "AI Content Repurposing for Creators",
     metaDescription:
-      "Turn one long-form source into a viral-ready clip stack with hooks, captions, timestamps, packaging angles, and operator-ready review flow.",
+      "Turn one long-form source into a ranked clip stack with hooks, captions, timestamps, packaging angles, and operator-ready review flow.",
     keywords: ["creator repurposing tool", "ai content repurposing", "turn one video into multiple clips", "short form workflow for creators"],
     proofPoints: ["Source to post faster", "Review-ready stack", "Premium creator workflow"],
     sections: [

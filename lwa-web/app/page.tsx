@@ -4,9 +4,9 @@ import { buildPageMetadata } from "../lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "AI Clipping Engine",
-  description: "Turn one source into viral-ready clips with hooks, previews, and post order.",
+  description: "Turn one source into ranked clip packages with hooks, previews, and post order.",
   path: "/",
-  keywords: ["ai clipping engine", "viral-ready clips", "short form repurposing", "creator workflow"],
+  keywords: ["ai clipping engine", "ranked clip packages", "short form repurposing", "creator workflow"],
 });
 
 const proofPoints = [
@@ -22,10 +22,10 @@ export default function HomePage() {
         <Logo animated />
 
         <h1 className="mt-10 text-4xl font-semibold leading-tight text-ink sm:text-6xl">
-          Viral-ready clips. One source in.
+          Ranked clip packages. One source in.
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-8 text-subtext sm:text-lg">
-          Paste a link. LWA picks the best moments.
+          Paste a public source. LWA ranks the cuts worth reviewing first.
         </p>
 
         <form action="/generate" method="get" className="mt-10 w-full space-y-4">

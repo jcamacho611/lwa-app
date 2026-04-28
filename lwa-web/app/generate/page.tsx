@@ -6,7 +6,7 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Generate Clips",
   description: "Paste a source URL to generate clips worth posting.",
   path: "/generate",
-  keywords: ["generate clips", "clip generator", "hooks captions timestamps", "viral-ready clips"],
+  keywords: ["generate clips", "clip generator", "hooks captions timestamps", "ranked clip packages"],
 });
 
 type GeneratePageProps = {

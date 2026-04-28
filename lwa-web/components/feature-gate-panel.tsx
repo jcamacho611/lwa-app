@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MoneyCtaPanel } from "./money-cta-panel";
 
 type FeatureGatePanelProps = {
   label: string;
@@ -31,12 +32,18 @@ export function FeatureGatePanel({ label, title, description, requiredPlan, bull
         <span className="rounded-full border border-[var(--gold-border)] bg-[linear-gradient(135deg,var(--surface-veil-heavy),var(--gold-dim),var(--surface-gold-ghost))] px-4 py-2 text-sm font-medium text-[var(--gold)] shadow-cyan">
           Unlock on {requiredPlan}
         </span>
-        <Link href="/settings" className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold">
-          Review plan
-        </Link>
         <Link href="/generate" className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium">
           Back to clips
         </Link>
+      </div>
+
+      <div className="mt-6">
+        <MoneyCtaPanel
+          variant="compact"
+          source={`feature_gate_${label.toLowerCase().replace(/\s+/g, "_")}`}
+          title="Choose an upgrade path"
+          description="Use checkout, demo, or referral paths when configured. Access still depends on the selected platform."
+        />
       </div>
     </section>
   );

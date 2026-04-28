@@ -13,6 +13,7 @@ import { ClipPackEditor, ClipPatchPayload } from "./clip-pack-editor";
 import { FeatureGatePanel } from "./feature-gate-panel";
 import HeroClip from "./HeroClip";
 import { HistoryPanel } from "./history-panel";
+import { MoneyCtaPanel } from "./money-cta-panel";
 import Navbar from "./Navbar";
 import { PostingPanel } from "./posting-panel";
 import { ReadyQueuePanel } from "./ready-queue-panel";
@@ -95,7 +96,7 @@ import {
   upsertReadyQueueItem,
 } from "../lib/queue";
 import { GENERATOR_COPY, HERO_COPY, RESULTS_COPY, rewriteSurfaceLabel } from "../lib/brand-voice";
-import { hasPreviewAsset } from "../lib/clip-utils";
+import { getClipScore, isRenderedClip } from "../lib/clip-utils";
 import type { CharacterActionId } from "../lib/character-intelligence";
 import { getPlanSurface } from "../lib/plans";
 import { RESULT_COPY } from "../lib/result-copy";
@@ -112,7 +113,7 @@ const sourceModeOptions: Array<{ value: SourceMode; label: string; detail: strin
 ];
 
 function clipHasRenderedMedia(clip: ClipResult) {
-  return hasPreviewAsset(clip);
+  return isRenderedClip(clip);
 }
 
 function clipHasShotPlan(clip: ClipResult) {
@@ -326,8 +327,8 @@ export function ClipStudio({
       case "wallet":
         return {
           label: "Wallet",
-          title: "Track value and payout state",
-          description: "See balance and payout state.",
+          title: "Track value readiness",
+          description: "See balance and manual payout readiness.",
         };
       case "settings":
         return {
@@ -883,6 +884,10 @@ export function ClipStudio({
   }, [activeResult?.processing_summary?.target_platform, platform]);
   const orderedClips = useMemo(() => {
     return [...displayedClips].sort((left, right) => {
+      if (Boolean(left.is_best_clip) !== Boolean(right.is_best_clip)) {
+        return Number(Boolean(right.is_best_clip)) - Number(Boolean(left.is_best_clip));
+      }
+
       const leftOrder = left.post_rank || left.best_post_order || left.rank || Number.MAX_SAFE_INTEGER;
       const rightOrder = right.post_rank || right.best_post_order || right.rank || Number.MAX_SAFE_INTEGER;
 
@@ -890,7 +895,12 @@ export function ClipStudio({
         return leftOrder - rightOrder;
       }
 
-      return (right.virality_score ?? right.score ?? 0) - (left.virality_score ?? left.score ?? 0);
+      const scoreDelta = getClipScore(right) - getClipScore(left);
+      if (scoreDelta !== 0) {
+        return scoreDelta;
+      }
+
+      return Number(clipHasRenderedMedia(right)) - Number(clipHasRenderedMedia(left));
     });
   }, [displayedClips]);
 
@@ -1018,8 +1028,7 @@ export function ClipStudio({
     },
   ] as const;
   const previewReadyCount = useMemo(
-    () =>
-      orderedClips.filter((clip) => clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url).length,
+    () => orderedClips.filter((clip) => clipHasRenderedMedia(clip)).length,
     [orderedClips],
   );
   const leadClip = orderedClips[0] ?? null;
@@ -1104,7 +1113,9 @@ export function ClipStudio({
         Out of credits.
       </p>
       <p className="mt-1 text-sm text-white/55">
-        {user ? "Upgrade to keep generating." : "Sign in free to keep generating and save your clips."}
+        {user
+          ? "Choose a checkout path, request a demo, or wait for reset."
+          : "Sign in free to keep generating and save your clips."}
       </p>
       <div className="mt-3">
         {!user ? (
@@ -1119,9 +1130,7 @@ export function ClipStudio({
             Sign in free
           </button>
         ) : (
-          <Link href="/settings" className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black hover:opacity-90">
-            Upgrade plan
-          </Link>
+          <MoneyCtaPanel variant="compact" source="clip_studio_quota" title="Choose how to keep generating" />
         )}
       </div>
     </div>
@@ -1300,7 +1309,7 @@ export function ClipStudio({
   async function pollGuestRenderStatus(clipId: string, requestId: string, attempt = 0) {
     try {
       const status = await loadClipRenderStatus(clipId, requestId, token);
-      if (hasPreviewAsset(status)) {
+      if (isRenderedClip(status)) {
         replaceClipInResult(status);
         setClipRecoveryStates((current) => ({
           ...current,
@@ -1387,7 +1396,7 @@ export function ClipStudio({
       }));
       try {
         const status = await retryClipRender(clipId, requestId, token);
-        if (hasPreviewAsset(status)) {
+        if (isRenderedClip(status)) {
           replaceClipInResult(status);
           setClipRecoveryStates((current) => ({
             ...current,
@@ -2374,7 +2383,7 @@ export function ClipStudio({
                     <WorkspaceRailCard
                       label="Studio pulse"
                       title="Generate first. Move fast."
-                      description="Move from generation to queue, assignments, and payout readiness."
+                      description="Move from generation to queue, assignments, and manual payout readiness."
                     >
                       <div className="mt-5 flex flex-wrap gap-2">
                         <StatPill tone="accent">{planSurface.name}</StatPill>
@@ -2550,7 +2559,7 @@ export function ClipStudio({
                       bullets={[
                         "Campaign briefs and angle targeting",
                         "Posting requirements for clippers and creators",
-                        "Campaign-level payout scaffolding",
+                        "Campaign-level payout readiness",
                       ]}
                     />
                   ) : null}
@@ -2561,12 +2570,12 @@ export function ClipStudio({
                     <FeatureGatePanel
                       label="Wallet"
                       title="Wallet views unlock on paid plans"
-                      description="Upgrade to track earnings, payout requests, and ledger movement from the same workspace."
+                      description="Upgrade to review earnings readiness, payout review requests, and ledger movement from the same workspace."
                       requiredPlan="Pro"
                       bullets={[
                         "Ledger balance tracking",
-                        "Payout request history",
-                        "Future earnings and payout surfaces",
+                        "Payout review request history",
+                        "Future earnings readiness surfaces",
                       ]}
                     />
                   ) : null}

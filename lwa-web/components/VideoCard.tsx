@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ClipResult } from "../lib/types";
 import { LiveClipPreview } from "./results/LiveClipPreview";
 import { RetryPreviewButton } from "./results/RetryPreviewButton";
-import { hasPreviewAsset } from "../lib/clip-utils";
+import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore, getPreviewUrl, isRenderedClip } from "../lib/clip-utils";
 import { buildLeadReason } from "../lib/result-copy";
 import { ClipViewer } from "./ClipViewer";
 
@@ -32,13 +32,6 @@ type ClipMetaLabel = {
   label: string;
   tone: "neutral" | "warning" | "danger";
 };
-
-function authorityLabel(rank?: number | null) {
-  if (rank === 1) return "Post first";
-  if (rank === 2) return "Post next";
-  if (rank === 3) return "Post third";
-  return "Post later";
-}
 
 function clipHasShotPlan(clip: ClipResult) {
   return Boolean(clip.shot_plan?.length);
@@ -177,15 +170,16 @@ export default function VideoCard({
   recoveryState = null,
   onRecover,
 }: VideoCardProps) {
-  const [copiedHook, setCopiedHook] = useState(false);
+  const [copiedAction, setCopiedAction] = useState<"hook" | "caption" | "package" | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  const hasRenderProof = hasPreviewAsset(clip);
-  const previewUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
+  const hasRenderProof = isRenderedClip(clip);
+  const previewUrl = getPreviewUrl(clip) || null;
+  const assetUrl = getBestClipUrl(clip) || null;
   const downloadUrl = clip.download_url || null;
   const artifactLinks = clipCaptionArtifactLinks(clip);
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
-  const scoreValue = Math.round(clip.virality_score ?? clip.score ?? 0);
+  const scoreValue = getClipScore(clip);
   const badges = buildBadges(clip, hasRenderProof);
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 3);
   const campaignLabel = clipCampaignStatusLabel(clip);
@@ -205,13 +199,13 @@ export default function VideoCard({
     ...(approvalLabel ? [approvalLabel] : []),
   ];
 
-  async function handleCopyHook(text: string) {
+  async function handleCopy(text: string, action: "hook" | "caption" | "package") {
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedHook(true);
-      window.setTimeout(() => setCopiedHook(false), 1600);
+      setCopiedAction(action);
+      window.setTimeout(() => setCopiedAction((current) => (current === action ? null : current)), 1600);
     } catch {
-      setCopiedHook(false);
+      setCopiedAction(null);
     }
   }
 
@@ -231,8 +225,26 @@ export default function VideoCard({
             </svg>
           </button>
 
-          {hasRenderProof ? (
+          {previewUrl ? (
             <LiveClipPreview clip={clip} className="aspect-[9/16]" />
+          ) : hasRenderProof ? (
+            <div className="flex aspect-[9/16] min-h-[260px] flex-col justify-between bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),transparent_22%),linear-gradient(180deg,var(--bg-card)_0%,var(--bg)_100%)] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-[11px] font-medium text-emerald-50">
+                  Rendered file ready
+                </span>
+                <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] text-ink/62">
+                  {clipAuthorityLabel(postRank)}
+                </span>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-emerald-100">Ready now</p>
+                <h3 className="mt-4 text-lg font-semibold leading-7 text-ink">{clip.hook || clip.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-ink/62">
+                  A rendered asset is available. Open it if inline playback is limited for this run.
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="flex aspect-[9/16] min-h-[260px] flex-col justify-between bg-[radial-gradient(circle_at_top,var(--surface-gold-glow),transparent_24%),linear-gradient(180deg,var(--bg-card)_0%,var(--bg)_100%)] p-5">
               <div className="flex items-center justify-between gap-3">
@@ -240,7 +252,7 @@ export default function VideoCard({
                   Strategy only
                 </span>
                 <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] text-ink/62">
-                  {authorityLabel(postRank)}
+                  {clipAuthorityLabel(postRank)}
                 </span>
               </div>
               <div>
@@ -303,7 +315,7 @@ export default function VideoCard({
                     <p className="text-xs leading-6 text-ink/78">{variant}</p>
                     <button
                       type="button"
-                      onClick={() => void handleCopyHook(variant)}
+                      onClick={() => void handleCopy(variant, "hook")}
                       className="secondary-button inline-flex items-center justify-center rounded-full px-3 py-2 text-xs font-medium"
                     >
                       Copy
@@ -345,9 +357,9 @@ export default function VideoCard({
               <a href={downloadUrl} download className="primary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold sm:w-auto">
                 Export clip
               </a>
-            ) : previewUrl ? (
+            ) : assetUrl ? (
               <a
-                href={previewUrl}
+                href={assetUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium sm:w-auto"
@@ -358,10 +370,26 @@ export default function VideoCard({
 
             <button
               type="button"
-              onClick={() => void handleCopyHook(clip.hook || clip.title || "")}
+              onClick={() => void handleCopy(clip.hook || clip.title || "", "hook")}
               className="secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium sm:w-auto"
             >
-              {copiedHook ? "Hook copied" : "Copy hook"}
+              {copiedAction === "hook" ? "Hook copied" : "Copy hook"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void handleCopy(clip.caption || clip.transcript || "", "caption")}
+              className="secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium sm:w-auto"
+            >
+              {copiedAction === "caption" ? "Caption copied" : "Copy caption"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void handleCopy(buildClipPackageText(clip, clip.target_platform || undefined), "package")}
+              className="secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium sm:w-auto"
+            >
+              {copiedAction === "package" ? "Package copied" : "Copy package"}
             </button>
 
             {showQueue ? (

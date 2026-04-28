@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { ClipResult } from "../lib/types";
-import { isRenderedClip } from "../lib/clip-utils";
+import { getPreviewUrl } from "../lib/clip-utils";
 
 type ClipViewerProps = {
   clip: ClipResult;
@@ -12,8 +12,8 @@ type ClipViewerProps = {
 
 export function ClipViewer({ clip, isOpen, onClose }: ClipViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hasVideo = isRenderedClip(clip);
-  const videoUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
+  const videoUrl = getPreviewUrl(clip) || null;
+  const hasVideo = Boolean(videoUrl);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
@@ -42,7 +42,7 @@ export function ClipViewer({ clip, isOpen, onClose }: ClipViewerProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-10 sm:px-6"
       onClick={onClose}
     >
       {/* Glass backdrop */}
@@ -50,14 +50,14 @@ export function ClipViewer({ clip, isOpen, onClose }: ClipViewerProps) {
 
       {/* Viewer shell */}
       <div
-        className="relative z-10 flex max-h-screen w-full max-w-sm flex-col"
+        className="relative z-10 flex max-h-full w-full max-w-sm flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute -top-10 right-0 flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/8 text-white/60 transition hover:bg-white/14 hover:text-white"
+          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white/72 backdrop-blur transition hover:bg-white/14 hover:text-white"
           aria-label="Close viewer"
         >
           ✕
@@ -73,7 +73,7 @@ export function ClipViewer({ clip, isOpen, onClose }: ClipViewerProps) {
               playsInline
               loop
               muted={false}
-              controls={false}
+              controls
               onClick={(e) => {
                 const v = e.currentTarget;
                 v.paused ? void v.play() : v.pause();
