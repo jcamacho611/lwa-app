@@ -9,7 +9,7 @@ from typing import Optional
 from openai import OpenAI
 
 from ..core.config import Settings
-from ..models.schemas import ClipResult
+from ..models.schemas import ClipResult, ScoreBreakdown
 from ..processor import SourceContext, score_excerpt
 from .anthropic_service import (
     anthropic_available,
@@ -309,14 +309,24 @@ def normalize_compiler_update(
         entry.get("hook_variants"),
         fallback=list(heuristic["hook_variants"]),
     )
+    score_breakdown = normalize_score_breakdown(
+        entry.get("score_breakdown"),
+        fallback=heuristic["score_breakdown"],
+    )
 
     return {
         "score": score,
         "virality_score": score,
+        "hook_score": clamp_score(entry.get("hook_score"), fallback=int(heuristic["hook_score"])),
         "confidence": confidence,
         "reason": reason,
         "why_this_matters": str_or_default(entry.get("why_this_matters"), str(heuristic["why_this_matters"])),
         "confidence_score": clamp_score(entry.get("confidence_score"), fallback=int(heuristic["confidence_score"])),
+        "score_breakdown": score_breakdown,
+        "scoring_explanation": str_or_default(
+            entry.get("scoring_explanation"),
+            str(heuristic["scoring_explanation"]),
+        ),
         "hook_variants": hook_variants,
         "caption_variants": normalize_caption_variants(
             entry.get("caption_variants"),
@@ -331,6 +341,10 @@ def normalize_compiler_update(
         "thumbnail_text": str_or_default(entry.get("thumbnail_text"), str(heuristic["thumbnail_text"])),
         "cta_suggestion": str_or_default(entry.get("cta_suggestion"), str(heuristic["cta_suggestion"])),
         "caption_style": str_or_default(entry.get("caption_style"), str(heuristic["caption_style"])),
+        "render_readiness_score": clamp_score(
+            entry.get("render_readiness_score"),
+            fallback=int(heuristic["render_readiness_score"]),
+        ),
         "post_rank": clamp_score(entry.get("post_rank"), fallback=index),
     }
 
@@ -410,7 +424,8 @@ def heuristic_analysis(
         ]
         if part
     )
-    emotional = keyword_score(combined_text, {"love", "hate", "pain", "fear", "crazy", "wild", "shocking", "secret"}) + punctuation_score(combined_text)
+    punctuation = punctuation_score(combined_text)
+    emotional = keyword_score(combined_text, {"love", "hate", "pain", "fear", "crazy", "wild", "shocking", "secret"}) + punctuation
     story = keyword_score(combined_text, {"story", "when", "then", "realized", "started", "moment", "because"})
     curiosity = keyword_score(combined_text, {"why", "how", "stop", "before", "nobody", "most", "exact", "mistake"})
     replay = keyword_score(combined_text, {"exact", "step", "mistake", "never", "always", "pattern", "shortcut", "convert"})
@@ -430,21 +445,28 @@ def heuristic_analysis(
         curiosity=curiosity,
         replay=replay,
     )
-    signal_total = (
-        (retention * 1.0)
-        + (clarity * 0.95)
-        + (emotional * 0.75)
-        + (curiosity * 0.95)
-        + (replay * 0.9)
-        + (story * 0.45)
-        + (transcript_signal * 1.35)
-        + (hook_strength * 1.45)
-        + (standalone * 1.15)
-        + (authority * 0.95)
-        + (contrarian * 0.65)
+    breakdown_data = score_breakdown_for(
+        clip=clip,
+        target_platform=target_platform,
+        combined_text=combined_text,
+        packaging_angle=packaging_angle,
+        punctuation=punctuation,
+        emotional=emotional,
+        story=story,
+        curiosity=curiosity,
+        replay=replay,
+        clarity=clarity,
+        retention=retention,
+        transcript_signal=transcript_signal,
+        hook_strength=hook_strength,
+        standalone=standalone,
+        authority=authority,
+        contrarian=contrarian,
     )
-    score = clamp_score(None, fallback=int(round(18 + (signal_total / 1.55))))
-    score = max(score, 48)
+    score_breakdown = ScoreBreakdown(**breakdown_data)
+    score = weighted_virality_score(breakdown_data)
+    score = max(score, 38 if clip.transcript_excerpt else 32)
+    signal_completeness = sum(1 for value in breakdown_data.values() if value >= 55)
     confidence = clamp_confidence(
         None,
         fallback=min(
@@ -454,7 +476,7 @@ def heuristic_analysis(
                 (score / 100.0)
                 + (0.04 if clip.transcript_excerpt else 0.0)
                 + (0.02 if index == 1 else 0.0)
-                + min((transcript_signal + hook_strength + standalone) / 260.0, 0.07),
+                + min(signal_completeness / 140.0, 0.08),
             ),
         ),
     )
@@ -481,8 +503,9 @@ def heuristic_analysis(
     return {
         "score": score,
         "virality_score": score,
+        "hook_score": score_breakdown.hook_score,
         "confidence": confidence,
-        "confidence_score": max(int(round(confidence * 100)), 55),
+        "confidence_score": max(int(round(confidence * 100)), 55 if score >= 60 else 46),
         "reason": heuristic_reason_for(
             target_platform=target_platform,
             packaging_angle=packaging_angle,
@@ -492,6 +515,8 @@ def heuristic_analysis(
             curiosity=curiosity,
             authority=authority,
         ),
+        "score_breakdown": score_breakdown,
+        "scoring_explanation": scoring_explanation_for(score_breakdown),
         "why_this_matters": why_this_matters_for(
             clip=clip,
             target_platform=target_platform,
@@ -510,6 +535,7 @@ def heuristic_analysis(
         "thumbnail_text": thumbnail_text,
         "cta_suggestion": cta_for(target_platform, index, packaging_angle=packaging_angle),
         "caption_style": caption_style_for(target_platform, packaging_angle),
+        "render_readiness_score": score_breakdown.render_readiness_score,
     }
 
 
@@ -604,6 +630,264 @@ def normalize_caption_variants(value: object, *, fallback: dict[str, str]) -> di
     return fallback
 
 
+def normalize_score_breakdown(value: object, *, fallback: object) -> ScoreBreakdown:
+    if isinstance(fallback, ScoreBreakdown):
+        normalized = fallback.model_dump()
+    elif isinstance(fallback, dict):
+        normalized = {
+            key: clamp_score(raw, fallback=0)
+            for key, raw in fallback.items()
+        }
+    else:
+        normalized = ScoreBreakdown().model_dump()
+
+    if isinstance(value, ScoreBreakdown):
+        normalized.update(value.model_dump())
+    elif isinstance(value, dict):
+        for key in ScoreBreakdown.model_fields:
+            if key in value:
+                normalized[key] = clamp_score(value.get(key), fallback=normalized.get(key, 0))
+
+    return ScoreBreakdown(**normalized)
+
+
+def scaled_component(raw: float, maximum: float) -> int:
+    if maximum <= 0:
+        return 0
+    return max(0, min(int(round((raw / maximum) * 100)), 100))
+
+
+def platform_fit_score_for(
+    *,
+    target_platform: str,
+    duration_seconds: int,
+    packaging_angle: str,
+    has_transcript: bool,
+    opening_line: str,
+) -> int:
+    normalized = target_platform.lower()
+    if "tiktok" in normalized:
+        if 7 <= duration_seconds <= 30:
+            base = 88
+        elif 5 <= duration_seconds <= 45:
+            base = 76
+        elif duration_seconds <= 60:
+            base = 64
+        else:
+            base = 46
+        if packaging_angle in {"shock", "curiosity", "controversy"}:
+            base += 6
+    elif "instagram" in normalized or "reels" in normalized:
+        if 7 <= duration_seconds <= 30:
+            base = 86
+        elif 30 <= duration_seconds <= 60:
+            base = 80
+        elif duration_seconds <= 90:
+            base = 68
+        else:
+            base = 48
+        if packaging_angle in {"story", "curiosity", "value"}:
+            base += 4
+    elif "youtube" in normalized or "shorts" in normalized:
+        if 15 <= duration_seconds <= 60:
+            base = 88
+        elif 10 <= duration_seconds <= 75:
+            base = 76
+        else:
+            base = 52
+        if packaging_angle in {"value", "story", "curiosity"}:
+            base += 5
+    elif "linkedin" in normalized:
+        if 30 <= duration_seconds <= 90:
+            base = 88
+        elif 20 <= duration_seconds <= 180:
+            base = 72
+        else:
+            base = 46
+        if packaging_angle in {"value", "story"}:
+            base += 6
+    elif "facebook" in normalized:
+        if 15 <= duration_seconds <= 60:
+            base = 84
+        elif 10 <= duration_seconds <= 75:
+            base = 72
+        else:
+            base = 48
+        if packaging_angle in {"story", "value"}:
+            base += 4
+    else:
+        base = 74 if 10 <= duration_seconds <= 60 else 58
+
+    opening_words = re.findall(r"[A-Za-z0-9']+", opening_line)
+    if has_transcript:
+        base += 4
+    if 5 <= len(opening_words) <= 14:
+        base += 2
+    return max(0, min(base, 100))
+
+
+def commercial_signal_score(text: str) -> int:
+    lowered = text.lower()
+    score = 0
+    if re.search(r"[$€£]\s?\d", text) or re.search(r"\b\d+(k|m|x|%)\b", lowered):
+        score += 8
+    if any(keyword in lowered for keyword in {"revenue", "sales", "clients", "followers", "grew", "made", "results", "booked"}):
+        score += 6
+    if any(keyword in lowered for keyword in {"offer", "buy", "dm", "consult", "join", "book"}):
+        score += 4
+    return min(score, 18)
+
+
+def score_breakdown_for(
+    *,
+    clip: ClipResult,
+    target_platform: str,
+    combined_text: str,
+    packaging_angle: str,
+    punctuation: int,
+    emotional: int,
+    story: int,
+    curiosity: int,
+    replay: int,
+    clarity: int,
+    retention: int,
+    transcript_signal: int,
+    hook_strength: int,
+    standalone: int,
+    authority: int,
+    contrarian: int,
+) -> dict[str, int]:
+    duration_seconds = max(parse_timestamp(clip.end_time or "0") - parse_timestamp(clip.start_time or "0"), 1)
+    hook_score = scaled_component(
+        hook_strength + (curiosity * 0.45) + (contrarian * 0.35) + (authority * 0.20),
+        34,
+    )
+    retention_score = scaled_component((retention * 0.6) + (standalone * 0.4), 22)
+    emotional_spike_score = scaled_component(emotional, 34)
+    clarity_component = scaled_component((clarity * 0.65) + (transcript_signal * 0.35), 19)
+    platform_fit_score = platform_fit_score_for(
+        target_platform=target_platform,
+        duration_seconds=duration_seconds,
+        packaging_angle=packaging_angle,
+        has_transcript=bool(clip.transcript_excerpt),
+        opening_line=clip.hook or clip.title,
+    )
+    visual_energy_score = scaled_component(
+        (emotional * 0.40) + (contrarian * 0.25) + (hook_strength * 0.20) + (8 if packaging_angle in {"shock", "controversy"} else 0),
+        30,
+    )
+    audio_energy_score = scaled_component((emotional * 0.50) + (hook_strength * 0.35) + (curiosity * 0.15), 30)
+    controversy_score = scaled_component(min(contrarian + (8 if packaging_angle == "controversy" else 0), 24), 24)
+    educational_value_score = scaled_component((authority * 0.55) + (replay * 0.45), 18)
+    share_comment_score = scaled_component(
+        (curiosity * 0.35)
+        + (contrarian * 0.40)
+        + (emotional * 0.15)
+        + (8 if packaging_angle in {"controversy", "curiosity"} else 0),
+        24,
+    )
+    commercial_value_score = scaled_component(
+        (authority * 0.40) + (transcript_signal * 0.20) + (commercial_signal_score(combined_text) * 0.40),
+        14,
+    )
+
+    render_readiness_score = clip.render_readiness_score
+    if render_readiness_score is None:
+        render_readiness_base = 28 + min(transcript_signal * 2, 18)
+        if clip.transcript_excerpt:
+            render_readiness_base += 12
+        if 7 <= duration_seconds <= 45:
+            render_readiness_base += 8
+        elif 5 <= duration_seconds <= 60:
+            render_readiness_base += 4
+        if hook_score >= 70:
+            render_readiness_base += 8
+        elif hook_score >= 55:
+            render_readiness_base += 4
+        if clarity_component >= 70:
+            render_readiness_base += 8
+        elif clarity_component >= 55:
+            render_readiness_base += 4
+        if audio_energy_score >= 60:
+            render_readiness_base += 6
+        elif audio_energy_score >= 45:
+            render_readiness_base += 3
+        if any([clip.preview_url, clip.clip_url, clip.edited_clip_url, clip.raw_clip_url]):
+            render_readiness_base += 18
+        if clip.render_status == "failed":
+            render_readiness_base -= 18
+        render_readiness_score = max(22, min(render_readiness_base, 92))
+
+    return {
+        "hook_score": hook_score,
+        "retention_score": retention_score,
+        "emotional_spike_score": emotional_spike_score,
+        "clarity_score": clarity_component,
+        "platform_fit_score": platform_fit_score,
+        "visual_energy_score": visual_energy_score,
+        "audio_energy_score": audio_energy_score,
+        "controversy_score": controversy_score,
+        "educational_value_score": educational_value_score,
+        "share_comment_score": share_comment_score,
+        "render_readiness_score": clamp_score(render_readiness_score, fallback=render_readiness_score),
+        "commercial_value_score": commercial_value_score,
+    }
+
+
+def weighted_virality_score(breakdown: dict[str, int]) -> int:
+    score = (
+        (breakdown["hook_score"] * 0.25)
+        + (breakdown["retention_score"] * 0.20)
+        + (breakdown["emotional_spike_score"] * 0.15)
+        + (breakdown["clarity_score"] * 0.10)
+        + (breakdown["platform_fit_score"] * 0.10)
+        + (breakdown["visual_energy_score"] * 0.05)
+        + (breakdown["audio_energy_score"] * 0.05)
+        + (breakdown["controversy_score"] * 0.03)
+        + (breakdown["educational_value_score"] * 0.03)
+        + (breakdown["share_comment_score"] * 0.02)
+        + (breakdown["render_readiness_score"] * 0.01)
+        + (breakdown["commercial_value_score"] * 0.01)
+    )
+    return clamp_score(None, fallback=int(round(score)))
+
+
+def scoring_explanation_for(score_breakdown: ScoreBreakdown) -> str:
+    explanation_map = {
+        "hook_score": "the opener lands quickly",
+        "retention_score": "the pacing should hold attention long enough to pay off",
+        "emotional_spike_score": "the emotion carries extra replay pressure",
+        "clarity_score": "the point is easy to understand fast",
+        "platform_fit_score": "the trim fits the target platform cleanly",
+        "visual_energy_score": "the moment should feel active on screen",
+        "audio_energy_score": "the delivery has enough lift to carry the cut",
+        "controversy_score": "the take is sharp enough to trigger responses",
+        "educational_value_score": "the value is specific enough to save or share",
+        "share_comment_score": "the framing gives viewers a reason to comment",
+        "render_readiness_score": "the clip is technically ready to turn into a usable asset",
+        "commercial_value_score": "the language carries clear proof or offer value",
+    }
+    breakdown = score_breakdown.model_dump()
+    strongest = sorted(
+        ((key, value) for key, value in breakdown.items() if key != "render_readiness_score"),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    strengths = [explanation_map[key] for key, value in strongest if value >= 65][:2]
+    if not strengths:
+        strengths = [explanation_map[strongest[0][0]]] if strongest else ["the clip has enough signal to test"]
+    readiness = (
+        "ready now"
+        if score_breakdown.render_readiness_score >= 72
+        else "worth testing but still needs review"
+        if score_breakdown.render_readiness_score >= 55
+        else "mostly strategic until render quality improves"
+    )
+    if len(strengths) == 1:
+        return f"Score driven by {strengths[0]}. Render readiness is {readiness}."
+    return f"Score driven by {strengths[0]} and {strengths[1]}. Render readiness is {readiness}."
+
+
 def keyword_score(text: str, keywords: set[str]) -> int:
     lowered = text.lower()
     return min(sum(4 for keyword in keywords if keyword in lowered), 24)
@@ -644,14 +928,16 @@ def hook_strength_score(text: str) -> int:
     elif words:
         score += 2
     if lowered.startswith(("stop", "why", "how", "if", "most", "this", "here")):
-        score += 5
-    if any(keyword in lowered for keyword in {"exact", "secret", "mistake", "wrong", "before", "nobody", "proof", "finally"}):
-        score += 5
+        score += 8
+    if any(keyword in lowered for keyword in {"exact", "secret", "mistake", "wrong", "before", "nobody", "proof", "finally", "again", "suddenly"}):
+        score += 6
+    if any(phrase in lowered for phrase in {"most creators", "why this", "how this", "the exact", "stop doing"}):
+        score += 4
     if any(token.isdigit() for token in words):
         score += 3
     if "?" in text or "!" in text:
         score += 3
-    return min(score, 24)
+    return min(score, 30)
 
 
 def standalone_coherence_score(primary_line: str, combined_text: str) -> int:

@@ -119,18 +119,25 @@ class AttentionCompilerTests(unittest.TestCase):
         clip = compiled[0]
         self.assertIsNotNone(clip.why_this_matters)
         self.assertIsNotNone(clip.confidence_score)
+        self.assertIsNotNone(clip.hook_score)
         self.assertIsNotNone(clip.thumbnail_text)
         self.assertIsNotNone(clip.cta_suggestion)
         self.assertIsNotNone(clip.caption_style)
+        self.assertIsNotNone(clip.score_breakdown)
+        self.assertIsNotNone(clip.scoring_explanation)
+        self.assertIsNotNone(clip.render_readiness_score)
         self.assertTrue(clip.hook_variants)
         self.assertTrue(clip.caption_variants)
         self.assertEqual(clip.post_rank, 1)
         self.assertGreaterEqual(clip.confidence_score or 0, 55)
+        self.assertGreaterEqual(clip.hook_score or 0, 55)
+        self.assertGreaterEqual((clip.score_breakdown.hook_score if clip.score_breakdown else 0), 55)
         self.assertEqual(len(clip.hook_variants), 3)
         self.assertEqual(len(set(clip.hook_variants)), len(clip.hook_variants))
         self.assertGreaterEqual(len((clip.thumbnail_text or "").split()), 2)
         self.assertLessEqual(len((clip.thumbnail_text or "").split()), 5)
         self.assertIn("Open with this", clip.why_this_matters or "")
+        self.assertIn("Render readiness", clip.scoring_explanation or "")
 
     def test_compile_with_fallback_builds_stronger_packaging_for_contrarian_clip(self) -> None:
         clips = [
@@ -160,6 +167,7 @@ class AttentionCompilerTests(unittest.TestCase):
         self.assertEqual(clip.caption_style, "Tension-led contrarian")
         self.assertIn("which side", (clip.cta_suggestion or "").lower())
         self.assertEqual(len(clip.hook_variants), 3)
+        self.assertGreaterEqual((clip.score_breakdown.controversy_score if clip.score_breakdown else 0), 60)
         self.assertTrue(any("wrong" in variant.lower() or "contrarian" in variant.lower() for variant in clip.hook_variants))
 
     def test_compile_with_fallback_creates_real_score_spread(self) -> None:
@@ -232,6 +240,8 @@ class AttentionCompilerTests(unittest.TestCase):
         scores = [clip.score for clip in compiled]
         self.assertGreaterEqual(max(scores) - min(scores), 15)
         for clip in compiled:
+            self.assertIsNotNone(clip.score_breakdown)
+            self.assertIsNotNone(clip.render_readiness_score)
             self.assertEqual(len(clip.hook_variants), 3)
             self.assertEqual(len(set(clip.hook_variants)), 3)
 

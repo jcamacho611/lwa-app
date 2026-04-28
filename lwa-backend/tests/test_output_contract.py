@@ -45,6 +45,9 @@ class OutputContractTests(unittest.TestCase):
         self.assertFalse(normalized["clips"][1]["is_rendered"])
         self.assertTrue(normalized["clips"][1]["is_strategy_only"])
         self.assertEqual(normalized["clips"][0]["confidence_label"], "High viral potential")
+        self.assertIn("hook_score", normalized["clips"][0])
+        self.assertIn("score_breakdown", normalized["clips"][0])
+        self.assertIn("render_readiness_score", normalized["clips"][0])
         self.assertIn("posting plan", normalized["clips"][1]["reason"])
 
     def test_plan_output_contract_includes_confidence_and_state_flags(self) -> None:
@@ -76,6 +79,9 @@ class OutputContractTests(unittest.TestCase):
         self.assertEqual(gated[0].confidence_label, "High viral potential")
         self.assertTrue(gated[0].is_rendered)
         self.assertFalse(gated[0].is_strategy_only)
+        self.assertIsNotNone(gated[0].hook_score)
+        self.assertIsNotNone(gated[0].score_breakdown)
+        self.assertIsNotNone(gated[0].render_readiness_score)
 
     def test_export_bundle_writes_json_and_returns_public_download_url(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -24,6 +24,7 @@ class RenderQualityTests(unittest.TestCase):
 
         self.assertEqual(evaluation.visual_engine_status, "ready_now")
         self.assertGreaterEqual(evaluation.render_quality_score, 72)
+        self.assertEqual(evaluation.render_readiness_score, evaluation.render_quality_score)
         self.assertIsNone(evaluation.strategy_only_reason)
 
     def test_disabled_provider_keeps_strategy_only_with_recovery_path(self) -> None:
@@ -42,6 +43,7 @@ class RenderQualityTests(unittest.TestCase):
         evaluation = evaluate_render_quality(clip=clip, render_result=provider_result)
 
         self.assertEqual(evaluation.visual_engine_status, "strategy_only")
+        self.assertEqual(evaluation.render_readiness_score, 46)
         self.assertIn("Shot plan ready", evaluation.strategy_only_reason or "")
         self.assertIn("Turn the visual engine back on", evaluation.recovery_recommendation or "")
 
@@ -64,6 +66,7 @@ class RenderQualityTests(unittest.TestCase):
 
         self.assertEqual(evaluation.visual_engine_status, "recoverable")
         self.assertEqual(evaluation.render_quality_score, 30)
+        self.assertEqual(evaluation.render_readiness_score, 30)
         self.assertIn("retry", (evaluation.recovery_recommendation or "").lower())
 
 

@@ -58,6 +58,21 @@ class ExportBundle(BaseModel):
     download_ready: bool = False
 
 
+class ScoreBreakdown(BaseModel):
+    hook_score: int = 0
+    retention_score: int = 0
+    emotional_spike_score: int = 0
+    clarity_score: int = 0
+    platform_fit_score: int = 0
+    visual_energy_score: int = 0
+    audio_energy_score: int = 0
+    controversy_score: int = 0
+    educational_value_score: int = 0
+    share_comment_score: int = 0
+    render_readiness_score: int = 0
+    commercial_value_score: int = 0
+
+
 class GeneratedScripts(BaseModel):
     main: str
     variants: List[str] = Field(default_factory=list)
@@ -87,11 +102,14 @@ class ClipResult(BaseModel):
     start_time: Optional[str] = None
     end_time: Optional[str] = None
     score: int
+    hook_score: Optional[int] = None
     confidence_score: Optional[int] = None
     confidence: Optional[float] = None
     confidence_label: Optional[str] = None
     reason: Optional[str] = None
     why_this_matters: Optional[str] = None
+    score_breakdown: Optional[ScoreBreakdown] = None
+    scoring_explanation: Optional[str] = None
     category: Optional[str] = None
     format: Optional[str] = None
     preview_url: Optional[str] = None
@@ -139,6 +157,7 @@ class ClipResult(BaseModel):
     rendered_by: Optional[str] = None
     visual_engine_status: Optional[str] = None
     render_quality_score: Optional[int] = None
+    render_readiness_score: Optional[int] = None
     strategy_only_reason: Optional[str] = None
     recovery_recommendation: Optional[str] = None
     text_overlay_plan: Optional[str] = None
