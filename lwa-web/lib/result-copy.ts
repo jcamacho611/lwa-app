@@ -1,12 +1,31 @@
 export const RESULT_COPY = {
-  whyPicked: "Why this was picked",
-  previewProcessing: "Preview available on Pro",
-  previewRetry: "Retry preview",
-  ideasOnly: "Ideas only",
-  finishedPreviews: "Finished previews",
-  postingPlan: "Keep this in your posting plan while the preview finishes.",
-  strongSignal: "Strong early signal.",
-  noPreviewYet: "No preview yet",
+  // Clip status labels
+  renderedReady: "READY NOW",
+  strategyOnly: "STRATEGY ONLY",
+  strategyOnlyShort: "Strategy only",
+  recoverRender: "Recover render",
+
+  // Legacy / compat
+  whyPicked: "Why this clip ranked",
+  previewProcessing: "Strategy only",
+  previewRetry: "Recover render",
+  ideasOnly: "Strategy only",
+  finishedPreviews: "Rendered clips",
+  noPreviewYet: "Render not ready",
+
+  // Reasoning copy
+  postingPlan: "Keep this in your posting plan — render it when ready.",
+  strongSignal: "Strong signal detected.",
+
+  // Package / export
+  copyPackage: "Copy package",
+  packageCopied: "Package copied",
+  copyHook: "Copy hook",
+  hookCopied: "Copied!",
+  exportClip: "Export clip",
+  queuePost: "Queue post",
+  queued: "Queued for post",
+  packageNotes: "Package notes",
 } as const;
 
 export function buildLeadReason(raw?: string | null): string {
@@ -19,7 +38,8 @@ export function buildLeadReason(raw?: string | null): string {
     .replace(/render proof/gi, "preview")
     .replace(/media proof/gi, "preview")
     .replace(/keep it in the stack/gi, "keep this in your posting plan")
-    .replace(/strategy-only/gi, RESULT_COPY.ideasOnly)
-    .replace(/strategy card/gi, "idea card")
-    .replace(/recover render/gi, RESULT_COPY.previewRetry);
+    .replace(/strategy[-\s]only/gi, RESULT_COPY.strategyOnlyShort)
+    .replace(/strategy card/gi, "strategy clip")
+    .replace(/recover render/gi, RESULT_COPY.recoverRender)
+    .replace(/ideas only/gi, RESULT_COPY.strategyOnlyShort);
 }

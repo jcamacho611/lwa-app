@@ -22,7 +22,7 @@ This is the shortest path to finish LWA/IWA from the current repo state.
 If you change files later and want to save everything to GitHub:
 
 ```bash
-cd /Users/bdm/LWA
+cd /Users/bdm/LWA/lwa-app
 git status
 git add .
 git commit -m "Describe what changed"
@@ -32,7 +32,7 @@ git push origin main
 To verify nothing is pending:
 
 ```bash
-cd /Users/bdm/LWA
+cd /Users/bdm/LWA/lwa-app
 git status --short --branch
 git log --oneline -1
 ```

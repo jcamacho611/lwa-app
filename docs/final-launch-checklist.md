@@ -17,8 +17,8 @@ This is the final manual checklist to get LWA from codebase to a live paid produ
 - Transcript-aware clip selection when subtitles exist
 - Async job queue with polling
 - SwiftUI iOS client that polls jobs and displays asset links
-- Railway config in [railway.toml](/Users/bdm/LWA/lwa-backend/railway.toml)
-- Render config in [render.yaml](/Users/bdm/LWA/render.yaml)
+- Railway config in [railway.toml](/Users/bdm/LWA/lwa-app/lwa-backend/railway.toml)
+- Render config in [render.yaml](/Users/bdm/LWA/lwa-app/render.yaml)
 
 ## Railway Final Steps
 
@@ -46,14 +46,14 @@ This is the final manual checklist to get LWA from codebase to a live paid produ
 Run this locally:
 
 ```bash
-cd /Users/bdm/LWA/lwa-backend
+cd /Users/bdm/LWA/lwa-app/lwa-backend
 python3 scripts/smoke_test.py
 ```
 
 Run this against Railway:
 
 ```bash
-cd /Users/bdm/LWA/lwa-backend
+cd /Users/bdm/LWA/lwa-app/lwa-backend
 python3 scripts/smoke_test.py https://YOUR-RAILWAY-URL
 ```
 
@@ -67,9 +67,9 @@ python3 scripts/smoke_test.py https://YOUR-RAILWAY-URL
 3. Confirm the paid plans are the only plans granting full app value
 4. Set the app or experience base URL to your deployed backend or hosted app flow
 5. Keep the product copy aligned to:
-   - more clips
-   - more views
-   - more Whop income
+   - more clip output
+   - faster repurposing
+   - clearer clipping workflows
 6. Confirm onboarding includes:
    - Start Here
    - App Access
@@ -81,7 +81,7 @@ python3 scripts/smoke_test.py https://YOUR-RAILWAY-URL
 
 1. Deploy the backend first
 2. Update the production API URL in:
-   - [Info.plist](/Users/bdm/LWA/lwa-ios/LWA/Info.plist)
+   - [Info.plist](/Users/bdm/LWA/lwa-app/lwa-ios/LWA/Info.plist)
    - or the in-app Settings screen
 3. Replace the placeholder checkout URL with your real payment URL
 4. Run the app in the simulator and generate clips from:

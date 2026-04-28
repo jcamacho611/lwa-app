@@ -39,19 +39,22 @@ export const GENERATOR_COPY = {
   loading: "Finding your best moments...",
   submit: "Generate clips",
   submitting: "Finding clips...",
-  outputReady: "Ready. Review, queue, export.",
+  outputReady: "Your best clips. Ranked. Ready to post.",
   outputIdle: "Drop one source.",
 } as const;
 
 export const RESULTS_COPY = {
-  kicker: "Outputs ready",
-  title: "Post this first. Move the rest next.",
-  subhead: "Lead cut first. Follow-ups after.",
+  kicker: "Clips ready",
+  title: "Best clip first. Post the rest in order.",
+  subhead: "Rendered clips first. Strategy-only clips second.",
   sourceTruth: "Source intelligence",
-  topClip: "Lead cut",
-  gridTitle: "Next clips",
-  outputTrust: "Output trust",
-  executionGuide: "Move fast",
+  topClip: "Best clip",
+  gridTitle: "Post next",
+  outputTrust: "Output confidence",
+  executionGuide: "Post in order",
+  renderedLabel: "Rendered",
+  strategyOnlyLabel: "Strategy only",
+  exportRail: "Export-ready",
 } as const;
 
 export function rewriteSurfaceLabel(label: string): string {

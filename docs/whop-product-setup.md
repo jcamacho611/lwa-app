@@ -6,7 +6,7 @@ This document is the paste-ready structure for selling **LWA - AI Content Repurp
 
 - Business name: `LWA`
 - Product name: `LWA - AI Content Repurposer`
-- Core promise: `Generate more clips, get more views, and make more money on Whop.`
+- Core promise: `Generate more clips, move faster, and support Whop-style clipping workflows with less manual work.`
 - Product type: recurring SaaS membership with community and training attached
 
 ## Pricing Tiers
@@ -14,8 +14,8 @@ This document is the paste-ready structure for selling **LWA - AI Content Repurp
 | Tier | Price | Best For | Included |
 | --- | --- | --- | --- |
 | Free | $0 | New clippers testing the workflow | 3 clips per day, watermark on exports, basic hook ideas, community access, starter tutorials |
-| Pro | $19/month | Active Whop clippers who need speed | Unlimited clip generations, better captions, stronger hooks, no watermark, full tutorial access, faster support |
-| Scale | $49/month | Power users and small teams | Everything in Pro, bulk processing, faster generation queue, priority support, future auto-posting access when released |
+| Pro | $19/month | Active Whop clippers who need speed | Higher daily generation limits, better captions, stronger hooks, full tutorial access, faster support |
+| Scale | $49/month | Power users and small teams | Everything in Pro, higher-volume workflows, faster generation queue, priority support, future campaign tooling when released |
 
 ## Experiences To Create
 
@@ -31,7 +31,7 @@ Welcome to LWA.
 Start here:
 1. Introduce yourself and what kind of content you want to clip.
 2. Post your first clip result for feedback.
-3. Share your Whop campaign goal so we can help you optimize for views.
+3. Share your Whop campaign goal so we can help you optimize your clipping workflow.
 ```
 
 ### 2. Tutorials Section
@@ -42,7 +42,7 @@ Start here:
   - `Start Here: Generate Your First 3 Clips`
   - `How To Pick Better Hooks`
   - `How To Format Clips For TikTok, Reels, and Shorts`
-  - `How To Make Money With Whop Clipping`
+  - `How Whop-style clipping workflows can support monetization`
   - `How To Upgrade From Free To Pro When You Need Volume`
 
 ### 3. Updates / Announcements
@@ -55,7 +55,7 @@ Start here:
 ```text
 LWA is live.
 
-You can now paste a video URL, generate short-form clip ideas, and turn long-form content into monetizable posts faster.
+You can now paste a video URL, generate short-form clip ideas, and turn long-form content into reusable clip packages faster.
 
 If you are on Free, start with your 3 daily clips.
 If you need more volume, better hooks, and no watermark, upgrade to Pro.
@@ -66,11 +66,11 @@ If you are running serious output or team workflows, Scale is the move.
 
 ### Headline
 
-`Turn 1 video into more clips, more views, and more Whop income.`
+`Turn 1 video into more clips and a cleaner clipping workflow.`
 
 ### Subheadline
 
-`LWA helps creators turn long-form content into short-form clips with hooks, captions, and faster repurposing so they can post more, grow faster, and make more money from Whop clipping.`
+`LWA helps creators turn long-form content into short-form clip packages with hooks, captions, timestamps, and faster repurposing for Whop-style clipping workflows.`
 
 ### Benefit Bullets
 
@@ -78,15 +78,15 @@ If you are running serious output or team workflows, Scale is the move.
 - `Get stronger hooks and captions without starting from scratch`
 - `Create more short-form content in less time`
 - `Stay consistent across TikTok, Instagram Reels, and YouTube Shorts`
-- `Use LWA to increase output, test more angles, and improve your Whop earnings`
+- `Use LWA to increase output, test more angles, and support Whop-style clipping workflows`
 
 ### Value Proposition
 
-`LWA is not just an editing helper. It is a speed and monetization tool for Whop clippers. More clips gives you more chances to get views. More views gives you more chances to get paid.`
+`LWA is not just an editing helper. It is a faster clip packaging workflow for Whop clippers who need more output, cleaner review, and better packaging decisions.`
 
 ### Short Description
 
-`A tool that helps users generate more clips, get more views, and make more money on Whop.`
+`A tool that helps users generate more clips and move faster through Whop-style clipping workflows.`
 
 ## Suggested Plan Copy
 
@@ -96,11 +96,11 @@ If you are running serious output or team workflows, Scale is the move.
 
 ### Pro
 
-`For creators who want consistent volume. Unlimited clips, better captions, stronger hooks, and no watermark for $19/month.`
+`For creators who want consistent volume. Higher daily limits, better captions, stronger hooks, and fuller packaging for $19/month.`
 
 ### Scale
 
-`For operators who want speed and leverage. Bulk processing, faster generation, and future auto-posting access for $49/month.`
+`For operators who want speed and leverage. Higher-volume workflows, faster generation, and future campaign tooling for $49/month.`
 
 ## Onboarding Flow
 
@@ -118,7 +118,7 @@ Immediately after purchase, they should land in this order:
 ```text
 You are in.
 
-LWA helps you move from long-form content to short-form output faster so you can post more and earn more.
+LWA helps you move from long-form content to short-form output faster so you can review more options and post more consistently.
 
 Your next steps:
 1. Open the app
@@ -177,17 +177,17 @@ Upgrade to Pro to unlock unlimited generations, better captions, stronger hooks,
 
 ### Fastest Conversion Hook
 
-`If LWA helps you create even one extra winning clip, Pro pays for itself fast.`
+`If LWA helps you ship stronger clips more consistently, Pro can pay for itself fast.`
 
 ## Recommended Positioning
 
 - Sell outcome, not software
-- Lead with speed, output, and earnings
-- Keep the message tied to Whop clipping economics
+- Lead with speed, output, and workflow clarity
+- Keep the message tied to Whop-style clipping workflows, not guaranteed earnings
 
 Use this positioning line everywhere:
 
-`LWA helps users generate more clips, get more views, and make more money on Whop.`
+`LWA helps users generate more clips and move faster through Whop-style clipping workflows.`
 
 ## Launch Checklist
 
