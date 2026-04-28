@@ -96,7 +96,7 @@ import {
   upsertReadyQueueItem,
 } from "../lib/queue";
 import { GENERATOR_COPY, HERO_COPY, RESULTS_COPY, rewriteSurfaceLabel } from "../lib/brand-voice";
-import { getClipScore, isRenderedClip } from "../lib/clip-utils";
+import { buildAllPackagesText, buildClipPackageText, getClipScore, isRenderedClip } from "../lib/clip-utils";
 import type { CharacterActionId } from "../lib/character-intelligence";
 import { getPlanSurface } from "../lib/plans";
 import { RESULT_COPY } from "../lib/result-copy";
@@ -167,7 +167,7 @@ const marketingNavItems = [
   { href: "/campaigns", label: rewriteSurfaceLabel("Campaigns") },
 ] as const;
 
-const VIDEO_LOADING_STAGES = ["Downloading", "Transcribing", "Analyzing", "Scoring", "Packaging"];
+const VIDEO_LOADING_STAGES = ["Source ingest", "Moment scan", "Clip ranking", "Packaging", "Render/export", "Delivery"];
 
 type StudioSection =
   | "home"
@@ -241,6 +241,7 @@ export function ClipStudio({
   const [bundleExportState, setBundleExportState] = useState<"idle" | "exporting" | "ready" | "failed">("idle");
   const [bundleExportMessage, setBundleExportMessage] = useState<string | null>(null);
   const [latestBundleExport, setLatestBundleExport] = useState<ExportBundleResponse | null>(null);
+  const [copiedPackageAction, setCopiedPackageAction] = useState<"lead" | "rendered" | "strategy" | "all" | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
   const [generatorHovered, setGeneratorHovered] = useState(false);
   const stableResult = useStableResults(result);
@@ -260,9 +261,9 @@ export function ClipStudio({
 
   const loadingStages =
     sourceMode === "idea"
-      ? ["Reading prompt", "Generating motion", "Analyzing", "Scoring", "Packaging"]
+      ? ["Source ingest", "Moment scan", "Clip ranking", "Packaging", "Render/export", "Delivery"]
       : sourceMode === "image"
-        ? ["Reading image", "Generating motion", "Analyzing", "Scoring", "Packaging"]
+        ? ["Source ingest", "Moment scan", "Clip ranking", "Packaging", "Render/export", "Delivery"]
         : VIDEO_LOADING_STAGES;
 
   const activeSourceLabel = useMemo(() => {
@@ -1216,6 +1217,43 @@ export function ClipStudio({
     }
   }
 
+  async function handleCopyPackages(action: "lead" | "rendered" | "strategy" | "all") {
+    if (!activeResult?.clips?.length) {
+      return;
+    }
+
+    const fallbackPlatform = effectiveTargetPlatform === "Auto" ? undefined : effectiveTargetPlatform;
+    const clips =
+      action === "lead"
+        ? leadClip
+          ? [leadClip]
+          : []
+        : action === "rendered"
+          ? renderedClips
+          : action === "strategy"
+            ? strategyOnlyClips
+            : orderedClips;
+
+    const text =
+      action === "lead" && leadClip
+        ? buildClipPackageText(leadClip, fallbackPlatform)
+        : buildAllPackagesText(clips, fallbackPlatform);
+
+    if (!text.trim()) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard?.writeText(text);
+      setCopiedPackageAction(action);
+      window.setTimeout(() => {
+        setCopiedPackageAction((current) => (current === action ? null : current));
+      }, 1600);
+    } catch {
+      setCopiedPackageAction(null);
+    }
+  }
+
   function replaceClipInResult(updatedClip: ClipResult) {
     setResult((current) => {
       if (!current) {
@@ -1588,7 +1626,7 @@ export function ClipStudio({
           onChange={(event) => setVideoUrl(event.target.value)}
           onFocus={() => setInputFocused(true)}
           onBlur={() => setInputFocused(false)}
-          placeholder="Paste a video URL..."
+          placeholder="Paste a public YouTube, podcast, stream, or video URL..."
           className="source-command-input input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
         />
       </label>
@@ -1707,11 +1745,11 @@ export function ClipStudio({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="section-kicker">Source command</p>
-          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop in. Get clips.</h2>
+          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Paste one public source. Find the cuts worth posting.</h2>
           <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/82">
             {generationMode === "quick"
-              ? "Paste once. Post-ready stack."
-              : "Learn what you keep."}
+              ? "Rendered clips first. Strategy ideas stay separate."
+              : "Best clip first, with hooks, captions, timestamps, score, and post order."}
           </p>
         </div>
         <StatPill tone="accent">{useManualPlatform ? platform : "Auto recommend"}</StatPill>
@@ -1733,7 +1771,7 @@ export function ClipStudio({
             onClick={(event) => {
               if (sourceMode === "video" && !videoUrl.trim() && !selectedUploadId) {
                 event.preventDefault();
-                setError("Paste a YouTube or TikTok URL to get started.");
+                setError("Paste a public YouTube, podcast, stream, or video URL to get started.");
               }
             }}
             disabled={isLoading}
@@ -1743,7 +1781,7 @@ export function ClipStudio({
                 : "primary-button inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:min-w-[220px] md:w-auto"
             }
           >
-            {isGuest ? (isLoading ? "Finding clips..." : "Generate clips") : isLoading ? GENERATOR_COPY.submitting : GENERATOR_COPY.submit}
+            {isGuest ? (isLoading ? "Finding clips..." : "Generate clip pack") : isLoading ? GENERATOR_COPY.submitting : "Generate clip pack"}
           </button>
         </div>
 
@@ -1771,8 +1809,8 @@ export function ClipStudio({
               </h2>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">
                 {generationMode === "quick"
-                  ? "Paste source. Get ranked clips."
-                  : GENERATOR_COPY.subhead}
+                  ? "Rendered clips first. Strategy ideas stay separate."
+                  : "Best clip first, with hooks, captions, timestamps, score, and post order."}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1805,7 +1843,7 @@ export function ClipStudio({
                 onClick={(event) => {
                   if (sourceMode === "video" && !videoUrl.trim() && !selectedUploadId) {
                     event.preventDefault();
-                    setError("Paste a YouTube or TikTok URL to get started.");
+                    setError("Paste a public YouTube, podcast, stream, or video URL to get started.");
                   }
                 }}
                 disabled={isLoading}
@@ -1815,7 +1853,7 @@ export function ClipStudio({
                     : "primary-button inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:min-w-[240px] md:w-auto"
                 }
               >
-                {isGuest ? (isLoading ? "Finding clips..." : "Generate clips") : isLoading ? GENERATOR_COPY.submitting : GENERATOR_COPY.submit}
+                {isGuest ? (isLoading ? "Finding clips..." : "Generate clip pack") : isLoading ? GENERATOR_COPY.submitting : "Generate clip pack"}
               </button>
             </div>
 
@@ -2042,6 +2080,42 @@ export function ClipStudio({
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
+            {leadClip ? (
+              <button
+                type="button"
+                onClick={() => void handleCopyPackages("lead")}
+                className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
+              >
+                {copiedPackageAction === "lead" ? "Lead package copied" : "Copy lead package"}
+              </button>
+            ) : null}
+            {renderedClips.length ? (
+              <button
+                type="button"
+                onClick={() => void handleCopyPackages("rendered")}
+                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+              >
+                {copiedPackageAction === "rendered" ? "Rendered copied" : "Copy rendered packages"}
+              </button>
+            ) : null}
+            {strategyOnlyClips.length ? (
+              <button
+                type="button"
+                onClick={() => void handleCopyPackages("strategy")}
+                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+              >
+                {copiedPackageAction === "strategy" ? "Strategy copied" : "Copy strategy packages"}
+              </button>
+            ) : null}
+            {orderedClips.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => void handleCopyPackages("all")}
+                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+              >
+                {copiedPackageAction === "all" ? "All packages copied" : "Copy all packages"}
+              </button>
+            ) : null}
             {leadPreviewReady ? (
               <a
                 href={leadPreviewUrl || undefined}
@@ -2826,6 +2900,14 @@ function LoadingSequence({
   const safeLength = Math.max(stages.length, 1);
   const progress = Math.min(((activeIndex + 1) / safeLength) * 100, 100);
   const etaSeconds = Math.max((safeLength - activeIndex - 1) * 8, 6);
+  const stageDetails: Record<string, string> = {
+    "Source ingest": "Reading source and validating access.",
+    "Moment scan": "Scanning replay-worthy moments.",
+    "Clip ranking": "Ranking hooks and post order.",
+    Packaging: "Building captions, thumbnail lines, and CTA package.",
+    "Render/export": "Preparing vertical assets when available.",
+    Delivery: "Returning the clip pack to the studio.",
+  };
 
   return (
     <div className="panel-subtle rounded-[24px] px-5 py-6">
@@ -2836,8 +2918,8 @@ function LoadingSequence({
             <img src="/brand/lwa-mark.svg" alt="LWA" className="relative h-6 w-6 opacity-90" />
           </div>
           <div>
-            <p className="text-lg font-medium text-ink">LWA is building outputs</p>
-            <p className="text-sm text-ink/60">{stages.join(" → ")}</p>
+            <p className="text-lg font-medium text-ink">LWA is building the clip pack</p>
+            <p className="text-sm text-ink/60">{stageDetails[stages[activeIndex]] || stages[activeIndex] || "Preparing outputs."}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -2861,17 +2943,19 @@ function LoadingSequence({
         />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         {stages.map((stage, index) => (
           <div
             key={stage}
             className={[
               "loading-stage rounded-[20px] px-4 py-4",
+              index < activeIndex ? "border-emerald-300/20 bg-emerald-300/10" : "",
               index === activeIndex ? "loading-stage-active" : "",
             ].join(" ")}
           >
             <p className="text-xs uppercase tracking-[0.24em] text-muted">Step {index + 1}</p>
             <p className="mt-2 text-sm font-medium text-ink">{stage}</p>
+            <p className="mt-2 text-xs leading-5 text-ink/48">{stageDetails[stage] || "Preparing outputs."}</p>
           </div>
         ))}
       </div>

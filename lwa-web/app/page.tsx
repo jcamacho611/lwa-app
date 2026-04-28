@@ -11,8 +11,11 @@ export const metadata: Metadata = buildPageMetadata({
 
 const proofPoints = [
   "Best clip first",
-  "Hooks, thumbnail text, CTA",
-  "Export-ready packaging",
+  "Rendered proof when available",
+  "Strategy fallback stays separate",
+  "Hooks, captions, timestamps",
+  "Score and post order",
+  "Copy-ready package",
 ];
 
 export default function HomePage() {
@@ -22,10 +25,10 @@ export default function HomePage() {
         <Logo animated />
 
         <h1 className="mt-10 text-4xl font-semibold leading-tight text-ink sm:text-6xl">
-          Ranked clip packages. One source in.
+          Paste one public source. LWA finds the cuts worth posting.
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-8 text-subtext sm:text-lg">
-          Paste a public source. LWA ranks the cuts worth reviewing first.
+          Best clip first. Rendered proof when available. Strategy fallback when media is limited.
         </p>
 
         <form action="/generate" method="get" className="mt-10 w-full space-y-4">
@@ -36,17 +39,17 @@ export default function HomePage() {
             autoCorrect="off"
             spellCheck={false}
             name="url"
-            placeholder="Paste a YouTube or TikTok URL..."
+            placeholder="Paste a public YouTube, podcast, stream, or video URL..."
             className="source-command-input input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
             aria-label="Source URL"
           />
           <button type="submit" className="primary-button w-full rounded-full px-6 py-4 text-base font-semibold">
-            Generate clips
+            Generate clip pack
           </button>
         </form>
       </div>
 
-      <section className="mx-auto mt-16 grid w-full max-w-5xl gap-4 pb-16 md:grid-cols-3">
+      <section className="mx-auto mt-16 grid w-full max-w-5xl gap-4 pb-16 sm:grid-cols-2 lg:grid-cols-3">
         {proofPoints.map((item) => (
           <div
             key={item}
