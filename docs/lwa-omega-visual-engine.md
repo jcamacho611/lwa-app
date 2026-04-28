@@ -100,3 +100,76 @@ This phase does **not** change:
 - improve fallback hook/scoring quality
 - polish demo docs
 - finalize challenge/demo submission materials
+
+## Day 3 fallback lane
+
+The Day 3 pass hardens the offline-safe packaging path so LWA still feels intelligent when paid providers are blocked or intentionally disabled.
+
+### What improves in fallback mode
+
+- score spread is no longer flat across the pack
+- hooks come back with stronger variety instead of near-duplicates
+- packaging copy is more specific:
+  - clearer `why_this_matters`
+  - stronger thumbnail text
+  - clearer CTA suggestions
+- strategy-only clips keep:
+  - Director Brain shot plans
+  - render recovery guidance
+  - visible explanation of why no playable asset exists yet
+
+### Product contract
+
+Day 3 keeps this promise:
+
+- if a clip is rendered, show the ready lane clearly
+- if a clip is strategy-only, still show the best hook, shot plan, and recovery path
+- never hide a useful clip just because premium rendering is unavailable
+
+## Smoke test checklist
+
+### Normal generation
+
+1. Open `/generate`
+2. Paste a public source URL
+3. Generate
+4. Confirm:
+   - `Best clip first`
+   - `Shot plan ready`
+   - ranked results are visible
+
+### YouTube blocked / fallback path
+
+1. Paste a YouTube source that cannot be ingested from Railway
+2. Confirm LWA still returns a strategy-only or fallback-safe result when possible
+3. Confirm the user-facing explanation stays plain English
+
+### Upload path
+
+1. Upload a direct video file if available
+2. Confirm the app returns a clip pack even without live provider help
+
+### Strategy-only output
+
+1. Confirm at least one strategy-only result shows:
+   - `Strategy only`
+   - `Shot plan ready`
+   - `Recover render` when applicable
+
+### Rendered output
+
+1. Confirm rendered clips show `Rendered by LWA`
+2. Confirm the lead clip still holds the `Best clip first` position
+
+### Director Brain visibility
+
+1. Expand a clip
+2. Confirm the four-beat plan is present:
+   - `hook`
+   - `context`
+   - `payoff`
+   - `loop_end`
+
+### Scope protection
+
+1. Confirm no `lwa-ios/` files were changed in this sprint pass

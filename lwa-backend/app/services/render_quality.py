@@ -44,16 +44,16 @@ def evaluate_render_quality(
         return RenderQualityEvaluation(
             visual_engine_status="strategy_only",
             render_quality_score=46,
-            strategy_only_reason=render_result.message,
-            recovery_recommendation="Enable the visual engine when you are ready to render this clip.",
+            strategy_only_reason="Shot plan ready. Visual rendering is off, so this clip stays strategy-only for now.",
+            recovery_recommendation="Turn the visual engine back on when you are ready to render the highest-ranked clips.",
         )
 
     if render_result and render_result.provider_state == "missing-key":
         return RenderQualityEvaluation(
             visual_engine_status="strategy_only",
             render_quality_score=42,
-            strategy_only_reason=render_result.message,
-            recovery_recommendation="Add the visual engine key and retry the highest-ranked clips only.",
+            strategy_only_reason="Shot plan ready. Visual rendering is not configured, so this clip stays strategy-only for now.",
+            recovery_recommendation="Add the visual engine key, then retry the highest-ranked clips only.",
         )
 
     if render_result and render_result.provider_state == "failed":
@@ -62,13 +62,13 @@ def evaluate_render_quality(
             return RenderQualityEvaluation(
                 visual_engine_status="recoverable",
                 render_quality_score=30,
-                strategy_only_reason=render_result.message,
-                recovery_recommendation="Keep the shot plan, surface the strategy-only output, and retry rendering later.",
+                strategy_only_reason="Shot plan ready. The render attempt failed, but this clip is recoverable.",
+                recovery_recommendation="Keep the strategy output visible now and retry rendering later.",
             )
         return RenderQualityEvaluation(
             visual_engine_status="render_failed",
             render_quality_score=18,
-            strategy_only_reason=render_result.message,
+            strategy_only_reason="Shot plan ready. Rendering failed before a usable asset was created.",
             recovery_recommendation="Review the source media and prompt plan before attempting another render.",
         )
 
@@ -83,8 +83,8 @@ def evaluate_render_quality(
     return RenderQualityEvaluation(
         visual_engine_status="strategy_only",
         render_quality_score=38,
-        strategy_only_reason=clip.strategy_only_reason or "Shot plan ready, but no visual render was attempted.",
-        recovery_recommendation="Show the packaging stack now and render later if source access or credits improve.",
+        strategy_only_reason=clip.strategy_only_reason or "Shot plan ready. No visual render was attempted, so this clip stays strategy-only for now.",
+        recovery_recommendation="Show the packaging stack now and render later if source access improves.",
     )
 
 

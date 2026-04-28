@@ -1,6 +1,47 @@
 # LWA / IWA
 
-Monorepo for the LWA / IWA project.
+LWA turns one source into ranked short-form clips with Director Brain shot plans, fallback-safe hook variants, and an honest rendered-vs-strategy-only workflow. The system is designed to stay useful even when paid AI providers are unavailable: the app still returns a structured clip pack, ranking, packaging guidance, and recovery states instead of a dead end.
+
+## What LWA ships today
+
+- Ranked clip packs with **Best clip first** ordering
+- Director Brain metadata on each clip:
+  - `shot_plan`
+  - `rendered_by`
+  - `visual_engine_status`
+  - `strategy_only_reason`
+  - `recovery_recommendation`
+- Strategy-only fallback that still returns:
+  - usable hooks
+  - packaging angle
+  - thumbnail text
+  - CTA suggestion
+  - posting order
+- Rendered-first UI with a separate strategy-only lane
+- Recovery actions that preserve useful output when rendering is unavailable
+
+## Quick demo flow
+
+1. Open `https://lwa-the-god-app-production.up.railway.app/generate`
+2. Paste a public source URL or upload a source file
+3. Generate the clip pack
+4. Confirm the lead card shows:
+   - `Best clip first`
+   - `Shot plan ready`
+   - either `Rendered by LWA` / `Visual render ready` or `Strategy only`
+5. Expand a clip and review the `hook`, `context`, `payoff`, and `loop_end` shot plan
+
+## Tech stack
+
+- **Backend:** FastAPI, ffmpeg, yt-dlp, SQLite-backed persistence
+- **Frontend:** Next.js, TypeScript, Tailwind + design tokens
+- **Intelligence layers:** LWA Director Brain, attention compiler, fallback packaging heuristics
+- **Deployment:** Railway
+
+## Demo and submission docs
+
+- `docs/lwa-omega-visual-engine.md`
+- `docs/lwa-codex-creator-challenge-submission.md`
 
 ## Repo Layout
 
@@ -74,6 +115,13 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Backend checks commonly used in this repo:
+
+```bash
+cd lwa-backend
+python3 -m unittest tests.test_attention_compiler tests.test_director_brain_integration tests.test_render_quality
 ```
 
 ## iOS Notes

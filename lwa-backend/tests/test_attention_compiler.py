@@ -162,6 +162,79 @@ class AttentionCompilerTests(unittest.TestCase):
         self.assertEqual(len(clip.hook_variants), 3)
         self.assertTrue(any("wrong" in variant.lower() or "contrarian" in variant.lower() for variant in clip.hook_variants))
 
+    def test_compile_with_fallback_creates_real_score_spread(self) -> None:
+        clips = [
+            self.build_clip(
+                clip_id="clip_proof",
+                title="Exact conversion proof",
+                hook="The exact hook that doubled conversions in one week.",
+                caption="Proof-first breakdown with a clear next step.",
+                score=70,
+                packaging_angle="value",
+                transcript_excerpt="We tested this exact hook and it doubled conversions in one week.",
+                start_time="00:02",
+                end_time="00:14",
+            ),
+            self.build_clip(
+                clip_id="clip_question",
+                title="Wait for the answer",
+                hook="Why this tiny framing change suddenly lifts retention.",
+                caption="Question-led opener that earns the payoff later.",
+                score=70,
+                packaging_angle="curiosity",
+                transcript_excerpt="Why this framing change works is what most viewers wait to hear explained.",
+                start_time="00:15",
+                end_time="00:34",
+            ),
+            self.build_clip(
+                clip_id="clip_story",
+                title="Story payoff",
+                hook="This is the moment the whole story actually turns.",
+                caption="Narrative beat with a clean payoff.",
+                score=70,
+                packaging_angle="story",
+                transcript_excerpt="This is the turning point that makes the rest of the story click.",
+                start_time="00:34",
+                end_time="00:51",
+            ),
+            self.build_clip(
+                clip_id="clip_contra",
+                title="Hot take",
+                hook="Most creators still bury the only part viewers care about.",
+                caption="Contrarian line built to trigger comments.",
+                score=70,
+                packaging_angle="controversy",
+                transcript_excerpt="Most creators still get this wrong and that is exactly why the clip dies.",
+                start_time="00:52",
+                end_time="01:08",
+            ),
+            self.build_clip(
+                clip_id="clip_flat",
+                title="Generic filler",
+                hook="Here is a clip from the source.",
+                caption="This is a basic continuation moment.",
+                score=70,
+                packaging_angle="value",
+                transcript_excerpt="basic clip",
+                start_time="01:08",
+                end_time="01:38",
+            ),
+        ]
+
+        compiled = compile_with_fallback(
+            clips=clips,
+            target_platform="TikTok",
+            selected_trend="creator growth",
+            content_angle=None,
+            source_context=None,
+        )
+
+        scores = [clip.score for clip in compiled]
+        self.assertGreaterEqual(max(scores) - min(scores), 15)
+        for clip in compiled:
+            self.assertEqual(len(clip.hook_variants), 3)
+            self.assertEqual(len(set(clip.hook_variants)), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

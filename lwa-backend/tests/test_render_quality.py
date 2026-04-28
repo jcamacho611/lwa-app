@@ -42,8 +42,8 @@ class RenderQualityTests(unittest.TestCase):
         evaluation = evaluate_render_quality(clip=clip, render_result=provider_result)
 
         self.assertEqual(evaluation.visual_engine_status, "strategy_only")
-        self.assertIn("turned off", evaluation.strategy_only_reason or "")
-        self.assertIn("Enable", evaluation.recovery_recommendation or "")
+        self.assertIn("Shot plan ready", evaluation.strategy_only_reason or "")
+        self.assertIn("Turn the visual engine back on", evaluation.recovery_recommendation or "")
 
     def test_failed_provider_returns_recoverable_state(self) -> None:
         clip = ClipResult(

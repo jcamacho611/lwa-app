@@ -32,6 +32,7 @@ SIGNAL_STOPWORDS = {
     "before",
     "but",
     "by",
+    "clip",
     "for",
     "from",
     "get",
@@ -47,16 +48,24 @@ SIGNAL_STOPWORDS = {
     "it",
     "its",
     "just",
+    "make",
     "most",
+    "one",
     "of",
     "on",
     "or",
+    "part",
+    "post",
+    "first",
+    "reels",
+    "shorts",
     "that",
     "the",
     "their",
     "them",
     "they",
     "this",
+    "tiktok",
     "to",
     "use",
     "using",
@@ -66,6 +75,7 @@ SIGNAL_STOPWORDS = {
     "with",
     "you",
     "your",
+    "youtube",
 }
 
 
@@ -387,6 +397,7 @@ def heuristic_analysis(
     source_context: Optional[SourceContext],
     index: int,
 ) -> dict[str, object]:
+    opening_line = primary_opening_line(clip.hook or clip.transcript_excerpt or clip.title)
     combined_text = " ".join(
         part
         for part in [
@@ -406,6 +417,10 @@ def heuristic_analysis(
     clarity = clarity_score(combined_text)
     retention = duration_score(clip.start_time, clip.end_time)
     transcript_signal = transcript_signal_score(clip.transcript_excerpt, source_context=source_context)
+    hook_strength = hook_strength_score(opening_line)
+    standalone = standalone_coherence_score(opening_line, combined_text)
+    authority = authority_signal_score(combined_text)
+    contrarian = keyword_score(combined_text, {"wrong", "myth", "nobody", "most", "never", "mistake", "everyone"})
 
     packaging_angle = heuristic_packaging_angle(
         combined_text=combined_text,
@@ -415,23 +430,21 @@ def heuristic_analysis(
         curiosity=curiosity,
         replay=replay,
     )
-    score = max(
-        55,
-        min(
-            int(
-                round(
-                    38
-                    + (retention * 0.24)
-                    + (clarity * 0.22)
-                    + (emotional * 0.18)
-                    + (curiosity * 0.18)
-                    + (replay * 0.18)
-                    + transcript_signal
-                )
-            ),
-            99,
-        ),
+    signal_total = (
+        (retention * 1.0)
+        + (clarity * 0.95)
+        + (emotional * 0.75)
+        + (curiosity * 0.95)
+        + (replay * 0.9)
+        + (story * 0.45)
+        + (transcript_signal * 1.35)
+        + (hook_strength * 1.45)
+        + (standalone * 1.15)
+        + (authority * 0.95)
+        + (contrarian * 0.65)
     )
+    score = clamp_score(None, fallback=int(round(18 + (signal_total / 1.55))))
+    score = max(score, 48)
     confidence = clamp_confidence(
         None,
         fallback=min(
@@ -441,7 +454,7 @@ def heuristic_analysis(
                 (score / 100.0)
                 + (0.04 if clip.transcript_excerpt else 0.0)
                 + (0.02 if index == 1 else 0.0)
-                + min(transcript_signal / 200.0, 0.05),
+                + min((transcript_signal + hook_strength + standalone) / 260.0, 0.07),
             ),
         ),
     )
@@ -470,8 +483,14 @@ def heuristic_analysis(
         "virality_score": score,
         "confidence": confidence,
         "confidence_score": max(int(round(confidence * 100)), 55),
-        "reason": (
-            f"This clip is strong because the {packaging_angle} framing creates a fast hook and a clear payoff for {target_platform} viewers."
+        "reason": heuristic_reason_for(
+            target_platform=target_platform,
+            packaging_angle=packaging_angle,
+            hook_strength=hook_strength,
+            standalone=standalone,
+            emotional=emotional,
+            curiosity=curiosity,
+            authority=authority,
         ),
         "why_this_matters": why_this_matters_for(
             clip=clip,
@@ -606,6 +625,95 @@ def clarity_score(text: str) -> int:
     return 12
 
 
+def primary_opening_line(text: str) -> str:
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return ""
+    parts = re.split(r"(?<=[.!?])\s+", cleaned, maxsplit=1)
+    return parts[0].strip() if parts else cleaned
+
+
+def hook_strength_score(text: str) -> int:
+    lowered = text.lower()
+    words = re.findall(r"[A-Za-z0-9']+", text)
+    score = 0
+    if 5 <= len(words) <= 12:
+        score += 6
+    elif 4 <= len(words) <= 18:
+        score += 4
+    elif words:
+        score += 2
+    if lowered.startswith(("stop", "why", "how", "if", "most", "this", "here")):
+        score += 5
+    if any(keyword in lowered for keyword in {"exact", "secret", "mistake", "wrong", "before", "nobody", "proof", "finally"}):
+        score += 5
+    if any(token.isdigit() for token in words):
+        score += 3
+    if "?" in text or "!" in text:
+        score += 3
+    return min(score, 24)
+
+
+def standalone_coherence_score(primary_line: str, combined_text: str) -> int:
+    lowered = primary_line.lower()
+    line_words = re.findall(r"[A-Za-z0-9']+", primary_line)
+    signal_words = significant_words(primary_line or combined_text)
+    score = 0
+    if 6 <= len(line_words) <= 24:
+        score += 6
+    elif 4 <= len(line_words) <= 30:
+        score += 4
+    if len(signal_words) >= 3:
+        score += 4
+    elif len(signal_words) >= 2:
+        score += 2
+    if re.search(r"\b(because|so|when|why|how|if|here's|this is)\b", lowered):
+        score += 4
+    if primary_line.endswith((".", "?", "!")):
+        score += 2
+    if len(set(signal_words[:6])) >= 3:
+        score += 2
+    return min(score, 18)
+
+
+def authority_signal_score(text: str) -> int:
+    lowered = text.lower()
+    score = 0
+    if any(char.isdigit() for char in text):
+        score += 4
+    if any(keyword in lowered for keyword in {"exact", "step", "framework", "proof", "tested", "results", "system", "breakdown", "playbook"}):
+        score += 6
+    if any(keyword in lowered for keyword in {"today", "right now", "again", "first"}):
+        score += 2
+    return min(score, 12)
+
+
+def heuristic_reason_for(
+    *,
+    target_platform: str,
+    packaging_angle: str,
+    hook_strength: int,
+    standalone: int,
+    emotional: int,
+    curiosity: int,
+    authority: int,
+) -> str:
+    strengths: list[str] = []
+    if hook_strength >= 12:
+        strengths.append("the opener makes a clear claim fast")
+    if standalone >= 10:
+        strengths.append("the clip stands on its own without extra context")
+    if curiosity >= 12:
+        strengths.append("the setup creates a real reason to stay for the payoff")
+    if emotional >= 12:
+        strengths.append("the emotional spike gives the cut stronger replay pressure")
+    if authority >= 8:
+        strengths.append("the language feels specific enough to earn trust quickly")
+    if not strengths:
+        strengths.append(f"the {packaging_angle} framing keeps the payoff easy to understand")
+    return f"This clip should travel on {target_platform} because {', '.join(strengths[:2])}."
+
+
 def duration_score(start_time: str, end_time: str) -> int:
     start_seconds = parse_timestamp(start_time)
     end_seconds = parse_timestamp(end_time)
@@ -704,37 +812,29 @@ def build_hook_variants(
 ) -> list[str]:
     trend_or_focus = (selected_trend or focus).strip()
     title_focus = focus_phrase_for(clip.title, clip.hook)
+    base_focus = title_focus or "this clip"
+    bold_claim = f"The clearest {trend_or_focus} proof starts with {base_focus}."
+    contrarian = f"Most creators still frame {base_focus} the wrong way."
+    curiosity_gap = f"Why {base_focus} is the part viewers wait to hear explained."
 
     if packaging_angle == "shock":
-        variants = [
-            f"Stop scrolling: {title_focus} changes the whole clip.",
-            f"The {trend_or_focus} moment nobody sees coming.",
-            f"This is the interruption that makes the full post hit harder.",
-        ]
+        bold_claim = f"Stop scrolling: {base_focus} changes the whole clip."
+        contrarian = f"Most creators bury {base_focus} instead of opening with it."
+        curiosity_gap = f"Why this {trend_or_focus} interruption holds attention longer than the rest."
     elif packaging_angle == "story":
-        variants = [
-            f"The moment {title_focus} finally clicks.",
-            f"Post this story beat first if you want the payoff to land.",
-            f"This {trend_or_focus} sequence is the part viewers remember.",
-        ]
+        bold_claim = f"The story actually turns when {base_focus} lands."
+        contrarian = f"Most creators start too early and miss the {base_focus} payoff."
+        curiosity_gap = f"Why {base_focus} is the beat viewers stay for."
     elif packaging_angle == "controversy":
-        variants = [
-            f"Most creators still get {title_focus} wrong.",
-            f"The {trend_or_focus} take people will argue with instantly.",
-            f"If you want comments, lead with this contrarian beat.",
-        ]
+        bold_claim = f"The strongest proof in this clip is that {base_focus} flips the take."
+        contrarian = f"Most creators still get {base_focus} wrong."
+        curiosity_gap = f"Why the {trend_or_focus} argument starts the moment {base_focus} shows up."
     elif packaging_angle == "curiosity":
-        variants = [
-            f"Why {title_focus} is suddenly working again.",
-            f"The {trend_or_focus} angle viewers will wait to hear explained.",
-            f"This is the question-led opener worth testing first.",
-        ]
-    else:
-        variants = [
-            f"The clearest {trend_or_focus} takeaway from the source.",
-            f"If you post one practical cut for {target_platform}, start here.",
-            f"This is the proof-first clip most creators should lead with.",
-        ]
+        bold_claim = f"The answer viewers want is buried inside {base_focus}."
+        contrarian = f"Most people skip {base_focus} and lose the payoff."
+        curiosity_gap = f"Why {base_focus} is suddenly working again."
+
+    variants = [bold_claim, contrarian, curiosity_gap]
 
     return unique_variants(variants)[:5]
 
@@ -746,7 +846,14 @@ def thumbnail_text_for(
     transcript_excerpt: str | None = None,
     packaging_angle: str | None = None,
 ) -> str:
-    words = significant_words(" ".join(part for part in [hook, transcript_excerpt or "", title] if part))
+    words: list[str] = []
+    seen: set[str] = set()
+    for word in significant_words(" ".join(part for part in [hook, transcript_excerpt or "", title] if part)):
+        lowered = word.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        words.append(word)
     if len(words) < 2:
         words = re.findall(r"[A-Za-z0-9']+", hook or title)
 
