@@ -53,6 +53,14 @@ function decisionText(rank?: number | null, hasRenderProof?: boolean) {
   return hasRenderProof ? "Ready to move" : "High viral potential";
 }
 
+function clipHasShotPlan(clip: ClipResult) {
+  return Boolean(clip.shot_plan?.length);
+}
+
+function clipHasRecoverableRender(clip: ClipResult, hasRenderProof: boolean) {
+  return !hasRenderProof && (clip.visual_engine_status === "recoverable" || clip.visual_engine_status === "render_failed");
+}
+
 export default function VideoCard({
   clip,
   compact = false,
@@ -84,6 +92,10 @@ export default function VideoCard({
   const displayThumbnail = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
     ? clip.thumbnail_text
     : clip.hook?.slice(0, 40) || clip.title;
+  const hasShotPlan = clipHasShotPlan(clip);
+  const showRenderedByLWA = hasRenderProof && clip.rendered_by === "LWA Omega Visual Engine";
+  const showVisualRenderReady = clip.visual_engine_status === "ready_now";
+  const showRecoverRender = clipHasRecoverableRender(clip, hasRenderProof);
 
   async function handleCopyHook() {
     try {
@@ -148,6 +160,23 @@ export default function VideoCard({
             </div>
             <p className="mt-4 text-lg font-semibold leading-7 text-[var(--gold)]">{clip.hook || clip.title}</p>
             <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--ink-mid)]">{clip.caption}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {postRank === 1 ? (
+                <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-[11px] font-semibold text-[var(--gold)]">
+                  Best clip first
+                </span>
+              ) : null}
+              {Boolean(clip.is_strategy_only) ? (
+                <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] text-ink/82">
+                  Strategy only
+                </span>
+              ) : null}
+              {hasShotPlan ? (
+                <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] text-ink/82">
+                  Shot plan ready
+                </span>
+              ) : null}
+            </div>
             <p className="mt-2 text-xs text-[var(--ink-faint)]">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
           </div>
         ) : (
@@ -157,16 +186,28 @@ export default function VideoCard({
         {!compact ? (
           <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 p-3">
           <div className="flex items-center justify-between gap-3">
-            <span
-              className={[
-                "rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-[0.16em]",
-                hasRenderProof ? "bg-[var(--gold-dim)] text-[var(--gold)]" : "bg-[var(--crimson-dim)] text-red-100",
-              ].join(" ")}
-            >
-              {hasRenderProof ? "READY NOW" : "RENDERING AVAILABLE ON PRO"}
-            </span>
+            <div className="flex flex-wrap gap-2">
+              <span
+                className={[
+                  "rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-[0.16em]",
+                  hasRenderProof ? "bg-[var(--gold-dim)] text-[var(--gold)]" : "bg-white/[0.07] text-white/55",
+                ].join(" ")}
+              >
+                {hasRenderProof ? RESULT_COPY.renderedReady : RESULT_COPY.strategyOnly}
+              </span>
+              {showRenderedByLWA ? (
+                <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-[11px] font-semibold tracking-[0.16em] text-[var(--gold)]">
+                  Rendered by LWA
+                </span>
+              ) : null}
+              {showVisualRenderReady ? (
+                <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-[11px] font-semibold tracking-[0.16em] text-[var(--gold)]">
+                  Visual render ready
+                </span>
+              ) : null}
+            </div>
             <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/82 backdrop-blur">
-              {hasPlayablePreview ? "Preview ready" : hasRenderProof ? RESULT_COPY.previewProcessing : RESULT_COPY.ideasOnly}
+              {hasPlayablePreview ? "Preview ready" : hasRenderProof ? RESULT_COPY.recoverRender : RESULT_COPY.strategyOnlyShort}
             </span>
           </div>
         </div>
@@ -179,9 +220,46 @@ export default function VideoCard({
               <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/82">{authority}</span>
               {!compact ? (
                 <>
-                  <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/76">
-                    {hasRenderProof ? "Ready now" : "Rendering available on Pro"}
+                  <span
+                    className={[
+                      "rounded-full border px-3 py-1.5 text-xs",
+                      hasRenderProof
+                        ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]"
+                        : "border-[var(--divider)] bg-[var(--surface-soft)] text-ink/55",
+                    ].join(" ")}
+                  >
+                    {hasRenderProof ? "Ready now" : RESULT_COPY.strategyOnlyShort}
                   </span>
+                  {postRank === 1 ? (
+                    <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs text-[var(--gold)]">
+                      Best clip first
+                    </span>
+                  ) : null}
+                  {showRenderedByLWA ? (
+                    <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs text-[var(--gold)]">
+                      Rendered by LWA
+                    </span>
+                  ) : null}
+                  {showVisualRenderReady ? (
+                    <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs text-[var(--gold)]">
+                      Visual render ready
+                    </span>
+                  ) : null}
+                  {Boolean(clip.is_strategy_only) ? (
+                    <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/76">
+                      Strategy only
+                    </span>
+                  ) : null}
+                  {hasShotPlan ? (
+                    <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/76">
+                      Shot plan ready
+                    </span>
+                  ) : null}
+                  {showRecoverRender ? (
+                    <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/76">
+                      Recover render
+                    </span>
+                  ) : null}
                   {clip.confidence_label ? (
                     <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs text-[var(--gold)]">
                       {clip.confidence_label}
@@ -211,7 +289,7 @@ export default function VideoCard({
           ) : null}
           {clip.cta_suggestion ? (
             <div className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Move</p>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-muted">CTA</p>
               <p className="mt-1 text-xs font-medium text-ink/82">{clip.cta_suggestion}</p>
             </div>
           ) : null}
@@ -220,9 +298,35 @@ export default function VideoCard({
         {!compact && whyThisHits ? (
           <details className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">
             <summary className="cursor-pointer list-none text-[10px] uppercase tracking-[0.22em] text-muted transition-colors duration-300 hover:text-[var(--ink-mid)]">
-              Open package notes
+              {RESULT_COPY.packageNotes}
             </summary>
             <p className="mt-2 text-xs leading-6 text-ink/62">{whyThisHits}</p>
+          </details>
+        ) : null}
+
+        {!compact && hasShotPlan ? (
+          <details className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">
+            <summary className="cursor-pointer list-none text-[10px] uppercase tracking-[0.22em] text-muted transition-colors duration-300 hover:text-[var(--ink-mid)]">
+              Shot plan ready
+            </summary>
+            <div className="mt-3 grid gap-2">
+              {clip.shot_plan?.map((step) => (
+                <div key={`${clip.id}-${step.role}`} className="rounded-[14px] border border-[var(--divider)] bg-[var(--surface-veil)] px-3 py-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">
+                      {step.role}
+                    </span>
+                    {step.duration_seconds ? (
+                      <span className="text-[11px] text-ink/58">{step.duration_seconds}s</span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 text-xs leading-6 text-ink/76">{step.visual_direction || step.retention_goal || "Director note pending."}</p>
+                </div>
+              ))}
+              {clip.recovery_recommendation ? (
+                <p className="text-xs leading-6 text-ink/58">{clip.recovery_recommendation}</p>
+              ) : null}
+            </div>
           </details>
         ) : null}
 
@@ -256,7 +360,7 @@ export default function VideoCard({
                 queued ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]" : "",
               ].join(" ")}
             >
-              {queued ? "Queued" : "Add to Queue"}
+              {queued ? RESULT_COPY.queued : RESULT_COPY.queuePost}
             </button>
           ) : null}
 
@@ -288,9 +392,7 @@ export default function VideoCard({
                 ? "Recovering..."
                 : recoveryState?.status === "queued"
                   ? "Recovery queued"
-                  : recoveryState?.status === "failed"
-                    ? RESULT_COPY.previewRetry
-                    : RESULT_COPY.previewRetry}
+                  : "Recover render"}
             />
           ) : null}
 
@@ -299,7 +401,7 @@ export default function VideoCard({
             onClick={() => void handleCopyPackage()}
             className="secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium sm:w-auto"
           >
-            {copiedPackage ? "Package copied" : "Copy package"}
+            {copiedPackage ? RESULT_COPY.packageCopied : RESULT_COPY.copyPackage}
           </button>
         </div>
 

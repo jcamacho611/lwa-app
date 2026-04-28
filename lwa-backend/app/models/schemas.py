@@ -186,6 +186,10 @@ class ProcessingSummary(BaseModel):
     source_duration_seconds: Optional[int] = None
     assets_created: int = 0
     edited_assets_created: int = 0
+    visual_engine_enabled: bool = False
+    visual_engine_attempted_count: int = 0
+    visual_engine_ready_count: int = 0
+    visual_engine_failed_count: int = 0
     rendered_clip_count: int = 0
     strategy_only_clip_count: int = 0
     free_preview_unlocked: bool = True

@@ -63,6 +63,14 @@ function buildPackageText(clip: ClipResult) {
   ].join("\n");
 }
 
+function clipHasShotPlan(clip: ClipResult) {
+  return Boolean(clip.shot_plan?.length);
+}
+
+function clipHasRecoverableRender(clip: ClipResult, hasRenderProof: boolean) {
+  return !hasRenderProof && (clip.visual_engine_status === "recoverable" || clip.visual_engine_status === "render_failed");
+}
+
 export default function HeroClip({
   clip,
   compact = false,
@@ -94,6 +102,10 @@ export default function HeroClip({
   const displayThumbnail = clip.thumbnail_text && clip.thumbnail_text !== "Best Clip"
     ? clip.thumbnail_text
     : clip.hook?.slice(0, 42) || clip.title;
+  const hasShotPlan = clipHasShotPlan(clip);
+  const showRenderedByLWA = hasRenderProof && clip.rendered_by === "LWA Omega Visual Engine";
+  const showVisualRenderReady = clip.visual_engine_status === "ready_now";
+  const showRecoverRender = clipHasRecoverableRender(clip, hasRenderProof);
 
   async function handleCopyHook() {
     try {
@@ -151,6 +163,23 @@ export default function HeroClip({
                 </div>
                 <p className="mt-4 text-2xl font-semibold leading-8 text-[var(--gold)]">{clip.hook || clip.title}</p>
                 <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--ink-mid)]">{clip.caption}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {postRank === 1 ? (
+                    <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-[11px] font-semibold text-[var(--gold)]">
+                      Best clip first
+                    </span>
+                  ) : null}
+                  {Boolean(clip.is_strategy_only) ? (
+                    <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] text-ink/82">
+                      Strategy only
+                    </span>
+                  ) : null}
+                  {hasShotPlan ? (
+                    <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] text-ink/82">
+                      Shot plan ready
+                    </span>
+                  ) : null}
+                </div>
                 <p className="mt-3 text-xs text-[var(--ink-faint)]">{clip.timestamp_start || clip.start_time} — {clip.timestamp_end || clip.end_time}</p>
               </div>
             ) : (
@@ -160,7 +189,12 @@ export default function HeroClip({
             {!compact ? (
               <div className="video-overlay pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
-                <span className="status-chip status-approved">{hasRenderProof ? "POST THIS FIRST" : "HIGH VIRAL POTENTIAL"}</span>
+                <span className={hasRenderProof ? "status-chip status-approved" : "status-chip status-submitted"}>
+                  {hasRenderProof ? "READY NOW — POST FIRST" : "STRATEGY ONLY — HIGH SIGNAL"}
+                </span>
+                {showRenderedByLWA ? <span className="status-chip status-approved">Rendered by LWA</span> : null}
+                {showVisualRenderReady ? <span className="status-chip status-approved">Visual render ready</span> : null}
+                {hasShotPlan ? <span className="status-chip status-submitted">Shot plan ready</span> : null}
                 {clip.confidence_label ? <span className="status-chip status-submitted">{clip.confidence_label}</span> : null}
                 {clip.caption_style ? <span className="status-chip status-submitted">{clip.caption_style}</span> : null}
               </div>
@@ -236,9 +270,7 @@ export default function HeroClip({
                   ? "Recovering..."
                   : recoveryState?.status === "queued"
                     ? "Recovery queued"
-                    : recoveryState?.status === "failed"
-                      ? RESULT_COPY.previewRetry
-                      : RESULT_COPY.previewRetry}
+                    : "Recover render"}
               />
             ) : null}
           </div>
@@ -246,11 +278,43 @@ export default function HeroClip({
 
         <div className="space-y-5">
           <div className="space-y-3">
-            {!compact ? <p className="section-kicker">Lead drop</p> : null}
+            {!compact ? <p className="section-kicker">Best clip</p> : null}
             {!compact ? <h2 className="text-2xl font-semibold leading-tight text-ink sm:text-[2.1rem]">{clip.title}</h2> : null}
             <p className={compact ? "text-2xl font-semibold leading-tight text-ink sm:text-[2.7rem]" : "text-lg leading-8 text-ink/88"}>
               {clip.hook || clip.title}
             </p>
+            <div className="flex flex-wrap gap-2">
+              {postRank === 1 ? (
+                <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs font-semibold text-[var(--gold)]">
+                  Best clip first
+                </span>
+              ) : null}
+              {showRenderedByLWA ? (
+                <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs font-semibold text-[var(--gold)]">
+                  Rendered by LWA
+                </span>
+              ) : null}
+              {showVisualRenderReady ? (
+                <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1.5 text-xs font-semibold text-[var(--gold)]">
+                  Visual render ready
+                </span>
+              ) : null}
+              {Boolean(clip.is_strategy_only) ? (
+                <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/82">
+                  Strategy only
+                </span>
+              ) : null}
+              {hasShotPlan ? (
+                <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/82">
+                  Shot plan ready
+                </span>
+              ) : null}
+              {showRecoverRender ? (
+                <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs text-ink/82">
+                  Recover render
+                </span>
+              ) : null}
+            </div>
           </div>
 
           {!compact ? (
@@ -314,6 +378,32 @@ export default function HeroClip({
             ) : null}
             <p className="mt-4 text-sm leading-6 text-ink/76">{whyThisHits}</p>
           </details>
+          ) : null}
+
+          {!compact && hasShotPlan ? (
+            <details className="rounded-[24px] border border-[var(--divider)] bg-[var(--surface-veil)] p-4">
+              <summary className="cursor-pointer list-none text-xs uppercase tracking-[0.24em] text-muted transition-colors duration-300 hover:text-[var(--ink-mid)]">
+                Shot plan ready
+              </summary>
+              <div className="mt-4 grid gap-3">
+                {clip.shot_plan?.map((step) => (
+                  <div key={`${clip.id}-${step.role}`} className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">
+                        {step.role}
+                      </span>
+                      {step.duration_seconds ? (
+                        <span className="text-[11px] text-ink/58">{step.duration_seconds}s</span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-xs leading-6 text-ink/76">{step.visual_direction || step.retention_goal || "Director note pending."}</p>
+                  </div>
+                ))}
+                {clip.recovery_recommendation ? (
+                  <p className="text-xs leading-6 text-ink/58">{clip.recovery_recommendation}</p>
+                ) : null}
+              </div>
+            </details>
           ) : null}
 
           {showFeedback ? (

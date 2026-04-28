@@ -19,6 +19,7 @@ from ..job_store import JobStore
 from ..models.schemas import (
     CaptionModes,
     ClipBatchResponse,
+    ClipResult,
     EditPlan,
     ExportBundle,
     ProcessRequest,
@@ -33,9 +34,19 @@ from ..services.clip_status_store import register_clip_batch
 from ..services.confidence_engine import build_confidence_label, resolve_confidence_score
 from ..services.entitlements import EntitlementContext, UsageStore
 from ..services.platform_store import PlatformStore
+from ..services.render_quality import evaluate_render_quality
 from ..services.render_jobs import queue_preview_render
+from ..services.shot_planner import build_shot_plan_for_clip
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
 from ..services.visual_generation_service import visual_generation_available, visual_generation_status
+from ..services.visual_render_provider import (
+    RENDER_PROVIDER_PUBLIC_ID,
+    RENDERED_BY_PUBLIC_LABEL,
+    VisualRenderPayload,
+    VisualRenderProviderResult,
+    render_visual_clip,
+    resolve_visual_render_provider_state,
+)
 from ..style_engine import build_script_pack
 from ..trends import fetch_public_trends, trends_timestamp
 
@@ -260,6 +271,11 @@ async def build_clip_response(
         clips=clips,
         entitlement=entitlement,
     )
+    clips, director_brain_summary = await apply_director_brain_foundation(
+        settings=settings,
+        clips=clips,
+        target_platform=target_platform,
+    )
     clips = [clip.model_copy(update={"request_id": request_id}) for clip in clips]
     local_asset_paths = resolve_local_asset_paths(settings=settings, request_id=request_id, clips=clips)
     register_clip_batch(request_id=request_id, clips=clips, local_asset_paths=local_asset_paths)
@@ -290,8 +306,8 @@ async def build_clip_response(
     download_asset_url = resolve_download_asset_url(clips=clips, source_context=source_context, entitlement=entitlement)
     thumbnail_url = resolve_thumbnail_url(clips=clips, source_context=source_context)
     preview_ready_count = len([clip for clip in clips if clip.preview_url or clip.edited_clip_url or clip.clip_url or clip.raw_clip_url])
-    rendered_clip_count = len([clip for clip in clips if clip_has_rendered_media(clip)])
-    strategy_only_clip_count = max(len(clips) - rendered_clip_count, 0)
+    rendered_clip_count = int(director_brain_summary["rendered_clip_count"])
+    strategy_only_clip_count = int(director_brain_summary["strategy_only_clip_count"])
     export_ready_count = len([clip for clip in clips if clip.download_url])
     script_pack = build_script_pack(
         source_title=source_title,
@@ -346,6 +362,10 @@ async def build_clip_response(
             source_duration_seconds=source_duration_seconds,
             assets_created=assets_created,
             edited_assets_created=edited_assets_created,
+            visual_engine_enabled=bool(director_brain_summary["visual_engine_enabled"]),
+            visual_engine_attempted_count=int(director_brain_summary["visual_engine_attempted_count"]),
+            visual_engine_ready_count=int(director_brain_summary["visual_engine_ready_count"]),
+            visual_engine_failed_count=int(director_brain_summary["visual_engine_failed_count"]),
             rendered_clip_count=rendered_clip_count,
             strategy_only_clip_count=strategy_only_clip_count,
             free_preview_unlocked=entitlement.plan.code == "free",
@@ -366,6 +386,106 @@ async def build_clip_response(
             local_asset_paths=local_asset_paths,
         )
     return response
+
+
+async def apply_director_brain_foundation(
+    *,
+    settings: Settings,
+    clips: list[ClipResult],
+    target_platform: str,
+) -> tuple[list[ClipResult], dict[str, int | bool]]:
+    provider_state = resolve_visual_render_provider_state(settings)
+    max_render_attempts = max(int(getattr(settings, "visual_engine_max_renders_per_request", 1)), 0)
+    visual_engine_attempted_count = 0
+    visual_engine_ready_count = 0
+    visual_engine_failed_count = 0
+    enriched: list[ClipResult] = []
+
+    for clip in clips:
+        try:
+            shot_plan = build_shot_plan_for_clip(clip, target_platform=target_platform)
+            render_result: VisualRenderProviderResult | None = None
+            if not clip_has_rendered_media(clip):
+                if provider_state == "disabled":
+                    render_result = VisualRenderProviderResult(
+                        provider_state="disabled",
+                        message="Visual rendering is turned off. Keep the clip strategy-only and preserve the shot plan.",
+                    )
+                elif provider_state == "missing-key":
+                    render_result = VisualRenderProviderResult(
+                        provider_state="missing-key",
+                        message="Visual rendering key is missing. Keep the strategy-only clip and surface a recover render action.",
+                    )
+                elif visual_engine_attempted_count < max_render_attempts:
+                    render_result = await render_visual_clip(
+                        settings=settings,
+                        payload=VisualRenderPayload(
+                            clip_id=clip.id,
+                            title=clip.title,
+                            hook=clip.hook,
+                            caption=clip.caption,
+                            shot_plan=[step.model_dump() for step in shot_plan.shot_plan],
+                            visual_engine_prompt=shot_plan.visual_engine_prompt,
+                            motion_prompt=shot_plan.motion_prompt,
+                            duration_seconds=clip.duration,
+                            target_platform=target_platform,
+                            source_clip_url=clip.clip_url or clip.raw_clip_url or clip.preview_url,
+                        ),
+                    )
+                    if render_result.attempted:
+                        visual_engine_attempted_count += 1
+
+            evaluation = evaluate_render_quality(clip=clip, render_result=render_result)
+            update: dict[str, object] = {
+                **shot_plan.as_clip_update(),
+                **evaluation.as_clip_update(),
+                "render_provider": clip.render_provider or RENDER_PROVIDER_PUBLIC_ID,
+                "rendered_by": clip.rendered_by or RENDERED_BY_PUBLIC_LABEL,
+                "render_status": clip.render_status or ("ready" if clip_has_rendered_media(clip) else "pending"),
+            }
+            if render_result:
+                if render_result.preview_url:
+                    update["preview_url"] = render_result.preview_url
+                if render_result.asset_url:
+                    update["clip_url"] = render_result.asset_url
+                if render_result.download_url:
+                    update["download_url"] = render_result.download_url
+                if render_result.error:
+                    update["render_error"] = render_result.error
+                if render_result.attempted:
+                    update["render_status"] = "ready" if render_result.success else "failed"
+
+            updated_clip = clip.model_copy(update=update)
+            if updated_clip.visual_engine_status == "ready_now":
+                visual_engine_ready_count += 1
+            if updated_clip.visual_engine_status in {"recoverable", "render_failed"}:
+                visual_engine_failed_count += 1
+            enriched.append(updated_clip)
+        except Exception as error:
+            logger.warning(
+                "director_brain_enrichment_failed clip_id=%s reason=%s",
+                clip.id,
+                error,
+            )
+            enriched.append(
+                clip.model_copy(
+                    update={
+                        "render_provider": clip.render_provider or RENDER_PROVIDER_PUBLIC_ID,
+                        "rendered_by": clip.rendered_by or (RENDERED_BY_PUBLIC_LABEL if clip_has_rendered_media(clip) else None),
+                    }
+                )
+            )
+
+    rendered_clip_count = len([clip for clip in enriched if clip_has_rendered_media(clip)])
+    strategy_only_clip_count = max(len(enriched) - rendered_clip_count, 0)
+    return enriched, {
+        "visual_engine_enabled": bool(getattr(settings, "visual_engine_enabled", False)),
+        "visual_engine_attempted_count": visual_engine_attempted_count,
+        "visual_engine_ready_count": visual_engine_ready_count,
+        "visual_engine_failed_count": visual_engine_failed_count,
+        "rendered_clip_count": rendered_clip_count,
+        "strategy_only_clip_count": strategy_only_clip_count,
+    }
 
 
 def apply_plan_feature_flags(

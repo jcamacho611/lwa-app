@@ -114,6 +114,10 @@ function clipHasRenderedMedia(clip: ClipResult) {
   return hasPreviewAsset(clip);
 }
 
+function clipHasShotPlan(clip: ClipResult) {
+  return Boolean(clip.shot_plan?.length);
+}
+
 type ClipRecoveryState = {
   jobId?: string;
   status: "queued" | "processing" | "recovered" | "failed";
@@ -579,18 +583,17 @@ export function ClipStudio({
         token,
         { signal: controller.signal },
       );
+      setResult(data);
+      setClipRecoveryStates({});
+      setPaywallMessage(null);
       const allStrategyOnly = data.clips.length > 0 && data.clips.every((clip) => clip.is_strategy_only === true);
       const fallbackReason = (data.processing_summary as { fallback_reason?: string } | undefined)?.fallback_reason;
 
       if (allStrategyOnly && fallbackReason) {
         setError(`Could not process video: ${fallbackReason}. Try a different YouTube URL.`);
-        setResult(null);
         return;
       }
-
-      setResult(data);
-      setClipRecoveryStates({});
-      setPaywallMessage(null);
+      setError(null);
       const leadClip = data.clips?.[0];
       void fireGodTrigger("generation_complete", {
         route: window.location.pathname,
@@ -1017,6 +1020,10 @@ export function ClipStudio({
   const platformRecommendationReason = activeResult?.processing_summary?.platform_recommendation_reason || null;
   const renderedClipCount = renderedClips.length;
   const strategyOnlyClipCount = strategyOnlyClips.length;
+  const shotPlanReadyCount = orderedClips.filter((clip) => clipHasShotPlan(clip)).length;
+  const visualEngineEnabled = Boolean(activeResult?.processing_summary?.visual_engine_enabled);
+  const visualEngineReadyCount = activeResult?.processing_summary?.visual_engine_ready_count ?? renderedClipCount;
+  const visualEngineFailedCount = activeResult?.processing_summary?.visual_engine_failed_count ?? 0;
   const hasStrategyOnlyWithoutPreview = strategyOnlyClips.some(
     (clip) => Boolean(clip.is_strategy_only) && !clip.preview_url && !clipHasRenderedMedia(clip),
   );
@@ -1985,14 +1992,25 @@ export function ClipStudio({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
                 <p className="section-kicker">LWA recommendation</p>
-                <h4 className="mt-3 text-2xl font-semibold text-ink">Post this first. Then move the stack.</h4>
+                <h4 className="mt-3 text-2xl font-semibold text-ink">Best clip first. Then move the stack.</h4>
                 <div className="mt-4 flex flex-wrap gap-2">
+                  {orderedClips.length ? <StatPill tone="accent">Best clip first</StatPill> : null}
+                  {shotPlanReadyCount ? <StatPill tone="neutral">Shot plan ready</StatPill> : null}
+                  {renderedClipCount ? <StatPill tone="signal">Rendered by LWA</StatPill> : null}
+                  {visualEngineReadyCount ? <StatPill tone="accent">Visual render ready</StatPill> : null}
+                  {strategyOnlyClipCount ? <StatPill tone="neutral">Strategy only</StatPill> : null}
+                  {visualEngineFailedCount ? <StatPill tone="signal">Recover render</StatPill> : null}
                   {recommendedPlatform ? <StatPill tone="accent">Recommended: {recommendedPlatform}</StatPill> : null}
                   {recommendedContentType ? <StatPill tone="signal">{recommendedContentType}</StatPill> : null}
                   {recommendedOutputStyle ? <StatPill tone="neutral">{recommendedOutputStyle}</StatPill> : null}
                 </div>
                 {platformRecommendationReason ? (
                   <p className="mt-4 max-w-2xl text-sm leading-7 text-ink/58">{platformRecommendationReason}</p>
+                ) : null}
+                {visualEngineEnabled ? (
+                  <p className="mt-3 text-sm text-ink/60">
+                    Director Brain is attached to this stack. Render attempts stay additive and never block the clip pack.
+                  </p>
                 ) : null}
                 {activeResult.processing_summary?.recommended_next_step ? (
                   <p className="mt-3 text-sm font-medium text-ink/82">{activeResult.processing_summary.recommended_next_step}</p>
@@ -2041,12 +2059,12 @@ export function ClipStudio({
           </div>
 
           {isGuest && hasStrategyOnlyWithoutPreview ? (
-            <InlineAlert tone="violet">
-              Hooks and packaging are ready. Preview video requires a standard YouTube video — not a live stream.
+            <InlineAlert tone="violet" title="Strategy only — shot plan ready">
+              Hooks, packaging, and shot plans are ready. Preview video requires a standard YouTube video — not a live stream.
             </InlineAlert>
           ) : !renderedClipCount ? (
-            <InlineAlert tone="violet" title="Ideas ready">
-              LWA returned the package, hooks, captions, and posting order, but this run did not produce preview media. Review the ideas now, then retry with a longer or cleaner source if you need playable output.
+            <InlineAlert tone="violet" title="Strategy only — shot plan ready">
+              LWA returned the package, hooks, captions, posting order, and shot plans, but this run did not produce preview media. Review the ideas now, then retry with a longer or cleaner source if you need playable output.
             </InlineAlert>
           ) : !previewReadyCount ? (
             <InlineAlert tone="violet" title="Playable preview pending">

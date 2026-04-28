@@ -1,5 +1,17 @@
 export type PlatformOption = "TikTok" | "Instagram Reels" | "YouTube Shorts";
 
+export type ShotPlanStep = {
+  role: "hook" | "context" | "payoff" | "loop_end";
+  duration_seconds?: number;
+  camera_direction?: string | null;
+  visual_direction?: string | null;
+  motion_direction?: string | null;
+  text_overlay?: string | null;
+  subtitle_behavior?: string | null;
+  transition?: string | null;
+  retention_goal?: string | null;
+};
+
 export type UserProfile = {
   id: string;
   email: string;
@@ -244,6 +256,22 @@ export type ClipResult = {
   is_strategy_only?: boolean;
   render_status?: "pending" | "rendering" | "ready" | "failed" | string | null;
   render_error?: string | null;
+  clip_type?: string | null;
+  viral_trigger?: string | null;
+  energy_level?: string | null;
+  shot_plan?: ShotPlanStep[];
+  shot_plan_confidence?: number | null;
+  visual_engine_prompt?: string | null;
+  motion_prompt?: string | null;
+  render_provider?: string | null;
+  rendered_by?: string | null;
+  visual_engine_status?: "ready_now" | "needs_review" | "strategy_only" | "render_failed" | "recoverable" | string | null;
+  render_quality_score?: number | null;
+  strategy_only_reason?: string | null;
+  recovery_recommendation?: string | null;
+  text_overlay_plan?: string | null;
+  subtitle_guidance?: string | null;
+  transition_plan?: string | null;
   burned_caption?: string;
   export_package?: {
     title?: string;
@@ -297,6 +325,10 @@ export type GenerateResponse = {
     credits_remaining?: number;
     estimated_turnaround?: string;
     recommended_next_step?: string;
+    visual_engine_enabled?: boolean;
+    visual_engine_attempted_count?: number;
+    visual_engine_ready_count?: number;
+    visual_engine_failed_count?: number;
     rendered_clip_count?: number;
     strategy_only_clip_count?: number;
     feature_flags?: FeatureFlags;
