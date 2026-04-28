@@ -245,6 +245,33 @@ class AttentionCompilerTests(unittest.TestCase):
             self.assertEqual(len(clip.hook_variants), 3)
             self.assertEqual(len(set(clip.hook_variants)), 3)
 
+    def test_compile_with_fallback_detects_category_specific_risk_flags(self) -> None:
+        clips = [
+            self.build_clip(
+                clip_id="clip_medspa",
+                title="Botox myth most medspas never explain",
+                hook="Stop believing this Botox myth before your next treatment.",
+                caption="A medspa explainer that needs strong compliance review.",
+                score=74,
+                packaging_angle="value",
+                transcript_excerpt="Most medspas never explain this filler risk clearly before treatment.",
+                start_time="00:04",
+                end_time="00:24",
+            )
+        ]
+
+        compiled = compile_with_fallback(
+            clips=clips,
+            target_platform="TikTok",
+            selected_trend=None,
+            content_angle=None,
+            source_context=None,
+        )
+
+        clip = compiled[0]
+        self.assertEqual(clip.detected_category, "medspa_clinical")
+        self.assertIn("medical_claim_review", clip.risk_flags)
+
 
 if __name__ == "__main__":
     unittest.main()

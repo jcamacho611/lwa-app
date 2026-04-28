@@ -85,6 +85,53 @@ SIGNAL_STOPWORDS = {
 
 SIGNAL_IDS = tuple(f"vs_{index:03d}" for index in range(1, 13))
 
+MEDICAL_RISK_KEYWORDS = {
+    "botox",
+    "filler",
+    "juvederm",
+    "ozempic",
+    "treatment",
+    "diagnose",
+    "cure",
+    "heal",
+    "medical",
+    "symptom",
+    "disease",
+    "skin condition",
+    "acne treatment",
+    "medspa",
+}
+
+FINANCIAL_RISK_KEYWORDS = {
+    "investment",
+    "invest",
+    "stock",
+    "crypto",
+    "forex",
+    "option",
+    "returns",
+    "profit guaranteed",
+    "make money",
+    "financial advice",
+    "trading",
+    "portfolio",
+}
+
+RIGHTS_RISK_KEYWORDS = {
+    "nba",
+    "nfl",
+    "ufc",
+    "mlb",
+    "fifa",
+    "olympics",
+    "song",
+    "music video",
+    "official audio",
+    "movie scene",
+    "tv clip",
+    "netflix",
+}
+
 
 # =============================================================================
 # LWA OMEGA
@@ -828,6 +875,7 @@ def normalize_compiler_update(
         "strategy_only": bool(heuristic["strategy_only"]),
         "is_best_clip": bool(heuristic["is_best_clip"]),
         "frontend_badges": heuristic["frontend_badges"],
+        "risk_flags": merge_risk_flags(clip.risk_flags, entry.get("risk_flags"), heuristic["risk_flags"]),
     }
 
 
@@ -914,6 +962,7 @@ def heuristic_analysis(
     score_breakdown = intelligence["score_breakdown"]
     score = max(intelligence["score"], 38 if clip.transcript_excerpt else 32)
     signal_completeness = sum(1 for value in breakdown_data.values() if value >= 55)
+    risk_flags = risk_flags_for(detected_category, combined_text)
     confidence = clamp_confidence(
         None,
         fallback=min(
@@ -994,6 +1043,7 @@ def heuristic_analysis(
         "strategy_only": intelligence["strategy_only"],
         "is_best_clip": False,
         "frontend_badges": intelligence["frontend_badges"],
+        "risk_flags": risk_flags,
     }
 
 
@@ -1143,10 +1193,68 @@ def build_caption_track_payload(clip: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def merge_risk_flags(*values: object) -> list[str]:
+    merged: list[str] = []
+    for value in values:
+        if isinstance(value, (list, tuple)):
+            items = value
+        else:
+            items = []
+        for item in items:
+            normalized = str(item or "").strip()
+            if normalized and normalized not in merged:
+                merged.append(normalized)
+    return merged
+
+
+def risk_flags_for(category: str | None, combined_text: str) -> list[str]:
+    profile = build_clip_intelligence_context(None, category).get("category_profile", {})
+    category_flags = profile.get("risk_flags") or []
+    lowered = combined_text.lower()
+    detected: list[str] = []
+
+    if any(keyword in lowered for keyword in MEDICAL_RISK_KEYWORDS):
+        if str(category or "") == "medspa_clinical":
+            detected.append("medical_claim_review")
+        else:
+            detected.append("medical_claim_watch")
+
+    if any(keyword in lowered for keyword in FINANCIAL_RISK_KEYWORDS):
+        detected.append("financial_claim_review")
+
+    if any(keyword in lowered for keyword in RIGHTS_RISK_KEYWORDS):
+        if str(category or "") in {"sports_highlights", "music_artist", "reaction"}:
+            detected.append("rights_review")
+        else:
+            detected.append("licensed_media_watch")
+
+    return merge_risk_flags(category_flags, detected)
+
+
 def canonical_category_for(current_category: object, combined_text: str, platform: str | None) -> str:
     if isinstance(current_category, str) and current_category.strip():
         return current_category.strip()
     lowered = combined_text.lower()
+    if any(token in lowered for token in ("medspa", "botox", "filler", "juvederm", "treatment plan")):
+        return "medspa_clinical"
+    if any(token in lowered for token in ("skincare", "beauty", "routine", "glow", "makeup", "before and after", "fit check")):
+        return "beauty_skincare"
+    if any(token in lowered for token in ("sports", "highlight", "touchdown", "goal", "knockout", "dunk", "buzzer")):
+        return "sports_highlights"
+    if any(token in lowered for token in ("song", "chorus", "verse", "artist", "album", "music video", "studio session")):
+        return "music_artist"
+    if any(token in lowered for token in ("reaction", "react", "stream", "livestream", "chat", "gaming", "clutch")):
+        return "livestream_gaming" if any(token in lowered for token in ("gaming", "clutch", "ranked match")) else "reaction"
+    if any(token in lowered for token in ("debate", "election", "policy", "left vs right", "politics", "senator")):
+        return "debate_political"
+    if any(token in lowered for token in ("demo", "walkthrough", "feature", "product tour", "onboarding flow", "use case")):
+        return "product_demo"
+    if any(token in lowered for token in ("ai", "agent", "llm", "gpt", "automation", "model", "prompt engineering")):
+        return "ai_tech_review"
+    if any(token in lowered for token in ("coach", "mindset", "healing", "self worth", "discipline", "self improvement")):
+        return "coaching_self_dev"
+    if any(token in lowered for token in ("restaurant", "salon", "local business", "shop owner", "dentist", "gym owner")):
+        return "local_business"
     if any(token in lowered for token in ("podcast", "interview", "host", "guest")):
         return "podcast"
     if any(token in lowered for token in ("founder", "startup", "strategy", "b2b", "linkedin")):
