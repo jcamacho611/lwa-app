@@ -43,6 +43,12 @@ from ..services.platform_store import PlatformStore
 from ..services.render_quality import evaluate_render_quality
 from ..services.render_jobs import queue_preview_render
 from ..services.shot_planner import build_shot_plan_for_clip
+from ..services.source_ingest import (
+    build_strategy_source_context,
+    infer_source_type,
+    source_type_uses_media_pipeline,
+    source_value_for_request,
+)
 from ..services.trend_intelligence import build_trend_intelligence
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
 from ..services.visual_generation_service import visual_generation_available, visual_generation_status
@@ -160,7 +166,9 @@ async def build_clip_response(
     source_path: str | None = None,
     progress_callback: Callable[[str], Awaitable[None]] | None = None,
 ) -> ClipBatchResponse:
-    video_url = str(request.video_url or "")
+    source_value = source_value_for_request(request)
+    video_url = str(request.video_url or request.source_url or "")
+    normalized_source_type = infer_source_type(request)
     requested_clip_limit, clip_limit_upgrade_reason = resolve_requested_clip_limit(
         requested_clip_count=request.clip_count,
         plan_clip_limit=entitlement.plan.feature_flags.clip_limit,
@@ -224,7 +232,15 @@ async def build_clip_response(
 
     await emit_progress(progress_callback, "Ingesting source media, transcript windows, and candidate moments.")
 
-    can_process_source = ffmpeg_is_available and (bool(source_path) or yt_dlp_is_available)
+    can_process_source = (
+        ffmpeg_is_available
+        and source_type_uses_media_pipeline(
+            normalized_source_type,
+            has_source_path=bool(source_path),
+            source_url=video_url,
+        )
+        and (bool(source_path) or (bool(video_url) and yt_dlp_is_available))
+    )
 
     if can_process_source:
         try:
@@ -236,7 +252,7 @@ async def build_clip_response(
                 public_base_url=public_base_url,
                 source_path=source_path,
                 max_candidates=candidate_limit,
-                source_type=request.source_type,
+                source_type=normalized_source_type,
                 upload_content_type=request.upload_content_type,
             )
             logger.info(
@@ -261,17 +277,31 @@ async def build_clip_response(
             await emit_progress(progress_callback, "Source ingest failed. Falling back to lightweight packaging.")
             source_context = None
     else:
-        fallback_reason = "missing runtime dependencies"
+        fallback_reason = (
+            "strategy-only source type; media extraction was not required"
+            if not source_type_uses_media_pipeline(
+                normalized_source_type,
+                has_source_path=bool(source_path),
+                source_url=video_url,
+            )
+            else "missing runtime dependencies"
+        )
         logger.warning(
-            "source_context_skipped request_id=%s route=%s built=%s ffmpeg=%s yt_dlp=%s reason=%s",
+            "source_context_skipped request_id=%s route=%s built=%s ffmpeg=%s yt_dlp=%s source_type=%s reason=%s",
             request_id,
             route_path,
             False,
             ffmpeg_is_available,
             yt_dlp_is_available,
+            normalized_source_type,
             fallback_reason,
         )
-        await emit_progress(progress_callback, "Runtime dependencies are limited. Building a lightweight clip pack.")
+        source_context = build_strategy_source_context(
+            request=request,
+            source_type=normalized_source_type,
+            source_value=source_value,
+        )
+        await emit_progress(progress_callback, "Building a strategy package from the provided source context.")
 
     source_platform = source_context.source_platform if source_context else detect_platform(video_url)
     auto_target_platform, recommendation_reason, recommended_content_type, recommended_output_style = (
@@ -287,7 +317,7 @@ async def build_clip_response(
 
     clips, provider_used = await generate_clip_copy(
         settings=settings,
-        video_url=video_url,
+        video_url=source_value,
         target_platform=target_platform,
         selected_trend=request.selected_trend,
         content_angle=request.content_angle,
@@ -355,7 +385,7 @@ async def build_clip_response(
         trend_context=trend_context,
     )
     source_title = source_context.title if source_context else None
-    source_type = source_context.source_type if source_context else (request.source_type or ("video_upload" if source_path else "url"))
+    source_type = source_context.source_type if source_context else (normalized_source_type or ("video_upload" if source_path else "url"))
     clips = apply_operational_metadata(
         clips=clips,
         request_id=request_id,
@@ -418,7 +448,7 @@ async def build_clip_response(
 
     response = ClipBatchResponse(
         request_id=request_id,
-        video_url=request.video_url,
+        video_url=source_value,
         status="success",
         source_type=source_type,
         source_title=source_title,

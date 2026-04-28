@@ -27,6 +27,7 @@ from ...services.clip_service import (
 from ...services.entitlements import UsageStore, resolve_entitlement
 from ...services.event_log import emit_event
 from ...services.export_bundle import create_export_bundle
+from ...services.source_ingest import infer_source_type
 
 router = APIRouter()
 settings = get_settings()
@@ -332,9 +333,10 @@ def resolve_request_source(
     current_user: UserRecord | None,
     base_url: str,
 ) -> tuple[ProcessRequest, str | None]:
-    if request.upload_file_id:
+    upload_file_id = request.upload_file_id or request.uploaded_file_ref
+    if upload_file_id:
         upload = platform_store.get_upload(
-            request.upload_file_id,
+            upload_file_id,
             user_id=current_user.id if current_user else None,
         )
         if not upload:
@@ -343,16 +345,28 @@ def resolve_request_source(
         resolved = request.model_copy(
             update={
                 "video_url": upload["public_url"],
+                "source_url": upload["public_url"],
+                "upload_file_id": upload_file_id,
                 "source_type": source_type,
                 "upload_content_type": upload.get("content_type"),
             }
         )
         return resolved, upload["stored_path"]
 
-    if not request.video_url:
-        raise HTTPException(status_code=422, detail="Provide video_url or upload_file_id")
+    if request.source_url and not request.video_url:
+        request = request.model_copy(update={"video_url": request.source_url})
 
-    return request.model_copy(update={"source_type": request.source_type or "url"}), None
+    source_type = infer_source_type(request)
+    has_strategy_context = bool(
+        (request.prompt or "").strip()
+        or (request.text_prompt or "").strip()
+        or (request.campaign_goal or "").strip()
+        or (request.campaign_brief or "").strip()
+    )
+    if not request.video_url and source_type in {"url", "video", "audio", "twitch", "stream"} and not has_strategy_context:
+        raise HTTPException(status_code=422, detail="Provide video_url, source_url, or upload_file_id for media sources")
+
+    return request.model_copy(update={"source_type": source_type}), None
 
 
 def classify_upload_source(upload: dict[str, object]) -> str:

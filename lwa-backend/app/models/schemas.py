@@ -7,10 +7,13 @@ from pydantic import BaseModel, Field, model_validator
 
 class ProcessRequest(BaseModel):
     video_url: Optional[str] = Field(default=None, description="Public URL for the source video")
+    source_url: Optional[str] = Field(default=None, description="Public URL or source reference for any supported source")
     upload_file_id: Optional[str] = None
+    uploaded_file_ref: Optional[str] = None
     prompt: Optional[str] = None
     text_prompt: Optional[str] = None
     source_type: Optional[str] = None
+    source_metadata: Dict[str, Any] = Field(default_factory=dict)
     upload_content_type: Optional[str] = None
     selected_trend: Optional[str] = None
     trend_source: Optional[str] = None
@@ -28,9 +31,14 @@ class ProcessRequest(BaseModel):
 
     @model_validator(mode="after")
     def ensure_source(self) -> "ProcessRequest":
+        if not self.video_url and self.source_url:
+            self.video_url = self.source_url
+        if not self.upload_file_id and self.uploaded_file_ref:
+            self.upload_file_id = self.uploaded_file_ref
         has_prompt = bool((self.prompt or "").strip() or (self.text_prompt or "").strip())
-        if not self.video_url and not self.upload_file_id and not has_prompt:
-            raise ValueError("Provide video_url, upload_file_id, prompt, or text_prompt")
+        has_campaign_context = bool((self.campaign_goal or "").strip() or (self.campaign_brief or "").strip())
+        if not self.video_url and not self.upload_file_id and not has_prompt and not has_campaign_context:
+            raise ValueError("Provide video_url, source_url, upload_file_id, uploaded_file_ref, prompt, text_prompt, or campaign_goal")
         return self
 
 

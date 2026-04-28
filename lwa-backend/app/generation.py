@@ -614,9 +614,9 @@ def build_generation_prompt(
     seed_lines = build_seed_lines(source_context.clip_seeds if source_context else None)
     desired_clip_count = desired_clip_count_for_source(source_context)
     return f"""
-Generate exactly {desired_clip_count} short-form video clip ideas as JSON.
+Generate exactly {desired_clip_count} short-form content package ideas as JSON.
 
-Video URL: {video_url}
+Source value: {video_url}
 Source type: {source_type}
 Source title: {source_title}
 Source duration seconds: {source_duration}
@@ -662,8 +662,8 @@ Return valid JSON in this shape:
 }}
 
 Rules:
-- Evaluate each clip using the actual transcript excerpt or visual summary, timing, and target platform.
-- Use the provided clip windows as the media boundaries; prefer tight starts and stop shortly after the payoff.
+- Evaluate each package using the actual transcript excerpt, source brief, prompt, campaign objective, or visual summary.
+- Use provided clip windows as media boundaries when they exist; for prompt/audio/music/campaign sources, create strategy-only scripts, captions, thumbnail text, and visual direction without pretending media was rendered.
 - If preferred packaging angle is present, bias the response toward it unless the clip clearly fits a stronger angle.
 - reason must explain in one short sentence why the clip will work.
 - why_this_matters must explain why this clip should be posted in the stack.
