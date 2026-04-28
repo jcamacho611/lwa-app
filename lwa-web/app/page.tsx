@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Logo } from "../components/brand/Logo";
+import { buildUtmUrl, getMoneyLinkByKey, getPrimaryMoneyLink, type MoneyLink } from "../lib/money-links";
 import { buildPageMetadata } from "../lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -27,48 +29,141 @@ const proofPoints = [
 const sourceModes = [
   {
     label: "Video",
-    detail: "Clip-ready packages from video links or uploaded media when supported.",
+    status: "Live now",
+    detail: "Clip-ready packages from public links and owned media workflows when they are enabled.",
     tone: "from-[rgba(109,92,255,0.14)] to-white",
   },
   {
     label: "Audio",
-    detail: "Turn podcasts, voice, or sound sources into captions, scripts, and angles.",
+    status: "Expanding",
+    detail: "Turn podcasts, voice notes, and sound-led sources into captions, scripts, and packaging angles.",
     tone: "from-[rgba(49,130,246,0.14)] to-white",
   },
   {
     label: "Music",
-    detail: "Shape music ideas into promo hooks, visual direction, and posting packages.",
+    status: "Expanding",
+    detail: "Shape music ideas into promo hooks, visual direction, and posting packages without pretending a full editor already exists.",
     tone: "from-[rgba(236,72,153,0.14)] to-white",
   },
   {
     label: "Prompt",
-    detail: "Start from an idea when no finished media exists yet.",
+    status: "In studio",
+    detail: "Start from an idea when no finished media exists yet and build the package from intent first.",
     tone: "from-[rgba(16,185,129,0.14)] to-white",
   },
   {
     label: "Twitch / Stream",
-    detail: "Package VOD and stream moments for creator-native short-form review.",
+    status: "Foundation",
+    detail: "Keep VOD and stream highlight workflows visible so the product does not collapse back into a YouTube-only tool.",
     tone: "from-[rgba(245,158,11,0.16)] to-white",
   },
   {
     label: "Campaign / Objective",
-    detail: "Translate goals into hooks, captions, thumbnails, and manual-review briefs.",
+    status: "Manual prep",
+    detail: "Translate goals into hooks, captions, thumbnails, and manual-review briefs without fake submission automation.",
     tone: "from-[rgba(139,92,246,0.14)] to-white",
   },
   {
     label: "Upload / File",
-    detail: "Use owned source files when the active workflow can process them.",
+    status: "When enabled",
+    detail: "Use owned source files when the active workflow can actually process them.",
     tone: "from-[rgba(20,184,166,0.14)] to-white",
   },
 ];
 
-const moneyPaths = [
-  "Generate from source",
-  "Request custom clip pack",
-  "Support the build",
-  "Book demo",
-  "Join creator/referral program",
+type ActionPath = {
+  label: string;
+  detail: string;
+  href: string | MoneyLink | null;
+  source?: string;
+  external?: boolean;
+};
+
+const actionPaths: ActionPath[] = [
+  {
+    label: "Generate from source",
+    detail: "Open the live source engine and move into clip review.",
+    href: "/generate",
+    external: false,
+  },
+  {
+    label: "Request custom clip pack",
+    detail: "Use a custom workflow or creator brief when direct generation is not the right first step.",
+    href: getMoneyLinkByKey("demoForm") || getMoneyLinkByKey("contact") || getMoneyLinkByKey("booking"),
+    source: "homepage_custom_clip_pack",
+  },
+  {
+    label: "Support the build",
+    detail: "Use the live support path without making checkout the whole product story.",
+    href: getPrimaryMoneyLink(),
+    source: "homepage_support_the_build",
+  },
+  {
+    label: "Book demo",
+    detail: "Use a guided walkthrough when a human operator path fits better.",
+    href: getMoneyLinkByKey("booking") || getMoneyLinkByKey("demoForm"),
+    source: "homepage_book_demo",
+  },
+  {
+    label: "Join creator/referral program",
+    detail: "Keep partner and early-operator lanes visible before every external form is configured.",
+    href: getMoneyLinkByKey("affiliateForm"),
+    source: "homepage_referral",
+  },
 ];
+
+function ActionCard({
+  label,
+  detail,
+  href,
+  source,
+  external = true,
+}: {
+  label: string;
+  detail: string;
+  href: string | MoneyLink | null;
+  source?: string;
+  external?: boolean;
+}) {
+  const className =
+    "rounded-[24px] border border-white/66 bg-white/78 px-5 py-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--gold-border)] hover:shadow-[var(--shadow-card)]";
+
+  if (!href) {
+    return (
+      <div className={[className, "opacity-80"].join(" ")}>
+        <p className="text-sm font-semibold text-ink">{label}</p>
+        <p className="mt-2 text-sm leading-6 text-subtext">{detail}</p>
+        <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-wine)]">
+          Add path when configured
+        </p>
+      </div>
+    );
+  }
+
+  if (!external && typeof href === "string") {
+    return (
+      <Link href={href} className={className}>
+        <p className="text-sm font-semibold text-ink">{label}</p>
+        <p className="mt-2 text-sm leading-6 text-subtext">{detail}</p>
+        <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-wine)]">
+          Open now
+        </p>
+      </Link>
+    );
+  }
+
+  const link = typeof href === "string" ? href : buildUtmUrl(href, source || "homepage");
+
+  return (
+    <a href={link} target="_blank" rel="noreferrer" className={className}>
+      <p className="text-sm font-semibold text-ink">{label}</p>
+      <p className="mt-2 text-sm leading-6 text-subtext">{detail}</p>
+      <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-wine)]">
+        Open path
+      </p>
+    </a>
+  );
+}
 
 export default function HomePage() {
   return (
@@ -77,17 +172,20 @@ export default function HomePage() {
         <div className="text-center lg:text-left">
           <Logo animated />
 
-          <h1 className="mt-10 text-4xl font-semibold leading-tight text-ink sm:text-6xl">
+          <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.32em] text-[var(--accent-wine)]">
             Any source in. Creator-ready content out.
+          </p>
+          <h1 className="mt-10 text-4xl font-semibold leading-tight text-ink sm:text-6xl">
+            Give LWA the source, stream, prompt, music idea, or objective. It builds the content package.
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-8 text-subtext sm:text-lg">
-            Drop video, audio, a stream, prompt, music idea, campaign objective, or owned file. LWA helps build ranked hooks, captions, visuals, post order, and rendered assets when available.
+            LWA is the any-source creator engine: video, audio, music, Twitch or stream material, prompt-led ideas, campaign objectives, and owned files when the workflow supports them. Ranked hooks, captions, visuals, post order, and rendered proof stay in one path.
           </p>
 
           <form action="/generate" method="get" className="mt-10 w-full space-y-4">
             <input
               type="text"
-              inputMode="url"
+              inputMode="text"
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
@@ -96,20 +194,21 @@ export default function HomePage() {
               className="source-command-input input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
               aria-label="Source, campaign, or prompt"
             />
-            <button type="submit" className="primary-button w-full rounded-full px-6 py-4 text-base font-semibold">
-              Generate from source
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button type="submit" className="primary-button w-full rounded-full px-6 py-4 text-base font-semibold sm:w-auto sm:min-w-[220px]">
+                Generate from source
+              </button>
+              <Link
+                href="/generate"
+                className="inline-flex w-full items-center justify-center rounded-full border border-[var(--gold-border)] bg-white/72 px-6 py-4 text-base font-semibold text-ink transition hover:bg-[var(--surface-gold-ghost)] sm:w-auto"
+              >
+                Open source engine
+              </Link>
+            </div>
           </form>
 
-          <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
-            {moneyPaths.map((path) => (
-              <span key={path} className="rounded-full border border-[var(--divider)] bg-white/72 px-3 py-2 text-xs font-medium text-ink/72 shadow-sm">
-                {path}
-              </span>
-            ))}
-          </div>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">
-            Whop is one access path. Direct checkout, demos, support, custom packs, and referral routes can be configured without changing the product flow.
+            Public links work now. Prompt, upload, audio, stream, and campaign lanes keep expanding inside the same studio without pretending every backend path is already fully finished.
           </p>
         </div>
 
@@ -125,7 +224,7 @@ export default function HomePage() {
               <p className="section-kicker">Muse source engine</p>
               <p className="mt-2 text-lg font-semibold text-ink">Signal scan, package, render when possible.</p>
               <p className="mt-2 text-sm leading-6 text-subtext">
-                Character-led brand assets are now visible without making the product dark-only.
+                Existing Athena art is the current hero signature while the dedicated character-girl system is tightened further.
               </p>
             </div>
           </div>
@@ -138,11 +237,33 @@ export default function HomePage() {
             key={mode.label}
             className={`rounded-[24px] border border-white/66 bg-gradient-to-br ${mode.tone} px-5 py-5 shadow-sm`}
           >
-            <p className="text-sm font-semibold text-ink">{mode.label}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-ink">{mode.label}</p>
+              <span className="rounded-full border border-[var(--gold-border)] bg-white/72 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-wine)]">
+                {mode.status}
+              </span>
+            </div>
             <p className="mt-2 text-sm leading-6 text-subtext">{mode.detail}</p>
           </div>
         ))}
       </section>
+
+      <section className="mx-auto mt-2 grid w-full max-w-6xl gap-4 pb-10 md:grid-cols-2 xl:grid-cols-5">
+        {actionPaths.map((path) => (
+          <ActionCard
+            key={path.label}
+            label={path.label}
+            detail={path.detail}
+            href={path.href}
+            source={path.source}
+            external={path.external}
+          />
+        ))}
+      </section>
+
+      <p className="mx-auto max-w-6xl pb-10 text-xs leading-6 text-subtext/80">
+        Whop stays available as one live access path today. Demo, booking, support, and referral routes appear as they are configured, without changing the product identity.
+      </p>
 
       <section className="mx-auto grid w-full max-w-5xl gap-4 pb-16 sm:grid-cols-2 lg:grid-cols-3">
         {proofPoints.map((item) => (
