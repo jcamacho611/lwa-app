@@ -228,16 +228,39 @@ def require_feature_access(
     raise HTTPException(status_code=403, detail=detail)
 
 
+def effective_clip_limit(settings: Settings, configured_limit: int) -> int:
+    high_volume_cap = (
+        settings.high_volume_max_clips
+        if getattr(settings, "enable_high_volume_clips", False)
+        else settings.max_clip_limit
+    )
+    return max(
+        min(
+            max(configured_limit, 1),
+            max(high_volume_cap, 1),
+            max(getattr(settings, "max_clips_per_job", settings.max_clip_limit), 1),
+        ),
+        1,
+    )
+
+
+def high_volume_enabled_for_plan(*, settings: Settings, clip_limit: int) -> bool:
+    return bool(getattr(settings, "enable_high_volume_clips", False) and clip_limit > 12)
+
+
 def build_free_plan(settings: Settings) -> PlanDefinition:
+    clip_limit = effective_clip_limit(settings, settings.free_clip_limit)
     return PlanDefinition(
         code="free",
         name=settings.default_plan_name,
         daily_limit=settings.free_daily_limit,
         feature_flags=FeatureFlags(
-            clip_limit=settings.free_clip_limit,
+            clip_limit=clip_limit,
+            high_volume_clips=high_volume_enabled_for_plan(settings=settings, clip_limit=clip_limit),
             alt_hooks=False,
             campaign_mode=False,
             packaging_profiles=False,
+            caption_styles=True,
             history_limit=10,
             caption_editor=False,
             timeline_editor=False,
@@ -248,22 +271,27 @@ def build_free_plan(settings: Settings) -> PlanDefinition:
             premium_exports=False,
             priority_processing=False,
             batch_mode=False,
+            thumbnail_preview=True,
             export_bundle=False,
+            export_profiles=False,
             analytics_feedback=False,
         ),
     )
 
 
 def build_pro_plan(settings: Settings) -> PlanDefinition:
+    clip_limit = effective_clip_limit(settings, settings.pro_clip_limit)
     return PlanDefinition(
         code="pro",
         name="Pro",
         daily_limit=settings.pro_daily_limit,
         feature_flags=FeatureFlags(
-            clip_limit=min(settings.pro_clip_limit, settings.max_clip_limit),
+            clip_limit=clip_limit,
+            high_volume_clips=high_volume_enabled_for_plan(settings=settings, clip_limit=clip_limit),
             alt_hooks=True,
             campaign_mode=False,
             packaging_profiles=True,
+            caption_styles=True,
             history_limit=25,
             caption_editor=False,
             timeline_editor=False,
@@ -274,22 +302,27 @@ def build_pro_plan(settings: Settings) -> PlanDefinition:
             premium_exports=True,
             priority_processing=False,
             batch_mode=False,
+            thumbnail_preview=True,
             export_bundle=True,
+            export_profiles=False,
             analytics_feedback=False,
         ),
     )
 
 
 def build_scale_plan(settings: Settings) -> PlanDefinition:
+    clip_limit = effective_clip_limit(settings, settings.scale_clip_limit)
     return PlanDefinition(
         code="scale",
         name="Scale",
         daily_limit=settings.scale_daily_limit,
         feature_flags=FeatureFlags(
-            clip_limit=min(settings.scale_clip_limit, settings.max_clip_limit),
+            clip_limit=clip_limit,
+            high_volume_clips=high_volume_enabled_for_plan(settings=settings, clip_limit=clip_limit),
             alt_hooks=True,
             campaign_mode=True,
             packaging_profiles=True,
+            caption_styles=True,
             history_limit=100,
             caption_editor=False,
             timeline_editor=False,
@@ -300,7 +333,9 @@ def build_scale_plan(settings: Settings) -> PlanDefinition:
             premium_exports=True,
             priority_processing=False,
             batch_mode=False,
+            thumbnail_preview=True,
             export_bundle=True,
+            export_profiles=False,
             analytics_feedback=False,
         ),
     )

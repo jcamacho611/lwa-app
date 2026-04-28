@@ -23,6 +23,8 @@ class ProcessRequest(BaseModel):
     campaign_goal: Optional[str] = None
     required_hashtags: Optional[List[str]] = None
     forbidden_terms: Optional[List[str]] = None
+    min_clip_seconds: Optional[int] = Field(default=None, ge=5, le=180)
+    max_clip_seconds: Optional[int] = Field(default=None, ge=5, le=300)
 
     @model_validator(mode="after")
     def ensure_source(self) -> "ProcessRequest":
@@ -145,7 +147,9 @@ class ClipResult(BaseModel):
     caption_txt_url: Optional[str] = None
     caption_srt_url: Optional[str] = None
     caption_vtt_url: Optional[str] = None
+    subtitle_url: Optional[str] = None
     burned_caption_url: Optional[str] = None
+    captions_burned_in: bool = False
     export_filename: Optional[str] = None
     render_status: Optional[str] = None
     rendered_status: Optional[str] = None
@@ -172,6 +176,7 @@ class ClipResult(BaseModel):
     edit_profile: Optional[str] = None
     aspect_ratio: Optional[str] = None
     thumbnail_text: Optional[str] = None
+    thumbnail_preview_url: Optional[str] = None
     cta_suggestion: Optional[str] = None
     hook_variants: List[str] = Field(default_factory=list)
     hooks: Optional[List[Dict[str, Any]]] = None
@@ -185,14 +190,17 @@ class ClipResult(BaseModel):
     platform_fit: Optional[str] = None
     packaging_angle: Optional[str] = None
     duration: Optional[int] = None
+    duration_seconds: Optional[int] = None
     timestamp_start: Optional[str] = None
     timestamp_end: Optional[str] = None
     transcript: Optional[str] = None
     cta: Optional[str] = None
     package_text: Optional[str] = None
     export_ready: bool = False
+    export_profile: Optional[str] = None
     asset_manifest: Optional[Dict[str, Any]] = None
     download_url: Optional[str] = None
+    render_notes: List[str] = Field(default_factory=list)
     render_error: Optional[str] = None
     request_id: Optional[str] = None
     clip_type: Optional[str] = None
@@ -207,8 +215,10 @@ class ClipResult(BaseModel):
     ai_provider: Optional[str] = None
     ai_model: Optional[str] = None
     visual_engine_status: Optional[str] = None
+    render_quality: Optional[str] = None
     render_quality_score: Optional[int] = None
     render_readiness_score: Optional[int] = None
+    resolution: Optional[str] = None
     strategy_only_reason: Optional[str] = None
     recovery_recommendation: Optional[str] = None
     text_overlay_plan: Optional[str] = None
@@ -231,9 +241,11 @@ class ClipResult(BaseModel):
 
 class FeatureFlags(BaseModel):
     clip_limit: int = 3
+    high_volume_clips: bool = False
     alt_hooks: bool = False
     campaign_mode: bool = False
     packaging_profiles: bool = False
+    caption_styles: bool = False
     history_limit: int = 10
     caption_editor: bool = False
     timeline_editor: bool = False
@@ -244,7 +256,9 @@ class FeatureFlags(BaseModel):
     premium_exports: bool = False
     priority_processing: bool = False
     batch_mode: bool = False
+    thumbnail_preview: bool = False
     export_bundle: bool = False
+    export_profiles: bool = False
     analytics_feedback: bool = False
 
 
@@ -272,6 +286,7 @@ class ProcessingSummary(BaseModel):
     source_duration_seconds: Optional[int] = None
     source_count: Optional[int] = None
     clip_count_requested: Optional[int] = None
+    clip_count_allowed: Optional[int] = None
     clip_count_returned: Optional[int] = None
     batch_mode: bool = False
     batch_id: Optional[str] = None
@@ -292,10 +307,17 @@ class ProcessingSummary(BaseModel):
     visual_engine_failed_count: int = 0
     rendered_clip_count: int = 0
     strategy_only_clip_count: int = 0
+    thumbnail_count: int = 0
+    thumbnail_generation_enabled: bool = False
+    available_caption_styles: List[str] = Field(default_factory=list)
+    default_caption_style: Optional[str] = None
     export_bundle_available: bool = False
     export_bundle_format: Optional[str] = None
     export_bundle_manifest_url: Optional[str] = None
     export_bundle_notes: List[str] = Field(default_factory=list)
+    available_export_profiles: List[str] = Field(default_factory=list)
+    default_export_profile: Optional[str] = None
+    render_quality_summary: Optional[str] = None
     bulk_export_ready: bool = False
     manifest_url: Optional[str] = None
     free_preview_unlocked: bool = True

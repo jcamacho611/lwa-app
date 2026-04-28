@@ -58,6 +58,9 @@ class Settings:
         self.pro_clip_limit = _env_int("LWA_PRO_CLIP_LIMIT", 6, minimum=1)
         self.scale_clip_limit = _env_int("LWA_SCALE_CLIP_LIMIT", 12, minimum=1)
         self.max_clip_limit = _env_int("LWA_MAX_CLIP_LIMIT", 12, minimum=1)
+        self.enable_high_volume_clips = _env_bool("LWA_ENABLE_HIGH_VOLUME_CLIPS", "false")
+        self.high_volume_max_clips = _env_int("LWA_HIGH_VOLUME_MAX_CLIPS", 24, minimum=1)
+        self.max_clips_per_job = _env_int("LWA_MAX_CLIPS_PER_JOB", self.max_clip_limit, minimum=1)
         self.pro_api_keys = {
             value.strip()
             for value in os.getenv("LWA_PRO_API_KEYS", "").split(",")

@@ -174,8 +174,16 @@ def _build_clip_package(clip: dict[str, Any]) -> dict[str, Any]:
         "caption_txt_url": clip.get("caption_txt_url"),
         "caption_srt_url": clip.get("caption_srt_url"),
         "caption_vtt_url": clip.get("caption_vtt_url"),
+        "subtitle_url": clip.get("subtitle_url"),
         "burned_caption_url": clip.get("burned_caption_url"),
+        "captions_burned_in": clip.get("captions_burned_in"),
+        "thumbnail_preview_url": clip.get("thumbnail_preview_url"),
         "export_filename": clip.get("export_filename"),
+        "export_profile": clip.get("export_profile"),
+        "render_quality": clip.get("render_quality"),
+        "render_notes": clip.get("render_notes"),
+        "resolution": clip.get("resolution"),
+        "duration_seconds": clip.get("duration_seconds") or clip.get("duration"),
     }
 
 

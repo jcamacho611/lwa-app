@@ -37,6 +37,7 @@ from ..services.clip_status_store import register_clip_batch
 from ..services.confidence_engine import build_confidence_label, resolve_confidence_score
 from ..services.entitlements import EntitlementContext, UsageStore
 from ..services.event_log import emit_event
+from ..services.intelligence_data_core import get_intelligence_core
 from ..services.output_builder import OutputBuilder
 from ..services.platform_store import PlatformStore
 from ..services.render_quality import evaluate_render_quality
@@ -59,6 +60,10 @@ from ..trends import fetch_public_trends, trends_timestamp
 
 logger = logging.getLogger("uvicorn.error")
 _last_generated_asset_prune_at = 0.0
+DEFAULT_EXPORT_PROFILE = "tiktok_reels_9_16"
+SHORTS_EXPORT_PROFILE = "shorts_9_16"
+PODCAST_EXPORT_PROFILE = "podcast_clean_9_16"
+STRATEGY_EXPORT_PROFILE = "strategy_only_package"
 
 
 def enforce_api_key(request: Request, settings: Settings) -> None:
@@ -159,8 +164,20 @@ async def build_clip_response(
     requested_clip_limit, clip_limit_upgrade_reason = resolve_requested_clip_limit(
         requested_clip_count=request.clip_count,
         plan_clip_limit=entitlement.plan.feature_flags.clip_limit,
-        hard_max_clip_limit=max(getattr(settings, "max_clip_limit", entitlement.plan.feature_flags.clip_limit), 1),
+        hard_max_clip_limit=max(
+            getattr(
+                settings,
+                "high_volume_max_clips" if getattr(settings, "enable_high_volume_clips", False) else "max_clip_limit",
+                entitlement.plan.feature_flags.clip_limit,
+            ),
+            1,
+        ),
+        enable_high_volume_clips=bool(getattr(settings, "enable_high_volume_clips", False)),
+        high_volume_max_clips=max(getattr(settings, "high_volume_max_clips", getattr(settings, "max_clip_limit", 12)), 1),
+        max_clips_per_job=max(getattr(settings, "max_clips_per_job", getattr(settings, "max_clip_limit", 12)), 1),
     )
+    clip_count_requested = max(int(request.clip_count), 1) if request.clip_count is not None else entitlement.plan.feature_flags.clip_limit
+    clip_count_allowed = requested_clip_limit
     candidate_limit = min(max(requested_clip_limit, 20), 40)
     trend_context_response = await get_live_trends()
     trend_context: list[TrendItem] = trend_context_response.trends
@@ -177,6 +194,32 @@ async def build_clip_response(
         yt_dlp_is_available,
         public_base_url,
     )
+    if request.clip_count and request.clip_count > 12:
+        emit_event(
+            settings=settings,
+            event="high_volume_requested",
+            request_id=request_id,
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            metadata={
+                "clip_count_requested": request.clip_count,
+                "clip_count_allowed": clip_count_allowed,
+                "high_volume_enabled": bool(getattr(settings, "enable_high_volume_clips", False)),
+            },
+        )
+    if clip_limit_upgrade_reason:
+        emit_event(
+            settings=settings,
+            event="clip_count_clamped",
+            request_id=request_id,
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            metadata={
+                "clip_count_requested": clip_count_requested,
+                "clip_count_allowed": clip_count_allowed,
+                "reason": clip_limit_upgrade_reason,
+            },
+        )
     await asyncio.to_thread(maybe_prune_generated_assets, settings)
 
     await emit_progress(progress_callback, "Ingesting source media, transcript windows, and candidate moments.")
@@ -311,6 +354,8 @@ async def build_clip_response(
         selected_trend=request.selected_trend,
         trend_context=trend_context,
     )
+    source_title = source_context.title if source_context else None
+    source_type = source_context.source_type if source_context else (request.source_type or ("video_upload" if source_path else "url"))
     clips = apply_operational_metadata(
         clips=clips,
         request_id=request_id,
@@ -339,11 +384,9 @@ async def build_clip_response(
 
     await emit_progress(progress_callback, "Finalizing ranked clip pack and delivery bundle.")
     processing_mode = source_context.processing_mode if source_context else "mock"
-    source_title = source_context.title if source_context else None
     source_duration_seconds = source_context.duration_seconds if source_context else None
     assets_created = len([clip for clip in clips if clip.clip_url])
     selection_strategy = source_context.selection_strategy if source_context else "timeline"
-    source_type = source_context.source_type if source_context else (request.source_type or ("video_upload" if source_path else "url"))
     preview_asset_url = resolve_preview_asset_url(clips=clips, source_context=source_context)
     download_asset_url = resolve_download_asset_url(clips=clips, source_context=source_context, entitlement=entitlement)
     thumbnail_url = resolve_thumbnail_url(clips=clips, source_context=source_context)
@@ -352,6 +395,7 @@ async def build_clip_response(
     rendered_clip_count = int(director_brain_summary["rendered_clip_count"])
     strategy_only_clip_count = int(director_brain_summary["strategy_only_clip_count"])
     export_ready_count = len([clip for clip in clips if clip.download_url])
+    thumbnail_count = len([clip for clip in clips if clip.thumbnail_preview_url or clip.preview_image_url or clip.thumbnail_url])
     export_manifest = (
         OutputBuilder(settings).create_export_manifest(
             request_id=request_id,
@@ -412,7 +456,8 @@ async def build_clip_response(
             source_type=source_type,
             source_duration_seconds=source_duration_seconds,
             source_count=1,
-            clip_count_requested=requested_clip_limit,
+            clip_count_requested=clip_count_requested,
+            clip_count_allowed=clip_count_allowed,
             clip_count_returned=len(clips),
             batch_mode=False,
             batch_id=None,
@@ -449,6 +494,10 @@ async def build_clip_response(
             visual_engine_failed_count=int(director_brain_summary["visual_engine_failed_count"]),
             rendered_clip_count=rendered_clip_count,
             strategy_only_clip_count=strategy_only_clip_count,
+            thumbnail_count=thumbnail_count,
+            thumbnail_generation_enabled=bool(thumbnail_count or ffmpeg_is_available),
+            available_caption_styles=available_caption_styles(),
+            default_caption_style=default_caption_style(clips),
             export_bundle_available=bool(export_manifest),
             export_bundle_format="json" if export_manifest else None,
             export_bundle_manifest_url=export_manifest["download_url"] if export_manifest else None,
@@ -457,6 +506,9 @@ async def build_clip_response(
                 rendered_clip_count=rendered_clip_count,
                 strategy_only_clip_count=strategy_only_clip_count,
             ),
+            available_export_profiles=available_export_profiles(clips=clips, target_platform=target_platform),
+            default_export_profile=default_export_profile(clips=clips, target_platform=target_platform),
+            render_quality_summary=build_render_quality_summary(clips),
             bulk_export_ready=bool(export_manifest),
             manifest_url=export_manifest["download_url"] if export_manifest else None,
             free_preview_unlocked=entitlement.plan.code == "free",
@@ -1363,6 +1415,134 @@ def build_clip_rendered_status(
     return "strategy_only"
 
 
+def available_caption_styles() -> list[str]:
+    try:
+        presets = get_intelligence_core().caption_presets()
+    except Exception:
+        presets = []
+    styles = [
+        str(row.get("preset_name") or row.get("id") or "").strip()
+        for row in presets
+        if str(row.get("preset_name") or row.get("id") or "").strip()
+    ]
+    if styles:
+        return styles
+    return [
+        "clean_editorial",
+        "karaoke_bold",
+        "block_punch",
+        "beauty_minimal",
+        "clinical_safe",
+    ]
+
+
+def default_caption_style(clips: list) -> str:
+    for clip in clips:
+        style = str(getattr(clip, "caption_preset", None) or getattr(clip, "caption_style", None) or "").strip()
+        if style:
+            return style
+    styles = available_caption_styles()
+    return styles[0] if styles else "clean_editorial"
+
+
+def default_export_profile(*, clips: list, target_platform: str) -> str:
+    if any((clip.rendered_status or clip.render_status) == "strategy_only" for clip in clips) and not any(
+        clip_has_rendered_media(clip) for clip in clips
+    ):
+        return STRATEGY_EXPORT_PROFILE
+
+    lowered = str(target_platform or "").strip().lower()
+    if "youtube" in lowered:
+        return SHORTS_EXPORT_PROFILE
+    if "podcast" in lowered:
+        return PODCAST_EXPORT_PROFILE
+    return DEFAULT_EXPORT_PROFILE
+
+
+def available_export_profiles(*, clips: list, target_platform: str) -> list[str]:
+    profiles = [default_export_profile(clips=clips, target_platform=target_platform)]
+    if PODCAST_EXPORT_PROFILE not in profiles and any(
+        "podcast" in str(getattr(clip, "caption_style", "")).lower()
+        or "podcast" in str(getattr(clip, "detected_category", "")).lower()
+        for clip in clips
+    ):
+        profiles.append(PODCAST_EXPORT_PROFILE)
+    if STRATEGY_EXPORT_PROFILE not in profiles:
+        profiles.append(STRATEGY_EXPORT_PROFILE)
+    return profiles
+
+
+def build_render_quality_summary(clips: list) -> str:
+    counts = {
+        "rendered": 0,
+        "raw_only": 0,
+        "strategy_only": 0,
+        "render_failed": 0,
+    }
+    for clip in clips:
+        status = str(getattr(clip, "rendered_status", None) or getattr(clip, "render_status", None) or "strategy_only")
+        if status not in counts:
+            status = "strategy_only"
+        counts[status] += 1
+    return (
+        f"rendered={counts['rendered']}, "
+        f"raw_only={counts['raw_only']}, "
+        f"strategy_only={counts['strategy_only']}, "
+        f"render_failed={counts['render_failed']}"
+    )
+
+
+def build_clip_subtitle_url(clip) -> str | None:
+    return clip.caption_vtt_url or clip.caption_srt_url or clip.caption_txt_url
+
+
+def build_clip_thumbnail_preview_url(clip) -> str | None:
+    return clip.preview_image_url or clip.thumbnail_url
+
+
+def build_clip_captions_burned_in(clip) -> bool:
+    existing = getattr(clip, "captions_burned_in", None)
+    if existing is not None:
+        return bool(existing)
+    return False
+
+
+def build_clip_resolution(*, clip, rendered_status: str) -> str | None:
+    if getattr(clip, "resolution", None):
+        return clip.resolution
+    if getattr(clip, "aspect_ratio", None) == "9:16" or rendered_status == "rendered":
+        return "720x1280"
+    return None
+
+
+def resolve_clip_export_profile(*, clip, target_platform: str, rendered_status: str) -> str:
+    if rendered_status == "strategy_only":
+        return STRATEGY_EXPORT_PROFILE
+    lowered = str(target_platform or "").strip().lower()
+    if "youtube" in lowered:
+        return SHORTS_EXPORT_PROFILE
+    if "podcast" in lowered or "podcast" in str(getattr(clip, "caption_style", "")).lower():
+        return PODCAST_EXPORT_PROFILE
+    return DEFAULT_EXPORT_PROFILE
+
+
+def build_clip_render_notes(*, clip, rendered_status: str, subtitle_url: str | None) -> list[str]:
+    notes: list[str] = []
+    if subtitle_url:
+        notes.append("Subtitle sidecar files are available for manual upload or review.")
+    if rendered_status == "rendered":
+        notes.append("Current rendered exports use overlay text support, not full phrase-by-phrase burned-in captions.")
+    elif rendered_status == "raw_only":
+        notes.append("A raw or lightly edited cut exists, but final polish is still optional.")
+    elif rendered_status == "render_failed":
+        notes.append("Rendering failed before a stable export was created.")
+    else:
+        notes.append("No playable media asset is available yet; treat this as strategy-only.")
+    if getattr(clip, "recovery_recommendation", None):
+        notes.append(str(clip.recovery_recommendation))
+    return notes[:3]
+
+
 def build_plan_first_three_seconds_assessment(hook: str | None) -> str:
     opener = " ".join((hook or "").strip().split())
     if not opener:
@@ -1424,8 +1604,15 @@ def resolve_requested_clip_limit(
     requested_clip_count: int | None,
     plan_clip_limit: int,
     hard_max_clip_limit: int,
+    enable_high_volume_clips: bool = False,
+    high_volume_max_clips: int | None = None,
+    max_clips_per_job: int | None = None,
 ) -> tuple[int, str | None]:
     allowed_limit = min(max(plan_clip_limit, 1), max(hard_max_clip_limit, 1))
+    if enable_high_volume_clips and high_volume_max_clips is not None:
+        allowed_limit = min(allowed_limit, max(high_volume_max_clips, 1))
+    if max_clips_per_job is not None:
+        allowed_limit = min(allowed_limit, max(max_clips_per_job, 1))
     if requested_clip_count is None:
         return allowed_limit, None
     requested = max(int(requested_clip_count), 1)
@@ -1512,20 +1699,33 @@ def determine_workflow_stage(
 
 
 def build_clip_package_text(clip) -> str:
+    status_label = {
+        "rendered": "Rendered",
+        "raw_only": "Raw cut",
+        "render_failed": "Render failed",
+        "strategy_only": "Strategy only",
+    }.get(clip.rendered_status or clip.render_status or "strategy_only", "Strategy only")
     lines = [
         f"Title: {clip.title}",
+        f"Status: {status_label}",
+        f"Score: {clip.score}",
         f"Hook: {clip.hook}",
         f"Caption: {clip.caption}",
-        f"Post order: {clip.post_rank or clip.rank or 1}",
-        f"Score: {clip.score}",
-        f"Rendered status: {clip.rendered_status or clip.render_status or 'strategy_only'}",
     ]
     if clip.thumbnail_text:
-        lines.append(f"Thumbnail: {clip.thumbnail_text}")
+        lines.append(f"Thumbnail Text: {clip.thumbnail_text}")
     if clip.cta_suggestion:
         lines.append(f"CTA: {clip.cta_suggestion}")
+    if clip.caption_style:
+        lines.append(f"Caption Style: {clip.caption_style}")
+    if getattr(clip, "export_profile", None):
+        lines.append(f"Export Profile: {clip.export_profile}")
+    lines.append(f"Post Order: {clip.post_rank or clip.rank or 1}")
     if clip.platform_fit:
-        lines.append(f"Platform fit: {clip.platform_fit}")
+        lines.append(f"Platform: {clip.platform_fit}")
+    clip_url = clip.preview_url or clip.edited_clip_url or clip.clip_url or clip.raw_clip_url or clip.download_url
+    if clip_url:
+        lines.append(f"Clip URL: {clip_url}")
     return "\n".join(line for line in lines if line.split(":", 1)[1].strip())
 
 
@@ -1536,10 +1736,19 @@ def build_clip_asset_manifest(clip) -> dict[str, object]:
         "edited_clip_url": clip.edited_clip_url,
         "preview_url": clip.preview_url,
         "preview_image_url": clip.preview_image_url,
+        "thumbnail_preview_url": getattr(clip, "thumbnail_preview_url", None),
+        "thumbnail_url": clip.thumbnail_url,
         "download_url": clip.download_url,
+        "subtitle_url": getattr(clip, "subtitle_url", None),
+        "caption_txt_url": clip.caption_txt_url,
+        "caption_srt_url": clip.caption_srt_url,
+        "caption_vtt_url": clip.caption_vtt_url,
+        "captions_burned_in": getattr(clip, "captions_burned_in", False),
         "rendered_status": clip.rendered_status or clip.render_status,
+        "render_quality": getattr(clip, "render_quality", None),
+        "export_profile": getattr(clip, "export_profile", None),
     }
-    return {key: value for key, value in manifest.items() if value}
+    return {key: value for key, value in manifest.items() if value is not None and value != ""}
 
 
 def apply_operational_metadata(
@@ -1574,6 +1783,35 @@ def apply_operational_metadata(
         platform_notes: list[str] = []
         compliance_notes: list[str] = []
         required_hashtags = [tag for tag in (request.required_hashtags or []) if isinstance(tag, str) and tag.strip()]
+        subtitle_url = build_clip_subtitle_url(clip)
+        thumbnail_preview_url = build_clip_thumbnail_preview_url(clip)
+        duration_seconds = clip.duration or derive_clip_duration_seconds(clip.start_time, clip.end_time)
+        export_profile = resolve_clip_export_profile(
+            clip=clip,
+            target_platform=target_platform,
+            rendered_status=rendered_status,
+        )
+        render_notes = build_clip_render_notes(
+            clip=clip,
+            rendered_status=rendered_status,
+            subtitle_url=subtitle_url,
+        )
+        render_quality = rendered_status
+        prepared_clip = clip.model_copy(
+            update={
+                "duration_seconds": duration_seconds,
+                "duration": duration_seconds,
+                "subtitle_url": subtitle_url,
+                "captions_burned_in": build_clip_captions_burned_in(clip),
+                "thumbnail_preview_url": thumbnail_preview_url,
+                "thumbnail_url": clip.thumbnail_url or thumbnail_preview_url,
+                "export_profile": export_profile,
+                "render_quality": render_quality,
+                "render_notes": render_notes,
+                "resolution": build_clip_resolution(clip=clip, rendered_status=rendered_status),
+                "rendered_status": rendered_status,
+            }
+        )
 
         if campaign_requested:
             if allowed_platforms and target_platform not in allowed_platforms:
@@ -1594,18 +1832,18 @@ def apply_operational_metadata(
                 )
 
         updated.append(
-            clip.model_copy(
+            prepared_clip.model_copy(
                 update={
                     "source_index": 1,
                     "source_label": source_label,
                     "batch_group": request_id,
-                    "selection_reason": clip.selection_reason or clip.why_this_matters or clip.reason,
+                    "selection_reason": prepared_clip.selection_reason or prepared_clip.why_this_matters or prepared_clip.reason,
                     "duplicate_risk": "medium" if diversity_counts.get(diversity_bucket, 0) > 1 else "low",
                     "diversity_bucket": diversity_bucket,
                     "rendered_status": rendered_status,
-                    "export_ready": bool(clip.preview_url or clip.edited_clip_url or clip.clip_url or clip.raw_clip_url or clip.download_url),
-                    "asset_manifest": build_clip_asset_manifest(clip),
-                    "package_text": build_clip_package_text(clip),
+                    "export_ready": bool(prepared_clip.preview_url or prepared_clip.edited_clip_url or prepared_clip.clip_url or prepared_clip.raw_clip_url or prepared_clip.download_url),
+                    "asset_manifest": build_clip_asset_manifest(prepared_clip),
+                    "package_text": build_clip_package_text(prepared_clip),
                     "campaign_fit_score": campaign_fit_score,
                     "campaign_fit_reason": campaign_fit_reason,
                     "platform_notes": platform_notes,
