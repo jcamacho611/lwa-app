@@ -1,8 +1,41 @@
 const PLATFORM_BLOCKED_SOURCE_MESSAGE =
   "This platform blocked server access. Upload the video/audio file directly, try another public source, or use prompt mode.";
 
-function sanitizeApiErrorMessage(message: string): string {
-  const lower = message.toLowerCase();
+function extractApiErrorMessage(data: unknown): string {
+  if (!data) return "Request failed.";
+
+  if (typeof data === "string") return data;
+
+  if (Array.isArray(data)) {
+    return data.map((item) => extractApiErrorMessage(item)).filter(Boolean).join(" ");
+  }
+
+  if (typeof data === "object") {
+    const record = data as Record<string, unknown>;
+
+    const directMessage =
+      record.user_message ||
+      record.message ||
+      record.error ||
+      record.reason ||
+      record.detail;
+
+    if (directMessage && directMessage !== data) {
+      return extractApiErrorMessage(directMessage);
+    }
+
+    return Object.values(record)
+      .map((value) => extractApiErrorMessage(value))
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return String(data);
+}
+
+function sanitizeApiErrorMessage(message: unknown): string {
+  const value = extractApiErrorMessage(message);
+  const lower = value.toLowerCase();
 
   if (
     lower.includes("sign in to confirm") ||
@@ -17,7 +50,7 @@ function sanitizeApiErrorMessage(message: string): string {
     return PLATFORM_BLOCKED_SOURCE_MESSAGE;
   }
 
-  return message;
+  return value || "Request failed.";
 }
 
 import {
@@ -125,7 +158,7 @@ async function jsonRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
     const data = (text ? JSON.parse(text) : {}) as T & { detail?: string; error?: string; message?: string };
 
     if (!response.ok) {
-      const message = data.detail || data.error || data.message || "Request failed.";
+      const message = extractApiErrorMessage(data);
       logApiError(path, response.status, message);
       throw new ApiError(sanitizeApiErrorMessage(message), response.status);
     }
