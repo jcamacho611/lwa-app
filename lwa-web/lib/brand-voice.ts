@@ -34,13 +34,14 @@ export const HERO_COPY = {
 } as const;
 
 export const GENERATOR_COPY = {
-  title: "Paste your source URL",
-  subhead: "Hooks, previews, post order.",
+  title: "Any source in. Creator-ready content out.",
+  subhead: "Paste a URL, upload a file, or describe an idea.",
   loading: "Finding your best moments...",
   submit: "Generate clips",
   submitting: "Finding clips...",
   outputReady: "Your best clips. Ranked. Ready to post.",
   outputIdle: "Drop one source.",
+  sourceModesHint: "Video · Audio · Music · Prompt · Stream · Campaign · Upload",
 } as const;
 
 export const RESULTS_COPY = {

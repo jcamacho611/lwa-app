@@ -652,16 +652,16 @@ export function ClipStudio({
       } else {
         const raw = submitError instanceof Error ? submitError.message : "Unable to generate clips.";
         const lower = raw.toLowerCase();
-        const isBot = lower.includes("sign in to confirm") || lower.includes("not a bot") || lower.includes("bot");
+        const isBot = lower.includes("sign in to confirm") || lower.includes("not a bot") || lower.includes("bot") || lower.includes("yt-dlp") || lower.includes("cookie") || lower.includes("blocked");
         const isLive = lower.includes("live") || lower.includes("premiere");
         const isTimeout = lower.includes("timeout") || lower.includes("too long") || lower.includes("504");
         const isUnavailable = lower.includes("unavailable") || lower.includes("private") || lower.includes("removed");
 
-        if (isBot) setError("This source couldn't be accessed. Try a different public link, stream source, upload, or prompt.");
-        else if (isLive) setError("Live streams can't be clipped yet. Paste a regular uploaded video.");
-        else if (isTimeout) setError("Video took too long. Try a shorter video under 10 minutes.");
-        else if (isUnavailable) setError("This video is private, removed, or region-locked. Try another URL.");
-        else setError(raw === "Unable to generate clips." ? "Could not process that source. Try a different video URL." : raw);
+        if (isBot) setError("This platform blocked server access. Upload the video/audio file directly, try another public source, or use prompt mode to generate the package.");
+        else if (isLive) setError("Live streams can't be clipped yet. Upload the stream later as a file, or use prompt mode.");
+        else if (isTimeout) setError("Video took too long. Try a shorter source under 10 minutes, or upload a pre-trimmed file.");
+        else if (isUnavailable) setError("This video is private, removed, or region-locked. Upload your own file, try another URL, or use prompt mode.");
+        else setError(raw === "Unable to generate clips." ? "Could not process that source. Try a different file, URL, or use prompt mode to generate content." : raw);
       }
     } finally {
       if (generationControllerRef.current === controller) {
@@ -1947,12 +1947,12 @@ export function ClipStudio({
       </div>
 
       {isGuest && hasStrategyOnlyWithoutPreview ? (
-        <InlineAlert tone="violet" title="Strategy only — shot plan ready">
-          Hooks, packaging, and shot plans are ready. Preview video requires a standard uploaded source, not a blocked or live source.
+        <InlineAlert tone="violet" title="Strategy-only package ready">
+          To get playable clips, upload your source file directly or try a different public source. Strategy shot plans are ready for manual production.
         </InlineAlert>
       ) : !renderedClipCount ? (
-        <InlineAlert tone="violet" title="Strategy only — shot plan ready">
-          This run returned useful packaging and shot plans, but no playable media. Review the strategy lane first, then retry with a cleaner source if you need rendered output.
+        <InlineAlert tone="violet" title="Strategy-only package ready">
+          Strategy package ready. To get playable clips, upload the source file directly or try a different public source.
         </InlineAlert>
       ) : !previewReadyCount ? (
         <InlineAlert tone="violet" title="Rendered lane is partial">
