@@ -1,13 +1,27 @@
 import type { ClipResult } from "./types";
 
 const LOCAL_FILE_PREFIXES = ["file://", "/Users/", "/tmp/", "/var/", "C:\\"];
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/$/, "");
 
 function cleanUrl(value?: string | null): string | undefined {
   const normalized = value?.trim();
   if (!normalized || LOCAL_FILE_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
     return undefined;
   }
-  return normalized;
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  if (normalized.startsWith("//")) {
+    return `https:${normalized}`;
+  }
+
+  if (normalized.startsWith("/") && API_BASE_URL) {
+    return `${API_BASE_URL}${normalized}`;
+  }
+
+  return undefined;
 }
 
 /**
