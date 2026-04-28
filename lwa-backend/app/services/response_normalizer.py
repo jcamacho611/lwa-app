@@ -119,6 +119,8 @@ def normalize_clip(clip: Dict[str, Any], index: int) -> Dict[str, Any]:
         "render_status": clip.get("render_status") or ("ready" if rendered else "pending"),
         "strategy_only_reason": clip.get("strategy_only_reason"),
         "recovery_recommendation": clip.get("recovery_recommendation"),
+        "approval_state": clip.get("approval_state") or ("approved" if rendered and render_readiness_score >= 72 else "needs_edit" if not rendered else "new"),
+        "campaign_requirement_checks": clip.get("campaign_requirement_checks") or [],
         "request_id": clip.get("request_id"),
     }
     return enrich_confidence(normalized)

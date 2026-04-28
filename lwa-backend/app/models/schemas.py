@@ -76,6 +76,12 @@ class ScoreBreakdown(BaseModel):
     commercial_value_score: int = 0
 
 
+class CampaignRequirementCheck(BaseModel):
+    status: Literal["pass", "warning", "fail", "unknown"] = "unknown"
+    requirement: str
+    message: str
+
+
 class GeneratedScripts(BaseModel):
     main: str
     variants: List[str] = Field(default_factory=list)
@@ -166,6 +172,8 @@ class ClipResult(BaseModel):
     text_overlay_plan: Optional[str] = None
     subtitle_guidance: Optional[str] = None
     transition_plan: Optional[str] = None
+    approval_state: Optional[str] = None
+    campaign_requirement_checks: List[CampaignRequirementCheck] = Field(default_factory=list)
 
 
 class FeatureFlags(BaseModel):

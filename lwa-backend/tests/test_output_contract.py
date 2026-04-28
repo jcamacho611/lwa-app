@@ -51,6 +51,8 @@ class OutputContractTests(unittest.TestCase):
         self.assertIn("hook_score", normalized["clips"][0])
         self.assertIn("score_breakdown", normalized["clips"][0])
         self.assertIn("render_readiness_score", normalized["clips"][0])
+        self.assertEqual(normalized["clips"][0]["approval_state"], "approved")
+        self.assertEqual(normalized["clips"][1]["approval_state"], "needs_edit")
         self.assertIn("posting plan", normalized["clips"][1]["reason"])
 
     def test_plan_output_contract_includes_confidence_and_state_flags(self) -> None:
@@ -85,6 +87,9 @@ class OutputContractTests(unittest.TestCase):
         self.assertIsNotNone(gated[0].hook_score)
         self.assertIsNotNone(gated[0].score_breakdown)
         self.assertIsNotNone(gated[0].render_readiness_score)
+        self.assertEqual(gated[0].approval_state, "approved")
+        self.assertTrue(gated[0].campaign_requirement_checks)
+        self.assertTrue(gated[0].approved)
 
     def test_export_bundle_writes_zip_with_caption_artifacts_and_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

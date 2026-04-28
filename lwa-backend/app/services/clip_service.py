@@ -17,6 +17,7 @@ from fastapi import HTTPException, Request
 from ..core.config import Settings
 from ..job_store import JobStore
 from ..models.schemas import (
+    CampaignRequirementCheck,
     CaptionModes,
     ClipBatchResponse,
     ClipResult,
@@ -610,6 +611,20 @@ def apply_plan_feature_flags(
             clip.scoring_explanation
             or "Score led by hook strength, clarity, and platform fit. Confirm render readiness before posting."
         )
+        campaign_requirement_checks = build_campaign_requirement_checks(
+            clip=clip,
+            is_rendered=is_rendered,
+            hook_score=hook_score,
+            render_readiness_score=render_readiness_score,
+            score_breakdown=score_breakdown,
+            thumbnail_text=thumbnail_text,
+            cta_suggestion=cta_suggestion,
+        )
+        approval_state = build_approval_state(
+            campaign_requirement_checks=campaign_requirement_checks,
+            is_rendered=is_rendered,
+            render_readiness_score=render_readiness_score,
+        )
 
         gated.append(
             clip.model_copy(
@@ -640,6 +655,9 @@ def apply_plan_feature_flags(
                     "render_readiness_score": render_readiness_score,
                     "score_breakdown": score_breakdown,
                     "scoring_explanation": scoring_explanation,
+                    "campaign_requirement_checks": campaign_requirement_checks,
+                    "approval_state": approval_state,
+                    "approved": approval_state == "approved",
                     "why_this_matters": why_this_matters,
                     "thumbnail_text": thumbnail_text,
                     "platform_fit": platform_fit,
@@ -718,6 +736,140 @@ def build_export_bundle(
         manifest_ready=True,
         artifact_types=["package_json", "caption_txt", "subtitle_srt", "subtitle_vtt"],
     )
+
+
+def build_campaign_requirement_checks(
+    *,
+    clip,
+    is_rendered: bool,
+    hook_score: int,
+    render_readiness_score: int,
+    score_breakdown: ScoreBreakdown,
+    thumbnail_text: str,
+    cta_suggestion: str,
+) -> list[CampaignRequirementCheck]:
+    checks: list[CampaignRequirementCheck] = []
+
+    if is_rendered and render_readiness_score >= 72:
+        checks.append(
+            CampaignRequirementCheck(
+                status="pass",
+                requirement="Playable asset",
+                message="Rendered media is ready to publish now.",
+            )
+        )
+    elif is_rendered:
+        checks.append(
+            CampaignRequirementCheck(
+                status="warning",
+                requirement="Playable asset",
+                message="Rendered media exists, but first-frame pacing or readability should be reviewed before publishing.",
+            )
+        )
+    else:
+        checks.append(
+            CampaignRequirementCheck(
+                status="fail",
+                requirement="Playable asset",
+                message=clip.strategy_only_reason or "This clip is still strategy-only and needs recovery before it can ship as media.",
+            )
+        )
+
+    if hook_score >= 70:
+        checks.append(
+            CampaignRequirementCheck(
+                status="pass",
+                requirement="Hook strength",
+                message="The opener is strong enough to lead a post without extra setup.",
+            )
+        )
+    elif hook_score >= 55:
+        checks.append(
+            CampaignRequirementCheck(
+                status="warning",
+                requirement="Hook strength",
+                message="The opener is usable, but it could be sharper before this becomes a campaign lead.",
+            )
+        )
+    else:
+        checks.append(
+            CampaignRequirementCheck(
+                status="fail",
+                requirement="Hook strength",
+                message="The opener is too soft for a lead post and needs a stronger first line.",
+            )
+        )
+
+    platform_fit_score = score_breakdown.platform_fit_score
+    if platform_fit_score >= 80:
+        checks.append(
+            CampaignRequirementCheck(
+                status="pass",
+                requirement="Platform fit",
+                message="Trim and packaging align well with the target platform.",
+            )
+        )
+    elif platform_fit_score >= 65:
+        checks.append(
+            CampaignRequirementCheck(
+                status="warning",
+                requirement="Platform fit",
+                message="The clip is close to platform-native, but pacing or packaging should be refined before campaign use.",
+            )
+        )
+    else:
+        checks.append(
+            CampaignRequirementCheck(
+                status="fail",
+                requirement="Platform fit",
+                message="This cut does not fit the target platform tightly enough yet.",
+            )
+        )
+
+    package_parts = [bool((clip.caption or "").strip()), bool(thumbnail_text.strip()), bool(cta_suggestion.strip())]
+    package_completeness = sum(1 for part in package_parts if part)
+    if package_completeness == 3:
+        checks.append(
+            CampaignRequirementCheck(
+                status="pass",
+                requirement="Packaging completeness",
+                message="Caption, thumbnail line, and CTA are all ready.",
+            )
+        )
+    elif package_completeness == 2:
+        checks.append(
+            CampaignRequirementCheck(
+                status="warning",
+                requirement="Packaging completeness",
+                message="Core packaging is mostly ready, but one delivery element still needs review.",
+            )
+        )
+    else:
+        checks.append(
+            CampaignRequirementCheck(
+                status="fail",
+                requirement="Packaging completeness",
+                message="This clip needs more packaging support before it is campaign-ready.",
+            )
+        )
+
+    return checks
+
+
+def build_approval_state(
+    *,
+    campaign_requirement_checks: list[CampaignRequirementCheck],
+    is_rendered: bool,
+    render_readiness_score: int,
+) -> str:
+    fail_count = sum(1 for check in campaign_requirement_checks if check.status == "fail")
+    warning_count = sum(1 for check in campaign_requirement_checks if check.status == "warning")
+
+    if fail_count > 0:
+        return "needs_edit"
+    if is_rendered and render_readiness_score >= 72 and warning_count == 0:
+        return "approved"
+    return "new"
 
 
 def build_plan_fallback_why_this_matters(*, clip, post_order: int, packaging_angle: str) -> str:
