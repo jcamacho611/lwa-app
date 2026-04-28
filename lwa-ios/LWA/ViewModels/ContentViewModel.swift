@@ -63,7 +63,7 @@ final class ContentViewModel: ObservableObject {
 
         if let mostRecentRun = history.first {
             latestResponse = mostRecentRun.response
-            clips = mostRecentRun.response.clips
+            clips = orderedClips(mostRecentRun.response.clips)
             lastSubmittedURL = mostRecentRun.response.videoURL
             videoURL = mostRecentRun.response.videoURL
             selectedTrend = mostRecentRun.response.trendContext.first
@@ -94,12 +94,19 @@ final class ContentViewModel: ObservableObject {
             )
             jobStatusMessage = job.message
             let response = try await waitForJob(jobID: job.jobID)
-            clips = response.clips
+            clips = orderedClips(response.clips)
             lastSubmittedURL = response.videoURL
             latestResponse = response
             syncSelectedPlatform(with: response)
             saveRun(response)
             showPaywall = !AppConfiguration.isAppStoreMode && response.processingSummary.creditsRemaining <= 1
+        } catch let apiError as APIError {
+            clips = []
+            lastSubmittedURL = ""
+            errorMessage = apiError.localizedDescription
+            if case .quotaExceeded = apiError {
+                showPaywall = !AppConfiguration.isAppStoreMode
+            }
         } catch {
             clips = []
             lastSubmittedURL = ""
@@ -157,7 +164,7 @@ final class ContentViewModel: ObservableObject {
 
     func restore(run: SavedRun) {
         latestResponse = run.response
-        clips = run.response.clips
+        clips = orderedClips(run.response.clips)
         lastSubmittedURL = run.response.videoURL
         videoURL = run.response.videoURL
         selectedUpload = nil
@@ -276,19 +283,7 @@ final class ContentViewModel: ObservableObject {
     }
 
     var bestClip: ClipResult? {
-        clips.sorted { lhs, rhs in
-            let lhsRank = lhs.rank ?? Int.max
-            let rhsRank = rhs.rank ?? Int.max
-            if lhsRank != rhsRank {
-                return lhsRank < rhsRank
-            }
-            let lhsPostRank = lhs.postRank ?? lhs.bestPostOrder ?? Int.max
-            let rhsPostRank = rhs.postRank ?? rhs.bestPostOrder ?? Int.max
-            if lhsPostRank != rhsPostRank {
-                return lhsPostRank < rhsPostRank
-            }
-            return lhs.score > rhs.score
-        }.first
+        orderedClips(clips).first
     }
 
     var recentRuns: [SavedRun] {
@@ -427,10 +422,20 @@ final class ContentViewModel: ObservableObject {
 
     var shareText: String {
         guard let response = latestResponse else { return "" }
+        let ordered = orderedClips(response.clips)
 
-        let clipLines = response.clips.enumerated().map { index, clip in
-            """
+        let clipLines = ordered.enumerated().map { index, clip in
+            let confidenceLine: String
+            if let confidenceScore = clip.confidenceScore {
+                confidenceLine = "\(confidenceScore)%"
+            } else if let confidence = clip.confidence {
+                confidenceLine = "\(Int((confidence * 100).rounded()))%"
+            } else {
+                confidenceLine = "not available"
+            }
+            return """
             Review rank \(clip.rank ?? (index + 1)) | Post order \(clip.postRank ?? clip.bestPostOrder ?? (index + 1)) | \(clip.title) [\(clip.startTime)-\(clip.endTime)] score \(clip.score)
+            Confidence: \(confidenceLine)
             Hook: \(clip.hook)
             Caption: \(clip.caption)
             Why it matters: \(clip.whyThisMatters ?? "not available")
@@ -468,6 +473,28 @@ final class ContentViewModel: ObservableObject {
 
     func reviewState(for clip: ClipResult) -> ClipReviewState? {
         reviewStates[reviewKey(for: clip)]
+    }
+
+    private func orderedClips(_ items: [ClipResult]) -> [ClipResult] {
+        items.sorted { lhs, rhs in
+            let lhsPostRank = lhs.postRank ?? lhs.bestPostOrder ?? Int.max
+            let rhsPostRank = rhs.postRank ?? rhs.bestPostOrder ?? Int.max
+            if lhsPostRank != rhsPostRank {
+                return lhsPostRank < rhsPostRank
+            }
+
+            if lhs.score != rhs.score {
+                return lhs.score > rhs.score
+            }
+
+            let lhsRank = lhs.rank ?? Int.max
+            let rhsRank = rhs.rank ?? Int.max
+            if lhsRank != rhsRank {
+                return lhsRank < rhsRank
+            }
+
+            return lhs.id < rhs.id
+        }
     }
 
     func setReviewState(_ state: ClipReviewState?, for clip: ClipResult) {

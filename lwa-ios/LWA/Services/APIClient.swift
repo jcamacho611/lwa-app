@@ -14,6 +14,7 @@ enum APIError: LocalizedError {
     case invalidVideoURL
     case invalidBaseURL
     case invalidResponse
+    case quotaExceeded(String)
     case server(String)
 
     var errorDescription: String? {
@@ -24,6 +25,8 @@ enum APIError: LocalizedError {
             return "Set a valid backend base URL in Settings."
         case .invalidResponse:
             return "The backend returned an invalid response."
+        case .quotaExceeded(let message):
+            return message
         case .server(let message):
             return message
         }
@@ -217,9 +220,7 @@ struct APIClient {
         }
 
         guard (200 ... 299).contains(httpResponse.statusCode) else {
-            let fallback = "Backend error \(httpResponse.statusCode)"
-            let message = String(data: data, encoding: .utf8) ?? fallback
-            throw APIError.server(message)
+            throw parsedServerError(statusCode: httpResponse.statusCode, data: data)
         }
 
         return try JSONDecoder().decode(ClipResponse.self, from: data)
@@ -262,9 +263,7 @@ struct APIClient {
         }
 
         guard (200 ... 299).contains(httpResponse.statusCode) else {
-            let fallback = "Backend error \(httpResponse.statusCode)"
-            let message = String(data: data, encoding: .utf8) ?? fallback
-            throw APIError.server(message)
+            throw parsedServerError(statusCode: httpResponse.statusCode, data: data)
         }
 
         return try JSONDecoder().decode(JobCreatedResponse.self, from: data)
@@ -284,9 +283,7 @@ struct APIClient {
         }
 
         guard (200 ... 299).contains(httpResponse.statusCode) else {
-            let fallback = "Backend error \(httpResponse.statusCode)"
-            let message = String(data: data, encoding: .utf8) ?? fallback
-            throw APIError.server(message)
+            throw parsedServerError(statusCode: httpResponse.statusCode, data: data)
         }
 
         return try JSONDecoder().decode(JobStatusResponse.self, from: data)
@@ -337,9 +334,7 @@ struct APIClient {
         }
 
         guard (200 ... 299).contains(httpResponse.statusCode) else {
-            let fallback = "Upload failed with status \(httpResponse.statusCode)"
-            let message = String(data: data, encoding: .utf8) ?? fallback
-            throw APIError.server(message)
+            throw parsedServerError(statusCode: httpResponse.statusCode, data: data, fallbackPrefix: "Upload failed")
         }
 
         return try JSONDecoder().decode(UploadedSource.self, from: data)
@@ -351,6 +346,60 @@ struct APIClient {
             return nil
         }
         return normalized
+    }
+
+    private func parsedServerError(
+        statusCode: Int,
+        data: Data,
+        fallbackPrefix: String = "Backend error"
+    ) -> APIError {
+        if let envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let detail = envelope["detail"] as? [String: Any] {
+                let message = (detail["message"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let upgradeHint = (detail["upgrade_hint"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let code = (detail["code"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                var lines: [String] = []
+                if let message, !message.isEmpty {
+                    lines.append(message)
+                }
+                if let upgradeHint, !upgradeHint.isEmpty {
+                    lines.append(upgradeHint)
+                }
+                if code == "quota_exceeded" {
+                    if AppConfiguration.isAppStoreMode {
+                        lines.append("Manage access on the web when you're ready to run more volume.")
+                    } else if AppConfiguration.apiKey.isEmpty {
+                        lines.append("Add your paid API key in Settings to keep generating.")
+                    }
+                    return .quotaExceeded(lines.joined(separator: "\n"))
+                }
+                if !lines.isEmpty {
+                    return .server(lines.joined(separator: "\n"))
+                }
+            }
+
+            if let detail = envelope["detail"] as? String,
+               !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if statusCode == 402 {
+                    return .quotaExceeded(detail)
+                }
+                return .server(detail)
+            }
+        }
+
+        let fallback = "\(fallbackPrefix) \(statusCode)"
+        let message = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if statusCode == 402 {
+            if let message, !message.isEmpty {
+                return .quotaExceeded(message)
+            }
+            return .quotaExceeded(fallback)
+        }
+        if let message, !message.isEmpty {
+            return .server(message)
+        }
+        return .server(fallback)
     }
 }
 
