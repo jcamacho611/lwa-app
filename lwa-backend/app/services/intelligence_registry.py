@@ -727,14 +727,17 @@ def _signal_weights_for(platform: str | None, category: str | None) -> dict[str,
 
 
 def build_clip_intelligence_context(platform: str | None, category: str | None) -> dict[str, Any]:
+    viral = load_intelligence_tables()["viral"]
     category_profile = build_unified_category_profile(category)
     return {
         "platform_profile": build_unified_platform_profile(platform),
         "category_profile": category_profile,
         "signal_weights": _signal_weights_for(platform, category_profile.get("category")),
-        "hook_formulas": category_profile.get("hook_formulas") or load_intelligence_tables()["viral"].get("hook_formula_library", []),
-        "caption_presets": load_intelligence_tables()["viral"].get("caption_style_presets", []),
-        "badge_rules": load_intelligence_tables()["viral"].get("frontend_badge_rules", []),
+        "hook_formulas": category_profile.get("hook_formulas") or viral.get("hook_formula_library", []),
+        "caption_presets": viral.get("caption_style_presets", []),
+        "badge_rules": viral.get("frontend_badge_rules", []),
+        "thumbnail_rules": viral.get("thumbnail_rules", []),
+        "campaign_readiness_rules": viral.get("campaign_readiness_rules", []),
     }
 
 

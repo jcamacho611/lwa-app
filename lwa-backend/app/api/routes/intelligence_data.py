@@ -33,6 +33,8 @@ def intelligence_index() -> dict[str, object]:
             "hook_formulas": len(core.hook_formula_library()),
             "caption_styles": len(core.caption_presets()),
             "badge_rules": len(core.frontend_badge_rules()),
+            "thumbnail_rules": len(core.thumbnail_rules()),
+            "campaign_readiness_rules": len(core.campaign_readiness_rules()),
             "sales_rows": len(core.sales_positioning()),
             "competitor_rows": len(core.competitor_matrix()),
         },
@@ -73,6 +75,18 @@ def caption_styles() -> dict[str, object]:
 def frontend_badges() -> dict[str, object]:
     core = get_intelligence_core()
     return {"items": core.frontend_badge_rules()}
+
+
+@router.get("/thumbnail-rules")
+def thumbnail_rules() -> dict[str, object]:
+    core = get_intelligence_core()
+    return {"items": core.thumbnail_rules()}
+
+
+@router.get("/campaign-readiness")
+def campaign_readiness() -> dict[str, object]:
+    core = get_intelligence_core()
+    return {"items": core.campaign_readiness_rules()}
 
 
 @router.get("/sales-positioning")

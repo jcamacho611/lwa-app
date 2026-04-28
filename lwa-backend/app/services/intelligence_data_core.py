@@ -162,8 +162,11 @@ class IntelligenceDataCore:
     def content_categories(self) -> List[Dict]:
         return list(self._data.get("content_categories", []))
 
-    def caption_presets(self) -> List[Dict]:
+    def legacy_caption_presets(self) -> List[Dict]:
         return list(self._data.get("caption_style_presets", []))
+
+    def caption_presets(self) -> List[Dict]:
+        return list(load_intelligence_tables().get("viral", {}).get("caption_style_presets", []))
 
     def scoring_weights(self) -> Dict[str, Any]:
         return dict(self._data.get("scoring_weights", {}))
@@ -191,6 +194,12 @@ class IntelligenceDataCore:
 
     def frontend_badge_rules(self) -> List[Dict]:
         return list(load_intelligence_tables().get("viral", {}).get("frontend_badge_rules", []))
+
+    def thumbnail_rules(self) -> List[Dict]:
+        return list(load_intelligence_tables().get("viral", {}).get("thumbnail_rules", []))
+
+    def campaign_readiness_rules(self) -> List[Dict]:
+        return list(load_intelligence_tables().get("viral", {}).get("campaign_readiness_rules", []))
 
     def sales_positioning(self) -> List[Dict]:
         return list(load_intelligence_tables().get("viral", {}).get("sales_positioning_matrix", []))

@@ -73,6 +73,8 @@ Attention compilation runs after clip candidates are created and before final cl
 - `GET /v1/intelligence/hook-formulas`
 - `GET /v1/intelligence/caption-styles`
 - `GET /v1/intelligence/frontend-badges`
+- `GET /v1/intelligence/thumbnail-rules`
+- `GET /v1/intelligence/campaign-readiness`
 - `GET /v1/intelligence/sales-positioning`
 - `POST /v1/intelligence/claim-check`
 

@@ -58,6 +58,8 @@ class IntelligenceTableIntegrationTests(unittest.TestCase):
         weights = context["signal_weights"]
         self.assertAlmostEqual(sum(weights.values()), 1.0, places=6)
         self.assertEqual(len(weights), 12)
+        self.assertTrue(context["thumbnail_rules"])
+        self.assertTrue(context["campaign_readiness_rules"])
 
     def test_claim_guard_blocks_forbidden_claims_and_allows_safe_copy(self) -> None:
         blocked = public_claim_guard("This tool guarantees viral views and guaranteed revenue.")
@@ -130,10 +132,25 @@ class IntelligenceTableIntegrationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["ok"], True)
+        self.assertEqual(payload["counts"]["caption_styles"], 7)
 
         response = self.client.get("/v1/intelligence/viral-signals")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()["items"]), 12)
+
+        response = self.client.get("/v1/intelligence/caption-styles")
+        self.assertEqual(response.status_code, 200)
+        caption_items = response.json()["items"]
+        self.assertEqual(len(caption_items), 7)
+        self.assertTrue(all("preset_name" in item for item in caption_items))
+
+        response = self.client.get("/v1/intelligence/thumbnail-rules")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["items"])
+
+        response = self.client.get("/v1/intelligence/campaign-readiness")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["items"])
 
         response = self.client.post("/v1/intelligence/claim-check", json={"text": "guaranteed viral results"})
         self.assertEqual(response.status_code, 200)
