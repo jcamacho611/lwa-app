@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .api.routes.auth import router as auth_router
 from .api.routes.batches import router as batches_router
+from .api.routes.capabilities import router as capabilities_router
 from .api.routes.campaigns import router as campaigns_router
 from .api.routes.clip_status import router as clip_status_router
 from .api.routes.clips import router as clips_router
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(generate_router)
     app.include_router(generation_router)
+    app.include_router(capabilities_router)
     app.include_router(intelligence_data_router)
     app.include_router(video_analysis_router)
     app.include_router(visual_generation_router)
