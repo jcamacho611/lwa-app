@@ -120,6 +120,80 @@ function clipHasShotPlan(clip: ClipResult) {
   return Boolean(clip.shot_plan?.length);
 }
 
+function getClipPreviewUrl(clip?: ClipResult | null) {
+  if (!clip) {
+    return null;
+  }
+
+  return (
+    clip.preview_url ||
+    clip.edited_clip_url ||
+    clip.clip_url ||
+    clip.raw_clip_url ||
+    clip.download_url ||
+    null
+  );
+}
+
+function reconcileGenerateResponseMediaTruth(data: GenerateResponse): GenerateResponse {
+  const clips = (data.clips || []).map((clip) => {
+    const previewUrl = getClipPreviewUrl(clip);
+    const hasRenderedMedia = Boolean(previewUrl);
+
+    if (!hasRenderedMedia) {
+      return {
+        ...clip,
+        is_rendered: clip.is_rendered === true ? true : false,
+        rendered: clip.rendered === true ? true : false,
+        is_strategy_only: clip.is_strategy_only === false ? false : true,
+        strategy_only: clip.strategy_only === false ? false : true,
+        render_status: clip.render_status || "strategy_only",
+      };
+    }
+
+    return {
+      ...clip,
+      preview_url: clip.preview_url || previewUrl,
+      clip_url: clip.clip_url || previewUrl,
+      edited_clip_url: clip.edited_clip_url || previewUrl,
+      is_rendered: true,
+      rendered: true,
+      is_strategy_only: false,
+      strategy_only: false,
+      render_status: clip.render_status === "strategy_only" ? "ready" : clip.render_status || "ready",
+      rendered_status: clip.rendered_status || "ready",
+      export_bundle: clip.export_bundle
+        ? {
+            ...clip.export_bundle,
+            preview_ready: true,
+          }
+        : clip.export_bundle,
+    };
+  });
+
+  const renderedClipCount = clips.filter((clip) => clipHasRenderedMedia(clip)).length;
+  const strategyOnlyClipCount = Math.max(clips.length - renderedClipCount, 0);
+  const firstRenderedClip = clips.find((clip) => clipHasRenderedMedia(clip));
+  const firstRenderedPreviewUrl = getClipPreviewUrl(firstRenderedClip);
+
+  return {
+    ...data,
+    clips,
+    preview_asset_url: data.preview_asset_url || firstRenderedPreviewUrl || null,
+    download_asset_url: data.download_asset_url || firstRenderedClip?.download_url || null,
+    thumbnail_url: data.thumbnail_url || firstRenderedClip?.thumbnail_url || firstRenderedClip?.preview_image_url || null,
+    processing_summary: data.processing_summary
+      ? {
+          ...data.processing_summary,
+          rendered_clip_count: renderedClipCount,
+          strategy_only_clip_count: strategyOnlyClipCount,
+          raw_assets_created: Math.max(data.processing_summary.raw_assets_created || 0, renderedClipCount),
+          edited_assets_created: Math.max(data.processing_summary.edited_assets_created || 0, renderedClipCount),
+        }
+      : data.processing_summary,
+  };
+}
+
 function formatBundleBytes(value?: number | null) {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     return null;
@@ -618,24 +692,26 @@ export function ClipStudio({
         token,
         { signal: controller.signal },
       );
-      setResult(data);
+      const reconciledData = reconcileGenerateResponseMediaTruth(data);
+      setResult(reconciledData);
       setClipRecoveryStates({});
       setPaywallMessage(null);
-      const allStrategyOnly = data.clips.length > 0 && data.clips.every((clip) => clip.is_strategy_only === true);
-      const fallbackReason = (data.processing_summary as { fallback_reason?: string } | undefined)?.fallback_reason;
+      const allStrategyOnly =
+        reconciledData.clips.length > 0 && reconciledData.clips.every((clip) => !clipHasRenderedMedia(clip));
+      const fallbackReason = (reconciledData.processing_summary as { fallback_reason?: string } | undefined)?.fallback_reason;
 
       if (allStrategyOnly && fallbackReason) {
         setError(`Could not process this source: ${fallbackReason}. Try a different public link, upload, or prompt.`);
         return;
       }
       setError(null);
-      const leadClip = data.clips?.[0];
+      const leadClip = reconciledData.clips?.find((clip) => clipHasRenderedMedia(clip)) || reconciledData.clips?.[0];
       void fireGodTrigger("generation_complete", {
         route: window.location.pathname,
         lastClipScore: leadClip?.score,
         lastClipHook: leadClip?.hook,
-        creditsRemaining: data.processing_summary?.credits_remaining,
-        platform: data.processing_summary?.target_platform || platform,
+        creditsRemaining: reconciledData.processing_summary?.credits_remaining,
+        platform: reconciledData.processing_summary?.target_platform || platform,
       });
       if (token) {
         await refreshAccount(token);
@@ -885,6 +961,11 @@ export function ClipStudio({
   }, [activeResult?.processing_summary?.target_platform, platform]);
   const orderedClips = useMemo(() => {
     return [...displayedClips].sort((left, right) => {
+      const renderedDelta = Number(clipHasRenderedMedia(right)) - Number(clipHasRenderedMedia(left));
+      if (renderedDelta !== 0) {
+        return renderedDelta;
+      }
+
       if (Boolean(left.is_best_clip) !== Boolean(right.is_best_clip)) {
         return Number(Boolean(right.is_best_clip)) - Number(Boolean(left.is_best_clip));
       }
@@ -901,7 +982,7 @@ export function ClipStudio({
         return scoreDelta;
       }
 
-      return Number(clipHasRenderedMedia(right)) - Number(clipHasRenderedMedia(left));
+      return String(left.id).localeCompare(String(right.id));
     });
   }, [displayedClips]);
 
@@ -1032,7 +1113,12 @@ export function ClipStudio({
     () => orderedClips.filter((clip) => clipHasRenderedMedia(clip)).length,
     [orderedClips],
   );
-  const leadClip = orderedClips[0] ?? null;
+  const leadClip =
+    orderedClips.find((clip) => clip.is_best_clip && clipHasRenderedMedia(clip)) ||
+    orderedClips.find((clip) => clipHasRenderedMedia(clip)) ||
+    orderedClips.find((clip) => clip.is_best_clip) ||
+    orderedClips[0] ||
+    null;
   const leadClipId = leadClip ? resolveClipQueueId(leadClip) : null;
   const renderedClips = useMemo(() => orderedClips.filter((clip) => clipHasRenderedMedia(clip)), [orderedClips]);
   const strategyOnlyClips = useMemo(() => orderedClips.filter((clip) => !clipHasRenderedMedia(clip)), [orderedClips]);
@@ -1073,13 +1159,7 @@ export function ClipStudio({
     [clipRecoveryStates],
   );
   const exportReadyCount = useMemo(() => orderedClips.filter((clip) => clip.download_url).length, [orderedClips]);
-  const leadPreviewUrl =
-    activeResult?.preview_asset_url ||
-      leadClip?.preview_url ||
-      leadClip?.edited_clip_url ||
-      leadClip?.clip_url ||
-      leadClip?.raw_clip_url ||
-      null;
+  const leadPreviewUrl = activeResult?.preview_asset_url || getClipPreviewUrl(leadClip);
   const leadExportUrl = activeResult?.download_asset_url || leadClip?.download_url || null;
   const leadPreviewReady = Boolean(leadPreviewUrl);
   const leadExportReady = Boolean(leadExportUrl);
