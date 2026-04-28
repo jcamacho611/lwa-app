@@ -54,6 +54,10 @@ class Settings:
         self.free_daily_limit = _env_int("LWA_FREE_DAILY_LIMIT", self.default_credits_remaining, minimum=0)
         self.pro_daily_limit = _env_int("LWA_PRO_DAILY_LIMIT", 25, minimum=-1)
         self.scale_daily_limit = _env_int("LWA_SCALE_DAILY_LIMIT", 100, minimum=-1)
+        self.free_clip_limit = _env_int("LWA_FREE_CLIP_LIMIT", 3, minimum=1)
+        self.pro_clip_limit = _env_int("LWA_PRO_CLIP_LIMIT", 6, minimum=1)
+        self.scale_clip_limit = _env_int("LWA_SCALE_CLIP_LIMIT", 12, minimum=1)
+        self.max_clip_limit = _env_int("LWA_MAX_CLIP_LIMIT", 12, minimum=1)
         self.pro_api_keys = {
             value.strip()
             for value in os.getenv("LWA_PRO_API_KEYS", "").split(",")
@@ -112,6 +116,7 @@ class Settings:
         )
         self.event_log_path = os.getenv("LWA_EVENT_LOG_PATH", default_event_log)
         self.event_log_enabled = _env_bool("LWA_EVENT_LOG_ENABLED", "true")
+        self.event_log_max_bytes = _env_int("LWA_EVENT_LOG_MAX_BYTES", 10_485_760, minimum=1024)
         self.event_log_max_metadata_chars = _env_int("LWA_EVENT_LOG_MAX_METADATA_CHARS", 2000, minimum=256)
         self.abuse_window_seconds = _env_int("LWA_ABUSE_WINDOW_SECONDS", 300, minimum=1)
         self.abuse_max_generation_requests = _env_int("LWA_ABUSE_MAX_GENERATION_REQUESTS", 8, minimum=1)

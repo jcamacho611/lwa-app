@@ -126,6 +126,18 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
             "source_type": resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
         },
     )
+    if resolved_request.campaign_brief:
+        emit_event(
+            settings=settings,
+            event="campaign_pack_requested",
+            request_id=request_id,
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            metadata={
+                "campaign_goal": resolved_request.campaign_goal or "unspecified",
+                "allowed_platform_count": len(resolved_request.allowed_platforms or []),
+            },
+        )
     logger.info(
         "route_generate request_id=%s route=%s target_platform=%s video_url=%s plan=%s subject_source=%s",
         request_id,
@@ -208,6 +220,19 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
             "mode": "async_job",
         },
     )
+    if resolved_request.campaign_brief:
+        emit_event(
+            settings=settings,
+            event="campaign_pack_requested",
+            request_id=job_id,
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            metadata={
+                "campaign_goal": resolved_request.campaign_goal or "unspecified",
+                "allowed_platform_count": len(resolved_request.allowed_platforms or []),
+                "mode": "async_job",
+            },
+        )
     logger.info(
         "route_job request_id=%s route=%s target_platform=%s video_url=%s plan=%s subject_source=%s",
         job_id,
@@ -217,7 +242,12 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
         entitlement.plan.code,
         entitlement.subject_source,
     )
-    await job_store.create(job_id, "Job queued. Starting source analysis.")
+    await job_store.create(
+        job_id,
+        "Job queued. Starting source analysis.",
+        plan_code=entitlement.plan.code,
+        generation_mode="campaign_pack" if resolved_request.campaign_brief else "single_source",
+    )
     platform_store.create_job(
         job_id=job_id,
         user_id=current_user.id if current_user else None,
@@ -283,6 +313,14 @@ async def get_processing_job(job_id: str, http_request: Request) -> JobStatusRes
         message=record.message,
         created_at=record.created_at,
         updated_at=record.updated_at,
+        completed_at=record.completed_at,
+        duration_ms=record.duration_ms,
+        plan_code=record.plan_code,
+        generation_mode=record.generation_mode,
+        rendered_clip_count=record.rendered_clip_count,
+        strategy_only_clip_count=record.strategy_only_clip_count,
+        fallback_used=record.fallback_used,
+        error_type=record.error_type,
         result=record.result,
         error=record.error,
     )

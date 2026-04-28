@@ -5,6 +5,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from ..core.config import Settings
@@ -50,6 +51,14 @@ def _coalesce_text(*values: object) -> str:
         if text:
             return text
     return ""
+
+
+def _safe_source_domain(value: str) -> str | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    parsed = urlparse(text)
+    return parsed.netloc.lower() or None
 
 
 def _parse_timestamp(value: object) -> float:
@@ -152,10 +161,16 @@ def _build_clip_package(clip: dict[str, Any]) -> dict[str, Any]:
         "caption_style": clip.get("caption_style"),
         "post_rank": clip.get("post_rank"),
         "score": clip.get("score"),
+        "why_this_matters": clip.get("why_this_matters"),
+        "rendered_status": clip.get("rendered_status") or clip.get("render_status"),
+        "clip_url": clip.get("clip_url"),
+        "raw_clip_url": clip.get("raw_clip_url"),
+        "edited_clip_url": clip.get("edited_clip_url"),
         "hook_score": clip.get("hook_score"),
         "render_readiness_score": clip.get("render_readiness_score") or clip.get("render_quality_score"),
         "score_breakdown": clip.get("score_breakdown"),
         "scoring_explanation": clip.get("scoring_explanation"),
+        "package_text": clip.get("package_text"),
         "caption_txt_url": clip.get("caption_txt_url"),
         "caption_srt_url": clip.get("caption_srt_url"),
         "caption_vtt_url": clip.get("caption_vtt_url"),
@@ -288,6 +303,7 @@ def create_export_bundle(
                 "title": clip.get("title") or "Untitled clip",
                 "score": clip.get("score"),
                 "post_rank": clip.get("post_rank"),
+                "rendered_status": clip.get("rendered_status") or clip.get("render_status"),
                 "artifact_paths": artifact_paths,
                 "artifact_urls": {
                     field_name: clip.get(field_name)
@@ -305,6 +321,11 @@ def create_export_bundle(
                     for field_name in ("preview_url", "download_url", "edited_clip_url", "clip_url", "raw_clip_url")
                     if clip.get(field_name)
                 },
+                "asset_manifest": {
+                    key: value
+                    for key, value in (clip.get("asset_manifest") or {}).items()
+                    if isinstance(value, str) and value.startswith(("http://", "https://", "/generated/"))
+                },
             }
         )
 
@@ -312,7 +333,7 @@ def create_export_bundle(
         "bundle_id": bundle_id,
         "request_id": request_id,
         "created_at": created_at,
-        "source_url": source_url,
+        "source_domain": _safe_source_domain(source_url),
         "clip_count": len(clip_entries),
         "bundle_format": "zip",
         "artifact_types": DEFAULT_ARTIFACT_TYPES,

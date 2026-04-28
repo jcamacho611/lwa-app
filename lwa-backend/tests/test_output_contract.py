@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 import zipfile
@@ -7,7 +8,7 @@ from asyncio import run
 from pathlib import Path
 
 from app.core.config import Settings
-from app.models.schemas import ClipResult, ScoreBreakdown
+from app.models.schemas import ClipResult, ProcessingSummary, ScoreBreakdown
 from app.services.clip_service import apply_plan_feature_flags
 from app.services.confidence_engine import build_confidence_label, resolve_confidence_score
 from app.services.entitlements import EntitlementContext, build_free_plan
@@ -45,8 +46,10 @@ class OutputContractTests(unittest.TestCase):
         self.assertEqual(normalized["strategy_count"], 1)
         self.assertTrue(normalized["clips"][0]["is_rendered"])
         self.assertFalse(normalized["clips"][0]["is_strategy_only"])
+        self.assertEqual(normalized["clips"][0]["rendered_status"], "rendered")
         self.assertFalse(normalized["clips"][1]["is_rendered"])
         self.assertTrue(normalized["clips"][1]["is_strategy_only"])
+        self.assertEqual(normalized["clips"][1]["rendered_status"], "strategy_only")
         self.assertEqual(normalized["clips"][0]["confidence_label"], "High viral potential")
         self.assertIn("hook_score", normalized["clips"][0])
         self.assertIn("score_breakdown", normalized["clips"][0])
@@ -84,12 +87,48 @@ class OutputContractTests(unittest.TestCase):
         self.assertEqual(gated[0].confidence_label, "High viral potential")
         self.assertTrue(gated[0].is_rendered)
         self.assertFalse(gated[0].is_strategy_only)
+        self.assertEqual(gated[0].rendered_status, "raw_only")
         self.assertIsNotNone(gated[0].hook_score)
+        self.assertIsNotNone(gated[0].hook_strength)
+        self.assertIsNotNone(gated[0].first_three_seconds_assessment)
+        self.assertIsNotNone(gated[0].retention_reason)
+        self.assertTrue(gated[0].export_ready)
+        self.assertIsNotNone(gated[0].asset_manifest)
+        self.assertIsNotNone(gated[0].package_text)
         self.assertIsNotNone(gated[0].score_breakdown)
         self.assertIsNotNone(gated[0].render_readiness_score)
         self.assertEqual(gated[0].approval_state, "approved")
         self.assertTrue(gated[0].campaign_requirement_checks)
         self.assertTrue(gated[0].approved)
+
+    def test_processing_summary_accepts_extended_optional_backend_fields(self) -> None:
+        summary = ProcessingSummary(
+            plan_code="pro",
+            plan_name="Pro",
+            credits_remaining=12,
+            estimated_turnaround="preview ready now",
+            recommended_next_step="Open the lead preview and export the winners.",
+            ai_provider="fallback",
+            target_platform="TikTok",
+            sources_considered=["manual"],
+            processing_mode="full",
+            selection_strategy="timeline",
+            source_count=1,
+            clip_count_requested=3,
+            clip_count_returned=3,
+            batch_mode=False,
+            generation_mode="single_source",
+            raw_assets_created=2,
+            edited_assets_created=1,
+            export_bundle_available=True,
+            export_bundle_format="json",
+            export_bundle_manifest_url="https://example.com/generated/req_001/manifest.json",
+        )
+
+        self.assertEqual(summary.raw_assets_created, 2)
+        self.assertEqual(summary.edited_assets_created, 1)
+        self.assertEqual(summary.clip_count_requested, 3)
+        self.assertEqual(summary.export_bundle_format, "json")
 
     def test_warning_level_campaign_checks_route_clip_to_needs_review(self) -> None:
         settings = Settings()
@@ -178,6 +217,11 @@ class OutputContractTests(unittest.TestCase):
                 self.assertIn("clips/clip_1/caption.txt", names)
                 self.assertIn("clips/clip_1/subtitle.srt", names)
                 self.assertIn("clips/clip_1/subtitle.vtt", names)
+                manifest = json.loads(bundle_zip.read("manifest.json"))
+                self.assertEqual(manifest["bundle_format"], "zip")
+                self.assertEqual(manifest["source_domain"], "example.com")
+                self.assertEqual(manifest["clips"][0]["rendered_status"], None)
+                self.assertNotIn("/Users/", json.dumps(manifest))
 
     def test_output_builder_delegates_to_shared_zip_bundle_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

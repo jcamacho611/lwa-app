@@ -63,6 +63,15 @@ def normalize_clip(clip: Dict[str, Any], index: int) -> Dict[str, Any]:
         or "Strong early signal. Keep this in your posting plan while the preview finishes."
     )
     rendered = is_rendered(clip)
+    render_status = clip.get("render_status")
+    if str(render_status or "").strip().lower() == "failed":
+        rendered_status = "render_failed"
+    elif clip.get("preview_url") or clip.get("edited_clip_url"):
+        rendered_status = "rendered"
+    elif clip.get("clip_url") or clip.get("raw_clip_url"):
+        rendered_status = "raw_only"
+    else:
+        rendered_status = "strategy_only"
     hook_score = _coerce_score(clip.get("hook_score"), _fallback_hook_score(clip, raw_score))
     render_readiness_score = _coerce_score(
         clip.get("render_readiness_score"),
@@ -122,6 +131,7 @@ def normalize_clip(clip: Dict[str, Any], index: int) -> Dict[str, Any]:
         "is_rendered": rendered,
         "is_strategy_only": not rendered,
         "render_status": clip.get("render_status") or ("ready" if rendered else "pending"),
+        "rendered_status": clip.get("rendered_status") or rendered_status,
         "strategy_only_reason": clip.get("strategy_only_reason"),
         "recovery_recommendation": clip.get("recovery_recommendation"),
         "trend_match_score": clip.get("trend_match_score"),

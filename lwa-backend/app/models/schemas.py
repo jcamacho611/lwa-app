@@ -16,6 +16,13 @@ class ProcessRequest(BaseModel):
     trend_source: Optional[str] = None
     target_platform: Optional[str] = None
     content_angle: Optional[str] = None
+    clip_count: Optional[int] = Field(default=None, ge=1, le=50)
+    campaign_brief: Optional[str] = None
+    target_audience: Optional[str] = None
+    allowed_platforms: Optional[List[str]] = None
+    campaign_goal: Optional[str] = None
+    required_hashtags: Optional[List[str]] = None
+    forbidden_terms: Optional[List[str]] = None
 
     @model_validator(mode="after")
     def ensure_source(self) -> "ProcessRequest":
@@ -120,6 +127,9 @@ class ClipResult(BaseModel):
     confidence_label: Optional[str] = None
     reason: Optional[str] = None
     why_this_matters: Optional[str] = None
+    first_three_seconds_assessment: Optional[str] = None
+    hook_strength: Optional[str | int | float] = None
+    retention_reason: Optional[str] = None
     score_breakdown: Optional[ScoreBreakdown] = None
     signals: Optional[Dict[str, float]] = None
     scoring_explanation: Optional[str] = None
@@ -138,6 +148,7 @@ class ClipResult(BaseModel):
     burned_caption_url: Optional[str] = None
     export_filename: Optional[str] = None
     render_status: Optional[str] = None
+    rendered_status: Optional[str] = None
     is_rendered: Optional[bool] = None
     is_strategy_only: Optional[bool] = None
     rendered: Optional[bool] = None
@@ -148,6 +159,12 @@ class ClipResult(BaseModel):
     best_post_order: Optional[int] = None
     virality_score: Optional[int] = None
     rank: Optional[int] = None
+    source_index: Optional[int] = None
+    source_label: Optional[str] = None
+    batch_group: Optional[str] = None
+    selection_reason: Optional[str] = None
+    duplicate_risk: Optional[str] = None
+    diversity_bucket: Optional[str] = None
     target_platform: Optional[str] = None
     platform_compatibility: Optional[Dict[str, bool]] = None
     frontend_badges: Optional[List[Dict[str, Any]]] = None
@@ -172,6 +189,9 @@ class ClipResult(BaseModel):
     timestamp_end: Optional[str] = None
     transcript: Optional[str] = None
     cta: Optional[str] = None
+    package_text: Optional[str] = None
+    export_ready: bool = False
+    asset_manifest: Optional[Dict[str, Any]] = None
     download_url: Optional[str] = None
     render_error: Optional[str] = None
     request_id: Optional[str] = None
@@ -202,6 +222,11 @@ class ClipResult(BaseModel):
     approval_state: Optional[str] = None
     risk_flags: List[str] = Field(default_factory=list)
     campaign_requirement_checks: List[CampaignRequirementCheck] = Field(default_factory=list)
+    campaign_fit_score: Optional[int] = None
+    campaign_fit_reason: Optional[str] = None
+    platform_notes: List[str] = Field(default_factory=list)
+    required_hashtag_suggestions: List[str] = Field(default_factory=list)
+    compliance_notes: List[str] = Field(default_factory=list)
 
 
 class FeatureFlags(BaseModel):
@@ -218,6 +243,9 @@ class FeatureFlags(BaseModel):
     max_generations_per_day: int = 0
     premium_exports: bool = False
     priority_processing: bool = False
+    batch_mode: bool = False
+    export_bundle: bool = False
+    analytics_feedback: bool = False
 
 
 class ProcessingSummary(BaseModel):
@@ -242,7 +270,21 @@ class ProcessingSummary(BaseModel):
     source_title: Optional[str] = None
     source_type: Optional[str] = None
     source_duration_seconds: Optional[int] = None
+    source_count: Optional[int] = None
+    clip_count_requested: Optional[int] = None
+    clip_count_returned: Optional[int] = None
+    batch_mode: bool = False
+    batch_id: Optional[str] = None
+    generation_mode: Optional[str] = None
+    workflow_stage: Optional[str] = None
+    upgrade_reason: Optional[str] = None
+    campaign_mode: bool = False
+    campaign_goal: Optional[str] = None
+    allowed_platforms: List[str] = Field(default_factory=list)
+    campaign_readiness: Optional[str] = None
+    campaign_notes: List[str] = Field(default_factory=list)
     assets_created: int = 0
+    raw_assets_created: int = 0
     edited_assets_created: int = 0
     visual_engine_enabled: bool = False
     visual_engine_attempted_count: int = 0
@@ -250,6 +292,10 @@ class ProcessingSummary(BaseModel):
     visual_engine_failed_count: int = 0
     rendered_clip_count: int = 0
     strategy_only_clip_count: int = 0
+    export_bundle_available: bool = False
+    export_bundle_format: Optional[str] = None
+    export_bundle_manifest_url: Optional[str] = None
+    export_bundle_notes: List[str] = Field(default_factory=list)
     bulk_export_ready: bool = False
     manifest_url: Optional[str] = None
     free_preview_unlocked: bool = True
@@ -295,6 +341,14 @@ class JobStatusResponse(BaseModel):
     message: str
     created_at: str
     updated_at: str
+    completed_at: Optional[str] = None
+    duration_ms: Optional[int] = None
+    plan_code: Optional[str] = None
+    generation_mode: Optional[str] = None
+    rendered_clip_count: Optional[int] = None
+    strategy_only_clip_count: Optional[int] = None
+    fallback_used: Optional[bool] = None
+    error_type: Optional[str] = None
     result: Optional[ClipBatchResponse] = None
     error: Optional[str] = None
 

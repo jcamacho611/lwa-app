@@ -10,7 +10,7 @@ from starlette.requests import Request
 
 from app.core.config import Settings
 from app.services.clip_service import enforce_api_key
-from app.services.entitlements import UsageStore, resolve_entitlement
+from app.services.entitlements import UsageStore, build_pro_plan, build_scale_plan, resolve_entitlement
 
 
 def build_request(*, client_id: str | None = None, api_key: str | None = None) -> Request:
@@ -116,6 +116,36 @@ class EntitlementsTests(unittest.TestCase):
         self.assertEqual(entitlement.subject_source, "remote_ip")
         self.assertTrue(entitlement.subject.startswith("ip:"))
         self.assertNotIn("127.0.0.1", entitlement.subject)
+
+    def test_paid_feature_flags_do_not_claim_unshipped_queue_or_editor_capabilities(self) -> None:
+        settings = Settings()
+
+        pro_plan = build_pro_plan(settings)
+        scale_plan = build_scale_plan(settings)
+
+        self.assertTrue(pro_plan.feature_flags.alt_hooks)
+        self.assertTrue(pro_plan.feature_flags.packaging_profiles)
+        self.assertTrue(pro_plan.feature_flags.premium_exports)
+        self.assertTrue(pro_plan.feature_flags.export_bundle)
+        self.assertFalse(pro_plan.feature_flags.campaign_mode)
+        self.assertFalse(pro_plan.feature_flags.posting_queue)
+        self.assertFalse(pro_plan.feature_flags.caption_editor)
+        self.assertFalse(pro_plan.feature_flags.timeline_editor)
+        self.assertFalse(pro_plan.feature_flags.priority_processing)
+        self.assertFalse(pro_plan.feature_flags.batch_mode)
+        self.assertFalse(pro_plan.feature_flags.analytics_feedback)
+
+        self.assertTrue(scale_plan.feature_flags.alt_hooks)
+        self.assertTrue(scale_plan.feature_flags.packaging_profiles)
+        self.assertTrue(scale_plan.feature_flags.premium_exports)
+        self.assertTrue(scale_plan.feature_flags.campaign_mode)
+        self.assertTrue(scale_plan.feature_flags.export_bundle)
+        self.assertFalse(scale_plan.feature_flags.posting_queue)
+        self.assertFalse(scale_plan.feature_flags.caption_editor)
+        self.assertFalse(scale_plan.feature_flags.timeline_editor)
+        self.assertFalse(scale_plan.feature_flags.priority_processing)
+        self.assertFalse(scale_plan.feature_flags.batch_mode)
+        self.assertFalse(scale_plan.feature_flags.analytics_feedback)
 
 
 if __name__ == "__main__":

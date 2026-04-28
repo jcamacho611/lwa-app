@@ -29,6 +29,10 @@ def emit_event(
     try:
         path = Path(settings.event_log_path)
         path.parent.mkdir(parents=True, exist_ok=True)
+        _trim_log_if_oversized(
+            path=path,
+            max_bytes=max(int(getattr(settings, "event_log_max_bytes", 10_485_760)), 1),
+        )
         payload = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": event,
@@ -43,8 +47,29 @@ def emit_event(
         }
         with path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+        _trim_log_if_oversized(
+            path=path,
+            max_bytes=max(int(getattr(settings, "event_log_max_bytes", 10_485_760)), 1),
+        )
     except Exception as error:
         logger.warning("event_log_write_failed event=%s error=%s", event, error)
+
+
+def _trim_log_if_oversized(*, path: Path, max_bytes: int) -> None:
+    if not path.exists():
+        return
+    try:
+        if path.stat().st_size <= max_bytes:
+            return
+        keep_bytes = max_bytes // 2
+        with path.open("rb") as handle:
+            handle.seek(-keep_bytes, 2)
+            tail = handle.read()
+        newline_index = tail.find(b"\n")
+        trimmed = tail[newline_index + 1 :] if newline_index >= 0 else tail
+        path.write_bytes(trimmed)
+    except OSError:
+        raise
 
 
 def _sanitize_metadata(metadata: dict[str, Any], *, max_chars: int) -> dict[str, Any]:

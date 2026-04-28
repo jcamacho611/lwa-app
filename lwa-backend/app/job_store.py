@@ -23,8 +23,17 @@ class JobRecord:
     message: str = "Job queued."
     created_at: str = field(default_factory=timestamp)
     updated_at: str = field(default_factory=timestamp)
+    completed_at: Optional[str] = None
+    duration_ms: Optional[int] = None
+    plan_code: Optional[str] = None
+    generation_mode: Optional[str] = None
+    rendered_clip_count: Optional[int] = None
+    strategy_only_clip_count: Optional[int] = None
+    fallback_used: Optional[bool] = None
+    error_type: Optional[str] = None
     result: Optional[ClipBatchResponse] = None
     error: Optional[str] = None
+    _started_at_monotonic: float = field(default_factory=monotonic, repr=False)
 
 
 class JobStore:
@@ -33,9 +42,21 @@ class JobStore:
         self._lock = asyncio.Lock()
         self._max_jobs = max_jobs
 
-    async def create(self, job_id: str, message: str) -> JobRecord:
+    async def create(
+        self,
+        job_id: str,
+        message: str,
+        *,
+        plan_code: str | None = None,
+        generation_mode: str | None = None,
+    ) -> JobRecord:
         async with self._lock:
-            record = JobRecord(id=job_id, message=message)
+            record = JobRecord(
+                id=job_id,
+                message=message,
+                plan_code=plan_code,
+                generation_mode=generation_mode,
+            )
             self._jobs[job_id] = record
             self._trim()
             return record
@@ -64,9 +85,17 @@ class JobStore:
             record.result = result
             record.error = None
             record.updated_at = timestamp()
+            record.completed_at = record.updated_at
+            record.duration_ms = max(int(round((monotonic() - record._started_at_monotonic) * 1000)), 0)
+            record.plan_code = result.processing_summary.plan_code
+            record.generation_mode = result.processing_summary.generation_mode
+            record.rendered_clip_count = result.processing_summary.rendered_clip_count
+            record.strategy_only_clip_count = result.processing_summary.strategy_only_clip_count
+            record.fallback_used = bool(result.processing_summary.fallback_reason)
+            record.error_type = None
             return record
 
-    async def fail(self, job_id: str, error: str) -> Optional[JobRecord]:
+    async def fail(self, job_id: str, error: str, *, error_type: str | None = None) -> Optional[JobRecord]:
         async with self._lock:
             record = self._jobs.get(job_id)
             if not record:
@@ -75,6 +104,10 @@ class JobStore:
             record.message = "Processing failed."
             record.error = error
             record.updated_at = timestamp()
+            record.completed_at = record.updated_at
+            record.duration_ms = max(int(round((monotonic() - record._started_at_monotonic) * 1000)), 0)
+            record.fallback_used = None
+            record.error_type = error_type or "RuntimeError"
             return record
 
     def _trim(self) -> None:

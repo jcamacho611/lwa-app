@@ -41,6 +41,27 @@ class EventLogTests(unittest.TestCase):
         settings.event_log_enabled = False
         emit_event(settings=settings, event="generation_completed")
 
+    def test_emit_event_trims_oversized_log_before_append(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings()
+            log_path = Path(temp_dir) / "events.jsonl"
+            settings.event_log_path = str(log_path)
+            settings.event_log_enabled = True
+            settings.event_log_max_bytes = 512
+            log_path.write_text(("x" * 900) + "\n", encoding="utf-8")
+
+            emit_event(
+                settings=settings,
+                event="job_completed",
+                request_id="req_trimmed",
+                metadata={"notes": "kept"},
+            )
+
+            content = log_path.read_text(encoding="utf-8")
+            self.assertLess(log_path.stat().st_size, 700)
+            self.assertIn("job_completed", content)
+            self.assertNotIn("x" * 200, content)
+
 
 if __name__ == "__main__":
     unittest.main()

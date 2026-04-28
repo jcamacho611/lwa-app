@@ -76,6 +76,7 @@ class AttentionCompilerTests(unittest.TestCase):
         by_id = {clip.id: clip for clip in ranked}
 
         self.assertEqual(by_id["clip_story"].rank, 1)
+        self.assertEqual(sum(1 for clip in ranked if clip.is_best_clip), 1)
         self.assertEqual(by_id["clip_shock"].post_rank, 1)
         self.assertEqual(by_id["clip_contra"].post_rank, 2)
         self.assertEqual(by_id["clip_story"].post_rank, 3)
@@ -118,6 +119,9 @@ class AttentionCompilerTests(unittest.TestCase):
         self.assertEqual(len(compiled), 1)
         clip = compiled[0]
         self.assertIsNotNone(clip.why_this_matters)
+        self.assertIsNotNone(clip.first_three_seconds_assessment)
+        self.assertIsNotNone(clip.hook_strength)
+        self.assertIsNotNone(clip.retention_reason)
         self.assertIsNotNone(clip.confidence_score)
         self.assertIsNotNone(clip.hook_score)
         self.assertIsNotNone(clip.thumbnail_text)
@@ -129,6 +133,7 @@ class AttentionCompilerTests(unittest.TestCase):
         self.assertTrue(clip.hook_variants)
         self.assertTrue(clip.caption_variants)
         self.assertEqual(clip.post_rank, 1)
+        self.assertEqual(clip.rendered_status, "strategy_only")
         self.assertGreaterEqual(clip.confidence_score or 0, 55)
         self.assertGreaterEqual(clip.hook_score or 0, 55)
         self.assertGreaterEqual((clip.score_breakdown.hook_score if clip.score_breakdown else 0), 55)
@@ -138,6 +143,7 @@ class AttentionCompilerTests(unittest.TestCase):
         self.assertLessEqual(len((clip.thumbnail_text or "").split()), 5)
         self.assertIn("Open with this", clip.why_this_matters or "")
         self.assertIn("Render readiness", clip.scoring_explanation or "")
+        self.assertIn("first three seconds", (clip.first_three_seconds_assessment or "").lower())
 
     def test_compile_with_fallback_builds_stronger_packaging_for_contrarian_clip(self) -> None:
         clips = [

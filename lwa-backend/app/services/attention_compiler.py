@@ -376,6 +376,7 @@ def enrich_clip_with_attention(
         "is_best_clip": False,
         "frontend_badges": [],
         "render_status": clip.get("render_status") or ("ready" if rendered else "pending"),
+        "rendered_status": rendered_status_for(clip),
         "is_rendered": clip.get("is_rendered") if clip.get("is_rendered") is not None else rendered,
         "is_strategy_only": clip.get("is_strategy_only") if clip.get("is_strategy_only") is not None else strategy_only,
         "packaging_angle": packaging_angle,
@@ -524,6 +525,23 @@ def detect_frontend_badges(clip: dict[str, Any]) -> list[dict[str, Any]]:
     }
     conditional = sorted(conditional, key=lambda item: priority_order.get(str(item.get("badge")), 999))[:3]
     return always_visible + conditional
+
+
+def rendered_status_for(clip: dict[str, Any] | ClipResult) -> str:
+    raw_render_status = clip.get("render_status") if isinstance(clip, dict) else getattr(clip, "render_status", None)
+    render_status = str(raw_render_status or "").strip().lower()
+    preview_url = clip.get("preview_url") if isinstance(clip, dict) else getattr(clip, "preview_url", None)
+    edited_clip_url = clip.get("edited_clip_url") if isinstance(clip, dict) else getattr(clip, "edited_clip_url", None)
+    clip_url = clip.get("clip_url") if isinstance(clip, dict) else getattr(clip, "clip_url", None)
+    raw_clip_url = clip.get("raw_clip_url") if isinstance(clip, dict) else getattr(clip, "raw_clip_url", None)
+
+    if render_status == "failed":
+        return "render_failed"
+    if preview_url or edited_clip_url:
+        return "rendered"
+    if clip_url or raw_clip_url:
+        return "raw_only"
+    return "strategy_only"
 
 
 def resolve_caption_preset(category: str | None, platform: str | None) -> str:
@@ -839,6 +857,15 @@ def normalize_compiler_update(
         "confidence": confidence,
         "reason": reason,
         "why_this_matters": str_or_default(entry.get("why_this_matters"), str(heuristic["why_this_matters"])),
+        "first_three_seconds_assessment": str_or_default(
+            entry.get("first_three_seconds_assessment"),
+            str(heuristic["first_three_seconds_assessment"]),
+        ),
+        "hook_strength": entry.get("hook_strength") or heuristic["hook_strength"],
+        "retention_reason": str_or_default(
+            entry.get("retention_reason"),
+            str(heuristic["retention_reason"]),
+        ),
         "confidence_score": clamp_score(entry.get("confidence_score"), fallback=int(heuristic["confidence_score"])),
         "score_breakdown": score_breakdown,
         "scoring_explanation": str_or_default(
@@ -873,6 +900,10 @@ def normalize_compiler_update(
         "caption_track": heuristic["caption_track"],
         "rendered": bool(heuristic["rendered"]),
         "strategy_only": bool(heuristic["strategy_only"]),
+        "rendered_status": str_or_default(
+            entry.get("rendered_status"),
+            str(heuristic["rendered_status"]),
+        ),
         "is_best_clip": bool(heuristic["is_best_clip"]),
         "frontend_badges": heuristic["frontend_badges"],
         "risk_flags": merge_risk_flags(clip.risk_flags, entry.get("risk_flags"), heuristic["risk_flags"]),
@@ -1002,6 +1033,13 @@ def heuristic_analysis(
         "hook_score": int(round(intelligence["signals"]["vs_001"] * 100)),
         "confidence": confidence,
         "confidence_score": max(int(round(confidence * 100)), 55 if score >= 60 else 46),
+        "first_three_seconds_assessment": first_three_seconds_assessment_for(
+            opening_line=opening_line,
+            hook_strength=hook_strength,
+            curiosity=curiosity,
+            standalone=standalone,
+        ),
+        "hook_strength": hook_strength_label_for(hook_strength),
         "reason": heuristic_reason_for(
             target_platform=target_platform,
             packaging_angle=packaging_angle,
@@ -1019,6 +1057,14 @@ def heuristic_analysis(
             packaging_angle=packaging_angle,
             post_rank=index,
             review_rank=index,
+        ),
+        "retention_reason": retention_reason_for(
+            packaging_angle=packaging_angle,
+            hook_strength=hook_strength,
+            retention=retention,
+            standalone=standalone,
+            curiosity=curiosity,
+            rendered=bool(intelligence["rendered"]),
         ),
         "hook_variants": hook_variants,
         "caption_variants": caption_variants_for(
@@ -1041,6 +1087,7 @@ def heuristic_analysis(
         "caption_track": intelligence["caption_track"],
         "rendered": intelligence["rendered"],
         "strategy_only": intelligence["strategy_only"],
+        "rendered_status": intelligence["rendered_status"],
         "is_best_clip": False,
         "frontend_badges": intelligence["frontend_badges"],
         "risk_flags": risk_flags,
@@ -1565,6 +1612,58 @@ def scoring_explanation_for(score_breakdown: ScoreBreakdown) -> str:
     if len(strengths) == 1:
         return f"Score driven by {strengths[0]}. Render readiness is {readiness}."
     return f"Score driven by {strengths[0]} and {strengths[1]}. Render readiness is {readiness}."
+
+
+def first_three_seconds_assessment_for(
+    *,
+    opening_line: str,
+    hook_strength: int,
+    curiosity: int,
+    standalone: int,
+) -> str:
+    cleaned = compact_text(opening_line)
+    if hook_strength >= 18:
+        return f"The first three seconds open with a strong interrupt: {cleaned or 'the clip starts with a clear payoff cue'}."
+    if curiosity >= 14:
+        return f"The first three seconds create a question loop that should earn the next beat: {cleaned or 'the opener creates curiosity'}."
+    if standalone >= 12:
+        return f"The first three seconds are clear enough to stand alone without extra context: {cleaned or 'the opener is self-contained'}."
+    return f"The first three seconds are usable, but the opener would benefit from a sharper first sentence: {cleaned or 'the opening line needs a stronger interrupt'}."
+
+
+def hook_strength_label_for(hook_strength: int) -> str:
+    if hook_strength >= 18:
+        return "strong"
+    if hook_strength >= 12:
+        return "workable"
+    return "soft"
+
+
+def retention_reason_for(
+    *,
+    packaging_angle: str,
+    hook_strength: int,
+    retention: int,
+    standalone: int,
+    curiosity: int,
+    rendered: bool,
+) -> str:
+    reasons: list[str] = []
+    if hook_strength >= 18:
+        reasons.append("the opener lands quickly")
+    elif hook_strength >= 12:
+        reasons.append("the opener is solid enough to test")
+    if retention >= 18:
+        reasons.append("the payoff window is tight enough for short-form pacing")
+    if standalone >= 12:
+        reasons.append("the excerpt makes sense without extra setup")
+    if curiosity >= 12 and packaging_angle in {"curiosity", "controversy", "story"}:
+        reasons.append("the setup gives viewers a reason to wait for the turn")
+    if rendered:
+        reasons.append("playable assets are already available")
+    else:
+        reasons.append("the media still needs render follow-through")
+    return "Retention case: " + ", ".join(reasons[:3]) + "."
 
 
 def keyword_score(text: str, keywords: set[str]) -> int:
