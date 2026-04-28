@@ -188,10 +188,23 @@ export function BatchPanel({ batches, uploads, currentVideoUrl, selectedUpload, 
                   <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/72">
                     {batch.target_platform || platform}
                   </span>
+                  {batch.selected_trend ? (
+                    <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-ink/72">
+                      {batch.selected_trend}
+                    </span>
+                  ) : null}
+                  {batch.top_clip_score ? (
+                    <span className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs text-accent">
+                      Top {batch.top_clip_score}
+                    </span>
+                  ) : null}
                 </div>
                 <p className="mt-3 text-base font-semibold text-ink">{batch.title}</p>
                 <p className="mt-2 text-sm text-ink/62">
                   {batch.completed_sources}/{batch.total_sources} completed · {batch.failed_sources || 0} failed
+                </p>
+                <p className="mt-2 text-xs text-ink/56">
+                  {batch.request_count || 0} requests · {batch.rendered_clip_count || 0} ready now · {batch.needs_review_clip_count || 0} review · {batch.evergreen_clip_count || 0} evergreen
                 </p>
               </div>
             ))

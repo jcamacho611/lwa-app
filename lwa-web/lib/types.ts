@@ -119,13 +119,35 @@ export type BatchSummary = {
   total_sources: number;
   completed_sources: number;
   failed_sources?: number;
+  request_count?: number;
+  clip_count?: number;
+  rendered_clip_count?: number;
+  strategy_only_clip_count?: number;
+  approved_clip_count?: number;
+  needs_review_clip_count?: number;
+  needs_edit_clip_count?: number;
+  evergreen_clip_count?: number;
+  trend_tied_clip_count?: number;
+  top_clip_score?: number;
   created_at?: string;
   sources?: Array<{
     id: string;
     source_kind: string;
-    source_value: string;
+    source_value?: string;
+    video_url?: string | null;
+    upload_id?: string | null;
     request_id?: string | null;
     status: string;
+    clip_count?: number;
+    rendered_clip_count?: number;
+    strategy_only_clip_count?: number;
+    approved_clip_count?: number;
+    needs_review_clip_count?: number;
+    needs_edit_clip_count?: number;
+    evergreen_clip_count?: number;
+    trend_tied_clip_count?: number;
+    top_clip_score?: number;
+    created_at?: string;
   }>;
 };
 
@@ -258,6 +280,7 @@ export type ClipResult = {
   edited_clip_url?: string | null;
   raw_clip_url?: string | null;
   preview_image_url?: string | null;
+  caption_txt_url?: string | null;
   caption_srt_url?: string | null;
   caption_vtt_url?: string | null;
   burned_caption_url?: string | null;
@@ -284,6 +307,11 @@ export type ClipResult = {
   text_overlay_plan?: string | null;
   subtitle_guidance?: string | null;
   transition_plan?: string | null;
+  trend_match_score?: number | null;
+  trend_alignment_reason?: string | null;
+  reuse_potential?: number | null;
+  evergreen_status?: string | null;
+  time_sensitivity?: string | null;
   burned_caption?: string;
   export_package?: {
     title?: string;

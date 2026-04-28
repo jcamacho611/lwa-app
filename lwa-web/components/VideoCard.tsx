@@ -50,11 +50,20 @@ function clipHasRecoverableRender(clip: ClipResult, hasRenderProof: boolean) {
 
 function clipHasCaptionArtifacts(clip: ClipResult) {
   return Boolean(
-    clip.caption_srt_url ||
+    clip.caption_txt_url ||
+      clip.caption_srt_url ||
       clip.caption_vtt_url ||
       clip.export_bundle?.artifact_types?.includes("subtitle_srt") ||
       clip.export_bundle?.artifact_types?.includes("subtitle_vtt"),
   );
+}
+
+function clipCaptionArtifactLinks(clip: ClipResult) {
+  return [
+    clip.caption_txt_url ? { label: "TXT", href: clip.caption_txt_url } : null,
+    clip.caption_srt_url ? { label: "SRT", href: clip.caption_srt_url } : null,
+    clip.caption_vtt_url ? { label: "VTT", href: clip.caption_vtt_url } : null,
+  ].filter((item): item is { label: string; href: string } => Boolean(item?.href));
 }
 
 function clipHasBundleArtifacts(clip: ClipResult) {
@@ -92,11 +101,33 @@ function clipApprovalStateLabel(clip: ClipResult): ClipMetaLabel | null {
     return { label: "Needs edit", tone: "warning" };
   }
 
+  if (approvalState === "needs_review" || approvalState === "needs review") {
+    return { label: "Needs review", tone: "warning" };
+  }
+
   if (approvalState === "new") {
     return { label: "New", tone: "neutral" };
   }
 
   return { label: clip.approval_state || "New", tone: "neutral" };
+}
+
+function clipEvergreenLabel(clip: ClipResult): ClipMetaLabel | null {
+  const status = clip.evergreen_status?.trim().toLowerCase();
+
+  if (status === "evergreen") {
+    return { label: "Evergreen", tone: "neutral" };
+  }
+
+  if (status === "trend_aware" || status === "trend aware") {
+    return { label: "Trend aware", tone: "neutral" };
+  }
+
+  if (status === "time_sensitive" || status === "time sensitive") {
+    return { label: "Trend tied", tone: "warning" };
+  }
+
+  return null;
 }
 
 function buildBadges(clip: ClipResult, hasRenderProof: boolean): ClipBadge[] {
@@ -152,12 +183,14 @@ export default function VideoCard({
   const hasRenderProof = hasPreviewAsset(clip);
   const previewUrl = clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
   const downloadUrl = clip.download_url || null;
+  const artifactLinks = clipCaptionArtifactLinks(clip);
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
   const scoreValue = Math.round(clip.virality_score ?? clip.score ?? 0);
   const badges = buildBadges(clip, hasRenderProof);
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 3);
   const campaignLabel = clipCampaignStatusLabel(clip);
   const approvalLabel = clipApprovalStateLabel(clip);
+  const evergreenLabel = clipEvergreenLabel(clip);
   const whyThisMatters = buildLeadReason(clip.why_this_matters || clip.reason);
   const displayThumbnail = clip.thumbnail_text?.trim() || clip.title;
   const showRetryPreview = Boolean(onRecover) && !hasRenderProof;
@@ -167,6 +200,7 @@ export default function VideoCard({
   const metaLabels: ClipMetaLabel[] = [
     ...(clipHasBundleArtifacts(clip) ? [{ label: "Bundle ready", tone: "neutral" as const }] : []),
     ...(clipHasCaptionArtifacts(clip) ? [{ label: "Captions ready", tone: "neutral" as const }] : []),
+    ...(evergreenLabel ? [evergreenLabel] : []),
     ...(campaignLabel ? [campaignLabel] : []),
     ...(approvalLabel ? [approvalLabel] : []),
   ];
@@ -358,6 +392,22 @@ export default function VideoCard({
               />
             ) : null}
           </div>
+
+          {artifactLinks.length ? (
+            <div className="flex flex-wrap gap-2">
+              {artifactLinks.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="secondary-button inline-flex items-center justify-center rounded-full px-3 py-2 text-[11px] font-medium"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          ) : null}
 
           {showFeedback ? (
             <div className="flex gap-2">

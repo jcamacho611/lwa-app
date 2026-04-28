@@ -156,6 +156,11 @@ def _build_clip_package(clip: dict[str, Any]) -> dict[str, Any]:
         "render_readiness_score": clip.get("render_readiness_score") or clip.get("render_quality_score"),
         "score_breakdown": clip.get("score_breakdown"),
         "scoring_explanation": clip.get("scoring_explanation"),
+        "caption_txt_url": clip.get("caption_txt_url"),
+        "caption_srt_url": clip.get("caption_srt_url"),
+        "caption_vtt_url": clip.get("caption_vtt_url"),
+        "burned_caption_url": clip.get("burned_caption_url"),
+        "export_filename": clip.get("export_filename"),
     }
 
 
@@ -284,6 +289,16 @@ def create_export_bundle(
                 "score": clip.get("score"),
                 "post_rank": clip.get("post_rank"),
                 "artifact_paths": artifact_paths,
+                "artifact_urls": {
+                    field_name: clip.get(field_name)
+                    for field_name in (
+                        "caption_txt_url",
+                        "caption_srt_url",
+                        "caption_vtt_url",
+                        "burned_caption_url",
+                    )
+                    if clip.get(field_name)
+                },
                 "media_files": media_files,
                 "source_asset_urls": {
                     field_name: clip.get(field_name)

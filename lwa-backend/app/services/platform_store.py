@@ -157,6 +157,24 @@ class PlatformStore:
                     raw_clip_url TEXT,
                     edited_clip_url TEXT,
                     preview_image_url TEXT,
+                    caption_txt_url TEXT,
+                    caption_srt_url TEXT,
+                    caption_vtt_url TEXT,
+                    burned_caption_url TEXT,
+                    export_filename TEXT,
+                    hook_score INTEGER,
+                    score_breakdown_json TEXT,
+                    scoring_explanation TEXT,
+                    render_readiness_score INTEGER,
+                    strategy_only_reason TEXT,
+                    recovery_recommendation TEXT,
+                    trend_match_score INTEGER,
+                    trend_alignment_reason TEXT,
+                    reuse_potential INTEGER,
+                    evergreen_status TEXT,
+                    time_sensitivity TEXT,
+                    approval_state TEXT,
+                    campaign_requirement_checks_json TEXT NOT NULL DEFAULT '[]',
                     local_asset_path TEXT,
                     trim_start_seconds REAL,
                     trim_end_seconds REAL,
@@ -249,6 +267,24 @@ class PlatformStore:
             self._ensure_column(connection, "clips", "download_url", "TEXT")
             self._ensure_column(connection, "clips", "why_this_matters", "TEXT")
             self._ensure_column(connection, "clips", "post_rank", "INTEGER")
+            self._ensure_column(connection, "clips", "caption_txt_url", "TEXT")
+            self._ensure_column(connection, "clips", "caption_srt_url", "TEXT")
+            self._ensure_column(connection, "clips", "caption_vtt_url", "TEXT")
+            self._ensure_column(connection, "clips", "burned_caption_url", "TEXT")
+            self._ensure_column(connection, "clips", "export_filename", "TEXT")
+            self._ensure_column(connection, "clips", "hook_score", "INTEGER")
+            self._ensure_column(connection, "clips", "score_breakdown_json", "TEXT")
+            self._ensure_column(connection, "clips", "scoring_explanation", "TEXT")
+            self._ensure_column(connection, "clips", "render_readiness_score", "INTEGER")
+            self._ensure_column(connection, "clips", "strategy_only_reason", "TEXT")
+            self._ensure_column(connection, "clips", "recovery_recommendation", "TEXT")
+            self._ensure_column(connection, "clips", "trend_match_score", "INTEGER")
+            self._ensure_column(connection, "clips", "trend_alignment_reason", "TEXT")
+            self._ensure_column(connection, "clips", "reuse_potential", "INTEGER")
+            self._ensure_column(connection, "clips", "evergreen_status", "TEXT")
+            self._ensure_column(connection, "clips", "time_sensitivity", "TEXT")
+            self._ensure_column(connection, "clips", "approval_state", "TEXT")
+            self._ensure_column(connection, "clips", "campaign_requirement_checks_json", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(connection, "campaigns", "description", "TEXT")
             self._ensure_column(connection, "campaigns", "allowed_platforms_json", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(connection, "campaigns", "target_angle", "TEXT")
@@ -465,12 +501,8 @@ class PlatformStore:
             if not campaign:
                 return None
             clips = connection.execute(
-                """
-                SELECT id, request_id, clip_key, title, hook, caption, score, confidence, rank_value,
-                       reason, packaging_angle, platform_fit, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url,
-                       preview_image_url, trim_start_seconds, trim_end_seconds, caption_style_override,
-                       approved, created_at
+                f"""
+                SELECT {self._clip_select_columns()}
                 FROM clips
                 WHERE campaign_id = ?
                 ORDER BY rank_value ASC, score DESC, created_at DESC
@@ -849,8 +881,75 @@ class PlatformStore:
             "completed_sources": 0,
             "failed_sources": 0,
             "selected_trend": selected_trend,
+            "request_count": 0,
+            "clip_count": 0,
+            "rendered_clip_count": 0,
+            "strategy_only_clip_count": 0,
+            "approved_clip_count": 0,
+            "needs_review_clip_count": 0,
+            "needs_edit_clip_count": 0,
+            "evergreen_clip_count": 0,
+            "trend_tied_clip_count": 0,
+            "top_clip_score": 0,
             "created_at": created_at,
         }
+
+    def _batch_metrics_for_ids(self, connection: sqlite3.Connection, batch_ids: list[str]) -> dict[str, dict[str, Any]]:
+        if not batch_ids:
+            return {}
+        placeholders = ",".join("?" for _ in batch_ids)
+        rows = connection.execute(
+            f"""
+            SELECT
+                bs.batch_id AS batch_id,
+                COUNT(DISTINCT CASE WHEN bs.request_id IS NOT NULL THEN bs.request_id END) AS request_count,
+                COUNT(c.id) AS clip_count,
+                COALESCE(SUM(CASE WHEN c.edited_clip_url IS NOT NULL OR c.clip_url IS NOT NULL OR c.raw_clip_url IS NOT NULL THEN 1 ELSE 0 END), 0) AS rendered_clip_count,
+                COALESCE(SUM(CASE WHEN c.id IS NOT NULL AND c.edited_clip_url IS NULL AND c.clip_url IS NULL AND c.raw_clip_url IS NULL THEN 1 ELSE 0 END), 0) AS strategy_only_clip_count,
+                COALESCE(SUM(CASE WHEN c.approval_state = 'approved' THEN 1 ELSE 0 END), 0) AS approved_clip_count,
+                COALESCE(SUM(CASE WHEN c.approval_state = 'needs_review' THEN 1 ELSE 0 END), 0) AS needs_review_clip_count,
+                COALESCE(SUM(CASE WHEN c.approval_state = 'needs_edit' THEN 1 ELSE 0 END), 0) AS needs_edit_clip_count,
+                COALESCE(SUM(CASE WHEN c.evergreen_status = 'evergreen' THEN 1 ELSE 0 END), 0) AS evergreen_clip_count,
+                COALESCE(SUM(CASE WHEN c.evergreen_status = 'time_sensitive' THEN 1 ELSE 0 END), 0) AS trend_tied_clip_count,
+                COALESCE(MAX(COALESCE(c.virality_score, c.score)), 0) AS top_clip_score
+            FROM batch_sources bs
+            LEFT JOIN clips c ON c.request_id = bs.request_id
+            WHERE bs.batch_id IN ({placeholders})
+            GROUP BY bs.batch_id
+            """,
+            tuple(batch_ids),
+        ).fetchall()
+        return {str(row["batch_id"]): dict(row) for row in rows}
+
+    def _source_metrics_for_batch(self, connection: sqlite3.Connection, batch_id: str) -> list[dict[str, Any]]:
+        rows = connection.execute(
+            """
+            SELECT
+                bs.id,
+                bs.source_kind,
+                bs.video_url,
+                bs.upload_id,
+                bs.status,
+                bs.request_id,
+                bs.created_at,
+                COUNT(c.id) AS clip_count,
+                COALESCE(SUM(CASE WHEN c.edited_clip_url IS NOT NULL OR c.clip_url IS NOT NULL OR c.raw_clip_url IS NOT NULL THEN 1 ELSE 0 END), 0) AS rendered_clip_count,
+                COALESCE(SUM(CASE WHEN c.id IS NOT NULL AND c.edited_clip_url IS NULL AND c.clip_url IS NULL AND c.raw_clip_url IS NULL THEN 1 ELSE 0 END), 0) AS strategy_only_clip_count,
+                COALESCE(SUM(CASE WHEN c.approval_state = 'approved' THEN 1 ELSE 0 END), 0) AS approved_clip_count,
+                COALESCE(SUM(CASE WHEN c.approval_state = 'needs_review' THEN 1 ELSE 0 END), 0) AS needs_review_clip_count,
+                COALESCE(SUM(CASE WHEN c.approval_state = 'needs_edit' THEN 1 ELSE 0 END), 0) AS needs_edit_clip_count,
+                COALESCE(SUM(CASE WHEN c.evergreen_status = 'evergreen' THEN 1 ELSE 0 END), 0) AS evergreen_clip_count,
+                COALESCE(SUM(CASE WHEN c.evergreen_status = 'time_sensitive' THEN 1 ELSE 0 END), 0) AS trend_tied_clip_count,
+                COALESCE(MAX(COALESCE(c.virality_score, c.score)), 0) AS top_clip_score
+            FROM batch_sources bs
+            LEFT JOIN clips c ON c.request_id = bs.request_id
+            WHERE bs.batch_id = ?
+            GROUP BY bs.id, bs.source_kind, bs.video_url, bs.upload_id, bs.status, bs.request_id, bs.created_at
+            ORDER BY bs.created_at ASC
+            """,
+            (batch_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
 
     def list_batches(self, *, user_id: str) -> list[dict[str, Any]]:
         with self._lock, self._connect() as connection:
@@ -864,6 +963,7 @@ class PlatformStore:
                 """,
                 (user_id,),
             ).fetchall()
+            metrics = self._batch_metrics_for_ids(connection, [str(row["id"]) for row in rows])
         return [
             {
                 "id": row["id"],
@@ -874,6 +974,16 @@ class PlatformStore:
                 "total_sources": row["total_sources"],
                 "completed_sources": row["completed_sources"],
                 "failed_sources": row["failed_sources"],
+                "request_count": int(metrics.get(str(row["id"]), {}).get("request_count", 0)),
+                "clip_count": int(metrics.get(str(row["id"]), {}).get("clip_count", 0)),
+                "rendered_clip_count": int(metrics.get(str(row["id"]), {}).get("rendered_clip_count", 0)),
+                "strategy_only_clip_count": int(metrics.get(str(row["id"]), {}).get("strategy_only_clip_count", 0)),
+                "approved_clip_count": int(metrics.get(str(row["id"]), {}).get("approved_clip_count", 0)),
+                "needs_review_clip_count": int(metrics.get(str(row["id"]), {}).get("needs_review_clip_count", 0)),
+                "needs_edit_clip_count": int(metrics.get(str(row["id"]), {}).get("needs_edit_clip_count", 0)),
+                "evergreen_clip_count": int(metrics.get(str(row["id"]), {}).get("evergreen_clip_count", 0)),
+                "trend_tied_clip_count": int(metrics.get(str(row["id"]), {}).get("trend_tied_clip_count", 0)),
+                "top_clip_score": int(metrics.get(str(row["id"]), {}).get("top_clip_score", 0)),
                 "created_at": row["created_at"],
             }
             for row in rows
@@ -901,6 +1011,8 @@ class PlatformStore:
                 """,
                 (batch_id,),
             ).fetchall()
+            metrics = self._batch_metrics_for_ids(connection, [batch_id])
+            source_metrics = self._source_metrics_for_batch(connection, batch_id)
         return {
             "batch": {
                 "id": batch["id"],
@@ -912,9 +1024,19 @@ class PlatformStore:
                 "total_sources": batch["total_sources"],
                 "completed_sources": batch["completed_sources"],
                 "failed_sources": batch["failed_sources"],
+                "request_count": int(metrics.get(batch_id, {}).get("request_count", 0)),
+                "clip_count": int(metrics.get(batch_id, {}).get("clip_count", 0)),
+                "rendered_clip_count": int(metrics.get(batch_id, {}).get("rendered_clip_count", 0)),
+                "strategy_only_clip_count": int(metrics.get(batch_id, {}).get("strategy_only_clip_count", 0)),
+                "approved_clip_count": int(metrics.get(batch_id, {}).get("approved_clip_count", 0)),
+                "needs_review_clip_count": int(metrics.get(batch_id, {}).get("needs_review_clip_count", 0)),
+                "needs_edit_clip_count": int(metrics.get(batch_id, {}).get("needs_edit_clip_count", 0)),
+                "evergreen_clip_count": int(metrics.get(batch_id, {}).get("evergreen_clip_count", 0)),
+                "trend_tied_clip_count": int(metrics.get(batch_id, {}).get("trend_tied_clip_count", 0)),
+                "top_clip_score": int(metrics.get(batch_id, {}).get("top_clip_score", 0)),
                 "created_at": batch["created_at"],
             },
-            "sources": [dict(row) for row in sources],
+            "sources": source_metrics or [dict(row) for row in sources],
         }
 
     def attach_batch_source_request(self, *, batch_id: str, source_id: str, request_id: str, status: str) -> None:
@@ -1014,6 +1136,7 @@ class PlatformStore:
         with self._lock, self._connect() as connection:
             for clip in response.clips:
                 record_id = clip.record_id or f"cliprec_{uuid4().hex[:12]}"
+                clip_payload = clip.model_dump(mode="json")
                 connection.execute(
                     """
                     INSERT OR REPLACE INTO clips (
@@ -1022,9 +1145,12 @@ class PlatformStore:
                         source_thumbnail_url, title, hook, caption, start_time, end_time, duration_seconds, score,
                         confidence, confidence_score, rank_value, reason, why_this_matters, clip_format, transcript_excerpt, packaging_angle, platform_fit, post_rank, best_post_order,
                         cta_suggestion, thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, download_url, raw_clip_url,
-                        edited_clip_url, preview_image_url, local_asset_path, trim_start_seconds,
+                        edited_clip_url, preview_image_url, caption_txt_url, caption_srt_url, caption_vtt_url, burned_caption_url, export_filename, hook_score,
+                        score_breakdown_json, scoring_explanation, render_readiness_score, strategy_only_reason, recovery_recommendation, trend_match_score, trend_alignment_reason,
+                        reuse_potential, evergreen_status, time_sensitivity, approval_state,
+                        campaign_requirement_checks_json, local_asset_path, trim_start_seconds,
                         trim_end_seconds, caption_style_override, approved, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         record_id,
@@ -1070,11 +1196,29 @@ class PlatformStore:
                         clip.raw_clip_url,
                         clip.edited_clip_url,
                         clip.preview_image_url,
+                        clip_payload.get("caption_txt_url"),
+                        clip_payload.get("caption_srt_url"),
+                        clip_payload.get("caption_vtt_url"),
+                        clip_payload.get("burned_caption_url"),
+                        clip_payload.get("export_filename"),
+                        clip_payload.get("hook_score"),
+                        json.dumps(clip_payload.get("score_breakdown")) if clip_payload.get("score_breakdown") is not None else None,
+                        clip_payload.get("scoring_explanation"),
+                        clip_payload.get("render_readiness_score"),
+                        clip_payload.get("strategy_only_reason"),
+                        clip_payload.get("recovery_recommendation"),
+                        clip_payload.get("trend_match_score"),
+                        clip_payload.get("trend_alignment_reason"),
+                        clip_payload.get("reuse_potential"),
+                        clip_payload.get("evergreen_status"),
+                        clip_payload.get("time_sensitivity"),
+                        clip_payload.get("approval_state"),
+                        json.dumps(clip_payload.get("campaign_requirement_checks") or []),
                         local_asset_paths.get(clip.id),
                         None,
                         None,
                         clip.caption_style,
-                        0,
+                        1 if clip_payload.get("approval_state") == "approved" else 0,
                         created_at,
                     ),
                 )
@@ -1115,13 +1259,8 @@ class PlatformStore:
         return int(result.rowcount or 0)
 
     def get_clip(self, *, clip_id: str, user_id: str | None = None) -> Optional[dict[str, Any]]:
-        query = """
-            SELECT id, request_id, clip_key, user_id, campaign_id, source_type, source_video_url, source_upload_content_type,
-                   title, hook, caption, start_time, end_time, score, confidence,
-                   confidence_score, rank_value, reason, why_this_matters, packaging_angle, platform_fit, post_rank, best_post_order, cta_suggestion,
-                   thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, download_url, raw_clip_url, edited_clip_url, preview_image_url,
-                   local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
-                   approved, created_at
+        query = f"""
+            SELECT {self._clip_select_columns()}
             FROM clips
             WHERE id = ?
         """
@@ -1173,13 +1312,8 @@ class PlatformStore:
             if not result.rowcount:
                 return None
             row = connection.execute(
-                """
-                SELECT id, request_id, clip_key, user_id, campaign_id, source_type, source_video_url, source_upload_content_type,
-                       title, hook, caption, start_time, end_time, score, confidence,
-                       confidence_score, rank_value, reason, why_this_matters, packaging_angle, platform_fit, post_rank, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, download_url, raw_clip_url, edited_clip_url, preview_image_url,
-                       local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
-                       approved, created_at
+                f"""
+                SELECT {self._clip_select_columns()}
                 FROM clips WHERE id = ?
                 """,
                 (clip_id,),
@@ -1234,12 +1368,8 @@ class PlatformStore:
             if not result.rowcount:
                 return None
             row = connection.execute(
-                """
-                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
-                       confidence_score, rank_value, reason, why_this_matters, packaging_angle, platform_fit, post_rank, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, download_url, raw_clip_url, edited_clip_url, preview_image_url,
-                       local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
-                       approved, created_at
+                f"""
+                SELECT {self._clip_select_columns()}
                 FROM clips WHERE id = ?
                 """,
                 (clip_id,),
@@ -1249,12 +1379,8 @@ class PlatformStore:
     def list_public_clips(self, *, limit: int = 50) -> list[dict[str, Any]]:
         with self._lock, self._connect() as connection:
             rows = connection.execute(
-                """
-                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
-                       confidence_score, rank_value, reason, why_this_matters, packaging_angle, platform_fit, post_rank, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
-                       local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
-                       approved, created_at
+                f"""
+                SELECT {self._clip_select_columns()}
                 FROM clips
                 WHERE approved = 1
                 ORDER BY created_at DESC, score DESC
@@ -1293,12 +1419,8 @@ class PlatformStore:
             if not result.rowcount:
                 return None
             row = connection.execute(
-                """
-                SELECT id, request_id, clip_key, user_id, campaign_id, title, hook, caption, start_time, end_time, score, confidence,
-                       confidence_score, rank_value, reason, why_this_matters, packaging_angle, platform_fit, post_rank, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
-                       local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
-                       approved, created_at
+                f"""
+                SELECT {self._clip_select_columns()}
                 FROM clips WHERE id = ?
                 """,
                 (clip_id,),
@@ -1327,14 +1449,8 @@ class PlatformStore:
     def get_clip_pack(self, *, user_id: str, request_id: str) -> dict[str, Any]:
         with self._lock, self._connect() as connection:
             clips = connection.execute(
-                """
-                SELECT id, request_id, clip_key, user_id, campaign_id, source_type, source_title, source_platform,
-                       source_transcript, source_visual_summary, source_preview_asset_url, source_download_asset_url,
-                       source_thumbnail_url, title, hook, caption, start_time, end_time, duration_seconds, score, confidence, confidence_score,
-                       rank_value, reason, why_this_matters, clip_format, transcript_excerpt, packaging_angle, platform_fit, post_rank, best_post_order, cta_suggestion,
-                       thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, raw_clip_url, edited_clip_url, preview_image_url,
-                       local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
-                       approved, created_at
+                f"""
+                SELECT {self._clip_select_columns()}
                 FROM clips
                 WHERE user_id = ? AND request_id = ?
                 ORDER BY COALESCE(post_rank, best_post_order, rank_value) ASC, score DESC
@@ -1615,6 +1731,28 @@ class PlatformStore:
             created_at=row["created_at"],
         )
 
+    def _clip_select_columns(self) -> str:
+        return """
+            id, request_id, clip_key, user_id, campaign_id, source_type, source_video_url, source_upload_content_type,
+            source_title, source_platform, source_transcript, source_visual_summary, source_preview_asset_url, source_download_asset_url, source_thumbnail_url,
+            title, hook, caption, start_time, end_time, score, confidence,
+            confidence_score, rank_value, reason, why_this_matters, packaging_angle, platform_fit, post_rank, best_post_order, cta_suggestion,
+            thumbnail_text, hook_variants_json, caption_variants_json, virality_score, clip_url, download_url, raw_clip_url, edited_clip_url, preview_image_url,
+            caption_txt_url, caption_srt_url, caption_vtt_url, burned_caption_url, export_filename, hook_score, score_breakdown_json,
+            scoring_explanation, render_readiness_score, strategy_only_reason, recovery_recommendation, trend_match_score, trend_alignment_reason,
+            reuse_potential, evergreen_status, time_sensitivity, approval_state, campaign_requirement_checks_json,
+            local_asset_path, trim_start_seconds, trim_end_seconds, caption_style_override,
+            approved, created_at
+        """
+
+    def _parse_json_value(self, value: Any, fallback: Any) -> Any:
+        if value in {None, ""}:
+            return fallback
+        try:
+            return json.loads(value)
+        except Exception:
+            return fallback
+
     def _clip_payload_from_row(self, row: sqlite3.Row) -> dict[str, Any]:
         preview_url = self._row_value(row, "edited_clip_url") or self._row_value(row, "clip_url") or self._row_value(row, "raw_clip_url")
         download_url = self._row_value(row, "download_url")
@@ -1625,6 +1763,14 @@ class PlatformStore:
         )
         is_rendered = bool(preview_url)
         render_status = "ready" if is_rendered else "pending"
+        render_readiness_score = self._row_value(row, "render_readiness_score")
+        campaign_requirement_checks = self._parse_json_value(
+            self._row_value(row, "campaign_requirement_checks_json"),
+            [],
+        )
+        approval_state = self._row_value(row, "approval_state") or (
+            "approved" if is_rendered and (render_readiness_score or 0) >= 72 else "needs_edit" if not is_rendered else "new"
+        )
         return {
             "record_id": row["id"],
             "request_id": row["request_id"],
@@ -1659,8 +1805,8 @@ class PlatformStore:
             "cta_suggestion": row["cta_suggestion"],
             "cta": row["cta_suggestion"],
             "thumbnail_text": row["thumbnail_text"],
-            "hook_variants": json.loads(row["hook_variants_json"] or "[]"),
-            "caption_variants": json.loads(row["caption_variants_json"] or "{}"),
+            "hook_variants": self._parse_json_value(row["hook_variants_json"], []),
+            "caption_variants": self._parse_json_value(row["caption_variants_json"], {}),
             "caption_style": self._row_value(row, "caption_style_override"),
             "clip_url": row["clip_url"],
             "raw_clip_url": row["raw_clip_url"],
@@ -1669,6 +1815,24 @@ class PlatformStore:
             "preview_url": preview_url,
             "download_url": download_url,
             "thumbnail_url": row["preview_image_url"],
+            "caption_txt_url": self._row_value(row, "caption_txt_url"),
+            "caption_srt_url": self._row_value(row, "caption_srt_url"),
+            "caption_vtt_url": self._row_value(row, "caption_vtt_url"),
+            "burned_caption_url": self._row_value(row, "burned_caption_url") or preview_url,
+            "export_filename": self._row_value(row, "export_filename"),
+            "hook_score": self._row_value(row, "hook_score"),
+            "score_breakdown": self._parse_json_value(self._row_value(row, "score_breakdown_json"), None),
+            "scoring_explanation": self._row_value(row, "scoring_explanation"),
+            "render_readiness_score": render_readiness_score,
+            "strategy_only_reason": self._row_value(row, "strategy_only_reason"),
+            "recovery_recommendation": self._row_value(row, "recovery_recommendation"),
+            "trend_match_score": self._row_value(row, "trend_match_score"),
+            "trend_alignment_reason": self._row_value(row, "trend_alignment_reason"),
+            "reuse_potential": self._row_value(row, "reuse_potential"),
+            "evergreen_status": self._row_value(row, "evergreen_status"),
+            "time_sensitivity": self._row_value(row, "time_sensitivity"),
+            "approval_state": approval_state,
+            "campaign_requirement_checks": campaign_requirement_checks,
             "is_rendered": is_rendered,
             "is_strategy_only": not is_rendered,
             "render_status": render_status,

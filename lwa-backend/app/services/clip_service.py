@@ -32,6 +32,7 @@ from ..models.schemas import (
 from ..models.user import UserRecord
 from ..services.ai_service import generate_clip_copy
 from ..services.attention_compiler import compile_attention
+from ..services.caption_artifacts import create_caption_artifacts
 from ..services.clip_status_store import register_clip_batch
 from ..services.confidence_engine import build_confidence_label, resolve_confidence_score
 from ..services.entitlements import EntitlementContext, UsageStore
@@ -40,6 +41,7 @@ from ..services.platform_store import PlatformStore
 from ..services.render_quality import evaluate_render_quality
 from ..services.render_jobs import queue_preview_render
 from ..services.shot_planner import build_shot_plan_for_clip
+from ..services.trend_intelligence import build_trend_intelligence
 from ..services.video_service import build_source_context, export_social_ready_clips, ffmpeg_available
 from ..services.visual_generation_service import visual_generation_available, visual_generation_status
 from ..services.visual_render_provider import (
@@ -280,6 +282,18 @@ async def build_clip_response(
         target_platform=target_platform,
     )
     clips = [clip.model_copy(update={"request_id": request_id}) for clip in clips]
+    clips = attach_platform_caption_artifacts(
+        settings=settings,
+        clips=clips,
+        request_id=request_id,
+        public_base_url=public_base_url,
+        target_platform=target_platform,
+    )
+    clips = attach_trend_and_evergreen_metadata(
+        clips=clips,
+        selected_trend=request.selected_trend,
+        trend_context=trend_context,
+    )
     local_asset_paths = resolve_local_asset_paths(settings=settings, request_id=request_id, clips=clips)
     register_clip_batch(request_id=request_id, clips=clips, local_asset_paths=local_asset_paths)
     for clip in clips:
@@ -613,8 +627,10 @@ def apply_plan_feature_flags(
         )
         campaign_requirement_checks = build_campaign_requirement_checks(
             clip=clip,
+            export_bundle=export_bundle,
             is_rendered=is_rendered,
             hook_score=hook_score,
+            confidence_score=confidence_score,
             render_readiness_score=render_readiness_score,
             score_breakdown=score_breakdown,
             thumbnail_text=thumbnail_text,
@@ -738,11 +754,51 @@ def build_export_bundle(
     )
 
 
+def attach_platform_caption_artifacts(
+    *,
+    settings: Settings,
+    clips: list[ClipResult],
+    request_id: str,
+    public_base_url: str,
+    target_platform: str | None,
+) -> list[ClipResult]:
+    enriched: list[ClipResult] = []
+    for clip in clips:
+        artifacts = create_caption_artifacts(
+            settings=settings,
+            public_base_url=public_base_url,
+            request_id=request_id,
+            clip=clip,
+            target_platform=target_platform,
+        )
+        enriched.append(clip.model_copy(update=artifacts))
+    return enriched
+
+
+def attach_trend_and_evergreen_metadata(
+    *,
+    clips: list[ClipResult],
+    selected_trend: str | None,
+    trend_context: list[TrendItem],
+) -> list[ClipResult]:
+    enriched: list[ClipResult] = []
+    for clip in clips:
+        trend_fields = build_trend_intelligence(
+            clip=clip,
+            selected_trend=selected_trend,
+            trend_context=trend_context,
+        )
+        enriched.append(clip.model_copy(update=trend_fields))
+    return enriched
+
+
 def build_campaign_requirement_checks(
     *,
     clip,
+    export_bundle: ExportBundle,
     is_rendered: bool,
     hook_score: int,
+    confidence_score: int,
     render_readiness_score: int,
     score_breakdown: ScoreBreakdown,
     thumbnail_text: str,
@@ -853,6 +909,61 @@ def build_campaign_requirement_checks(
             )
         )
 
+    artifact_types = set((export_bundle.artifact_types if export_bundle else []) or [])
+    has_caption_text = "caption_txt" in artifact_types or bool((clip.caption or "").strip())
+    has_subtitle_files = "subtitle_srt" in artifact_types and "subtitle_vtt" in artifact_types
+    has_burned_caption_delivery = bool(clip.preview_url or clip.edited_clip_url or clip.clip_url or clip.raw_clip_url) if is_rendered else True
+
+    if has_caption_text and has_subtitle_files and has_burned_caption_delivery:
+        checks.append(
+            CampaignRequirementCheck(
+                status="pass",
+                requirement="Caption delivery",
+                message="Caption text, subtitle files, and publishable media delivery are all in place.",
+            )
+        )
+    elif has_caption_text and has_subtitle_files:
+        checks.append(
+            CampaignRequirementCheck(
+                status="warning",
+                requirement="Caption delivery",
+                message="Caption files are ready, but the rendered delivery asset still needs review before campaign use.",
+            )
+        )
+    else:
+        checks.append(
+            CampaignRequirementCheck(
+                status="fail",
+                requirement="Caption delivery",
+                message="Caption artifacts are incomplete. Generate text and subtitle assets before this enters a campaign pack.",
+            )
+        )
+
+    if confidence_score >= 80:
+        checks.append(
+            CampaignRequirementCheck(
+                status="pass",
+                requirement="Decision confidence",
+                message="Signal confidence is strong enough to treat this ranking as campaign-safe.",
+            )
+        )
+    elif confidence_score >= 65:
+        checks.append(
+            CampaignRequirementCheck(
+                status="warning",
+                requirement="Decision confidence",
+                message="The ranking is usable, but this clip should be reviewed by an operator before campaign deployment.",
+            )
+        )
+    else:
+        checks.append(
+            CampaignRequirementCheck(
+                status="fail",
+                requirement="Decision confidence",
+                message="Signal confidence is too soft for campaign use without manual review and recutting.",
+            )
+        )
+
     return checks
 
 
@@ -867,7 +978,9 @@ def build_approval_state(
 
     if fail_count > 0:
         return "needs_edit"
-    if is_rendered and render_readiness_score >= 72 and warning_count == 0:
+    if warning_count > 0:
+        return "needs_review"
+    if is_rendered and render_readiness_score >= 72:
         return "approved"
     return "new"
 

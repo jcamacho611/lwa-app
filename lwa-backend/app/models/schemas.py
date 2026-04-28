@@ -127,6 +127,11 @@ class ClipResult(BaseModel):
     clip_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
     preview_image_url: Optional[str] = None
+    caption_txt_url: Optional[str] = None
+    caption_srt_url: Optional[str] = None
+    caption_vtt_url: Optional[str] = None
+    burned_caption_url: Optional[str] = None
+    export_filename: Optional[str] = None
     render_status: Optional[str] = None
     is_rendered: Optional[bool] = None
     is_strategy_only: Optional[bool] = None
@@ -172,6 +177,11 @@ class ClipResult(BaseModel):
     text_overlay_plan: Optional[str] = None
     subtitle_guidance: Optional[str] = None
     transition_plan: Optional[str] = None
+    trend_match_score: Optional[int] = None
+    trend_alignment_reason: Optional[str] = None
+    reuse_potential: Optional[int] = None
+    evergreen_status: Optional[str] = None
+    time_sensitivity: Optional[str] = None
     approval_state: Optional[str] = None
     campaign_requirement_checks: List[CampaignRequirementCheck] = Field(default_factory=list)
 

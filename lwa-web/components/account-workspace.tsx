@@ -129,7 +129,7 @@ export function AccountWorkspace({
           empty="No batches yet."
           items={batches.slice(0, 5).map((item) => ({
             title: item.title,
-            detail: `${item.status} · ${item.completed_sources}/${item.total_sources} completed`,
+            detail: `${item.status} · ${item.completed_sources}/${item.total_sources} completed · ${item.rendered_clip_count || 0} ready now · ${item.evergreen_clip_count || 0} evergreen`,
           }))}
         />
         <Panel

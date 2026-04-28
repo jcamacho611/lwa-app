@@ -62,7 +62,15 @@ function clipHasRecoverableRender(clip: ClipResult, hasRenderProof: boolean) {
 }
 
 function clipHasCaptionArtifacts(clip: ClipResult) {
-  return Boolean(clip.caption_srt_url || clip.caption_vtt_url);
+  return Boolean(clip.caption_txt_url || clip.caption_srt_url || clip.caption_vtt_url);
+}
+
+function clipCaptionArtifactLinks(clip: ClipResult) {
+  return [
+    clip.caption_txt_url ? { label: "Caption TXT", href: clip.caption_txt_url } : null,
+    clip.caption_srt_url ? { label: "Subtitle SRT", href: clip.caption_srt_url } : null,
+    clip.caption_vtt_url ? { label: "Subtitle VTT", href: clip.caption_vtt_url } : null,
+  ].filter((item): item is { label: string; href: string } => Boolean(item?.href));
 }
 
 function clipCampaignStatusLabel(clip: ClipResult): ClipMetaLabel | null {
@@ -96,11 +104,33 @@ function clipApprovalStateLabel(clip: ClipResult): ClipMetaLabel | null {
     return { label: "Needs edit", tone: "warning" };
   }
 
+  if (approvalState === "needs_review" || approvalState === "needs review") {
+    return { label: "Needs review", tone: "warning" };
+  }
+
   if (approvalState === "new") {
     return { label: "New", tone: "neutral" };
   }
 
   return { label: clip.approval_state || "New", tone: "neutral" };
+}
+
+function clipEvergreenLabel(clip: ClipResult): ClipMetaLabel | null {
+  const status = clip.evergreen_status?.trim().toLowerCase();
+
+  if (status === "evergreen") {
+    return { label: "Evergreen", tone: "neutral" };
+  }
+
+  if (status === "trend_aware" || status === "trend aware") {
+    return { label: "Trend aware", tone: "neutral" };
+  }
+
+  if (status === "time_sensitive" || status === "time sensitive") {
+    return { label: "Trend tied", tone: "warning" };
+  }
+
+  return null;
 }
 
 function buildBadges(clip: ClipResult, hasRenderProof: boolean): ClipBadge[] {
@@ -167,15 +197,18 @@ export default function HeroClip({
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 3);
   const campaignLabel = clipCampaignStatusLabel(clip);
   const approvalLabel = clipApprovalStateLabel(clip);
+  const evergreenLabel = clipEvergreenLabel(clip);
   const showRetryPreview = Boolean(onRecover) && !hasRenderProof;
   const showQueue = !compact && Boolean(onToggleQueue);
   const showFeedback = !compact && Boolean(onVote);
   const downloadUrl = clip.download_url || null;
+  const artifactLinks = clipCaptionArtifactLinks(clip);
   const displayThumbnail = clip.thumbnail_text?.trim() || clip.title;
   const whyThisMatters = buildLeadReason(clip.why_this_matters || clip.reason);
   const showRecoverRender = clipHasRecoverableRender(clip, hasRenderProof);
   const metaLabels: ClipMetaLabel[] = [
     ...(clipHasCaptionArtifacts(clip) ? [{ label: "Captions ready", tone: "neutral" as const }] : []),
+    ...(evergreenLabel ? [evergreenLabel] : []),
     ...(campaignLabel ? [campaignLabel] : []),
     ...(approvalLabel ? [approvalLabel] : []),
   ];
@@ -296,6 +329,22 @@ export default function HeroClip({
                 />
               ) : null}
             </div>
+
+            {artifactLinks.length ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                {artifactLinks.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-xs font-medium sm:w-auto"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-5">

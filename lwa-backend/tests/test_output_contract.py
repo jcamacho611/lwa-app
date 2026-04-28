@@ -7,7 +7,7 @@ from asyncio import run
 from pathlib import Path
 
 from app.core.config import Settings
-from app.models.schemas import ClipResult
+from app.models.schemas import ClipResult, ScoreBreakdown
 from app.services.clip_service import apply_plan_feature_flags
 from app.services.confidence_engine import build_confidence_label, resolve_confidence_score
 from app.services.entitlements import EntitlementContext, build_free_plan
@@ -90,6 +90,52 @@ class OutputContractTests(unittest.TestCase):
         self.assertEqual(gated[0].approval_state, "approved")
         self.assertTrue(gated[0].campaign_requirement_checks)
         self.assertTrue(gated[0].approved)
+
+    def test_warning_level_campaign_checks_route_clip_to_needs_review(self) -> None:
+        settings = Settings()
+        entitlement = EntitlementContext(
+            subject="client:test",
+            subject_source="client_id",
+            usage_day="2026-04-21",
+            plan=build_free_plan(settings),
+            credits_remaining=1,
+        )
+        clip = ClipResult(
+            id="clip_warn_001",
+            title="Review clip",
+            hook="This clip is close, but needs one more pass.",
+            caption="Use this after the lead.",
+            start_time="00:05",
+            end_time="00:20",
+            score=82,
+            confidence=0.72,
+            rank=2,
+            format="Hook First",
+            clip_url="https://example.com/clip.mp4",
+            hook_score=60,
+            render_readiness_score=74,
+            score_breakdown=ScoreBreakdown(
+                hook_score=60,
+                retention_score=76,
+                emotional_spike_score=70,
+                clarity_score=78,
+                platform_fit_score=68,
+                visual_energy_score=62,
+                audio_energy_score=66,
+                controversy_score=45,
+                educational_value_score=58,
+                share_comment_score=56,
+                render_readiness_score=74,
+                commercial_value_score=49,
+            ),
+        )
+
+        gated = apply_plan_feature_flags(clips=[clip], entitlement=entitlement)
+
+        self.assertEqual(gated[0].approval_state, "needs_review")
+        requirement_names = {check.requirement for check in gated[0].campaign_requirement_checks}
+        self.assertIn("Caption delivery", requirement_names)
+        self.assertIn("Decision confidence", requirement_names)
 
     def test_export_bundle_writes_zip_with_caption_artifacts_and_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
