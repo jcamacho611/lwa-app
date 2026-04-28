@@ -625,7 +625,7 @@ export function ClipStudio({
       const fallbackReason = (data.processing_summary as { fallback_reason?: string } | undefined)?.fallback_reason;
 
       if (allStrategyOnly && fallbackReason) {
-        setError(`Could not process video: ${fallbackReason}. Try a different YouTube URL.`);
+        setError(`Could not process this source: ${fallbackReason}. Try a different public link, upload, or prompt.`);
         return;
       }
       setError(null);
@@ -657,7 +657,7 @@ export function ClipStudio({
         const isTimeout = lower.includes("timeout") || lower.includes("too long") || lower.includes("504");
         const isUnavailable = lower.includes("unavailable") || lower.includes("private") || lower.includes("removed");
 
-        if (isBot) setError("This video couldn't be accessed. Try a different YouTube URL or a TikTok link.");
+        if (isBot) setError("This source couldn't be accessed. Try a different public link, stream source, upload, or prompt.");
         else if (isLive) setError("Live streams can't be clipped yet. Paste a regular uploaded video.");
         else if (isTimeout) setError("Video took too long. Try a shorter video under 10 minutes.");
         else if (isUnavailable) setError("This video is private, removed, or region-locked. Try another URL.");
@@ -1626,7 +1626,7 @@ export function ClipStudio({
           onChange={(event) => setVideoUrl(event.target.value)}
           onFocus={() => setInputFocused(true)}
           onBlur={() => setInputFocused(false)}
-          placeholder="Paste a public YouTube, podcast, stream, or video URL..."
+          placeholder="Drop a video, audio file, stream link, Twitch VOD, music idea, campaign, or prompt..."
           className="source-command-input input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
         />
       </label>
@@ -1745,7 +1745,7 @@ export function ClipStudio({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="section-kicker">Source command</p>
-          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Paste one public source. Find the cuts worth posting.</h2>
+          <h2 className="mt-3 text-2xl font-semibold text-ink sm:text-[2rem]">Drop any source. Build the creator-ready package.</h2>
           <p className="mt-3 max-w-xl text-sm leading-7 text-subtext/82">
             {generationMode === "quick"
               ? "Rendered clips first. Strategy ideas stay separate."
@@ -1771,7 +1771,7 @@ export function ClipStudio({
             onClick={(event) => {
               if (sourceMode === "video" && !videoUrl.trim() && !selectedUploadId) {
                 event.preventDefault();
-                setError("Paste a public YouTube, podcast, stream, or video URL to get started.");
+                setError("Drop a video, audio file, stream link, Twitch VOD, campaign, or prompt to get started.");
               }
             }}
             disabled={isLoading}
@@ -1843,7 +1843,7 @@ export function ClipStudio({
                 onClick={(event) => {
                   if (sourceMode === "video" && !videoUrl.trim() && !selectedUploadId) {
                     event.preventDefault();
-                    setError("Paste a public YouTube, podcast, stream, or video URL to get started.");
+                    setError("Drop a video, audio file, stream link, Twitch VOD, campaign, or prompt to get started.");
                   }
                 }}
                 disabled={isLoading}
