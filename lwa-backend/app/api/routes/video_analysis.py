@@ -232,7 +232,11 @@ async def export_bundle(request_id: str, request: Request) -> dict[str, object]:
         "bundle_id": bundle["bundle_id"],
         "file_name": bundle["file_name"],
         "download_url": bundle["download_url"],
+        "manifest_url": bundle.get("manifest_url"),
         "clip_count": bundle["clip_count"],
         "created_at": bundle["created_at"],
+        "bundle_format": bundle.get("bundle_format"),
+        "artifact_types": bundle.get("artifact_types"),
+        "artifact_counts": bundle.get("artifact_counts"),
         "size_bytes": bundle["size_bytes"],
     }

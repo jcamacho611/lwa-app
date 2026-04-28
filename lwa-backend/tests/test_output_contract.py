@@ -156,6 +156,22 @@ class OutputContractTests(unittest.TestCase):
             self.assertIn("manifest_url", bundle)
             self.assertTrue(bundle["download_url"].startswith("https://backend.example.com/generated/export-bundles/"))
 
+    def test_output_builder_creates_export_manifest_for_bulk_export_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings()
+            settings.generated_assets_dir = temp_dir
+            settings.api_base_url = "https://backend.example.com"
+            output_builder = OutputBuilder(settings)
+
+            manifest = output_builder.create_export_manifest(
+                request_id="req_456",
+                clips=[{"id": "clip_1", "title": "Lead Clip"}],
+            )
+
+            self.assertEqual(manifest["clip_count"], 1)
+            self.assertTrue(manifest["download_url"].startswith("https://backend.example.com/generated/req_456/"))
+            self.assertTrue(Path(manifest["manifest_path"]).exists())
+
 
 if __name__ == "__main__":
     unittest.main()

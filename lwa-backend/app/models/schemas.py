@@ -214,6 +214,8 @@ class ProcessingSummary(BaseModel):
     visual_engine_failed_count: int = 0
     rendered_clip_count: int = 0
     strategy_only_clip_count: int = 0
+    bulk_export_ready: bool = False
+    manifest_url: Optional[str] = None
     free_preview_unlocked: bool = True
     persistence_requires_signup: bool = False
     upgrade_prompt: Optional[str] = None

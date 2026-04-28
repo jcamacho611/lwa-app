@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
@@ -37,6 +38,17 @@ class OutputBuilder:
         except Exception as error:
             logger.error(f"output_builder_failed request_id={request_id} error={str(error)}")
             raise
+
+    def _public_generated_url(self, path: Path) -> str:
+        generated_dir = Path(self.settings.generated_assets_dir).resolve()
+        try:
+            relative = path.resolve().relative_to(generated_dir)
+        except ValueError:
+            relative = Path(path.name)
+        public_path = f"/generated/{relative.as_posix()}"
+        if self.settings.api_base_url:
+            return f"{self.settings.api_base_url.rstrip('/')}{public_path}"
+        return public_path
     
     def create_export_manifest(
         self,

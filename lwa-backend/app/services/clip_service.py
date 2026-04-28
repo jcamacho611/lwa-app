@@ -34,6 +34,7 @@ from ..services.attention_compiler import compile_attention
 from ..services.clip_status_store import register_clip_batch
 from ..services.confidence_engine import build_confidence_label, resolve_confidence_score
 from ..services.entitlements import EntitlementContext, UsageStore
+from ..services.output_builder import OutputBuilder
 from ..services.platform_store import PlatformStore
 from ..services.render_quality import evaluate_render_quality
 from ..services.render_jobs import queue_preview_render
@@ -310,6 +311,14 @@ async def build_clip_response(
     rendered_clip_count = int(director_brain_summary["rendered_clip_count"])
     strategy_only_clip_count = int(director_brain_summary["strategy_only_clip_count"])
     export_ready_count = len([clip for clip in clips if clip.download_url])
+    export_manifest = (
+        OutputBuilder(settings).create_export_manifest(
+            request_id=request_id,
+            clips=[clip.model_dump() for clip in clips],
+        )
+        if clips
+        else None
+    )
     script_pack = build_script_pack(
         source_title=source_title,
         transcript=source_context.transcript if source_context else None,
@@ -369,6 +378,8 @@ async def build_clip_response(
             visual_engine_failed_count=int(director_brain_summary["visual_engine_failed_count"]),
             rendered_clip_count=rendered_clip_count,
             strategy_only_clip_count=strategy_only_clip_count,
+            bulk_export_ready=bool(export_manifest),
+            manifest_url=export_manifest["download_url"] if export_manifest else None,
             free_preview_unlocked=entitlement.plan.code == "free",
             persistence_requires_signup=current_user is None,
             upgrade_prompt=build_upgrade_prompt(entitlement=entitlement, current_user=current_user),

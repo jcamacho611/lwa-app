@@ -302,6 +302,9 @@ export type ClipResult = {
     cta?: string | null;
     preview_ready?: boolean;
     download_ready?: boolean;
+    bundle_format?: string | null;
+    manifest_ready?: boolean;
+    artifact_types?: string[];
   };
   trim_start_seconds?: number | null;
   trim_end_seconds?: number | null;
@@ -368,6 +371,11 @@ export type ExportBundleResponse = {
   file_name: string;
   clip_count: number;
   created_at: string;
+  manifest_url?: string | null;
+  bundle_format?: string | null;
+  artifact_types?: string[];
+  artifact_counts?: Record<string, number> | null;
+  size_bytes?: number;
 };
 
 export type ClipRecoveryJob = {
