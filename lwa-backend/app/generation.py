@@ -361,12 +361,12 @@ def parse_generated_clips(
         source_context=source_context,
     )
 
-    ranked = sorted(
+    review_ranked = sorted(
         normalized,
         key=lambda current: (-(current.score or 0), -(current.confidence or 0.0), current.start_time),
     )
     finalized: list[ClipResult] = []
-    for rank, clip in enumerate(ranked, start=1):
+    for rank, clip in enumerate(review_ranked, start=1):
         finalized.append(
             clip.model_copy(
                 update={
@@ -390,9 +390,18 @@ def parse_generated_clips(
             )
         )
 
+    ordered = sorted(
+        finalized,
+        key=lambda current: (
+            current.post_rank or current.best_post_order or 999,
+            -(current.score or 0),
+            current.rank or 999,
+            current.start_time,
+        ),
+    )
     logger.info("clip_scoring_complete mode=ai clips_scored=%s", len(finalized))
-    logger.info("clip_ranking_complete ranked=%s", len(finalized))
-    return finalized
+    logger.info("clip_ranking_complete ranked=%s", len(ordered))
+    return ordered
 
 
 def supplement_source_grounded_clips(
@@ -643,6 +652,7 @@ Return valid JSON in this shape:
       "cta_suggestion": "...",
       "post_rank": 1,
       "score": 90,
+      "confidence_score": 86,
       "confidence": 0.86,
       "platform_fit": "...",
       "packaging_angle": "value",
@@ -661,6 +671,7 @@ Rules:
 - thumbnail_text must be 2 to 5 words and punchy.
 - hook_variants must contain exactly 3 alternate hook options.
 - caption_variants must include viral, story, educational, and controversial keys.
+- confidence_score must be an integer between 0 and 100.
 - packaging_angle must be one of: shock, story, value, curiosity, controversy.
 - confidence must be a float between 0.0 and 1.0.
 """.strip()

@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "components": {
+    "hook_score":              { "weight": 0.20, "display": "Hook Strength" },
+    "retention_score":         { "weight": 0.15, "display": "Retention Potential" },
+    "emotional_spike_score":   { "weight": 0.12, "display": "Emotional Spike" },
+    "platform_fit_score":      { "weight": 0.10, "display": "Platform Fit" },
+    "clarity_score":           { "weight": 0.08, "display": "Clarity" },
+    "visual_energy_score":     { "weight": 0.08, "display": "Visual Energy" },
+    "audio_energy_score":      { "weight": 0.07, "display": "Audio Energy" },
+    "controversy_score":       { "weight": 0.05, "display": "Controversy Signal" },
+    "educational_value_score": { "weight": 0.05, "display": "Educational Value" },
+    "share_comment_score":     { "weight": 0.05, "display": "Share / Comment Bait" },
+    "render_readiness_score":  { "weight": 0.03, "display": "Render Readiness" },
+    "commercial_value_score":  { "weight": 0.02, "display": "Commercial Value" }
+  },
+  "formula": "virality_score = sum(component * weight for component, weight in components)",
+  "confidence_modifier": "final_score = virality_score * confidence_score",
+  "notes": "Weights sum to 1.0. Each component is 0–100. confidence_score is 0.0–1.0."
+}

@@ -1,0 +1,10 @@
+[
+  {"id": "tr_001", "rule": "Max 3-5 words on cover", "applies_to": ["youtube_shorts", "reels_instagram"], "source": "Dataslayer 2026"},
+  {"id": "tr_002", "rule": "Face should occupy at least 30 percent of frame for person-led content", "applies_to": ["all"], "source": "Dataslayer"},
+  {"id": "tr_003", "rule": "Use high contrast text against the frame", "applies_to": ["all"], "source": "YouTube 2026 mobile readability"},
+  {"id": "tr_004", "rule": "Cover must stay readable on a 350px-wide phone screen", "applies_to": ["all"], "source": "YouTube 2026"},
+  {"id": "tr_005", "rule": "Never use stock clip-tool watermarks on cover", "applies_to": ["instagram", "youtube"], "source": "Mosseri 2025 originality"},
+  {"id": "tr_006", "rule": "Cover should not lie about the content", "applies_to": ["youtube"], "source": "YouTube 2026 satisfaction signal"},
+  {"id": "tr_007", "rule": "First frame and cover are separate choices", "applies_to": ["youtube_shorts", "reels_instagram"], "source": "YT Studio cover feature"},
+  {"id": "tr_008", "rule": "LinkedIn covers should look like a talking-head or screen capture, not a meme", "applies_to": ["linkedin_video"], "source": "Whitehat 2026"}
+]

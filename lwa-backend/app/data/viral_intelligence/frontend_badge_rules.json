@@ -1,0 +1,12 @@
+[
+  {"id": "fb_001", "badge": "Best Clip First", "trigger": "rank == 1 AND score >= 80", "color": "#F5C842", "priority": "always", "placement": "top-left"},
+  {"id": "fb_002", "badge": "Rendered", "trigger": "clip_url is not null AND render_status == ready", "color": "green", "priority": "always", "placement": "top-right"},
+  {"id": "fb_003", "badge": "Ideas Only", "trigger": "rendered == false AND strategy_only == true", "color": "gold-on-black", "priority": "always", "placement": "top-right"},
+  {"id": "fb_004", "badge": "Strong Hook", "trigger": "vs_001 >= 0.85", "color": "gold-text-on-dark", "priority": "conditional", "placement": "metadata"},
+  {"id": "fb_005", "badge": "High Shareability", "trigger": "vs_007 >= 0.80", "color": "gold-text-on-dark", "priority": "conditional", "placement": "metadata"},
+  {"id": "fb_006", "badge": "Platform Mismatch", "trigger": "duration outside platform_rules range", "color": "amber", "priority": "conditional", "placement": "metadata"},
+  {"id": "fb_007", "badge": "Captions Missing", "trigger": "caption_track == null", "color": "amber", "priority": "conditional", "placement": "metadata"},
+  {"id": "fb_008", "badge": "Trend Match", "trigger": "trend_id matched AND fresh < 48h", "color": "#F5C842", "priority": "conditional", "placement": "bottom"},
+  {"id": "fb_009", "badge": "Score Pill", "trigger": "always", "color": "dark", "priority": "always", "placement": "metadata"},
+  {"id": "fb_010", "badge": "Provider Pill", "trigger": "always", "color": "muted", "priority": "always", "placement": "bottom-right"}
+]

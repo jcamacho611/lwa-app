@@ -1,0 +1,24 @@
+[
+  {
+    "id": "cr_001",
+    "name": "rendered_required_for_campaign_push",
+    "minimum_score": 70,
+    "requires_rendered": true,
+    "requires_caption_presence": true,
+    "requires_platform_compatibility": true,
+    "requires_claim_safety": true,
+    "applies_to": ["whop_community", "reels_instagram", "youtube_shorts", "tiktok"],
+    "message": "Campaign-ready clips need rendered proof, captions, platform fit, and safe claims."
+  },
+  {
+    "id": "cr_002",
+    "name": "strategy_only_requires_operator_review",
+    "minimum_score": 75,
+    "requires_rendered": false,
+    "requires_caption_presence": false,
+    "requires_platform_compatibility": true,
+    "requires_claim_safety": true,
+    "applies_to": ["all"],
+    "message": "Strategy-only clips can stay in the pack, but should be reviewed before campaign use."
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "video": [
+    { "ext": "mp4",  "mime": "video/mp4",       "label": "MP4",   "max_size_mb": 2048, "needs_ffmpeg": true,  "notes": "Primary recommended format." },
+    { "ext": "mov",  "mime": "video/quicktime",  "label": "MOV",   "max_size_mb": 2048, "needs_ffmpeg": true,  "notes": "Apple QuickTime. Normalize before editing." },
+    { "ext": "webm", "mime": "video/webm",       "label": "WebM",  "max_size_mb": 1024, "needs_ffmpeg": true,  "notes": "Browser-native. Re-encode for compatibility." },
+    { "ext": "mkv",  "mime": "video/x-matroska", "label": "MKV",   "max_size_mb": 2048, "needs_ffmpeg": true,  "notes": "Container only. Re-encode to MP4." },
+    { "ext": "avi",  "mime": "video/x-msvideo",  "label": "AVI",   "max_size_mb": 2048, "needs_ffmpeg": true,  "notes": "Legacy format. Always re-encode." }
+  ],
+  "audio": [
+    { "ext": "mp3",  "mime": "audio/mpeg",       "label": "MP3",   "max_size_mb": 512,  "needs_ffmpeg": false, "notes": "Audio-only clip flow. Waveform visualization only." },
+    { "ext": "wav",  "mime": "audio/wav",         "label": "WAV",   "max_size_mb": 1024, "needs_ffmpeg": false, "notes": "Lossless. Large files. Silence detection works well." },
+    { "ext": "m4a",  "mime": "audio/mp4",         "label": "M4A",   "max_size_mb": 512,  "needs_ffmpeg": false, "notes": "Apple AAC. Common podcast export format." },
+    { "ext": "aac",  "mime": "audio/aac",         "label": "AAC",   "max_size_mb": 512,  "needs_ffmpeg": false, "notes": "Compressed audio. Good silence detection." },
+    { "ext": "flac", "mime": "audio/flac",        "label": "FLAC",  "max_size_mb": 1024, "needs_ffmpeg": false, "notes": "Lossless. Music production uploads." }
+  ],
+  "image": [
+    { "ext": "png",  "mime": "image/png",         "label": "PNG",   "max_size_mb": 50,   "needs_ffmpeg": false, "notes": "Static image source. Strategy-only output." },
+    { "ext": "jpg",  "mime": "image/jpeg",        "label": "JPG",   "max_size_mb": 50,   "needs_ffmpeg": false, "notes": "Static image source. Strategy-only output." },
+    { "ext": "jpeg", "mime": "image/jpeg",        "label": "JPEG",  "max_size_mb": 50,   "needs_ffmpeg": false, "notes": "Alias of jpg." },
+    { "ext": "webp", "mime": "image/webp",        "label": "WebP",  "max_size_mb": 50,   "needs_ffmpeg": false, "notes": "Modern compressed image format." }
+  ],
+  "text": [
+    { "ext": "txt",  "mime": "text/plain",        "label": "TXT",   "max_size_mb": 1,    "needs_ffmpeg": false, "notes": "Plain transcript input. Strategy and hook generation only." },
+    { "ext": "srt",  "mime": "text/plain",        "label": "SRT",   "max_size_mb": 1,    "needs_ffmpeg": false, "notes": "Subtitle file. Can be used for semantic cut graph." },
+    { "ext": "vtt",  "mime": "text/vtt",          "label": "VTT",   "max_size_mb": 1,    "needs_ffmpeg": false, "notes": "WebVTT subtitle format." }
+  ]
+}

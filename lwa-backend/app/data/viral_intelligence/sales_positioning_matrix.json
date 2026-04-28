@@ -1,0 +1,44 @@
+[
+  {
+    "segment": "solo_creator",
+    "pain": "I get clips but they all suck",
+    "competitor_claim": "Click to make 10 clips",
+    "lwa_positioning": "First rendered clip in 60 seconds, ranked best-first, with 3 hook variants",
+    "proof_point": "Live demo: paste link to render"
+  },
+  {
+    "segment": "podcaster",
+    "pain": "The AI picks the wrong moments",
+    "competitor_claim": "Our AI finds the best moments",
+    "lwa_positioning": "Score breakdown shows why a moment ranks. You override, we learn.",
+    "proof_point": "Score panel and signal-by-signal display"
+  },
+  {
+    "segment": "coach_consultant",
+    "pain": "I need premium-feeling output for my brand",
+    "competitor_claim": "Brand kit included",
+    "lwa_positioning": "Premium by default. Structured packaging without fake completeness.",
+    "proof_point": "Visual proof in demo output"
+  },
+  {
+    "segment": "b2b_linkedin",
+    "pain": "TikTok captions look childish on LinkedIn",
+    "competitor_claim": "Multi-platform export",
+    "lwa_positioning": "Per-platform caption presets. LinkedIn stays clean editorial.",
+    "proof_point": "Caption preset gallery"
+  },
+  {
+    "segment": "agency_clipping_shop",
+    "pain": "Tools cluster on the same look",
+    "competitor_claim": "Use templates",
+    "lwa_positioning": "Score-weighted ranking and signal transparency produce differentiated output.",
+    "proof_point": "Template fatigue competitor quote and ranked pack"
+  },
+  {
+    "segment": "whop_operator",
+    "pain": "I want members posting community-native clips",
+    "competitor_claim": "Auto-post to all platforms",
+    "lwa_positioning": "Whop-aware export profile and community-native captions later, manual workflow now.",
+    "proof_point": "Assumption pending Whop integration spec"
+  }
+]

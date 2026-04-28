@@ -1,0 +1,134 @@
+[
+  {
+    "id": "mistake",
+    "category": "mistake",
+    "formula": "[N] mistakes [audience] makes with [topic]",
+    "detection_patterns": ["mistake", "wrong", "should stop", "costing you"],
+    "example": "3 mistakes new investors make that cost them everything.",
+    "bad_version": "Let's talk about investing.",
+    "improved_version": "3 investing mistakes that quietly kill your returns.",
+    "platform_fit": ["tiktok", "youtube_shorts", "linkedin_video"],
+    "use_case": "instructional content with problem-solving"
+  },
+  {
+    "id": "stop_doing",
+    "category": "confrontation",
+    "formula": "Stop [common behavior]. It's [consequence].",
+    "detection_patterns": ["stop ", "quit ", "don't ", "never "],
+    "example": "Stop posting every day. It's killing your account.",
+    "bad_version": "Posting frequency is important to consider.",
+    "improved_version": "Stop posting every day. Here's the data.",
+    "platform_fit": ["tiktok", "x_video", "instagram_reels"],
+    "use_case": "advice and coaching clips"
+  },
+  {
+    "id": "contrarian",
+    "category": "contrarian",
+    "formula": "[Common belief] is [wrong/lie/keeping you poor]. Here's the truth.",
+    "detection_patterns": ["actually", "truth is", "wrong about", "contrary to", "myth"],
+    "example": "Saving money is keeping you poor. Here's why.",
+    "bad_version": "Let's talk about saving money.",
+    "improved_version": "Saving money is not the answer. This is.",
+    "platform_fit": ["tiktok", "x_video", "linkedin_video", "youtube_shorts"],
+    "use_case": "finance, business, health, or mindset clips with counterintuitive takes"
+  },
+  {
+    "id": "nobody_tells",
+    "category": "nobody_tells",
+    "formula": "Nobody tells you [uncomfortable truth about desired thing].",
+    "detection_patterns": ["nobody tells", "they don't tell you", "they won't show you", "no one talks about"],
+    "example": "Nobody tells you that entrepreneurship is the loneliest thing you'll ever do.",
+    "bad_version": "Entrepreneurship is hard.",
+    "improved_version": "Nobody talks about how lonely it gets at the top.",
+    "platform_fit": ["tiktok", "instagram_reels", "linkedin_video"],
+    "use_case": "honest takes, cautionary advice, coaching"
+  },
+  {
+    "id": "before_after",
+    "category": "transformation",
+    "formula": "From [state A] to [state B] — here's what changed.",
+    "detection_patterns": ["went from", "used to be", "from zero", "now I", "transformed"],
+    "example": "From $30k in debt to $200k saved in 4 years. Here's what I changed.",
+    "bad_version": "I improved my finances over time.",
+    "improved_version": "$30k debt → $200k saved. One decision made the difference.",
+    "platform_fit": ["tiktok", "instagram_reels", "youtube_shorts", "linkedin_video"],
+    "use_case": "personal transformation, fitness, business, finance"
+  },
+  {
+    "id": "watch_until",
+    "category": "watch_until",
+    "formula": "Watch until [moment/timestamp] — [strong emotional payoff].",
+    "detection_patterns": ["watch until", "stay until", "the ending", "what happens next"],
+    "example": "Watch until the last 5 seconds — you won't believe what he says.",
+    "bad_version": "There's something interesting at the end.",
+    "improved_version": "Do NOT skip the last 10 seconds of this.",
+    "platform_fit": ["tiktok", "youtube_shorts"],
+    "use_case": "clips with a strong late payoff or surprise ending"
+  },
+  {
+    "id": "proof",
+    "category": "social_proof",
+    "formula": "[Impressive number/result] — and I'm going to show you exactly how.",
+    "detection_patterns": ["million", "thousand", "clients", "results", "proof", "evidence", "I made"],
+    "example": "50,000 students paid $997 for this. I'm giving it away free.",
+    "bad_version": "I've helped a lot of people.",
+    "improved_version": "50,000 people used this system. Here's the free version.",
+    "platform_fit": ["tiktok", "instagram_reels", "linkedin_video"],
+    "use_case": "coaching, business, education clips with demonstrated scale"
+  },
+  {
+    "id": "changed_everything",
+    "category": "changed_everything",
+    "formula": "[Specific thing] completely changed my [life/business/health].",
+    "detection_patterns": ["changed everything", "changed my life", "changed how I", "turned everything around"],
+    "example": "One book changed how I think about money forever.",
+    "bad_version": "Reading helped me a lot.",
+    "improved_version": "One book. Completely rewired how I handle money.",
+    "platform_fit": ["tiktok", "instagram_reels", "youtube_shorts"],
+    "use_case": "high-impact personal change moments"
+  },
+  {
+    "id": "tested",
+    "category": "i_tested",
+    "formula": "I tested [debated thing] for [timeframe]. Here's what actually happened.",
+    "detection_patterns": ["I tested", "I tried", "I did this for", "I spent X days", "experiment"],
+    "example": "I tested posting 3x/day on TikTok for 30 days. The results surprised me.",
+    "bad_version": "Posting frequency results vary.",
+    "improved_version": "I posted 3x/day for 30 days. Here's what actually happened.",
+    "platform_fit": ["tiktok", "youtube_shorts", "x_video"],
+    "use_case": "experiment-style content, creator growth, fitness, finance"
+  },
+  {
+    "id": "fast_lesson",
+    "category": "speed",
+    "formula": "In [X seconds/minutes], you'll learn [valuable thing].",
+    "detection_patterns": ["in 30 seconds", "in 60 seconds", "in under a minute", "quick lesson"],
+    "example": "In 30 seconds: how compound interest actually works.",
+    "bad_version": "Let me explain compound interest.",
+    "improved_version": "30 seconds. Compound interest. You'll use this forever.",
+    "platform_fit": ["tiktok", "youtube_shorts", "instagram_reels"],
+    "use_case": "dense educational clips, quick how-to"
+  },
+  {
+    "id": "expensive_mistake",
+    "category": "mistake",
+    "formula": "The [dollar amount] mistake I made so you don't have to.",
+    "detection_patterns": ["cost me", "lost", "wasted", "expensive lesson", "mistake cost"],
+    "example": "The $50,000 mistake I made in my first business.",
+    "bad_version": "I made some business mistakes early on.",
+    "improved_version": "$50k gone. Here's exactly what went wrong.",
+    "platform_fit": ["tiktok", "youtube_shorts", "linkedin_video"],
+    "use_case": "business failure stories, finance, coaching"
+  },
+  {
+    "id": "hidden_signal",
+    "category": "curiosity",
+    "formula": "The [hidden/unknown] [signal/sign/reason] that [outcome].",
+    "detection_patterns": ["the real reason", "hidden reason", "nobody knows", "secret signal", "the sign"],
+    "example": "The hidden signal in job descriptions that tells you if the company is toxic.",
+    "bad_version": "How to evaluate job offers.",
+    "improved_version": "One line in every job description tells you everything about the company culture.",
+    "platform_fit": ["tiktok", "linkedin_video", "youtube_shorts"],
+    "use_case": "insider knowledge, professional insight, business intelligence"
+  }
+]

@@ -5,7 +5,6 @@ import importlib.util
 import json
 import logging
 import re
-import shutil
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -31,11 +30,13 @@ from ..models.schemas import (
 )
 from ..models.user import UserRecord
 from ..services.ai_service import generate_clip_copy
+from ..services.asset_retention import cleanup_generated_assets_nonfatal_for_settings
 from ..services.attention_compiler import compile_attention
 from ..services.caption_artifacts import create_caption_artifacts
 from ..services.clip_status_store import register_clip_batch
 from ..services.confidence_engine import build_confidence_label, resolve_confidence_score
 from ..services.entitlements import EntitlementContext, UsageStore
+from ..services.event_log import emit_event
 from ..services.output_builder import OutputBuilder
 from ..services.platform_store import PlatformStore
 from ..services.render_quality import evaluate_render_quality
@@ -63,8 +64,13 @@ def enforce_api_key(request: Request, settings: Settings) -> None:
     if not settings.api_key_secret:
         return
 
-    provided_key = request.headers.get(settings.api_key_header_name)
-    if provided_key != settings.api_key_secret:
+    provided_key = (request.headers.get(settings.api_key_header_name) or "").strip()
+    allowed_keys = {
+        settings.api_key_secret.strip(),
+        *settings.pro_api_keys,
+        *settings.scale_api_keys,
+    }
+    if provided_key not in allowed_keys:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
 
@@ -412,6 +418,49 @@ async def build_clip_response(
             response=response,
             local_asset_paths=local_asset_paths,
         )
+    emit_event(
+        settings=settings,
+        event="generation_completed",
+        request_id=request_id,
+        plan_code=entitlement.plan.code,
+        subject_source=entitlement.subject_source,
+        metadata={
+            "target_platform": target_platform,
+            "source_type": source_type,
+            "clip_count": len(clips),
+            "assets_created": assets_created,
+            "edited_assets_created": edited_assets_created,
+            "ai_provider": compiler_mode or provider_used,
+            "processing_mode": processing_mode,
+        },
+    )
+    if assets_created > 0:
+        emit_event(
+            settings=settings,
+            event="rendered_asset_created",
+            request_id=request_id,
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            metadata={
+                "target_platform": target_platform,
+                "assets_created": assets_created,
+                "rendered_clip_count": rendered_clip_count,
+            },
+        )
+    elif clips:
+        emit_event(
+            settings=settings,
+            event="strategy_package_created",
+            request_id=request_id,
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            metadata={
+                "target_platform": target_platform,
+                "clip_count": len(clips),
+                "strategy_only_clip_count": strategy_only_clip_count,
+                "fallback_reason": fallback_reason or "render_unavailable",
+            },
+        )
     return response
 
 
@@ -526,7 +575,11 @@ def apply_plan_feature_flags(
     exports_unlocked = bool(entitlement.plan.feature_flags.premium_exports)
     ranked = sorted(
         clips,
-        key=lambda clip: (clip.rank or 999, -(clip.score or 0)),
+        key=lambda clip: (
+            clip.post_rank or clip.best_post_order or clip.rank or 999,
+            -(clip.score or 0),
+            clip.rank or 999,
+        ),
     )
     visible = ranked[:clip_limit]
     gated = []
@@ -1574,6 +1627,28 @@ async def run_job(
             )
     except Exception as error:  # pragma: no cover
         usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
+        emit_event(
+            settings=settings,
+            event="quota_released",
+            request_id=job_id,
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            status="released",
+            metadata={"reason": "async_job_failure"},
+        )
+        emit_event(
+            settings=settings,
+            event="generation_failed",
+            request_id=job_id,
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            status="failed",
+            metadata={
+                "target_platform": request.target_platform or "auto",
+                "source_type": request.source_type or ("video_upload" if source_path else "url"),
+                "error_code": type(error).__name__,
+            },
+        )
         await job_store.fail(job_id, str(error))
         if platform_store is not None:
             platform_store.update_job(
@@ -1608,35 +1683,41 @@ def maybe_prune_generated_assets(settings: Settings, *, force: bool = False) -> 
 
     now = time.time()
     if not force and (now - _last_generated_asset_prune_at) < max(settings.generated_asset_prune_interval_seconds, 60):
-        return {"scanned": 0, "removed": 0}
+        return {"scanned": 0, "removed": 0, "store_removed": 0}
 
     _last_generated_asset_prune_at = now
-    generated_root = Path(settings.generated_assets_dir)
-    generated_root.mkdir(parents=True, exist_ok=True)
-
-    retention_seconds = max(settings.generated_asset_retention_hours, 1) * 3600
-    removed = 0
-    scanned = 0
-
-    for asset_path in generated_root.iterdir():
-        scanned += 1
-        try:
-            age_seconds = now - asset_path.stat().st_mtime
-        except FileNotFoundError:
-            continue
-        if age_seconds < retention_seconds:
-            continue
-        if asset_path.is_dir():
-            shutil.rmtree(asset_path, ignore_errors=True)
-        else:
-            asset_path.unlink(missing_ok=True)
-        removed += 1
-
-    if removed:
-        logger.info(
-            "generated_assets_pruned scanned=%s removed=%s retention_hours=%s",
-            scanned,
-            removed,
-            settings.generated_asset_retention_hours,
+    emit_event(
+        settings=settings,
+        event="asset_cleanup_started",
+        status="started",
+        metadata={
+            "retention_hours": settings.generated_asset_retention_hours,
+            "max_files": settings.generated_assets_max_files,
+        },
+    )
+    try:
+        stats = cleanup_generated_assets_nonfatal_for_settings(settings)
+        emit_event(
+            settings=settings,
+            event="asset_cleanup_completed",
+            status="ok",
+            metadata={
+                "scanned_count": stats.get("scanned_count", 0),
+                "deleted_count": stats.get("deleted_count", 0),
+                "store_removed": stats.get("store_removed", 0),
+            },
         )
-    return {"scanned": scanned, "removed": removed}
+        return {
+            "scanned": int(stats.get("scanned_count", stats.get("scanned", 0))),
+            "removed": int(stats.get("deleted_count", stats.get("removed", 0))),
+            "store_removed": int(stats.get("store_removed", 0)),
+        }
+    except Exception as error:
+        emit_event(
+            settings=settings,
+            event="asset_cleanup_failed",
+            status="failed",
+            metadata={"error_code": type(error).__name__},
+        )
+        logger.warning("generated_asset_cleanup_failed error=%s", error)
+        return {"scanned": 0, "removed": 0, "store_removed": 0}

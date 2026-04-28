@@ -1,0 +1,32 @@
+[
+  {
+    "id": "tm_001",
+    "twitch_signal": "chat_spike",
+    "maps_to": ["vs_003", "vs_007"],
+    "description": "Fast chat acceleration usually reflects emotional response and shareworthy phrasing."
+  },
+  {
+    "id": "tm_002",
+    "twitch_signal": "repeated_phrase",
+    "maps_to": ["vs_004", "vs_007"],
+    "description": "Repeated chat phrases often reveal quotable lines and repeatable social framing."
+  },
+  {
+    "id": "tm_003",
+    "twitch_signal": "clip_marker",
+    "maps_to": ["vs_002", "vs_001"],
+    "description": "Manual or automatic clip markers usually point to standalone openings with immediate value."
+  },
+  {
+    "id": "tm_004",
+    "twitch_signal": "audio_spike",
+    "maps_to": ["vs_003"],
+    "description": "Loudness spikes are a fallback proxy for reaction-heavy moments."
+  },
+  {
+    "id": "tm_005",
+    "twitch_signal": "topic_shift",
+    "maps_to": ["vs_008", "vs_006"],
+    "description": "Topic pivots often create curiosity gaps and setup-to-payoff arcs."
+  }
+]

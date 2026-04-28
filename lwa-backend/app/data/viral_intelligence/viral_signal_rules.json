@@ -1,0 +1,98 @@
+[
+  {
+    "id": "vs_001",
+    "signal_name": "hook_first_3s",
+    "category": "hook",
+    "weight_default": 0.18,
+    "detection_method": "NLP first sentence + audio energy first 90 frames",
+    "source": "TikTok 2026 8s test; PostEverywhere 63% stat"
+  },
+  {
+    "id": "vs_002",
+    "signal_name": "standalone_coherence",
+    "category": "structure",
+    "weight_default": 0.14,
+    "detection_method": "LLM eval: does this make sense without context",
+    "source": "Klypse 2026; Castmagic"
+  },
+  {
+    "id": "vs_003",
+    "signal_name": "emotional_spike",
+    "category": "audio",
+    "weight_default": 0.12,
+    "detection_method": "Audio RMS peak + laughter classifier",
+    "source": "ClippingAgency; Castmagic"
+  },
+  {
+    "id": "vs_004",
+    "signal_name": "quotable_line",
+    "category": "text",
+    "weight_default": 0.10,
+    "detection_method": "LLM scoring 0-1 on screenshot-worthiness",
+    "source": "Trialbear; Fame"
+  },
+  {
+    "id": "vs_005",
+    "signal_name": "information_density",
+    "category": "text",
+    "weight_default": 0.08,
+    "detection_method": "facts_count / duration_seconds",
+    "source": "TruefutureMedia"
+  },
+  {
+    "id": "vs_006",
+    "signal_name": "tension_payoff_arc",
+    "category": "structure",
+    "weight_default": 0.08,
+    "detection_method": "Discourse marker presence (but/actually/here is why)",
+    "source": "Darkroom"
+  },
+  {
+    "id": "vs_007",
+    "signal_name": "shareability_phrase",
+    "category": "text",
+    "weight_default": 0.07,
+    "detection_method": "Match against shareability_phrase_library",
+    "source": "Mosseri Jan 2025"
+  },
+  {
+    "id": "vs_008",
+    "signal_name": "curiosity_gap",
+    "category": "text",
+    "weight_default": 0.06,
+    "detection_method": "LLM eval: does opening promise something unresolved",
+    "source": "vidIQ Hooks 2026"
+  },
+  {
+    "id": "vs_009",
+    "signal_name": "speaker_authority",
+    "category": "text",
+    "weight_default": 0.05,
+    "detection_method": "Pronoun + credential phrase detection",
+    "source": "LinkedIn Depth Score 2026"
+  },
+  {
+    "id": "vs_010",
+    "signal_name": "visual_anchor",
+    "category": "video",
+    "weight_default": 0.05,
+    "detection_method": "Face presence + motion delta",
+    "source": "ReframeX"
+  },
+  {
+    "id": "vs_011",
+    "signal_name": "conflict_beat",
+    "category": "text",
+    "weight_default": 0.04,
+    "detection_method": "Sentiment polarity flip within clip",
+    "source": "Darkroom 2026"
+  },
+  {
+    "id": "vs_012",
+    "signal_name": "loopability",
+    "category": "structure",
+    "weight_default": 0.03,
+    "detection_method": "Audio + visual continuity at clip boundaries",
+    "source": "Hootsuite"
+  }
+]

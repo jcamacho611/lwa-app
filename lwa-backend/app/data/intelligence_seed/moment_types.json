@@ -1,0 +1,11 @@
+[
+  { "id": "chat_spike",       "name": "Chat Spike",           "description": "Chat message velocity exceeds 3x baseline over 10s window (Twitch/livestream).", "detection": "chat_velocity_analysis", "score_boost": 20 },
+  { "id": "viewer_spike",     "name": "Viewer Count Spike",   "description": "Concurrent viewer count rises > 20% in under 60 seconds.", "detection": "viewer_count_delta", "score_boost": 15 },
+  { "id": "audio_spike",      "name": "Audio Spike",          "description": "Audio RMS jumps > 2x baseline within a 3-second window.", "detection": "audio_rms_analysis", "score_boost": 12 },
+  { "id": "emotion_spike",    "name": "Emotion Spike",        "description": "Strong emotional shift detected via sentiment or pitch analysis.", "detection": "sentiment_nlp + pitch_variance", "score_boost": 15 },
+  { "id": "keyword_cluster",  "name": "Keyword Cluster",      "description": "High density of virality-signal keywords within 30s window.", "detection": "keyword_density_scan", "score_boost": 10 },
+  { "id": "manual_marker",    "name": "Manual Marker",        "description": "Explicitly flagged by creator or editor as a clip moment.", "detection": "manual_input", "score_boost": 25 },
+  { "id": "audience_clip",    "name": "Audience Clip",        "description": "Moment that has already been clipped and shared by audience members.", "detection": "clip_reference_scan", "score_boost": 30 },
+  { "id": "silence_break",    "name": "Silence Break",        "description": "Sudden end of silence followed by energetic speech or sound.", "detection": "silence_detector", "score_boost": 8 },
+  { "id": "topic_shift",      "name": "Topic Shift",          "description": "Semantic analysis detects a clear change in topic or narrative.", "detection": "semantic_segmentation", "score_boost": 7 }
+]

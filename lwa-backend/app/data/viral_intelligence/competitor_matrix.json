@@ -1,0 +1,12 @@
+[
+  {"tool": "OpusClip", "pricing": "$29 Pro", "strength": "Speed, templates, virality score", "weakness": "Template fatigue and sameness", "lwa_differentiation": "Scoring transparency and 3 hook variants, not 1"},
+  {"tool": "Vizard", "pricing": "$30 Creator", "strength": "Brand kits, multilingual, transcript editing", "weakness": "Static reframing, weak retention prediction", "lwa_differentiation": "Rendered proof plus retention-weighted scoring"},
+  {"tool": "Munch", "pricing": "premium tier", "strength": "Highlight discovery and multi-platform copy", "weakness": "Higher price, rigid editing", "lwa_differentiation": "Cheaper entry plus clearer packaging intelligence"},
+  {"tool": "Descript", "pricing": "$24 Creator", "strength": "Transcript-first editing and podcast integration", "weakness": "Not virality-first, weak auto-detect", "lwa_differentiation": "Virality-first ranking and packaging"},
+  {"tool": "Reap", "pricing": "tiered", "strength": "AI dubbing and scheduling", "weakness": "Broad repurposing, not best-clip-first", "lwa_differentiation": "Best Clip First as product law"},
+  {"tool": "Klap", "pricing": "$23-$63", "strength": "Dubbing and viral score", "weakness": "Limited free trial and expensive tiers", "lwa_differentiation": "Free tier can still produce a real rendered clip"},
+  {"tool": "Captions", "pricing": "$24 Pro", "strength": "Native capture and clipping", "weakness": "Weak long-form podcast ingestion", "lwa_differentiation": "Owns the source layer and ingest path"},
+  {"tool": "Mirra", "pricing": "tiered", "strength": "Text-to-video and carousels", "weakness": "Does not ingest existing video", "lwa_differentiation": "Different category; LWA starts from real source media"},
+  {"tool": "ForkOff", "pricing": "$2K-$10K retainer", "strength": "Human-in-loop managed performance", "weakness": "Enterprise only and slow turnaround", "lwa_differentiation": "AI-grade output at SMB price"},
+  {"tool": "FlowShorts", "pricing": "tiered", "strength": "Faceless niche templates", "weakness": "Niche-only, no source ingestion", "lwa_differentiation": "Works across source types and categories"}
+]

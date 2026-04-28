@@ -21,6 +21,19 @@ def _env_bool(name: str, default: str = "false") -> bool:
     return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _env_int(name: str, default: int | str, *, minimum: int | None = None) -> int:
+    default_value = int(default)
+    raw_value = os.getenv(name, str(default)).strip()
+    try:
+        parsed = int(raw_value)
+    except (TypeError, ValueError):
+        parsed = default_value
+
+    if minimum is not None and parsed < minimum:
+        return default_value if default_value >= minimum else minimum
+    return parsed
+
+
 class Settings:
     def __init__(self) -> None:
         origins = os.getenv("LWA_ALLOWED_ORIGINS") or os.getenv("ALLOWED_ORIGINS", "*")
@@ -30,17 +43,17 @@ class Settings:
         railway_public_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
         derived_public_base_url = f"https://{railway_public_domain}" if railway_public_domain else ""
         self.api_base_url = os.getenv("API_BASE_URL", "").strip() or derived_public_base_url
-        self.port = int(os.getenv("PORT", "8000"))
+        self.port = _env_int("PORT", 8000, minimum=1)
         self.log_level = os.getenv("LOG_LEVEL", "info")
         self.api_key_header_name = os.getenv("LWA_API_KEY_HEADER_NAME", "x-api-key").strip() or "x-api-key"
         self.api_key_secret = os.getenv("LWA_API_KEY_SECRET", "").strip()
         self.client_id_header_name = os.getenv("LWA_CLIENT_ID_HEADER_NAME", "x-lwa-client-id").strip() or "x-lwa-client-id"
         self.default_plan_name = os.getenv("LWA_DEFAULT_PLAN_NAME", "Guest access")
-        self.default_credits_remaining = int(os.getenv("LWA_DEFAULT_CREDITS_REMAINING", "10"))
+        self.default_credits_remaining = _env_int("LWA_DEFAULT_CREDITS_REMAINING", 10, minimum=0)
         self.default_turnaround = os.getenv("LWA_DEFAULT_TURNAROUND", "45 seconds")
-        self.free_daily_limit = int(os.getenv("LWA_FREE_DAILY_LIMIT", str(self.default_credits_remaining)))
-        self.pro_daily_limit = int(os.getenv("LWA_PRO_DAILY_LIMIT", "25"))
-        self.scale_daily_limit = int(os.getenv("LWA_SCALE_DAILY_LIMIT", "100"))
+        self.free_daily_limit = _env_int("LWA_FREE_DAILY_LIMIT", self.default_credits_remaining, minimum=0)
+        self.pro_daily_limit = _env_int("LWA_PRO_DAILY_LIMIT", 25, minimum=-1)
+        self.scale_daily_limit = _env_int("LWA_SCALE_DAILY_LIMIT", 100, minimum=-1)
         self.pro_api_keys = {
             value.strip()
             for value in os.getenv("LWA_PRO_API_KEYS", "").split(",")
@@ -68,8 +81,18 @@ class Settings:
             if railway_volume_mount_path
             else os.path.join(os.getcwd(), "generated", "lwa-generated-assets.sqlite3"),
         )
-        self.generated_asset_retention_hours = int(os.getenv("LWA_GENERATED_ASSET_RETENTION_HOURS", "72"))
-        self.generated_asset_prune_interval_seconds = int(os.getenv("LWA_GENERATED_ASSET_PRUNE_INTERVAL_SECONDS", "1800"))
+        self.generated_asset_retention_hours = _env_int(
+            "LWA_GENERATED_ASSETS_RETENTION_HOURS",
+            os.getenv("LWA_GENERATED_ASSET_RETENTION_HOURS", "24"),
+            minimum=1,
+        )
+        self.generated_assets_max_files = _env_int("LWA_GENERATED_ASSETS_MAX_FILES", 300, minimum=1)
+        self.asset_cleanup_on_startup = _env_bool("LWA_ASSET_CLEANUP_ON_STARTUP", "true")
+        self.generated_asset_prune_interval_seconds = _env_int(
+            "LWA_GENERATED_ASSET_PRUNE_INTERVAL_SECONDS",
+            1800,
+            minimum=60,
+        )
         default_uploads_dir = (
             os.path.join(railway_volume_mount_path, "lwa-uploads")
             if railway_volume_mount_path
@@ -82,8 +105,16 @@ class Settings:
             else os.path.join(os.getcwd(), "generated", "lwa-usage.json")
         )
         self.usage_store_path = os.getenv("LWA_USAGE_STORE_PATH", default_usage_store)
-        self.abuse_window_seconds = int(os.getenv("LWA_ABUSE_WINDOW_SECONDS", "300"))
-        self.abuse_max_generation_requests = int(os.getenv("LWA_ABUSE_MAX_GENERATION_REQUESTS", "8"))
+        default_event_log = (
+            os.path.join(railway_volume_mount_path, "lwa-events.jsonl")
+            if railway_volume_mount_path
+            else os.path.join(os.getcwd(), "generated", "lwa-events.jsonl")
+        )
+        self.event_log_path = os.getenv("LWA_EVENT_LOG_PATH", default_event_log)
+        self.event_log_enabled = _env_bool("LWA_EVENT_LOG_ENABLED", "true")
+        self.event_log_max_metadata_chars = _env_int("LWA_EVENT_LOG_MAX_METADATA_CHARS", 2000, minimum=256)
+        self.abuse_window_seconds = _env_int("LWA_ABUSE_WINDOW_SECONDS", 300, minimum=1)
+        self.abuse_max_generation_requests = _env_int("LWA_ABUSE_MAX_GENERATION_REQUESTS", 8, minimum=1)
         default_platform_db = (
             os.path.join(railway_volume_mount_path, "lwa-platform.sqlite3")
             if railway_volume_mount_path
@@ -96,9 +127,9 @@ class Settings:
             else os.path.join(os.getcwd(), "generated", "lwa-clipping.sqlite3")
         )
         self.clipping_db_path = os.getenv("LWA_CLIPPING_DB_PATH", default_clipping_db)
-        self.max_upload_mb = int(os.getenv("MAX_UPLOAD_MB", "500"))
+        self.max_upload_mb = _env_int("MAX_UPLOAD_MB", 500, minimum=1)
         self.jwt_secret = os.getenv("LWA_JWT_SECRET", "dev-secret-change-me")
-        self.jwt_exp_minutes = int(os.getenv("LWA_JWT_EXP_MINUTES", "43200"))
+        self.jwt_exp_minutes = _env_int("LWA_JWT_EXP_MINUTES", 43200, minimum=1)
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
         self.ai_provider = os.getenv("LWA_AI_PROVIDER") or os.getenv("AI_PROVIDER", "auto")
@@ -115,22 +146,23 @@ class Settings:
         self.ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2")
         self.visual_generation_enabled = os.getenv("LWA_VISUAL_GENERATION_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
         self.visual_generation_model = os.getenv("LWA_VISUAL_GENERATION_MODEL", "lwa-visual-v1").strip() or "lwa-visual-v1"
-        self.visual_generation_timeout_seconds = int(os.getenv("LWA_VISUAL_GENERATION_TIMEOUT_SECONDS", "180"))
-        self.visual_generation_poll_interval_seconds = int(os.getenv("LWA_VISUAL_GENERATION_POLL_INTERVAL_SECONDS", "3"))
+        self.visual_generation_timeout_seconds = _env_int("LWA_VISUAL_GENERATION_TIMEOUT_SECONDS", 180, minimum=1)
+        self.visual_generation_poll_interval_seconds = _env_int("LWA_VISUAL_GENERATION_POLL_INTERVAL_SECONDS", 3, minimum=1)
         self.visual_engine_enabled = _env_bool(
             "LWA_VISUAL_ENGINE_ENABLED",
             os.getenv("LWA_VISUAL_GENERATION_ENABLED", "true"),
         )
         self.visual_engine_api_key = os.getenv("LWA_VISUAL_ENGINE_API_KEY", "").strip()
         self.visual_engine_base_url = os.getenv("LWA_VISUAL_ENGINE_API_BASE_URL", "").strip()
-        self.visual_engine_timeout_seconds = int(
-            os.getenv(
-                "LWA_VISUAL_ENGINE_TIMEOUT_SECONDS",
-                str(self.visual_generation_timeout_seconds),
-            )
+        self.visual_engine_timeout_seconds = _env_int(
+            "LWA_VISUAL_ENGINE_TIMEOUT_SECONDS",
+            self.visual_generation_timeout_seconds,
+            minimum=1,
         )
-        self.visual_engine_max_renders_per_request = int(
-            os.getenv("LWA_VISUAL_ENGINE_MAX_RENDERS_PER_REQUEST", "1")
+        self.visual_engine_max_renders_per_request = _env_int(
+            "LWA_VISUAL_ENGINE_MAX_RENDERS_PER_REQUEST",
+            1,
+            minimum=1,
         )
         self.whop_api_key = os.getenv("WHOP_API_KEY", "")
         self.whop_company_id = os.getenv("WHOP_COMPANY_ID", "")

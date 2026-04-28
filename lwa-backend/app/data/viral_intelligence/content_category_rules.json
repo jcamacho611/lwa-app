@@ -1,0 +1,152 @@
+[
+  {
+    "id": "cc_001",
+    "category": "podcast",
+    "best_clip_length_sec": [30, 75],
+    "top_signal_weights": ["quotable_line", "emotional_spike", "standalone_coherence"],
+    "hook_style": "speaker_quote_pull",
+    "caption_density": "high",
+    "caption_preset": "cs_001",
+    "source": "Castmagic; Klypse; Reelify"
+  },
+  {
+    "id": "cc_002",
+    "category": "livestream_gaming",
+    "best_clip_length_sec": [8, 30],
+    "top_signal_weights": ["emotional_spike", "visual_anchor", "loopability"],
+    "hook_style": "reaction_frame",
+    "caption_density": "medium",
+    "caption_preset": "cs_002",
+    "source": "Virlo; Vivideo"
+  },
+  {
+    "id": "cc_003",
+    "category": "business_strategy",
+    "best_clip_length_sec": [45, 90],
+    "top_signal_weights": ["information_density", "speaker_authority", "conflict_beat"],
+    "hook_style": "contrarian_claim",
+    "caption_density": "high",
+    "caption_preset": "cs_003",
+    "source": "LinkedIn Depth 2026"
+  },
+  {
+    "id": "cc_004",
+    "category": "finance_personal",
+    "best_clip_length_sec": [30, 60],
+    "top_signal_weights": ["information_density", "conflict_beat", "quotable_line"],
+    "hook_style": "specific_dollar_amount",
+    "caption_density": "high",
+    "caption_preset": "cs_005",
+    "source": "FlowShorts; Outlierkit"
+  },
+  {
+    "id": "cc_005",
+    "category": "coaching_self_dev",
+    "best_clip_length_sec": [30, 75],
+    "top_signal_weights": ["emotional_spike", "quotable_line", "standalone_coherence"],
+    "hook_style": "identity_promise",
+    "caption_density": "high",
+    "caption_preset": "cs_001",
+    "source": "Reels by niche 2026"
+  },
+  {
+    "id": "cc_006",
+    "category": "beauty_skincare",
+    "best_clip_length_sec": [15, 45],
+    "top_signal_weights": ["visual_anchor", "information_density", "loopability"],
+    "hook_style": "before_after_first_frame",
+    "caption_density": "medium",
+    "caption_preset": "cs_004",
+    "source": "Appnova; Lemonlight"
+  },
+  {
+    "id": "cc_007",
+    "category": "medspa_clinical",
+    "best_clip_length_sec": [20, 45],
+    "top_signal_weights": ["visual_anchor", "speaker_authority", "information_density"],
+    "hook_style": "result_first_then_method",
+    "caption_density": "high",
+    "caption_preset": "cs_007",
+    "source": "ASSUMPTION - medical content compliance norms"
+  },
+  {
+    "id": "cc_008",
+    "category": "music_artist",
+    "best_clip_length_sec": [8, 25],
+    "top_signal_weights": ["emotional_spike", "loopability", "visual_anchor"],
+    "hook_style": "drop_or_chorus_first",
+    "caption_density": "low",
+    "caption_preset": "cs_004",
+    "source": "TikTok music data"
+  },
+  {
+    "id": "cc_009",
+    "category": "sports_highlights",
+    "best_clip_length_sec": [8, 30],
+    "top_signal_weights": ["emotional_spike", "visual_anchor", "loopability"],
+    "hook_style": "play_climax_first",
+    "caption_density": "low",
+    "caption_preset": "cs_002",
+    "source": "ReframeX sports orgs case"
+  },
+  {
+    "id": "cc_010",
+    "category": "education_explainer",
+    "best_clip_length_sec": [30, 60],
+    "top_signal_weights": ["information_density", "curiosity_gap", "quotable_line"],
+    "hook_style": "shocking_fact_first",
+    "caption_density": "high",
+    "caption_preset": "cs_001",
+    "source": "vidIQ; Lemonlight"
+  },
+  {
+    "id": "cc_011",
+    "category": "debate_political",
+    "best_clip_length_sec": [20, 60],
+    "top_signal_weights": ["conflict_beat", "emotional_spike", "quotable_line"],
+    "hook_style": "contrarian_punch",
+    "caption_density": "high",
+    "caption_preset": "cs_006",
+    "source": "ASSUMPTION - moderation risk noted"
+  },
+  {
+    "id": "cc_012",
+    "category": "reaction",
+    "best_clip_length_sec": [8, 25],
+    "top_signal_weights": ["emotional_spike", "visual_anchor", "loopability"],
+    "hook_style": "face_reaction_at_zero",
+    "caption_density": "low",
+    "caption_preset": "cs_002",
+    "source": "YouTube Shorts patterns"
+  },
+  {
+    "id": "cc_013",
+    "category": "product_demo",
+    "best_clip_length_sec": [20, 45],
+    "top_signal_weights": ["information_density", "visual_anchor", "quotable_line"],
+    "hook_style": "result_first_then_method",
+    "caption_density": "medium",
+    "caption_preset": "cs_003",
+    "source": "Sprout 2025"
+  },
+  {
+    "id": "cc_014",
+    "category": "ai_tech_review",
+    "best_clip_length_sec": [30, 75],
+    "top_signal_weights": ["information_density", "conflict_beat", "speaker_authority"],
+    "hook_style": "i_tested_x",
+    "caption_density": "high",
+    "caption_preset": "cs_005",
+    "source": "OutlierKit Tech CPM"
+  },
+  {
+    "id": "cc_015",
+    "category": "local_business",
+    "best_clip_length_sec": [15, 45],
+    "top_signal_weights": ["visual_anchor", "quotable_line", "emotional_spike"],
+    "hook_style": "local_proof_or_face",
+    "caption_density": "medium",
+    "caption_preset": "cs_004",
+    "source": "ASSUMPTION - SMB social patterns"
+  }
+]

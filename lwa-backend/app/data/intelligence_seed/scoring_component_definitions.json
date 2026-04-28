@@ -1,0 +1,122 @@
+[
+  {
+    "id": "hook_score",
+    "display_name": "Hook Strength",
+    "description": "How compelling the first 1–3 seconds are. Strong hooks use curiosity, interruption, or bold claims.",
+    "user_visible": true,
+    "council_owner": "Product Council",
+    "raises": ["strong opening verb", "curiosity gap", "interruption pattern", "visual energy in first 3s"],
+    "lowers": ["hey guys opener", "slow start", "filler words in first 5s", "weak intro"],
+    "backend_method": "keyword_match_hook_library + audio_energy_t0_t3"
+  },
+  {
+    "id": "retention_score",
+    "display_name": "Retention Potential",
+    "description": "Estimated ability to hold viewers to the end. Driven by pacing, filler density, and curiosity maintenance.",
+    "user_visible": true,
+    "council_owner": "Product Council",
+    "raises": ["low filler word density", "pattern interrupts at 8s/15s", "curiosity gap maintained"],
+    "lowers": ["filler words > 3 per 30s", "slow monotone sections"],
+    "backend_method": "filler_density + pacing_variance + structure_analysis"
+  },
+  {
+    "id": "emotional_spike_score",
+    "display_name": "Emotional Spike",
+    "description": "Presence and intensity of emotional moments. Joy and surprise drive shares; anger drives comments.",
+    "user_visible": true,
+    "council_owner": "Creator Intelligence Council",
+    "raises": ["emotion intensity > 60", "surprise or transformation moment", "sentiment variation"],
+    "lowers": ["flat tone", "no sentiment variation", "monotone delivery"],
+    "backend_method": "sentiment_nlp + audio_pitch_variance + emotion_keyword_density"
+  },
+  {
+    "id": "platform_fit_score",
+    "display_name": "Platform Fit",
+    "description": "How well the clip matches the target platform's length, pacing, and audience expectations.",
+    "user_visible": true,
+    "council_owner": "Product Council",
+    "raises": ["length in optimal range", "pacing matches platform", "content category matches audience"],
+    "lowers": ["wrong aspect ratio", "pacing mismatch", "competitor platform watermark"],
+    "backend_method": "platform_rules_engine per clip metadata"
+  },
+  {
+    "id": "clarity_score",
+    "display_name": "Clarity",
+    "description": "How clearly the message is communicated. Clean audio, structured delivery, and single focus raise this score.",
+    "user_visible": false,
+    "council_owner": "Engineering Council",
+    "raises": ["clean audio", "structured delivery", "single clear message"],
+    "lowers": ["background noise", "excessive jargon", "multiple unresolved threads"],
+    "backend_method": "audio_snr + transcript_readability + concept_count"
+  },
+  {
+    "id": "visual_energy_score",
+    "display_name": "Visual Energy",
+    "description": "Perceptible energy of the video frame — brightness, motion, contrast, face presence.",
+    "user_visible": false,
+    "council_owner": "Engineering Council",
+    "raises": ["high brightness", "motion detected", "color contrast", "face visible"],
+    "lowers": ["static shot", "dark underlit", "single-color background"],
+    "backend_method": "frame_brightness + motion_vector + scene_change_count"
+  },
+  {
+    "id": "audio_energy_score",
+    "display_name": "Audio Energy",
+    "description": "Volume level, clarity, and emotional expressiveness of the audio.",
+    "user_visible": false,
+    "council_owner": "Engineering Council",
+    "raises": ["good volume level", "emotional voice", "clear audio"],
+    "lowers": ["low volume", "background noise", "flat delivery"],
+    "backend_method": "audio_rms + peak_detection + noise_floor"
+  },
+  {
+    "id": "controversy_score",
+    "display_name": "Controversy Signal",
+    "description": "Presence of contrarian claims or divisive opinions that trigger comment and share behavior.",
+    "user_visible": false,
+    "council_owner": "Creator Intelligence Council",
+    "raises": ["contrarian claim", "challenge to popular belief", "strong declarative opinion"],
+    "lowers": ["neutral delivery", "both-sides framing", "corporate hedging"],
+    "backend_method": "keyword_polarity + negation_of_common_belief"
+  },
+  {
+    "id": "educational_value_score",
+    "display_name": "Educational Value",
+    "description": "How much the viewer learns. High save rate on Instagram correlates with strong educational content.",
+    "user_visible": true,
+    "council_owner": "Creator Intelligence Council",
+    "raises": ["concept density", "instruction keywords", "step-based delivery"],
+    "lowers": ["entertainment-only", "no actionable insight"],
+    "backend_method": "concept_count_per_min + instruction_keyword_density"
+  },
+  {
+    "id": "share_comment_score",
+    "display_name": "Share / Comment Bait",
+    "description": "How likely viewers are to share to a specific person or leave a comment.",
+    "user_visible": false,
+    "council_owner": "Creator Intelligence Council",
+    "raises": ["gift content (send to someone)", "debate trigger", "open question at end"],
+    "lowers": ["no natural discussion thread", "fully self-contained"],
+    "backend_method": "share_trigger_detection + question_ending_detection"
+  },
+  {
+    "id": "render_readiness_score",
+    "display_name": "Render Readiness",
+    "description": "Technical quality of the source that determines whether a render is possible.",
+    "user_visible": true,
+    "council_owner": "Engineering Council",
+    "raises": ["clean audio", "valid aspect ratio", "sufficient length", "good lighting"],
+    "lowers": ["corrupt segments", "very low resolution", "clip < 8 seconds"],
+    "backend_method": "technical_quality_checks"
+  },
+  {
+    "id": "commercial_value_score",
+    "display_name": "Commercial Value",
+    "description": "Likelihood the clip can drive commercial outcomes — leads, sales, community joins.",
+    "user_visible": false,
+    "council_owner": "Growth Council",
+    "raises": ["product demo", "business category", "transformation claim"],
+    "lowers": ["pure entertainment", "no commercial hook"],
+    "backend_method": "commercial_keyword_detection + category_tag"
+  }
+]

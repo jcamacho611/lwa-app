@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field, model_validator
 class ProcessRequest(BaseModel):
     video_url: Optional[str] = Field(default=None, description="Public URL for the source video")
     upload_file_id: Optional[str] = None
+    prompt: Optional[str] = None
+    text_prompt: Optional[str] = None
     source_type: Optional[str] = None
     upload_content_type: Optional[str] = None
     selected_trend: Optional[str] = None
@@ -17,8 +19,9 @@ class ProcessRequest(BaseModel):
 
     @model_validator(mode="after")
     def ensure_source(self) -> "ProcessRequest":
-        if not self.video_url and not self.upload_file_id:
-            raise ValueError("Provide either video_url or upload_file_id")
+        has_prompt = bool((self.prompt or "").strip() or (self.text_prompt or "").strip())
+        if not self.video_url and not self.upload_file_id and not has_prompt:
+            raise ValueError("Provide video_url, upload_file_id, prompt, or text_prompt")
         return self
 
 
@@ -118,8 +121,10 @@ class ClipResult(BaseModel):
     reason: Optional[str] = None
     why_this_matters: Optional[str] = None
     score_breakdown: Optional[ScoreBreakdown] = None
+    signals: Optional[Dict[str, float]] = None
     scoring_explanation: Optional[str] = None
     category: Optional[str] = None
+    detected_category: Optional[str] = None
     format: Optional[str] = None
     preview_url: Optional[str] = None
     raw_clip_url: Optional[str] = None
@@ -135,18 +140,28 @@ class ClipResult(BaseModel):
     render_status: Optional[str] = None
     is_rendered: Optional[bool] = None
     is_strategy_only: Optional[bool] = None
+    rendered: Optional[bool] = None
+    strategy_only: Optional[bool] = None
+    is_best_clip: Optional[bool] = None
+    fallback_reason: Optional[str] = None
     post_rank: Optional[int] = None
     best_post_order: Optional[int] = None
     virality_score: Optional[int] = None
     rank: Optional[int] = None
+    target_platform: Optional[str] = None
+    platform_compatibility: Optional[Dict[str, bool]] = None
+    frontend_badges: Optional[List[Dict[str, Any]]] = None
     transcript_excerpt: Optional[str] = None
     edit_profile: Optional[str] = None
     aspect_ratio: Optional[str] = None
     thumbnail_text: Optional[str] = None
     cta_suggestion: Optional[str] = None
     hook_variants: List[str] = Field(default_factory=list)
+    hooks: Optional[List[Dict[str, Any]]] = None
     caption_variants: dict[str, str] = Field(default_factory=dict)
     caption_style: Optional[str] = None
+    caption_preset: Optional[str] = None
+    caption_track: Optional[Dict[str, Any]] = None
     caption_modes: Optional[CaptionModes] = None
     edit_plan: Optional[EditPlan] = None
     export_bundle: Optional[ExportBundle] = None
@@ -169,6 +184,8 @@ class ClipResult(BaseModel):
     motion_prompt: Optional[str] = None
     render_provider: Optional[str] = None
     rendered_by: Optional[str] = None
+    ai_provider: Optional[str] = None
+    ai_model: Optional[str] = None
     visual_engine_status: Optional[str] = None
     render_quality_score: Optional[int] = None
     render_readiness_score: Optional[int] = None
@@ -183,6 +200,7 @@ class ClipResult(BaseModel):
     evergreen_status: Optional[str] = None
     time_sensitivity: Optional[str] = None
     approval_state: Optional[str] = None
+    risk_flags: List[str] = Field(default_factory=list)
     campaign_requirement_checks: List[CampaignRequirementCheck] = Field(default_factory=list)
 
 

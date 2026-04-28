@@ -1,0 +1,72 @@
+[
+  {
+    "id": "medical_claim",
+    "name": "Medical Claim",
+    "severity": "high",
+    "description": "Clip contains language that could be interpreted as medical diagnosis, treatment recommendation, or health promise.",
+    "detection_keywords": ["cures", "treats", "heals", "eliminates", "removes", "dissolves", "reverses", "anti-aging", "clinically proven", "FDA approved", "no side effects", "guaranteed results"],
+    "detection_categories": ["medspa", "fitness"],
+    "action": "flag_for_review",
+    "disclaimer": "Results may vary. Consult a qualified medical professional before starting any treatment.",
+    "blocks_render": false
+  },
+  {
+    "id": "financial_advice",
+    "name": "Financial Advice",
+    "severity": "medium",
+    "description": "Clip contains specific investment recommendations or guaranteed return promises.",
+    "detection_keywords": ["guaranteed returns", "risk-free", "you will make", "invest in this", "buy this stock", "this coin will", "100% profit", "no risk"],
+    "detection_categories": ["finance", "business"],
+    "action": "flag_for_review",
+    "disclaimer": "This is not financial advice. Past performance does not guarantee future results.",
+    "blocks_render": false
+  },
+  {
+    "id": "copyright_music",
+    "name": "Copyrighted Music",
+    "severity": "high",
+    "description": "Clip contains identifiable copyrighted music in the audio track.",
+    "detection_keywords": [],
+    "detection_categories": ["music"],
+    "action": "flag_for_review",
+    "disclaimer": null,
+    "blocks_render": false,
+    "notes": "Audio fingerprinting required for accurate detection. Flag manually for music category clips."
+  },
+  {
+    "id": "sports_rights",
+    "name": "Sports / Broadcast Rights",
+    "severity": "high",
+    "description": "Clip may contain footage from a professional sports broadcast.",
+    "detection_keywords": [],
+    "detection_categories": ["sports"],
+    "action": "flag_for_review",
+    "disclaimer": null,
+    "blocks_render": false,
+    "notes": "Professional sports footage may be DMCA-protected. Flag for all sports category clips."
+  },
+  {
+    "id": "explicit_language",
+    "name": "Explicit Language",
+    "severity": "low",
+    "description": "Clip contains profanity or explicit language that may limit platform distribution.",
+    "detection_keywords": ["fuck", "shit", "bitch", "ass", "damn", "crap"],
+    "detection_categories": [],
+    "action": "add_warning",
+    "disclaimer": null,
+    "blocks_render": false,
+    "notes": "Apply censored caption replacement. Warn creator about reduced distribution reach."
+  },
+  {
+    "id": "platform_watermark",
+    "name": "Competitor Platform Watermark",
+    "severity": "medium",
+    "description": "Clip contains a visible watermark from a competing platform (TikTok, Instagram, etc.).",
+    "detection_keywords": ["@tiktok", "tiktok.com", "@instagram", "reels"],
+    "detection_categories": [],
+    "action": "add_warning",
+    "disclaimer": null,
+    "blocks_render": false,
+    "notes": "Instagram and TikTok suppress cross-platform watermarked content. Crop or blur watermark before posting."
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "pr_001",
+    "platform": "tiktok",
+    "optimal_length_sec": [15, 35],
+    "aspect_ratio": "9:16",
+    "caption_required": "strongly_recommended",
+    "hook_window_sec": [1, 3],
+    "top_ranking_signal": "watch_time + completion_rate",
+    "watermark_penalty": true,
+    "hashtag_count": [3, 5],
+    "source": "ToolsBear; PostEverywhere"
+  },
+  {
+    "id": "pr_002",
+    "platform": "reels_instagram",
+    "optimal_length_sec": [30, 90],
+    "aspect_ratio": "9:16",
+    "caption_required": "strongly_recommended",
+    "hook_window_sec": [1, 1.7],
+    "top_ranking_signal": "dm_shares > saves > comments > likes",
+    "watermark_penalty": true,
+    "hashtag_count": [3, 5],
+    "source": "Mosseri 2025; Dataslayer"
+  },
+  {
+    "id": "pr_003",
+    "platform": "youtube_shorts",
+    "optimal_length_sec": [15, 60],
+    "aspect_ratio": "9:16",
+    "caption_required": "strongly_recommended",
+    "hook_window_sec": [0, 3],
+    "top_ranking_signal": "retention_pct + rewatches",
+    "watermark_penalty": false,
+    "hashtag_count": [0, 3],
+    "source": "Miraflow; vidIQ"
+  },
+  {
+    "id": "pr_004",
+    "platform": "facebook_reels",
+    "optimal_length_sec": [30, 90],
+    "aspect_ratio": "9:16",
+    "caption_required": "required",
+    "hook_window_sec": [1, 3],
+    "top_ranking_signal": "shares + watch_time",
+    "watermark_penalty": true,
+    "hashtag_count": [0, 3],
+    "source": "Meta business specs"
+  },
+  {
+    "id": "pr_005",
+    "platform": "x_video",
+    "optimal_length_sec": [30, 140],
+    "aspect_ratio": "9:16 or 16:9",
+    "caption_required": "recommended",
+    "hook_window_sec": [1, 3],
+    "top_ranking_signal": "replies + views (premium)",
+    "watermark_penalty": false,
+    "hashtag_count": [1, 3],
+    "source": "ASSUMPTION - X analytics opacity"
+  },
+  {
+    "id": "pr_006",
+    "platform": "linkedin_video",
+    "optimal_length_sec": [30, 90],
+    "aspect_ratio": "9:16 native",
+    "caption_required": "required",
+    "hook_window_sec": [1, 3],
+    "top_ranking_signal": "depth_score (dwell + comment depth)",
+    "watermark_penalty": false,
+    "hashtag_count": [3, 5],
+    "source": "LinkedIn 2026 algo; Whitehat"
+  },
+  {
+    "id": "pr_007",
+    "platform": "whop_community",
+    "optimal_length_sec": [30, 180],
+    "aspect_ratio": "9:16 or 16:9",
+    "caption_required": "recommended",
+    "hook_window_sec": [1, 5],
+    "top_ranking_signal": "in-community shares",
+    "watermark_penalty": false,
+    "hashtag_count": null,
+    "source": "ASSUMPTION - Whop creator-platform"
+  }
+]

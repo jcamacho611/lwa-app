@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 from threading import Lock
@@ -11,6 +12,7 @@ from fastapi import HTTPException, Request
 from ..core.config import Settings
 from ..models.schemas import FeatureFlags
 from ..models.user import UserRecord
+from .event_log import emit_event
 
 
 def usage_day_key() -> str:
@@ -19,6 +21,13 @@ def usage_day_key() -> str:
 
 def normalize_header_value(value: str | None) -> str:
     return (value or "").strip()
+
+
+def stable_hash(value: str) -> str:
+    normalized = normalize_header_value(value)
+    if not normalized:
+        return "anonymous"
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
 
 
 @dataclass(frozen=True)
@@ -46,7 +55,13 @@ class UsageStore:
         self._lock = Lock()
         self._retention_days = retention_days
 
-    def reserve(self, *, subject: str, daily_limit: int) -> tuple[str, int]:
+    def reserve(
+        self,
+        *,
+        subject: str,
+        daily_limit: int,
+        error_detail: dict[str, object] | None = None,
+    ) -> tuple[str, int]:
         usage_day = usage_day_key()
         with self._lock:
             payload = self._load()
@@ -54,17 +69,21 @@ class UsageStore:
             day_bucket = payload.setdefault(usage_day, {})
             current = int(day_bucket.get(subject, 0))
             if daily_limit >= 0 and current >= daily_limit:
-                plan_hint = (
-                    "Upgrade to Pro for 20 clips per run and 25 daily generations, "
-                    "or Scale for 40 clips, campaign mode, and posting queue access."
-                )
                 raise HTTPException(
                     status_code=402,
-                    detail=(
-                        f"Daily generation limit reached for the current plan. "
-                        f"Add a paid API key in Settings or upgrade on the web before running more jobs. "
-                        f"{plan_hint}"
-                    ),
+                    detail=error_detail or {
+                        "code": "quota_exceeded",
+                        "message": (
+                            "Daily generation limit reached for the current plan. "
+                            "Add a paid API key in Settings or upgrade on the web before running more jobs."
+                        ),
+                        "plan": "current",
+                        "credits_remaining": 0,
+                        "upgrade_hint": (
+                            "Upgrade to Pro for more runs and premium packaging, "
+                            "or Scale for higher-volume campaign workflows."
+                        ),
+                    },
                 )
 
             updated = current + 1
@@ -129,11 +148,11 @@ def resolve_entitlement(
 
     if api_key and api_key in settings.scale_api_keys:
         plan = build_scale_plan(settings)
-        subject = f"scale:{api_key}"
+        subject = f"scale:{stable_hash(api_key)}"
         subject_source = "scale_api_key"
     elif api_key and api_key in settings.pro_api_keys:
         plan = build_pro_plan(settings)
-        subject = f"pro:{api_key}"
+        subject = f"pro:{stable_hash(api_key)}"
         subject_source = "pro_api_key"
     elif current_user:
         plan = build_plan_from_user(settings, current_user.plan)
@@ -141,17 +160,46 @@ def resolve_entitlement(
         subject_source = "user"
     else:
         plan = build_free_plan(settings)
+        # Client ID is a quota hint, not an authenticated identity.
         if client_id:
-            subject = f"client:{client_id}"
+            subject = f"client:{stable_hash(client_id)}"
             subject_source = "client_id"
         else:
             remote_host = request.client.host if request.client else "anonymous"
-            subject = f"ip:{remote_host}"
+            subject = f"ip:{stable_hash(remote_host)}"
             subject_source = "remote_ip"
 
-    usage_day, credits_remaining = usage_store.reserve(
-        subject=subject,
-        daily_limit=plan.daily_limit,
+    try:
+        usage_day, credits_remaining = usage_store.reserve(
+            subject=subject,
+            daily_limit=plan.daily_limit,
+            error_detail=build_quota_exceeded_detail(plan),
+        )
+    except HTTPException as error:
+        if error.status_code == 402:
+            emit_event(
+                settings=settings,
+                event="quota_exceeded",
+                plan_code=plan.code,
+                subject_source=subject_source,
+                status="blocked",
+                metadata={
+                    "daily_limit": plan.daily_limit,
+                    "client_hint": "present" if client_id else "missing",
+                },
+            )
+        raise
+
+    emit_event(
+        settings=settings,
+        event="quota_reserved",
+        plan_code=plan.code,
+        subject_source=subject_source,
+        status="ok",
+        metadata={
+            "daily_limit": plan.daily_limit,
+            "credits_remaining": credits_remaining,
+        },
     )
     return EntitlementContext(
         subject=subject,
@@ -256,3 +304,20 @@ def build_plan_from_user(settings: Settings, plan_code: str) -> PlanDefinition:
     if normalized == "pro":
         return build_pro_plan(settings)
     return build_free_plan(settings)
+
+
+def build_quota_exceeded_detail(plan: PlanDefinition) -> dict[str, object]:
+    return {
+        "code": "quota_exceeded",
+        "message": (
+            "You've used today's free generations." if plan.code == "free" else
+            f"You've used today's {plan.name} generations."
+        ),
+        "plan": plan.name,
+        "plan_code": plan.code,
+        "credits_remaining": 0,
+        "upgrade_hint": (
+            "Upgrade or add your paid API key to keep generating. "
+            "Your saved results are still available."
+        ),
+    }

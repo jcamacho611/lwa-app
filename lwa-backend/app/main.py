@@ -13,6 +13,7 @@ from .api.routes.clips import router as clips_router
 from .api.routes.edit import router as edit_router
 from .api.routes.generate import router as generate_router
 from .api.routes.generation import router as generation_router
+from .api.routes.intelligence_data import router as intelligence_data_router
 from .api.routes.me import router as me_router
 from .api.routes.posting import router as posting_router
 from .api.routes.upload import router as upload_router
@@ -20,7 +21,7 @@ from .api.routes.video_analysis import router as video_analysis_router
 from .api.routes.visual_generation import router as visual_generation_router
 from .api.routes.wallet import router as wallet_router
 from .core.config import get_settings
-from .services.clip_service import maybe_prune_generated_assets
+from .services.asset_retention import cleanup_generated_assets_nonfatal_for_settings
 from .services.db_init import initialize_databases
 
 settings = get_settings()
@@ -29,7 +30,16 @@ logger = logging.getLogger("uvicorn.error")
 def create_app() -> FastAPI:
     Path(settings.generated_assets_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.uploads_dir).mkdir(parents=True, exist_ok=True)
-    maybe_prune_generated_assets(settings, force=True)
+    if settings.asset_cleanup_on_startup:
+        cleanup_stats = cleanup_generated_assets_nonfatal_for_settings(settings)
+        logger.info(
+            "generated_asset_startup_cleanup scanned_count=%s deleted_count=%s retained_count=%s bytes_deleted=%s store_removed=%s",
+            cleanup_stats.get("scanned_count", 0),
+            cleanup_stats.get("deleted_count", 0),
+            cleanup_stats.get("retained_count", 0),
+            cleanup_stats.get("bytes_deleted", 0),
+            cleanup_stats.get("store_removed", 0),
+        )
     initialize_databases(settings)
     app = FastAPI(
         title=settings.app_name,
@@ -47,6 +57,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(generate_router)
     app.include_router(generation_router)
+    app.include_router(intelligence_data_router)
     app.include_router(video_analysis_router)
     app.include_router(visual_generation_router)
     app.include_router(auth_router)

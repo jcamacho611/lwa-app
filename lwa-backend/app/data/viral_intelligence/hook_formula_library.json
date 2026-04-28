@@ -1,0 +1,16 @@
+[
+  {"id": "hf_001", "name": "bold_claim_proof", "formula": "[Surprising claim]. [Immediate visual/data proof].", "example": "This converts at 14%. Here's the page.", "best_for": ["business_strategy", "finance_personal", "coaching_self_dev"]},
+  {"id": "hf_002", "name": "contrarian", "formula": "Everyone tells you to [X]. That's why you're [bad outcome].", "example": "Everyone says hustle harder. That's why you're broke.", "best_for": ["coaching_self_dev", "business_strategy", "debate_political"]},
+  {"id": "hf_003", "name": "curiosity_gap", "formula": "If you don't know [X], you're losing [Y].", "example": "If you don't know this caption rule, you're losing 60% of your reach.", "best_for": ["education_explainer", "finance_personal", "ai_tech_review"]},
+  {"id": "hf_004", "name": "specific_number", "formula": "[Specific dollar/number] - here's how.", "example": "$4,200 in 30 days. Here's the exact playbook.", "best_for": ["finance_personal", "business_strategy"]},
+  {"id": "hf_005", "name": "identity_promise", "formula": "If you're [X], this is for you.", "example": "If you're a creator under 10K, watch this.", "best_for": ["coaching_self_dev", "beauty_skincare", "local_business"]},
+  {"id": "hf_006", "name": "question_provocative", "formula": "Did you know [unexpected fact]?", "example": "Did you know Reels under 30s outperform longer ones for new audiences?", "best_for": ["education_explainer", "ai_tech_review"]},
+  {"id": "hf_007", "name": "direct_address", "formula": "Stop scrolling if you want [outcome].", "example": "Stop scrolling if you want to double your reach this week.", "best_for": ["coaching_self_dev", "business_strategy", "reaction"]},
+  {"id": "hf_008", "name": "story_tease", "formula": "Here's what happened when I [X] for [time].", "example": "Here's what happened when I posted at 3am for 30 days.", "best_for": ["podcast", "coaching_self_dev", "local_business"]},
+  {"id": "hf_009", "name": "controversial_opener", "formula": "[Bold negative claim about consensus].", "example": "Most B2B marketing teams waste 60% of their video budget.", "best_for": ["business_strategy", "linkedin_video", "debate_political"]},
+  {"id": "hf_010", "name": "result_first", "formula": "[Result]. [Method].", "example": "Lost 14 lbs. Here's the protocol.", "best_for": ["beauty_skincare", "finance_personal", "product_demo"]},
+  {"id": "hf_011", "name": "secret_reveal", "formula": "The [X] nobody talks about.", "example": "The pricing rule nobody talks about.", "best_for": ["business_strategy", "finance_personal", "ai_tech_review"]},
+  {"id": "hf_012", "name": "list_promise", "formula": "[N] [things] that [outcome].", "example": "3 mistakes killing your conversions.", "best_for": ["education_explainer", "business_strategy", "product_demo"]},
+  {"id": "hf_013", "name": "wait_for_it", "formula": "Watch what happens when [X].", "example": "Watch what happens when the payoff finally hits.", "best_for": ["reaction", "livestream_gaming", "music_artist"]},
+  {"id": "hf_014", "name": "proof_offer", "formula": "[Social proof] - [next step].", "example": "10K creators use this. Try free.", "best_for": ["business_strategy", "product_demo", "local_business"]}
+]

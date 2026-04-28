@@ -1,0 +1,9 @@
+[
+  {"id": "cs_001", "preset_name": "karaoke_bold", "font_weight": "800", "size": "64-72px", "position": "center-lower-third", "animation": "word-by-word highlight", "bg_treatment": "none", "category_fit": ["podcast", "coaching_self_dev", "education_explainer"]},
+  {"id": "cs_002", "preset_name": "block_punch", "font_weight": "900", "size": "72-96px", "position": "upper-third", "animation": "snap-in-hold-snap-out", "bg_treatment": "semi-transparent pill", "category_fit": ["sports_highlights", "livestream_gaming", "reaction"]},
+  {"id": "cs_003", "preset_name": "clean_editorial", "font_weight": "600", "size": "48-56px", "position": "lower-third", "animation": "fade", "bg_treatment": "none", "category_fit": ["business_strategy", "finance_personal", "linkedin_video", "product_demo"]},
+  {"id": "cs_004", "preset_name": "beauty_minimal", "font_weight": "500", "size": "44-52px", "position": "lower-third", "animation": "crossfade", "bg_treatment": "none", "category_fit": ["beauty_skincare", "music_artist", "local_business"]},
+  {"id": "cs_005", "preset_name": "data_emphasis", "font_weight": "800 numerics, 600 text", "size": "64px numerics", "position": "center", "animation": "numbers pop on count", "bg_treatment": "thin underline", "category_fit": ["finance_personal", "business_strategy", "ai_tech_review"]},
+  {"id": "cs_006", "preset_name": "tabloid_punch", "font_weight": "900 italic", "size": "80-96px", "position": "upper-center", "animation": "shake on key word", "bg_treatment": "yellow highlight", "category_fit": ["debate_political"]},
+  {"id": "cs_007", "preset_name": "clinical_safe", "font_weight": "600", "size": "44-48px", "position": "lower-third", "animation": "fade", "bg_treatment": "white pill", "category_fit": ["medspa_clinical"]}
+]

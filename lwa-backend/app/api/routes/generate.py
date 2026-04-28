@@ -25,6 +25,7 @@ from ...services.clip_service import (
     run_job,
 )
 from ...services.entitlements import UsageStore, resolve_entitlement
+from ...services.event_log import emit_event
 from ...services.export_bundle import create_export_bundle
 
 router = APIRouter()
@@ -114,6 +115,17 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
     await enforce_generation_throttle(entitlement=entitlement)
     request_id = f"req_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
+    emit_event(
+        settings=settings,
+        event="generation_requested",
+        request_id=request_id,
+        plan_code=entitlement.plan.code,
+        subject_source=entitlement.subject_source,
+        metadata={
+            "target_platform": resolved_request.target_platform or "auto",
+            "source_type": resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
+        },
+    )
     logger.info(
         "route_generate request_id=%s route=%s target_platform=%s video_url=%s plan=%s subject_source=%s",
         request_id,
@@ -139,8 +151,30 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
         # Re-raise HTTP exceptions (including 402 quota errors) without releasing usage,
         # since the quota was already consumed by resolve_entitlement.
         raise
-    except Exception:
+    except Exception as error:
         usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
+        emit_event(
+            settings=settings,
+            event="quota_released",
+            request_id=request_id,
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            status="released",
+            metadata={"reason": "direct_generation_failure"},
+        )
+        emit_event(
+            settings=settings,
+            event="generation_failed",
+            request_id=request_id,
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            status="failed",
+            metadata={
+                "target_platform": resolved_request.target_platform or "auto",
+                "source_type": resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
+                "error_code": type(error).__name__,
+            },
+        )
         raise
 
 
@@ -162,6 +196,18 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
     await enforce_generation_throttle(entitlement=entitlement)
     job_id = f"job_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
+    emit_event(
+        settings=settings,
+        event="generation_requested",
+        request_id=job_id,
+        plan_code=entitlement.plan.code,
+        subject_source=entitlement.subject_source,
+        metadata={
+            "target_platform": resolved_request.target_platform or "auto",
+            "source_type": resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
+            "mode": "async_job",
+        },
+    )
     logger.info(
         "route_job request_id=%s route=%s target_platform=%s video_url=%s plan=%s subject_source=%s",
         job_id,
@@ -288,4 +334,12 @@ async def enforce_generation_throttle(*, entitlement) -> None:
         await request_throttle.enforce(subject=entitlement.subject)
     except HTTPException:
         usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
+        emit_event(
+            settings=settings,
+            event="quota_released",
+            plan_code=entitlement.plan.code,
+            subject_source=entitlement.subject_source,
+            status="released",
+            metadata={"reason": "generation_throttle"},
+        )
         raise

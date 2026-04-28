@@ -1,0 +1,98 @@
+[
+  {
+    "id": "gaming",
+    "name": "Gaming",
+    "clip_moments": ["clutch plays", "rage reactions", "funny bugs", "impressive skill", "trash talk"],
+    "hook_formula_ids": ["changed_everything", "watch_until", "proof"],
+    "best_platforms": ["tiktok", "youtube_shorts", "x_video"],
+    "caption_preset": "gaming_hype",
+    "scoring_boosts": {"visual_energy_score": 15, "audio_energy_score": 10},
+    "risk_flags": ["sports_rights"],
+    "hard_to_clip": "Context required for non-gaming viewers; gameplay audio can be distracting.",
+    "lwa_automate": "Audio spike detection as moment proxy; face-cam reaction crop"
+  },
+  {
+    "id": "podcast",
+    "name": "Podcast",
+    "clip_moments": ["genuine disagreements", "unexpected admissions", "strong takes", "personal stories", "nobody talks about this"],
+    "hook_formula_ids": ["contrarian", "nobody_tells", "hidden_signal"],
+    "best_platforms": ["tiktok", "youtube_shorts", "x_video", "linkedin_video"],
+    "caption_preset": "podcast_clean",
+    "scoring_boosts": {"controversy_score": 10, "educational_value_score": 8},
+    "risk_flags": [],
+    "hard_to_clip": "Long context setup; meandering conversations; b-roll may be unavailable.",
+    "lwa_automate": "Speaker identification; clip boundary detection at topic shifts; guest name lower-third"
+  },
+  {
+    "id": "business",
+    "name": "Business / Entrepreneurship",
+    "clip_moments": ["revenue reveals", "failure stories", "contrarian advice", "founder insights", "step-by-step breakdowns"],
+    "hook_formula_ids": ["expensive_mistake", "before_after", "contrarian", "proof"],
+    "best_platforms": ["tiktok", "linkedin_video", "youtube_shorts"],
+    "caption_preset": "bold_drop",
+    "scoring_boosts": {"commercial_value_score": 12, "educational_value_score": 10},
+    "risk_flags": [],
+    "hard_to_clip": "Long explanations needed for context; jargon can alienate general audience.",
+    "lwa_automate": "Revenue number extraction for hook generation; transformation pattern detection"
+  },
+  {
+    "id": "ai_tech",
+    "name": "AI / Tech",
+    "clip_moments": ["demo reveals", "I built this in X hours", "tool comparison demos", "future predictions"],
+    "hook_formula_ids": ["tested", "changed_everything", "proof"],
+    "best_platforms": ["tiktok", "youtube_shorts", "linkedin_video", "x_video"],
+    "caption_preset": "podcast_clean",
+    "scoring_boosts": {"educational_value_score": 12, "commercial_value_score": 8},
+    "risk_flags": [],
+    "hard_to_clip": "Screen recordings need zoom/crop treatment; audio may be weak.",
+    "lwa_automate": "Tool name extraction for hook generation; screen content crop assist"
+  },
+  {
+    "id": "medspa",
+    "name": "Medspa / Aesthetics",
+    "clip_moments": ["before/after transformations", "treatment education", "myth busting", "product reveals"],
+    "hook_formula_ids": ["before_after", "nobody_tells", "tested"],
+    "best_platforms": ["tiktok", "instagram_reels", "facebook_reels"],
+    "caption_preset": "clean_reels",
+    "scoring_boosts": {"visual_energy_score": 15},
+    "risk_flags": ["medical_claim"],
+    "hard_to_clip": "Medical claim risk is HIGH. Every clip needs compliance check before export.",
+    "lwa_automate": "Before/after scene detection; medical claim language flagging; disclaimer injection"
+  },
+  {
+    "id": "fitness",
+    "name": "Fitness / Health",
+    "clip_moments": ["form breakdowns", "before/after reveals", "PR moments", "nutrition myth busting"],
+    "hook_formula_ids": ["before_after", "stop_doing", "tested"],
+    "best_platforms": ["tiktok", "instagram_reels", "youtube_shorts"],
+    "caption_preset": "bold_drop",
+    "scoring_boosts": {"visual_energy_score": 12},
+    "risk_flags": ["medical_claim"],
+    "hard_to_clip": "Needs high-quality video to show form. Gym audio noise is common.",
+    "lwa_automate": "Visual change detection; noise filtering for gym audio; form cue overlay"
+  },
+  {
+    "id": "music",
+    "name": "Music",
+    "clip_moments": ["drop moments", "reaction faces during verses", "studio session reveals", "producer reveals"],
+    "hook_formula_ids": ["hidden_signal", "changed_everything"],
+    "best_platforms": ["tiktok", "instagram_reels", "youtube_shorts"],
+    "caption_preset": "karaoke_fast",
+    "scoring_boosts": {"audio_energy_score": 20, "emotional_spike_score": 10},
+    "risk_flags": ["copyright_music"],
+    "hard_to_clip": "Rights issues common. Only clip creator-owned music content.",
+    "lwa_automate": "Audio energy peak detection; beat drop timestamp extraction"
+  },
+  {
+    "id": "local_business",
+    "name": "Local Service Business",
+    "clip_moments": ["behind-the-scenes transformation", "before/after job reveal", "customer reactions", "what we found"],
+    "hook_formula_ids": ["before_after", "stop_doing"],
+    "best_platforms": ["tiktok", "instagram_reels", "facebook_reels"],
+    "caption_preset": "podcast_clean",
+    "scoring_boosts": {"visual_energy_score": 10},
+    "risk_flags": [],
+    "hard_to_clip": "Variable production quality; owner is often the camera operator.",
+    "lwa_automate": "Visual transformation detection; local identity extraction; simple CTA generation"
+  }
+]

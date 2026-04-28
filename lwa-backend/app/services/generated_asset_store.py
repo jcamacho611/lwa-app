@@ -205,6 +205,35 @@ class GeneratedAssetStore:
             ).fetchall()
         return [self._row_to_dict(row) for row in rows]
 
+    def prune_assets(
+        self,
+        *,
+        stale_before: str | None = None,
+        removed_local_paths: list[str] | None = None,
+    ) -> int:
+        clauses: list[str] = []
+        values: list[Any] = []
+
+        if stale_before:
+            clauses.append("COALESCE(updated_at, created_at) < ?")
+            values.append(stale_before)
+
+        normalized_paths = [path for path in (removed_local_paths or []) if str(path).strip()]
+        if normalized_paths:
+            placeholders = ", ".join("?" for _ in normalized_paths)
+            clauses.append(f"local_path IN ({placeholders})")
+            values.extend(normalized_paths)
+
+        if not clauses:
+            return 0
+
+        with self._lock, self._connect() as connection:
+            cursor = connection.execute(
+                f"DELETE FROM generated_assets WHERE {' OR '.join(f'({clause})' for clause in clauses)}",
+                values,
+            )
+            return cursor.rowcount or 0
+
     def _row_to_dict(self, row: sqlite3.Row) -> dict[str, Any]:
         payload = dict(row)
         return self._payload_to_public(payload)
