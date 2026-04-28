@@ -92,7 +92,7 @@ export function ReadyQueuePanel({ items, onMove, onRemove, onClear }: ReadyQueue
                     <p className="mt-3 text-base font-semibold text-ink">{item.hook}</p>
                     <p className="mt-2 text-sm leading-7 text-ink/62">{item.caption}</p>
                     <p className="mt-2 text-xs text-muted">
-                      Virality {item.viralityScore ?? "N/A"}
+                      Score {item.viralityScore ?? "N/A"}
                       {item.bestPostOrder ? ` · Post ${item.bestPostOrder}` : ""}
                     </p>
                   </div>

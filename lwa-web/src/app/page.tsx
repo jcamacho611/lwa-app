@@ -51,14 +51,14 @@ export default function HomePage() {
                 Powered by AI
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white text-balance">
-                Turn any video into{' '}
+                Turn public source material into{' '}
                 <span className="bg-gradient-to-r from-brand-400 to-violet-400 bg-clip-text text-transparent">
-                  viral clips
+                  ranked clip packages
                 </span>
               </h1>
               <p className="text-base sm:text-lg text-slate-400 text-balance leading-relaxed">
-                Paste a video URL and get AI-generated hooks, captions, and timestamps
-                optimised for TikTok, Reels, Shorts, and more — in seconds.
+                Paste a public video URL and get hooks, captions, timestamps, and post order
+                prepared for TikTok, Reels, Shorts, and more.
               </p>
             </div>
 

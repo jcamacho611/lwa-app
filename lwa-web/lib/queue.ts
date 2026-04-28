@@ -102,7 +102,7 @@ export function buildReadyQueueExport(items: ReadyQueueItem[]) {
         `#${index + 1} ${item.hook}`,
         `Platform: ${item.targetPlatform}`,
         `Angle: ${item.packagingAngle || "value"}`,
-        `Virality: ${item.viralityScore ?? "N/A"}`,
+        `Score: ${item.viralityScore ?? "N/A"}`,
         `Caption: ${item.caption}`,
         item.assetUrl ? `Asset: ${item.assetUrl}` : "",
       ]

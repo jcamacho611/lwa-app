@@ -1,6 +1,6 @@
 export const BRAND_VOICE = {
   mustFeel: [
-    "viral-native",
+    "retention-native",
     "premium",
     "cinematic",
     "sharp",

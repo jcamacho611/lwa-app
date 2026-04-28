@@ -11,20 +11,20 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'LWA — AI Clip Generator',
   description:
-    'Turn any video into viral short-form clips. AI-generated hooks, captions, and timestamps for TikTok, Instagram Reels, YouTube Shorts, and more.',
+    'Turn public source material into ranked short-form clip packages with hooks, captions, and timestamps for TikTok, Instagram Reels, YouTube Shorts, and more.',
   keywords: ['clip generator', 'AI video', 'short-form content', 'TikTok', 'Instagram Reels', 'YouTube Shorts'],
   authors: [{ name: 'LWA' }],
   robots: 'index, follow',
   openGraph: {
     title: 'LWA — AI Clip Generator',
-    description: 'Turn any video into viral short-form clips in seconds.',
+    description: 'Turn public source material into ranked short-form clip packages.',
     type: 'website',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'LWA — AI Clip Generator',
-    description: 'Turn any video into viral short-form clips in seconds.',
+    description: 'Turn public source material into ranked short-form clip packages.',
   },
 };
 

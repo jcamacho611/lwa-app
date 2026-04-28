@@ -166,9 +166,7 @@ export default function HeroClip({
   recoveryState = null,
   onRecover,
 }: HeroClipProps) {
-  const [copiedPackage, setCopiedPackage] = useState(false);
-  const [copiedHook, setCopiedHook] = useState(false);
-  const [copiedCaption, setCopiedCaption] = useState(false);
+  const [copiedAction, setCopiedAction] = useState<"hook" | "caption" | "package" | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
   const hasRenderProof = isRenderedClip(clip);
@@ -196,33 +194,15 @@ export default function HeroClip({
     ...(approvalLabel ? [approvalLabel] : []),
   ];
 
-  async function handleCopyHook(text: string) {
+  async function handleCopy(text: string, action: "hook" | "caption" | "package") {
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedHook(true);
-      window.setTimeout(() => setCopiedHook(false), 1600);
+      setCopiedAction(action);
+      window.setTimeout(() => {
+        setCopiedAction((current) => (current === action ? null : current));
+      }, 1600);
     } catch {
-      setCopiedHook(false);
-    }
-  }
-
-  async function handleCopyPackage() {
-    try {
-      await navigator.clipboard.writeText(buildClipPackageText(clip, clip.target_platform || undefined));
-      setCopiedPackage(true);
-      window.setTimeout(() => setCopiedPackage(false), 1600);
-    } catch {
-      setCopiedPackage(false);
-    }
-  }
-
-  async function handleCopyCaption() {
-    try {
-      await navigator.clipboard.writeText(clip.caption || clip.transcript || "");
-      setCopiedCaption(true);
-      window.setTimeout(() => setCopiedCaption(false), 1600);
-    } catch {
-      setCopiedCaption(false);
+      setCopiedAction(null);
     }
   }
 
@@ -307,26 +287,26 @@ export default function HeroClip({
 
               <button
                 type="button"
-                onClick={() => void handleCopyHook(clip.hook || clip.title || "")}
+                onClick={() => void handleCopy(clip.hook || clip.title || "", "hook")}
                 className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium sm:w-auto"
               >
-                {copiedHook ? "Hook copied" : "Copy hook"}
+                {copiedAction === "hook" ? "Hook copied" : "Copy hook"}
               </button>
 
               <button
                 type="button"
-                onClick={() => void handleCopyCaption()}
+                onClick={() => void handleCopy(clip.caption || clip.transcript || "", "caption")}
                 className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium sm:w-auto"
               >
-                {copiedCaption ? "Caption copied" : "Copy caption"}
+                {copiedAction === "caption" ? "Caption copied" : "Copy caption"}
               </button>
 
               <button
                 type="button"
-                onClick={() => void handleCopyPackage()}
+                onClick={() => void handleCopy(buildClipPackageText(clip, clip.target_platform || undefined), "package")}
                 className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium sm:w-auto"
               >
-                {copiedPackage ? "Package copied" : "Copy package"}
+                {copiedAction === "package" ? "Package copied" : "Copy package"}
               </button>
 
               {showQueue ? (
@@ -430,7 +410,7 @@ export default function HeroClip({
                       <p className="text-sm leading-6 text-ink/82">{variant}</p>
                       <button
                         type="button"
-                        onClick={() => void handleCopyHook(variant)}
+                        onClick={() => void handleCopy(variant, "hook")}
                         className="secondary-button inline-flex items-center justify-center rounded-full px-3 py-2 text-xs font-medium"
                       >
                         Copy
