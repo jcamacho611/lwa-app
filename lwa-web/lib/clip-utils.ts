@@ -103,9 +103,13 @@ export function buildClipPackageText(clip: ClipResult, fallbackPlatform?: string
 
   addLine(lines, "Title", clip.title || clip.hook || "Untitled clip");
   addLine(lines, "Status", packageStatusLabel(clip));
+  if (!isRenderedClip(clip)) {
+    addLine(lines, "Package Type", "Strategy only");
+  }
   addLine(lines, "Score", getClipScore(clip));
   addLine(lines, "Hook", clip.hook || clip.title);
   addLine(lines, "Caption", clip.caption || clip.export_package?.caption);
+  addLine(lines, "Why this matters", clip.why_this_matters || clip.reason || clip.retention_reason);
   addLine(lines, "Thumbnail Text", thumbnailText);
   addLine(lines, "CTA", clip.cta_suggestion || clip.cta || clip.export_package?.cta);
   addLine(lines, "Post Order", clipAuthorityLabel(postRank));

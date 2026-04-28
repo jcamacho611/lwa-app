@@ -6,6 +6,7 @@ import { LiveClipPreview } from "./results/LiveClipPreview";
 import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore, getPreviewUrl, isRenderedClip } from "../lib/clip-utils";
 import { buildLeadReason } from "../lib/result-copy";
+import { ClipIntelligencePanel } from "./clip-intelligence-panel";
 import { ClipViewer } from "./ClipViewer";
 
 export type VideoCardProps = {
@@ -176,12 +177,16 @@ export default function VideoCard({
   const hasRenderProof = isRenderedClip(clip);
   const previewUrl = getPreviewUrl(clip) || null;
   const assetUrl = getBestClipUrl(clip) || null;
+  const canOpenViewer = Boolean(previewUrl || assetUrl);
   const downloadUrl = clip.download_url || null;
   const artifactLinks = clipCaptionArtifactLinks(clip);
   const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
   const scoreValue = getClipScore(clip);
   const badges = buildBadges(clip, hasRenderProof);
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 3);
+  const captionVariants = Object.entries(clip.caption_variants || {})
+    .filter((entry): entry is [string, string] => Boolean(entry[1]?.trim()))
+    .slice(0, 3);
   const campaignLabel = clipCampaignStatusLabel(clip);
   const approvalLabel = clipApprovalStateLabel(clip);
   const evergreenLabel = clipEvergreenLabel(clip);
@@ -211,19 +216,21 @@ export default function VideoCard({
 
   return (
     <>
-      <ClipViewer clip={clip} isOpen={viewerOpen} onClose={() => setViewerOpen(false)} />
+      {canOpenViewer ? <ClipViewer clip={clip} isOpen={viewerOpen} onClose={() => setViewerOpen(false)} /> : null}
       <article className="clip-card rounded-[28px] border p-4 shadow-card transition-all duration-300 hover:scale-[1.01]">
         <div className="relative overflow-hidden rounded-[22px] border border-[var(--divider)] bg-[var(--surface-veil-strong)]">
-          <button
-            type="button"
-            onClick={() => setViewerOpen(true)}
-            className="absolute right-2.5 top-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 backdrop-blur-sm transition hover:border-[var(--gold-border)] hover:bg-[var(--gold-dim)] hover:text-[var(--gold)]"
-            aria-label="Expand clip"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 16 16">
-              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2 10v4h4M14 6V2h-4M10 6l4-4M6 10l-4 4" />
-            </svg>
-          </button>
+          {canOpenViewer ? (
+            <button
+              type="button"
+              onClick={() => setViewerOpen(true)}
+              className="absolute right-2.5 top-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 backdrop-blur-sm transition hover:border-[var(--gold-border)] hover:bg-[var(--gold-dim)] hover:text-[var(--gold)]"
+              aria-label="Expand clip"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 16 16">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2 10v4h4M14 6V2h-4M10 6l4-4M6 10l-4 4" />
+              </svg>
+            </button>
+          ) : null}
 
           {previewUrl ? (
             <LiveClipPreview clip={clip} className="aspect-[9/16]" />
@@ -325,6 +332,31 @@ export default function VideoCard({
               </div>
             </details>
           ) : null}
+
+          {captionVariants.length ? (
+            <details className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">
+              <summary className="cursor-pointer list-none text-[10px] uppercase tracking-[0.22em] text-muted transition-colors hover:text-[var(--ink-mid)]">
+                Caption variants
+              </summary>
+              <div className="mt-3 grid gap-2">
+                {captionVariants.map(([label, caption]) => (
+                  <div key={label} className="rounded-[14px] border border-[var(--divider)] bg-[var(--surface-veil)] px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{label}</p>
+                    <p className="mt-2 text-xs leading-6 text-ink/78">{caption}</p>
+                    <button
+                      type="button"
+                      onClick={() => void handleCopy(caption, "caption")}
+                      className="secondary-button mt-2 inline-flex items-center justify-center rounded-full px-3 py-2 text-xs font-medium"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : null}
+
+          <ClipIntelligencePanel clip={clip} compact={compact} />
 
           {clipHasShotPlan(clip) ? (
             <details className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">

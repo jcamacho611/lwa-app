@@ -6,6 +6,7 @@ import { LiveClipPreview } from "./results/LiveClipPreview";
 import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore, getPreviewUrl, isRenderedClip } from "../lib/clip-utils";
 import { buildLeadReason } from "../lib/result-copy";
+import { ClipIntelligencePanel } from "./clip-intelligence-panel";
 import { ClipViewer } from "./ClipViewer";
 
 type HeroClipProps = {
@@ -175,6 +176,9 @@ export default function HeroClip({
   const scoreValue = getClipScore(clip);
   const badges = buildBadges(clip, hasRenderProof);
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 3);
+  const captionVariants = Object.entries(clip.caption_variants || {})
+    .filter((entry): entry is [string, string] => Boolean(entry[1]?.trim()))
+    .slice(0, 3);
   const campaignLabel = clipCampaignStatusLabel(clip);
   const approvalLabel = clipApprovalStateLabel(clip);
   const evergreenLabel = clipEvergreenLabel(clip);
@@ -182,6 +186,7 @@ export default function HeroClip({
   const showQueue = !compact && Boolean(onToggleQueue);
   const showFeedback = !compact && Boolean(onVote);
   const assetUrl = getBestClipUrl(clip) || null;
+  const canOpenViewer = Boolean(previewUrl || assetUrl);
   const downloadUrl = clip.download_url || null;
   const artifactLinks = clipCaptionArtifactLinks(clip);
   const displayThumbnail = clip.thumbnail_text?.trim() || clip.title;
@@ -208,7 +213,7 @@ export default function HeroClip({
 
   return (
     <>
-      <ClipViewer clip={clip} isOpen={viewerOpen} onClose={() => setViewerOpen(false)} />
+      {canOpenViewer ? <ClipViewer clip={clip} isOpen={viewerOpen} onClose={() => setViewerOpen(false)} /> : null}
       <section id="lead-clip" className="clip-card top-pick rounded-[40px] border p-6 shadow-card sm:p-7 lg:p-8">
         <div className="-mx-6 -mt-6 mb-6 bg-[var(--gold)] px-6 py-2 text-[10px] font-bold tracking-[0.14em] text-black sm:-mx-7 sm:-mt-7 lg:-mx-8 lg:-mt-8">
           LEAD CLIP
@@ -217,16 +222,18 @@ export default function HeroClip({
         <div className="grid gap-6 xl:grid-cols-[minmax(0,0.58fr),minmax(320px,0.42fr)]">
           <div className="space-y-4">
             <div className="relative overflow-hidden rounded-[30px] border border-[var(--divider)] bg-[var(--surface-veil-strong)] shadow-[var(--shadow-preview)]">
-              <button
-                type="button"
-                onClick={() => setViewerOpen(true)}
-                className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 backdrop-blur-sm transition hover:border-[var(--gold-border)] hover:bg-[var(--gold-dim)] hover:text-[var(--gold)]"
-                aria-label="Expand clip"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 16 16">
-                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2 10v4h4M14 6V2h-4M10 6l4-4M6 10l-4 4" />
-                </svg>
-              </button>
+              {canOpenViewer ? (
+                <button
+                  type="button"
+                  onClick={() => setViewerOpen(true)}
+                  className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 backdrop-blur-sm transition hover:border-[var(--gold-border)] hover:bg-[var(--gold-dim)] hover:text-[var(--gold)]"
+                  aria-label="Expand clip"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 16 16">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2 10v4h4M14 6V2h-4M10 6l4-4M6 10l-4 4" />
+                  </svg>
+                </button>
+              ) : null}
 
               {previewUrl ? (
                 <LiveClipPreview clip={clip} className="aspect-[9/16]" autoPlay />
@@ -420,6 +427,35 @@ export default function HeroClip({
                 </div>
               </details>
             ) : null}
+
+            {captionVariants.length ? (
+              <details className="rounded-[22px] border border-[var(--divider)] bg-[var(--surface-veil)] p-4">
+                <summary className="cursor-pointer list-none text-xs uppercase tracking-[0.22em] text-muted transition-colors hover:text-[var(--ink-mid)]">
+                  Caption variants
+                </summary>
+                <div className="mt-4 grid gap-3">
+                  {captionVariants.map(([label, caption]) => (
+                    <div key={label} className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{label}</p>
+                          <p className="mt-2 text-sm leading-6 text-ink/82">{caption}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleCopy(caption, "caption")}
+                          className="secondary-button inline-flex shrink-0 items-center justify-center rounded-full px-3 py-2 text-xs font-medium"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ) : null}
+
+            <ClipIntelligencePanel clip={clip} compact={compact} />
 
             {clipHasShotPlan(clip) ? (
               <details className="rounded-[22px] border border-[var(--divider)] bg-[var(--surface-veil)] p-4">
