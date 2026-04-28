@@ -66,6 +66,18 @@ class GeneratedScripts(BaseModel):
     ctas: List[str] = Field(default_factory=list)
 
 
+class ShotPlanStep(BaseModel):
+    role: Literal["hook", "context", "payoff", "loop_end"]
+    duration_seconds: int = 0
+    camera_direction: Optional[str] = None
+    visual_direction: Optional[str] = None
+    motion_direction: Optional[str] = None
+    text_overlay: Optional[str] = None
+    subtitle_behavior: Optional[str] = None
+    transition: Optional[str] = None
+    retention_goal: Optional[str] = None
+
+
 class ClipResult(BaseModel):
     record_id: Optional[str] = None
     id: str
@@ -116,6 +128,22 @@ class ClipResult(BaseModel):
     download_url: Optional[str] = None
     render_error: Optional[str] = None
     request_id: Optional[str] = None
+    clip_type: Optional[str] = None
+    viral_trigger: Optional[str] = None
+    energy_level: Optional[str] = None
+    shot_plan: List[ShotPlanStep] = Field(default_factory=list)
+    shot_plan_confidence: Optional[int] = None
+    visual_engine_prompt: Optional[str] = None
+    motion_prompt: Optional[str] = None
+    render_provider: Optional[str] = None
+    rendered_by: Optional[str] = None
+    visual_engine_status: Optional[str] = None
+    render_quality_score: Optional[int] = None
+    strategy_only_reason: Optional[str] = None
+    recovery_recommendation: Optional[str] = None
+    text_overlay_plan: Optional[str] = None
+    subtitle_guidance: Optional[str] = None
+    transition_plan: Optional[str] = None
 
 
 class FeatureFlags(BaseModel):

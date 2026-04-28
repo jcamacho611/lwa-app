@@ -117,6 +117,21 @@ class Settings:
         self.visual_generation_model = os.getenv("LWA_VISUAL_GENERATION_MODEL", "lwa-visual-v1").strip() or "lwa-visual-v1"
         self.visual_generation_timeout_seconds = int(os.getenv("LWA_VISUAL_GENERATION_TIMEOUT_SECONDS", "180"))
         self.visual_generation_poll_interval_seconds = int(os.getenv("LWA_VISUAL_GENERATION_POLL_INTERVAL_SECONDS", "3"))
+        self.visual_engine_enabled = _env_bool(
+            "LWA_VISUAL_ENGINE_ENABLED",
+            os.getenv("LWA_VISUAL_GENERATION_ENABLED", "true"),
+        )
+        self.visual_engine_api_key = os.getenv("LWA_VISUAL_ENGINE_API_KEY", "").strip()
+        self.visual_engine_base_url = os.getenv("LWA_VISUAL_ENGINE_API_BASE_URL", "").strip()
+        self.visual_engine_timeout_seconds = int(
+            os.getenv(
+                "LWA_VISUAL_ENGINE_TIMEOUT_SECONDS",
+                str(self.visual_generation_timeout_seconds),
+            )
+        )
+        self.visual_engine_max_renders_per_request = int(
+            os.getenv("LWA_VISUAL_ENGINE_MAX_RENDERS_PER_REQUEST", "1")
+        )
         self.whop_api_key = os.getenv("WHOP_API_KEY", "")
         self.whop_company_id = os.getenv("WHOP_COMPANY_ID", "")
         self.google_api_key = os.getenv("GOOGLE_API_KEY", "")
