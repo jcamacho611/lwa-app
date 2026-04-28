@@ -66,8 +66,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const direction = resolveDirection(locale);
 
   return (
-    <html lang={locale} dir={direction} className="dark" suppressHydrationWarning>
-      <body className={`${poppinsBody.variable} ${poppinsDisplay.variable} bg-bgDark text-white antialiased`}>
+    <html lang={locale} dir={direction} suppressHydrationWarning>
+      <body className={`${poppinsBody.variable} ${poppinsDisplay.variable} antialiased`}>
         <BackgroundCanvas />
         <CharacterStage />
         <main className="lwa-ui-layer" style={{ position: "relative", zIndex: 10 }}>

@@ -45,6 +45,16 @@ let hidden = false;
 let disposed = false;
 const clock = new THREE.Clock();
 
+const SCENE_TONES = {
+  ambient: 0xf4ebff,
+  core: 0xb39bff,
+  rim: 0xf5bdd8,
+  cloud: 0xd8cbf3,
+  ground: 0xf2e9fb,
+  temple: 0xc6b4ec,
+  fog: 0xf6efff,
+};
+
 function scheduleFrame(callback: () => void): AnimationHandle {
   if (workerScope.requestAnimationFrame) {
     return workerScope.requestAnimationFrame(callback);
@@ -62,18 +72,18 @@ function cancelFrame(handle: AnimationHandle | null) {
 }
 
 function addCelestialLight(targetScene: THREE.Scene) {
-  const ambient = new THREE.AmbientLight(0x0d0b1a, 1.2);
+  const ambient = new THREE.AmbientLight(SCENE_TONES.ambient, 1.08);
   targetScene.add(ambient);
 
-  godLight = new THREE.PointLight(0xd4b26a, 3.5, 80);
+  godLight = new THREE.PointLight(SCENE_TONES.core, 2.2, 80);
   godLight.position.set(0, 25, -10);
   targetScene.add(godLight);
 
-  const rimLeft = new THREE.DirectionalLight(0x1a2a4a, 0.8);
+  const rimLeft = new THREE.DirectionalLight(SCENE_TONES.rim, 0.65);
   rimLeft.position.set(-20, 5, 5);
   targetScene.add(rimLeft);
 
-  const rimRight = new THREE.DirectionalLight(0x1a2a4a, 0.8);
+  const rimRight = new THREE.DirectionalLight(SCENE_TONES.rim, 0.52);
   rimRight.position.set(20, 5, 5);
   targetScene.add(rimRight);
 }
@@ -82,9 +92,9 @@ function addCloudVolume(targetScene: THREE.Scene) {
   clouds = [];
   for (let index = 0; index < 6; index += 1) {
     const material = new THREE.MeshLambertMaterial({
-      color: 0x171321,
+      color: SCENE_TONES.cloud,
       transparent: true,
-      opacity: 0.34 + index * 0.035,
+      opacity: 0.08 + index * 0.018,
       depthWrite: false,
     });
     const geometry = new THREE.PlaneGeometry(60 + index * 10, 18 + index * 2);
@@ -101,9 +111,11 @@ function addCloudVolume(targetScene: THREE.Scene) {
 function addGroundPlane(targetScene: THREE.Scene) {
   const geometry = new THREE.PlaneGeometry(120, 44);
   const material = new THREE.MeshStandardMaterial({
-    color: 0x050509,
-    metalness: 0.8,
-    roughness: 0.4,
+    color: SCENE_TONES.ground,
+    metalness: 0.08,
+    roughness: 0.92,
+    transparent: true,
+    opacity: 0.12,
   });
   const plane = new THREE.Mesh(geometry, material);
   plane.rotation.x = -Math.PI / 2;
@@ -112,9 +124,9 @@ function addGroundPlane(targetScene: THREE.Scene) {
 
   const templeGeometry = new THREE.PlaneGeometry(34, 12);
   const templeMaterial = new THREE.MeshBasicMaterial({
-    color: 0x03030a,
+    color: SCENE_TONES.temple,
     transparent: true,
-    opacity: 0.58,
+    opacity: 0.08,
     depthWrite: false,
   });
   const temple = new THREE.Mesh(templeGeometry, templeMaterial);
@@ -129,7 +141,7 @@ function renderFrame() {
   const elapsed = clock.getElapsedTime();
 
   if (godLight) {
-    godLight.intensity = 3.2 + Math.sin(elapsed * Math.PI) * 0.4;
+    godLight.intensity = 2.05 + Math.sin(elapsed * Math.PI) * 0.26;
   }
 
   for (const cloud of clouds) {
@@ -145,13 +157,14 @@ function renderFrame() {
 function init({ canvas, width, height, pixelRatio }: InitMessage) {
   disposed = false;
   hidden = false;
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: "low-power" });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: "low-power" });
   renderer.setPixelRatio(Math.min(pixelRatio || 1, 1.5));
   renderer.setSize(width, height, false);
+  renderer.setClearColor(0x000000, 0);
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x040408);
-  scene.fog = new THREE.FogExp2(0x0a0814, 0.035);
+  scene.background = null;
+  scene.fog = new THREE.FogExp2(SCENE_TONES.fog, 0.018);
 
   camera = new THREE.PerspectiveCamera(60, width / Math.max(height, 1), 0.1, 200);
   camera.position.set(0, 2, 18);

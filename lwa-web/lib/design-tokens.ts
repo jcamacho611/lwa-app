@@ -1,19 +1,19 @@
 export const tokens = {
   colors: {
-    bg: "#0A0A0F",
-    bgElev: "#12121A",
-    bgCard: "#161620",
-    gold: "#F5C842",
-    goldBright: "#FFD54F",
-    goldDim: "rgba(245,200,66,0.08)",
-    goldBorder: "rgba(245,200,66,0.28)",
-    ink: "#FFFFFF",
-    inkMid: "rgba(255,255,255,0.62)",
-    inkFaint: "rgba(255,255,255,0.18)",
+    bg: "#FFF7FC",
+    bgElev: "#F6EEFF",
+    bgCard: "#FFFDFE",
+    gold: "#8E76FF",
+    goldBright: "#F5BDD8",
+    goldDim: "rgba(142,118,255,0.10)",
+    goldBorder: "rgba(142,118,255,0.24)",
+    ink: "#2D1E3D",
+    inkMid: "rgba(45,30,61,0.68)",
+    inkFaint: "rgba(45,30,61,0.18)",
     success: "#3DD68C",
     danger: "#FF5A5A",
-    divider: "rgba(255,255,255,0.08)",
-    glass: "rgba(255,255,255,0.025)",
+    divider: "rgba(115,95,168,0.14)",
+    glass: "rgba(255,255,255,0.48)",
   },
   fonts: {
     display: "Poppins",
@@ -27,8 +27,8 @@ export const tokens = {
     pill: "999px",
   },
   shadow: {
-    card: "0 8px 24px rgba(0,0,0,0.32)",
-    glow: "0 0 32px rgba(245,200,66,0.18)",
+    card: "0 18px 48px rgba(107,80,152,0.14)",
+    glow: "0 0 36px rgba(142,118,255,0.18)",
   },
 } as const;
 
