@@ -29,6 +29,7 @@ import {
   ClipPackSummary,
   FeatureFlags,
   GenerateResponse,
+  ExportBundleResponse,
   PlatformOption,
   PostingConnection,
   ScheduledPost,
@@ -116,6 +117,30 @@ function clipHasRenderedMedia(clip: ClipResult) {
 
 function clipHasShotPlan(clip: ClipResult) {
   return Boolean(clip.shot_plan?.length);
+}
+
+function formatBundleBytes(value?: number | null) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function bundleArtifactLabel(value: string) {
+  switch (value) {
+    case "package_json":
+      return "Package JSON";
+    case "caption_txt":
+      return "Caption TXT";
+    case "subtitle_srt":
+      return "Subtitle SRT";
+    case "subtitle_vtt":
+      return "Subtitle VTT";
+    default:
+      return value.replace(/_/g, " ");
+  }
 }
 
 type ClipRecoveryState = {
@@ -214,6 +239,7 @@ export function ClipStudio({
   const [motionLocked, setMotionLocked] = useState(false);
   const [bundleExportState, setBundleExportState] = useState<"idle" | "exporting" | "ready" | "failed">("idle");
   const [bundleExportMessage, setBundleExportMessage] = useState<string | null>(null);
+  const [latestBundleExport, setLatestBundleExport] = useState<ExportBundleResponse | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
   const [generatorHovered, setGeneratorHovered] = useState(false);
   const stableResult = useStableResults(result);
@@ -224,6 +250,13 @@ export function ClipStudio({
   const selectedUploadIsImage =
     selectedUploadType.startsWith("image/") || /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(selectedUploadName);
   const isGuest = !user;
+
+  useEffect(() => {
+    setLatestBundleExport(null);
+    setBundleExportState("idle");
+    setBundleExportMessage(null);
+  }, [activeResult?.request_id]);
+
   const loadingStages =
     sourceMode === "idea"
       ? ["Reading prompt", "Generating motion", "Analyzing", "Scoring", "Packaging"]
@@ -1013,6 +1046,14 @@ export function ClipStudio({
   const generatedClipCount = activeResult?.processing_summary?.generated_clip_count ?? orderedClips.length;
   const bulkExportReady = Boolean(activeResult?.processing_summary?.bulk_export_ready);
   const manifestUrl = activeResult?.processing_summary?.manifest_url || null;
+  const latestManifestUrl = latestBundleExport?.manifest_url || null;
+  const visibleManifestUrl = latestManifestUrl || manifestUrl;
+  const exportArtifactTypes = latestBundleExport?.artifact_types?.length
+    ? latestBundleExport.artifact_types
+    : leadClip?.export_bundle?.artifact_types || [];
+  const exportArtifactCount = exportArtifactTypes.length;
+  const exportBundleFormat = (latestBundleExport?.bundle_format || leadClip?.export_bundle?.bundle_format || null)?.toUpperCase() || null;
+  const exportBundleSize = formatBundleBytes(latestBundleExport?.size_bytes || null);
   const campaignName = activeResult?.processing_summary?.campaign_name || null;
   const hasStrategyOnlyWithoutPreview = strategyOnlyClips.some(
     (clip) => Boolean(clip.is_strategy_only) && !clip.preview_url && !clipHasRenderedMedia(clip),
@@ -1142,12 +1183,17 @@ export function ClipStudio({
       );
       const link = document.createElement("a");
       link.href = bundle.download_url;
-      link.download = bundle.file_name || "lwa-bundle.json";
+      link.download = bundle.file_name || "lwa-bundle.zip";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setLatestBundleExport(bundle);
       setBundleExportState("ready");
-      setBundleExportMessage("Bundle downloaded.");
+      setBundleExportMessage(
+        bundle.manifest_url
+          ? "Bundle downloaded with manifest, caption text, and subtitle files."
+          : "Bundle downloaded.",
+      );
       void fireGodTrigger("first_download", {
         route: window.location.pathname,
         lastClipScore: orderedClips[0]?.score,
@@ -1969,7 +2015,21 @@ export function ClipStudio({
               <p className="mt-3 text-sm font-medium text-ink/72">Campaign: {campaignName}</p>
             ) : null}
             {bulkExportReady ? (
-              <p className="mt-2 text-sm text-[var(--gold)]">Bulk export ready</p>
+              <p className="mt-2 text-sm text-[var(--gold)]">
+                Bulk export ready{manifestUrl ? " with batch manifest." : "."}
+              </p>
+            ) : null}
+            {exportArtifactTypes.length ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {exportArtifactTypes.map((artifact) => (
+                  <span
+                    key={artifact}
+                    className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] font-medium text-ink/72"
+                  >
+                    {bundleArtifactLabel(artifact)}
+                  </span>
+                ))}
+              </div>
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1991,24 +2051,23 @@ export function ClipStudio({
               >
                 Export lead clip
               </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void handleExportBundle()}
-                disabled={bundleExportState === "exporting" || !activeResult?.clips?.length}
-                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {bundleExportState === "exporting" ? "Building bundle..." : "Export bundle"}
-              </button>
-            )}
-            {manifestUrl ? (
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void handleExportBundle()}
+              disabled={bundleExportState === "exporting" || !activeResult?.clips?.length}
+              className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {bundleExportState === "exporting" ? "Building bundle..." : "Export full bundle"}
+            </button>
+            {visibleManifestUrl ? (
               <a
-                href={manifestUrl}
+                href={visibleManifestUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
               >
-                Download clip pack
+                {latestManifestUrl ? "Open bundle manifest" : "Open batch manifest"}
               </a>
             ) : null}
           </div>
@@ -2080,12 +2139,26 @@ export function ClipStudio({
                   <MetricTile
                     label="Downloads"
                     value={String(exportReadyCount)}
-                    detail={exportReadyCount ? "Clip exports are ready now." : "Use bundle export or recover clips first."}
+                    detail={exportReadyCount ? "Direct clip files are ready now." : "Use bundle export or recover clips first."}
                   />
                   <MetricTile
                     label="Shot plans"
                     value={String(shotPlanReadyCount)}
                     detail="Director Brain guidance returned with this pack."
+                  />
+                  <MetricTile
+                    label="Manifest"
+                    value={visibleManifestUrl ? "Ready" : "Pending"}
+                    detail={latestManifestUrl ? "The latest bundle manifest is available now." : manifestUrl ? "Batch manifest is ready for export planning." : "Manifest appears after packaging metadata is prepared."}
+                  />
+                  <MetricTile
+                    label="Bundle"
+                    value={exportBundleFormat || "Pending"}
+                    detail={
+                      latestBundleExport
+                        ? `Latest bundle includes ${exportArtifactCount || 0} artifact types${exportBundleSize ? ` and weighs ${exportBundleSize}` : ""}.`
+                        : "Build the full bundle to package captions, subtitles, and metadata together."
+                    }
                   />
                 </div>
                 {bundleExportMessage ? (

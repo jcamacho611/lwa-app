@@ -49,7 +49,16 @@ function clipHasRecoverableRender(clip: ClipResult, hasRenderProof: boolean) {
 }
 
 function clipHasCaptionArtifacts(clip: ClipResult) {
-  return Boolean(clip.caption_srt_url || clip.caption_vtt_url);
+  return Boolean(
+    clip.caption_srt_url ||
+      clip.caption_vtt_url ||
+      clip.export_bundle?.artifact_types?.includes("subtitle_srt") ||
+      clip.export_bundle?.artifact_types?.includes("subtitle_vtt"),
+  );
+}
+
+function clipHasBundleArtifacts(clip: ClipResult) {
+  return Boolean(clip.export_bundle?.manifest_ready || clip.export_bundle?.artifact_types?.length);
 }
 
 function clipCampaignStatusLabel(clip: ClipResult): ClipMetaLabel | null {
@@ -156,6 +165,7 @@ export default function VideoCard({
   const showFeedback = !compact && Boolean(onVote);
   const showRecoverRender = clipHasRecoverableRender(clip, hasRenderProof);
   const metaLabels: ClipMetaLabel[] = [
+    ...(clipHasBundleArtifacts(clip) ? [{ label: "Bundle ready", tone: "neutral" as const }] : []),
     ...(clipHasCaptionArtifacts(clip) ? [{ label: "Captions ready", tone: "neutral" as const }] : []),
     ...(campaignLabel ? [campaignLabel] : []),
     ...(approvalLabel ? [approvalLabel] : []),
@@ -299,7 +309,7 @@ export default function VideoCard({
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {downloadUrl ? (
               <a href={downloadUrl} download className="primary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold sm:w-auto">
-                Export
+                Export clip
               </a>
             ) : previewUrl ? (
               <a
