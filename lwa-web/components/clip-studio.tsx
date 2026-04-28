@@ -2084,7 +2084,7 @@ export function ClipStudio({
               <button
                 type="button"
                 onClick={() => void handleCopyPackages("lead")}
-                className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
+                className="primary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold sm:w-auto"
               >
                 {copiedPackageAction === "lead" ? "Lead package copied" : "Copy lead package"}
               </button>
@@ -2093,7 +2093,7 @@ export function ClipStudio({
               <button
                 type="button"
                 onClick={() => void handleCopyPackages("rendered")}
-                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+                className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium sm:w-auto"
               >
                 {copiedPackageAction === "rendered" ? "Rendered copied" : "Copy rendered packages"}
               </button>
@@ -2102,7 +2102,7 @@ export function ClipStudio({
               <button
                 type="button"
                 onClick={() => void handleCopyPackages("strategy")}
-                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+                className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium sm:w-auto"
               >
                 {copiedPackageAction === "strategy" ? "Strategy copied" : "Copy strategy packages"}
               </button>
@@ -2111,7 +2111,7 @@ export function ClipStudio({
               <button
                 type="button"
                 onClick={() => void handleCopyPackages("all")}
-                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+                className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium sm:w-auto"
               >
                 {copiedPackageAction === "all" ? "All packages copied" : "Copy all packages"}
               </button>
@@ -2121,7 +2121,7 @@ export function ClipStudio({
                 href={leadPreviewUrl || undefined}
                 target="_blank"
                 rel="noreferrer"
-                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+                className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium sm:w-auto"
               >
                 Open lead preview
               </a>
@@ -2130,7 +2130,7 @@ export function ClipStudio({
               <a
                 href={leadExportUrl || undefined}
                 download
-                className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
+                className="primary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold sm:w-auto"
               >
                 Export lead clip
               </a>
@@ -2139,7 +2139,7 @@ export function ClipStudio({
               type="button"
               onClick={() => void handleExportBundle()}
               disabled={bundleExportState === "exporting" || !activeResult?.clips?.length}
-              className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+              className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {bundleExportState === "exporting" ? "Building bundle..." : "Export full bundle"}
             </button>
@@ -2148,7 +2148,7 @@ export function ClipStudio({
                 href={visibleManifestUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+                className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium sm:w-auto"
               >
                 {latestManifestUrl ? "Open bundle manifest" : "Open batch manifest"}
               </a>

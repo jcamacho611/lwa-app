@@ -61,7 +61,7 @@ export function MoneyCtaPanel({ variant = "full", title, description, source = "
       </div>
 
       {secondary.length ? (
-        <div className={compact ? "mt-4 flex flex-wrap gap-2" : "mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
+        <div className={compact ? "mt-4 grid gap-2 sm:flex sm:flex-wrap" : "mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
           {secondary.map((link) => (
             <a
               key={link.key}
