@@ -213,6 +213,12 @@ export type ScheduledPost = {
   created_at?: string;
 };
 
+export type CampaignRequirementCheck = {
+  status: "pass" | "warning" | "fail" | "unknown";
+  requirement: string;
+  message: string;
+};
+
 export type ClipResult = {
   id: string;
   record_id?: string | null;
@@ -252,6 +258,12 @@ export type ClipResult = {
   edited_clip_url?: string | null;
   raw_clip_url?: string | null;
   preview_image_url?: string | null;
+  caption_srt_url?: string | null;
+  caption_vtt_url?: string | null;
+  burned_caption_url?: string | null;
+  export_filename?: string | null;
+  approval_state?: string | null;
+  campaign_requirement_checks?: CampaignRequirementCheck[];
   is_rendered?: boolean;
   is_strategy_only?: boolean;
   render_status?: "pending" | "rendering" | "ready" | "failed" | string | null;
@@ -325,12 +337,17 @@ export type GenerateResponse = {
     credits_remaining?: number;
     estimated_turnaround?: string;
     recommended_next_step?: string;
+    requested_clip_count?: number;
+    generated_clip_count?: number;
     visual_engine_enabled?: boolean;
     visual_engine_attempted_count?: number;
     visual_engine_ready_count?: number;
     visual_engine_failed_count?: number;
     rendered_clip_count?: number;
     strategy_only_clip_count?: number;
+    bulk_export_ready?: boolean;
+    manifest_url?: string | null;
+    campaign_name?: string | null;
     feature_flags?: FeatureFlags;
   };
   clips: ClipResult[];

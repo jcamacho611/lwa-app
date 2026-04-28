@@ -28,6 +28,11 @@ type ClipBadge = {
   tone: "accent" | "neutral";
 };
 
+type ClipMetaLabel = {
+  label: string;
+  tone: "neutral" | "warning" | "danger";
+};
+
 function authorityLabel(rank?: number | null) {
   if (rank === 1) return "Post first";
   if (rank === 2) return "Post next";
@@ -41,6 +46,48 @@ function clipHasShotPlan(clip: ClipResult) {
 
 function clipHasRecoverableRender(clip: ClipResult, hasRenderProof: boolean) {
   return !hasRenderProof && (clip.visual_engine_status === "recoverable" || clip.visual_engine_status === "render_failed");
+}
+
+function clipHasCaptionArtifacts(clip: ClipResult) {
+  return Boolean(clip.caption_srt_url || clip.caption_vtt_url);
+}
+
+function clipCampaignStatusLabel(clip: ClipResult): ClipMetaLabel | null {
+  const checks = clip.campaign_requirement_checks || [];
+  const failCount = checks.filter((check) => check.status === "fail").length;
+  const warningCount = checks.filter((check) => check.status === "warning").length;
+
+  if (failCount > 0) {
+    return { label: "Campaign issue", tone: "danger" };
+  }
+
+  if (warningCount > 0) {
+    return { label: "Campaign warning", tone: "warning" };
+  }
+
+  return null;
+}
+
+function clipApprovalStateLabel(clip: ClipResult): ClipMetaLabel | null {
+  const approvalState = clip.approval_state?.trim().toLowerCase();
+
+  if (!approvalState) {
+    return null;
+  }
+
+  if (approvalState === "approved") {
+    return { label: "Approved", tone: "neutral" };
+  }
+
+  if (approvalState === "needs_edit" || approvalState === "needs edit" || approvalState === "needs_regen") {
+    return { label: "Needs edit", tone: "warning" };
+  }
+
+  if (approvalState === "new") {
+    return { label: "New", tone: "neutral" };
+  }
+
+  return { label: clip.approval_state || "New", tone: "neutral" };
 }
 
 function buildBadges(clip: ClipResult, hasRenderProof: boolean): ClipBadge[] {
@@ -68,6 +115,18 @@ function badgeClass(tone: ClipBadge["tone"]) {
   return "rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] text-ink/78";
 }
 
+function metaLabelClass(tone: ClipMetaLabel["tone"]) {
+  if (tone === "danger") {
+    return "rounded-full border border-red-400/30 bg-red-400/10 px-2.5 py-1 text-[10px] font-medium text-red-100";
+  }
+
+  if (tone === "warning") {
+    return "rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[10px] font-medium text-amber-100";
+  }
+
+  return "rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-2.5 py-1 text-[10px] font-medium text-ink/68";
+}
+
 export default function VideoCard({
   clip,
   compact = false,
@@ -88,12 +147,19 @@ export default function VideoCard({
   const scoreValue = Math.round(clip.virality_score ?? clip.score ?? 0);
   const badges = buildBadges(clip, hasRenderProof);
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 3);
+  const campaignLabel = clipCampaignStatusLabel(clip);
+  const approvalLabel = clipApprovalStateLabel(clip);
   const whyThisMatters = buildLeadReason(clip.why_this_matters || clip.reason);
   const displayThumbnail = clip.thumbnail_text?.trim() || clip.title;
   const showRetryPreview = Boolean(onRecover) && !hasRenderProof;
   const showQueue = !compact && Boolean(onToggleQueue);
   const showFeedback = !compact && Boolean(onVote);
   const showRecoverRender = clipHasRecoverableRender(clip, hasRenderProof);
+  const metaLabels: ClipMetaLabel[] = [
+    ...(clipHasCaptionArtifacts(clip) ? [{ label: "Captions ready", tone: "neutral" as const }] : []),
+    ...(campaignLabel ? [campaignLabel] : []),
+    ...(approvalLabel ? [approvalLabel] : []),
+  ];
 
   async function handleCopyHook(text: string) {
     try {
@@ -155,6 +221,15 @@ export default function VideoCard({
               </span>
             ))}
           </div>
+          {metaLabels.length ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {metaLabels.map((label) => (
+                <span key={label.label} className={metaLabelClass(label.tone)}>
+                  {label.label}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
           {!compact ? <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-ink">{clip.title}</h3> : null}
           <p className={compact ? "text-base font-semibold leading-7 text-ink" : "text-sm leading-6 text-ink/88"}>

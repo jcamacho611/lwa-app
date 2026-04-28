@@ -1009,6 +1009,11 @@ export function ClipStudio({
   const renderedClipCount = renderedClips.length;
   const strategyOnlyClipCount = strategyOnlyClips.length;
   const shotPlanReadyCount = orderedClips.filter((clip) => clipHasShotPlan(clip)).length;
+  const requestedClipCount = activeResult?.processing_summary?.requested_clip_count ?? null;
+  const generatedClipCount = activeResult?.processing_summary?.generated_clip_count ?? orderedClips.length;
+  const bulkExportReady = Boolean(activeResult?.processing_summary?.bulk_export_ready);
+  const manifestUrl = activeResult?.processing_summary?.manifest_url || null;
+  const campaignName = activeResult?.processing_summary?.campaign_name || null;
   const hasStrategyOnlyWithoutPreview = strategyOnlyClips.some(
     (clip) => Boolean(clip.is_strategy_only) && !clip.preview_url && !clipHasRenderedMedia(clip),
   );
@@ -1960,6 +1965,12 @@ export function ClipStudio({
             <p className="mt-2 max-w-2xl text-sm leading-7 text-ink/60">
               Use the lead hook, caption, thumbnail text, CTA, and post order together. Export rendered media first, then queue or recover the rest.
             </p>
+            {campaignName ? (
+              <p className="mt-3 text-sm font-medium text-ink/72">Campaign: {campaignName}</p>
+            ) : null}
+            {bulkExportReady ? (
+              <p className="mt-2 text-sm text-[var(--gold)]">Bulk export ready</p>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
             {leadPreviewReady ? (
@@ -1990,6 +2001,16 @@ export function ClipStudio({
                 {bundleExportState === "exporting" ? "Building bundle..." : "Export bundle"}
               </button>
             )}
+            {manifestUrl ? (
+              <a
+                href={manifestUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+              >
+                Download clip pack
+              </a>
+            ) : null}
           </div>
         </div>
 
@@ -2038,12 +2059,21 @@ export function ClipStudio({
                 <p className="section-kicker">Export state</p>
                 <div className="mt-4 grid gap-3">
                   <MetricTile
-                    label="Rendered lane"
+                    label="Clips"
+                    value={String(generatedClipCount)}
+                    detail={
+                      requestedClipCount && requestedClipCount !== generatedClipCount
+                        ? `Requested ${requestedClipCount} for this run.`
+                        : "Total clips returned in this pack."
+                    }
+                  />
+                  <MetricTile
+                    label="Rendered"
                     value={String(renderedClipCount)}
                     detail={renderedClipCount ? "Playable clips you can move right now." : "No playable clips were returned."}
                   />
                   <MetricTile
-                    label="Strategy lane"
+                    label="Strategy"
                     value={String(strategyOnlyClipCount)}
                     detail={strategyOnlyClipCount ? "Ideas that need review or recovery." : "Everything visible is rendered."}
                   />
