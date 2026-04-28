@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from functools import lru_cache
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import platform
 import re
@@ -62,6 +62,23 @@ class TranscriptWindow:
 
 
 @dataclass
+class TranscriptWord:
+    start_seconds: float
+    end_seconds: float
+    text: str
+    confidence: Optional[float] = None
+
+
+@dataclass
+class TranscriptCue:
+    start_seconds: float
+    end_seconds: float
+    text: str
+    score: int
+    words: List[TranscriptWord] = field(default_factory=list)
+
+
+@dataclass
 class SourceContext:
     title: str
     description: str
@@ -74,6 +91,9 @@ class SourceContext:
     source_type: str = "url"
     source_platform: Optional[str] = None
     transcript: Optional[str] = None
+    transcript_windows: List[TranscriptWindow] = field(default_factory=list)
+    transcript_cues: List[TranscriptCue] = field(default_factory=list)
+    transcript_words: List[TranscriptWord] = field(default_factory=list)
     visual_summary: Optional[str] = None
     preview_asset_url: Optional[str] = None
     download_asset_url: Optional[str] = None
@@ -236,10 +256,13 @@ def process_video_source(
                 cookiefile=resolve_yt_cookie_file(settings),
             )
             source_file = locate_source_file(work_dir)
-        transcript_windows = load_transcript_windows(work_dir)
+        transcript_windows, transcript_cues, transcript_words = load_transcript_timing(work_dir)
         transcript = flatten_transcript_windows(transcript_windows)
         if not transcript:
-            transcript_windows, transcript = transcribe_audio_source(settings=settings, source_file=source_file)
+            transcript_windows, transcript_cues, transcript_words, transcript = transcribe_audio_source(
+                settings=settings,
+                source_file=source_file,
+            )
 
         duration_seconds = parse_duration_seconds(info.get("duration"))
         if duration_seconds is None:
@@ -313,6 +336,9 @@ def process_video_source(
         source_type=source_type,
         source_platform="Upload" if source_type != "url" else detect_source_platform(video_url),
         transcript=transcript or None,
+        transcript_windows=transcript_windows,
+        transcript_cues=transcript_cues,
+        transcript_words=transcript_words,
         preview_asset_url=preview_asset_url,
         download_asset_url=preview_asset_url,
         thumbnail_url=thumbnail_url,
@@ -417,10 +443,13 @@ def process_audio_source(
         work_dir = Path(temp_dir)
         source_file = stage_local_source(source_path=Path(source_path), work_dir=work_dir)
         duration_seconds = probe_media_duration(source_file=source_file, settings=settings)
-        transcript_windows = load_transcript_windows(work_dir)
+        transcript_windows, transcript_cues, transcript_words = load_transcript_timing(work_dir)
         transcript = flatten_transcript_windows(transcript_windows)
         if not transcript:
-            transcript_windows, transcript = transcribe_audio_source(settings=settings, source_file=source_file)
+            transcript_windows, transcript_cues, transcript_words, transcript = transcribe_audio_source(
+                settings=settings,
+                source_file=source_file,
+            )
 
         segments, selection_strategy = build_segment_plan(
             duration_seconds=duration_seconds,
@@ -456,6 +485,9 @@ def process_audio_source(
         source_type="audio_upload",
         source_platform="Upload",
         transcript=transcript,
+        transcript_windows=transcript_windows,
+        transcript_cues=transcript_cues,
+        transcript_words=transcript_words,
         preview_asset_url=preview_asset_url,
         download_asset_url=preview_asset_url,
         thumbnail_url=thumbnail_url,
@@ -519,6 +551,9 @@ def process_image_source(
         selection_strategy="image-still",
         source_type="image_upload",
         source_platform="Upload",
+        transcript_windows=[],
+        transcript_cues=[],
+        transcript_words=[],
         visual_summary=visual_summary,
         preview_asset_url=source_url,
         download_asset_url=source_url,
@@ -1507,9 +1542,13 @@ def probe_media_duration(*, source_file: Path, settings: Settings) -> Optional[i
     return None
 
 
-def transcribe_audio_source(*, settings: Settings, source_file: Path) -> tuple[List[TranscriptWindow], Optional[str]]:
+def transcribe_audio_source(
+    *,
+    settings: Settings,
+    source_file: Path,
+) -> tuple[List[TranscriptWindow], List[TranscriptCue], List[TranscriptWord], Optional[str]]:
     if not settings.openai_api_key:
-        return [], None
+        return [], [], [], None
 
     try:
         from openai import OpenAI
@@ -1520,47 +1559,104 @@ def transcribe_audio_source(*, settings: Settings, source_file: Path) -> tuple[L
                 model="whisper-1",
                 file=handle,
                 response_format="verbose_json",
-                timestamp_granularities=["segment"],
+                timestamp_granularities=["segment", "word"],
             )
     except Exception as error:
         logger.warning("audio_transcription_fallback source=%s reason=%s", source_file, error)
-        return [], None
+        return [], [], [], None
 
     transcript = str(getattr(response, "text", "") or "").strip() or None
     segments = getattr(response, "segments", None) or []
-    windows = build_transcript_windows_from_segments(segments)
+    words = build_transcript_words_from_response(getattr(response, "words", None) or [])
+    windows, cues = build_transcript_timing_from_segments(segments)
     if not windows and transcript:
         duration = probe_media_duration(source_file=source_file, settings=settings) or 15
-        windows = [
-            TranscriptWindow(
-                start_seconds=0.0,
-                end_seconds=float(min(duration, 18)),
-                excerpt=transcript,
-                score=score_excerpt(transcript),
+        fallback_cue = TranscriptCue(
+            start_seconds=0.0,
+            end_seconds=float(min(duration, 18)),
+            text=transcript,
+            score=score_excerpt(transcript),
+            words=[],
+        )
+        cues = [fallback_cue]
+        windows = build_transcript_windows_from_cues(
+            [(fallback_cue.start_seconds, fallback_cue.end_seconds, fallback_cue.text)]
+        )
+    return windows, cues, words, transcript
+
+
+def build_transcript_words_from_response(words: list[object]) -> List[TranscriptWord]:
+    timed_words: List[TranscriptWord] = []
+    for word in words:
+        start = object_field(word, "start")
+        end = object_field(word, "end")
+        text = normalize_caption_text(str(object_field(word, "word") or object_field(word, "text") or ""))
+        if text and start is not None and end is not None and float(end) > float(start):
+            timed_words.append(
+                TranscriptWord(
+                    start_seconds=float(start),
+                    end_seconds=float(end),
+                    text=text,
+                    confidence=float(object_field(word, "confidence")) if object_field(word, "confidence") is not None else None,
+                )
             )
-        ]
-    return windows, transcript
+    return timed_words
+
+
+def build_transcript_timing_from_segments(segments: list[object]) -> tuple[List[TranscriptWindow], List[TranscriptCue]]:
+    cues: List[TranscriptCue] = []
+    for segment in segments:
+        start = object_field(segment, "start")
+        end = object_field(segment, "end")
+        text = normalize_caption_text(str(object_field(segment, "text") or ""))
+        if start is None or end is None:
+            continue
+        start_seconds = float(start)
+        end_seconds = float(end)
+        if not text or end_seconds <= start_seconds:
+            continue
+        segment_words = build_transcript_words_from_response(list(object_field(segment, "words") or []))
+        cues.append(
+            TranscriptCue(
+                start_seconds=start_seconds,
+                end_seconds=end_seconds,
+                text=text,
+                score=score_excerpt(text),
+                words=segment_words,
+            )
+        )
+    windows = build_transcript_windows_from_cues(
+        [(cue.start_seconds, cue.end_seconds, cue.text) for cue in cues]
+    )
+    return windows, cues
 
 
 def build_transcript_windows_from_segments(segments: list[object]) -> List[TranscriptWindow]:
-    windows: List[TranscriptWindow] = []
-    for segment in segments:
-        start = float(getattr(segment, "start", 0.0) or 0.0)
-        end = float(getattr(segment, "end", 0.0) or 0.0)
-        text = normalize_caption_text(str(getattr(segment, "text", "") or ""))
+    windows, _ = build_transcript_timing_from_segments(segments)
+    return windows
+
+
+def object_field(value: object, field_name: str) -> Any:
+    if isinstance(value, dict):
+        return value.get(field_name)
+    return getattr(value, field_name, None)
+
+
+def transcript_cues_from_cues(cues: List[tuple[float, float, str]]) -> List[TranscriptCue]:
+    transcript_cues: List[TranscriptCue] = []
+    for start, end, text in cues:
         if not text or end <= start:
             continue
-        windows.append(
-            TranscriptWindow(
+        transcript_cues.append(
+            TranscriptCue(
                 start_seconds=start,
                 end_seconds=end,
-                excerpt=text,
+                text=text,
                 score=score_excerpt(text),
+                words=[],
             )
         )
-    return build_transcript_windows_from_cues(
-        [(window.start_seconds, window.end_seconds, window.excerpt) for window in windows]
-    )
+    return transcript_cues
 
 
 def analyze_image_source(*, settings: Settings, source_file: Path) -> str:
@@ -1675,16 +1771,21 @@ def guess_image_mime_type(suffix: str) -> str:
     return "image/png"
 
 
-def load_transcript_windows(work_dir: Path) -> List[TranscriptWindow]:
+def load_transcript_timing(work_dir: Path) -> tuple[List[TranscriptWindow], List[TranscriptCue], List[TranscriptWord]]:
     subtitle_files = sorted(work_dir.rglob("*.vtt"))
     for subtitle_file in subtitle_files:
-        windows = parse_vtt_windows(subtitle_file)
+        windows, transcript_cues, transcript_words = parse_vtt_transcript(subtitle_file)
         if windows:
-            return windows
-    return []
+            return windows, transcript_cues, transcript_words
+    return [], [], []
 
 
-def parse_vtt_windows(path: Path) -> List[TranscriptWindow]:
+def load_transcript_windows(work_dir: Path) -> List[TranscriptWindow]:
+    windows, _, _ = load_transcript_timing(work_dir)
+    return windows
+
+
+def parse_vtt_transcript(path: Path) -> tuple[List[TranscriptWindow], List[TranscriptCue], List[TranscriptWord]]:
     lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
     cues: List[tuple[float, float, str]] = []
     index = 0
@@ -1715,7 +1816,15 @@ def parse_vtt_windows(path: Path) -> List[TranscriptWindow]:
             if not cues or cues[-1][2] != text:
                 cues.append((start_seconds, end_seconds, text))
 
-    return build_transcript_windows_from_cues(cues)
+    windows = build_transcript_windows_from_cues(cues)
+    transcript_cues = transcript_cues_from_cues(cues)
+    transcript_words: List[TranscriptWord] = []
+    return windows, transcript_cues, transcript_words
+
+
+def parse_vtt_windows(path: Path) -> List[TranscriptWindow]:
+    windows, _, _ = parse_vtt_transcript(path)
+    return windows
 
 
 def build_transcript_windows_from_cues(cues: List[tuple[float, float, str]]) -> List[TranscriptWindow]:
