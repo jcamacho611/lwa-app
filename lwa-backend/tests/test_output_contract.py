@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+import zipfile
+from asyncio import run
 from pathlib import Path
 
 from app.core.config import Settings
@@ -10,6 +12,7 @@ from app.services.clip_service import apply_plan_feature_flags
 from app.services.confidence_engine import build_confidence_label, resolve_confidence_score
 from app.services.entitlements import EntitlementContext, build_free_plan
 from app.services.export_bundle import create_export_bundle
+from app.services.output_builder import OutputBuilder
 from app.services.response_normalizer import normalize_response
 
 
@@ -83,7 +86,7 @@ class OutputContractTests(unittest.TestCase):
         self.assertIsNotNone(gated[0].score_breakdown)
         self.assertIsNotNone(gated[0].render_readiness_score)
 
-    def test_export_bundle_writes_json_and_returns_public_download_url(self) -> None:
+    def test_export_bundle_writes_zip_with_caption_artifacts_and_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings()
             settings.generated_assets_dir = temp_dir
@@ -91,12 +94,67 @@ class OutputContractTests(unittest.TestCase):
                 settings=settings,
                 public_base_url="https://backend.example.com",
                 source_url="https://example.com/source",
-                clips=[{"id": "clip_1", "title": "Lead Clip"}],
+                clips=[
+                    {
+                        "id": "clip_1",
+                        "title": "Lead Clip",
+                        "hook": "Stop posting random clips.",
+                        "caption": "Use this first.",
+                        "transcript_excerpt": "Stop posting random clips if you want better retention.",
+                        "post_rank": 1,
+                        "score": 91,
+                        "start_time": "00:03",
+                        "end_time": "00:18",
+                    }
+                ],
             )
 
             self.assertEqual(bundle["clip_count"], 1)
+            self.assertEqual(bundle["bundle_format"], "zip")
+            self.assertIn("manifest_url", bundle)
+            self.assertEqual(bundle["artifact_counts"]["caption_txt"], 1)
+            self.assertEqual(bundle["artifact_counts"]["subtitle_srt"], 1)
+            self.assertEqual(bundle["artifact_counts"]["subtitle_vtt"], 1)
             self.assertTrue(bundle["download_url"].startswith("https://backend.example.com/generated/export-bundles/"))
-            self.assertTrue((Path(temp_dir) / "export-bundles" / bundle["file_name"]).exists())
+            self.assertTrue((Path(bundle["bundle_path"])).exists())
+            self.assertTrue((Path(bundle["manifest_path"])).exists())
+
+            with zipfile.ZipFile(bundle["bundle_path"]) as bundle_zip:
+                names = set(bundle_zip.namelist())
+                self.assertIn("manifest.json", names)
+                self.assertIn("README.md", names)
+                self.assertIn("clips/clip_1/package.json", names)
+                self.assertIn("clips/clip_1/caption.txt", names)
+                self.assertIn("clips/clip_1/subtitle.srt", names)
+                self.assertIn("clips/clip_1/subtitle.vtt", names)
+
+    def test_output_builder_delegates_to_shared_zip_bundle_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings()
+            settings.generated_assets_dir = temp_dir
+            settings.api_base_url = "https://backend.example.com"
+            output_builder = OutputBuilder(settings)
+
+            bundle = run(
+                output_builder.create_clip_bundle(
+                    request_id="req_123",
+                    clips=[
+                        {
+                            "id": "clip_1",
+                            "title": "Lead Clip",
+                            "caption": "Use this first.",
+                            "transcript_excerpt": "Use this first for the clearest payoff.",
+                            "score": 88,
+                            "start_time": "00:03",
+                            "end_time": "00:14",
+                        }
+                    ],
+                )
+            )
+
+            self.assertEqual(bundle["bundle_format"], "zip")
+            self.assertIn("manifest_url", bundle)
+            self.assertTrue(bundle["download_url"].startswith("https://backend.example.com/generated/export-bundles/"))
 
 
 if __name__ == "__main__":

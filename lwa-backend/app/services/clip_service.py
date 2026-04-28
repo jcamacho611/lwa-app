@@ -703,6 +703,9 @@ def build_export_bundle(
         cta=cta_suggestion or "Prompt viewers to comment or follow.",
         preview_ready=bool(preview_url),
         download_ready=bool(download_url),
+        bundle_format="zip",
+        manifest_ready=True,
+        artifact_types=["package_json", "caption_txt", "subtitle_srt", "subtitle_vtt"],
     )
 
 

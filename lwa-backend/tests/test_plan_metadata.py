@@ -61,6 +61,9 @@ class PlanMetadataTests(unittest.TestCase):
         self.assertIsNotNone(clip.export_bundle)
         self.assertTrue(clip.export_bundle.preview_ready)
         self.assertFalse(clip.export_bundle.download_ready)
+        self.assertEqual(clip.export_bundle.bundle_format, "zip")
+        self.assertTrue(clip.export_bundle.manifest_ready)
+        self.assertIn("subtitle_srt", clip.export_bundle.artifact_types)
         self.assertEqual(clip.export_bundle.post_sequence_label, "post first")
         self.assertIn("Create an account", build_upgrade_prompt(entitlement=entitlement, current_user=None))
 
@@ -88,6 +91,9 @@ class PlanMetadataTests(unittest.TestCase):
         self.assertIsNotNone(clip.export_bundle)
         self.assertTrue(clip.export_bundle.preview_ready)
         self.assertTrue(clip.export_bundle.download_ready)
+        self.assertEqual(clip.export_bundle.bundle_format, "zip")
+        self.assertTrue(clip.export_bundle.manifest_ready)
+        self.assertIn("caption_txt", clip.export_bundle.artifact_types)
         self.assertEqual(clip.export_bundle.post_order, 1)
         self.assertIn("Scale", build_upgrade_prompt(entitlement=entitlement, current_user=object()))
 

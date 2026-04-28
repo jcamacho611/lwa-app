@@ -56,6 +56,9 @@ class ExportBundle(BaseModel):
     cta: Optional[str] = None
     preview_ready: bool = False
     download_ready: bool = False
+    bundle_format: Optional[str] = None
+    manifest_ready: bool = False
+    artifact_types: List[str] = Field(default_factory=list)
 
 
 class ScoreBreakdown(BaseModel):
