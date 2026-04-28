@@ -905,24 +905,7 @@ export function ClipStudio({
   const showSettings = initialSection === "settings";
   const showPostingOnDashboard = initialSection === "dashboard";
   const showPageIntro = Boolean(pageIntro) && !(isGuest && initialSection === "generate");
-  const topAngles = (preferenceProfile.preferredAngles.length
-    ? preferenceProfile.preferredAngles
-    : orderedClips.map((clip) => clip.packaging_angle).filter(Boolean)) as string[];
   const featureProof = ["Best clip first", "Hooks that hit", "Export-ready"];
-  const deliveryMoments = [
-      {
-        label: "Source in",
-        detail: "Paste or upload once.",
-    },
-    {
-      label: "Best first",
-      detail: "LWA puts the lead cut on top.",
-    },
-    {
-      label: "Post faster",
-      detail: "Queue or export ready clips.",
-    },
-  ] as const;
   const idleRunSummary =
     sourceMode === "idea"
       ? "Describe the asset. LWA generates a short-form starting point."
@@ -1006,24 +989,26 @@ export function ClipStudio({
       orderedClips.filter((clip) => clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url).length,
     [orderedClips],
   );
+  const leadClip = orderedClips[0] ?? null;
+  const leadClipId = leadClip ? resolveClipQueueId(leadClip) : null;
   const renderedClips = useMemo(() => orderedClips.filter((clip) => clipHasRenderedMedia(clip)), [orderedClips]);
   const strategyOnlyClips = useMemo(() => orderedClips.filter((clip) => !clipHasRenderedMedia(clip)), [orderedClips]);
-  const renderedHeroClip = renderedClips[0] ?? null;
-  const renderedGridClips = renderedHeroClip ? renderedClips.slice(1) : renderedClips;
-  const strategyHeroClip = !renderedHeroClip ? strategyOnlyClips[0] ?? null : null;
-  const strategyGridClips = strategyHeroClip ? strategyOnlyClips.slice(1) : strategyOnlyClips;
+  const renderedLaneClips = useMemo(
+    () => renderedClips.filter((clip) => resolveClipQueueId(clip) !== leadClipId),
+    [leadClipId, renderedClips],
+  );
+  const strategyLaneClips = useMemo(
+    () => strategyOnlyClips.filter((clip) => resolveClipQueueId(clip) !== leadClipId),
+    [leadClipId, strategyOnlyClips],
+  );
+  const leadClipIsRendered = leadClip ? clipHasRenderedMedia(leadClip) : false;
   const effectiveTargetPlatform = activeResult?.processing_summary?.target_platform || (useManualPlatform ? platform : "Auto");
   const recommendedPlatform = activeResult?.processing_summary?.recommended_platform || activeResult?.processing_summary?.target_platform || null;
-  const recommendedContentType = activeResult?.processing_summary?.recommended_content_type || null;
-  const recommendedOutputStyle = activeResult?.processing_summary?.recommended_output_style || null;
   const platformDecision = activeResult?.processing_summary?.platform_decision || (useManualPlatform ? "manual" : "auto");
   const platformRecommendationReason = activeResult?.processing_summary?.platform_recommendation_reason || null;
   const renderedClipCount = renderedClips.length;
   const strategyOnlyClipCount = strategyOnlyClips.length;
   const shotPlanReadyCount = orderedClips.filter((clip) => clipHasShotPlan(clip)).length;
-  const visualEngineEnabled = Boolean(activeResult?.processing_summary?.visual_engine_enabled);
-  const visualEngineReadyCount = activeResult?.processing_summary?.visual_engine_ready_count ?? renderedClipCount;
-  const visualEngineFailedCount = activeResult?.processing_summary?.visual_engine_failed_count ?? 0;
   const hasStrategyOnlyWithoutPreview = strategyOnlyClips.some(
     (clip) => Boolean(clip.is_strategy_only) && !clip.preview_url && !clipHasRenderedMedia(clip),
   );
@@ -1034,12 +1019,12 @@ export function ClipStudio({
   const exportReadyCount = useMemo(() => orderedClips.filter((clip) => clip.download_url).length, [orderedClips]);
   const leadPreviewUrl =
     activeResult?.preview_asset_url ||
-      renderedHeroClip?.preview_url ||
-      renderedHeroClip?.edited_clip_url ||
-      renderedHeroClip?.clip_url ||
-      renderedHeroClip?.raw_clip_url ||
+      leadClip?.preview_url ||
+      leadClip?.edited_clip_url ||
+      leadClip?.clip_url ||
+      leadClip?.raw_clip_url ||
       null;
-  const leadExportUrl = activeResult?.download_asset_url || renderedHeroClip?.download_url || null;
+  const leadExportUrl = activeResult?.download_asset_url || leadClip?.download_url || null;
   const leadPreviewReady = Boolean(leadPreviewUrl);
   const leadExportReady = Boolean(leadExportUrl);
   const worldPhase = resolveWorldPhase({
@@ -1550,6 +1535,109 @@ export function ClipStudio({
     );
   }
 
+  const advancedGeneratorControls = !isGuest ? (
+    <details className="operator-tile rounded-[24px] p-4">
+      <summary className="cursor-pointer list-none text-sm font-medium text-ink">
+        Advanced controls
+      </summary>
+      <div className="mt-4 space-y-4">
+        <div className="mode-switch inline-flex rounded-full p-1">
+          {[
+            { value: "quick", label: "Quick mode" },
+            { value: "pro", label: "Pro mode" },
+          ].map((option) => {
+            const active = generationMode === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setGenerationMode(option.value as "quick" | "pro")}
+                className={["mode-pill rounded-full px-4 py-2 text-sm font-medium", active ? "mode-pill-active" : ""].join(" ")}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {renderSourceModeControls()}
+
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-ink">Destination</p>
+              <p className="mt-2 text-sm leading-7 text-ink/72">
+                {useManualPlatform
+                  ? `Manual override is on for ${platform}.`
+                  : "Auto stays on unless you already know the feed."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setUseManualPlatform((current) => !current)}
+              className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium"
+            >
+              {useManualPlatform ? "Use auto recommendation" : "Set manual override"}
+            </button>
+          </div>
+
+          {useManualPlatform ? (
+            <div className="grid gap-2 sm:grid-cols-3">
+              {platforms.map((item) => {
+                const active = item === platform;
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setPlatform(item)}
+                    className={[
+                      "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
+                      active
+                        ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]"
+                        : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
+                    ].join(" ")}
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+
+        {generationMode === "pro" ? (
+          <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={improveResults}
+              onChange={(event) => setImproveResults(event.target.checked)}
+              className="h-4 w-4 accent-[var(--gold)]"
+            />
+            Improve results
+          </label>
+        ) : null}
+      </div>
+    </details>
+  ) : null;
+
+  const generatorSupportRow = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-sm font-medium text-ink">Source</p>
+        <p className="mt-1 text-sm text-ink/60">{activeSourceLabel}</p>
+      </div>
+      <label className="secondary-button inline-flex cursor-pointer items-center justify-center rounded-full px-4 py-2 text-sm font-medium">
+        Upload file
+        <input
+          type="file"
+          accept=".mp4,.mov,.m4v,.webm,.mp3,.wav,.m4a,.aac,.ogg,.oga,.flac,.jpg,.jpeg,.png,.webp,.heic,.heif,video/*,audio/*,image/*"
+          className="hidden"
+          onChange={onUploadSelected}
+        />
+      </label>
+    </div>
+  );
+
   const homeGeneratorSection = (
     <section
       className="generator-command-card source-command-card rounded-[38px] p-6 sm:p-8"
@@ -1570,119 +1658,9 @@ export function ClipStudio({
       </div>
 
       <form onSubmit={onSubmit} className="mt-7 space-y-5">
-        {!isGuest ? (
-          <div className="mode-switch inline-flex rounded-full p-1">
-            {[
-              { value: "quick", label: "Quick mode" },
-              { value: "pro", label: "Pro mode" },
-            ].map((option) => {
-              const active = generationMode === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setGenerationMode(option.value as "quick" | "pro")}
-                  className={["mode-pill rounded-full px-4 py-2 text-sm font-medium", active ? "mode-pill-active" : ""].join(" ")}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {!isGuest ? renderSourceModeControls() : null}
-
         {renderSourceInput()}
-
-        {!isGuest ? (
-        <div className="space-y-3">
-          <div className="operator-tile rounded-[24px] p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-ink">Destination</p>
-                <p className="mt-2 text-sm leading-7 text-ink/72">
-                  {useManualPlatform
-                    ? `Manual override is on for ${platform}.`
-                    : "Auto stays on unless you already know the feed."}
-                </p>
-                <p className="mt-1 text-sm text-ink/50">
-                  {useManualPlatform ? "Use this for fixed campaigns." : "Manual override is secondary."}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setUseManualPlatform((current) => !current)}
-                className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium"
-              >
-                {useManualPlatform ? "Use auto recommendation" : "Set manual override"}
-              </button>
-            </div>
-          </div>
-
-          {useManualPlatform ? (
-            <div>
-              <span className="mb-3 block text-sm font-medium text-ink/84">Manual destination override</span>
-              <div className="grid gap-2 sm:grid-cols-3">
-                {platforms.map((item) => {
-                  const active = item === platform;
-                  return (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => setPlatform(item)}
-                      className={[
-                        "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
-                        active
-                          ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]"
-                          : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
-                      ].join(" ")}
-                    >
-                      {item}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-        </div>
-        ) : null}
-
-        {!isGuest ? (
-        <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
-          <div className="operator-tile rounded-[24px] p-4">
-            <p className="text-sm font-medium text-ink">Flow</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {deliveryMoments.map((item) => (
-                <div key={item.label} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
-                  <span className="block font-medium text-ink">{item.label}</span>
-                  <span className="mt-2 block leading-6 text-ink/56">{item.detail}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {generationMode === "pro" ? (
-            <div className="metric-tile rounded-[24px] p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-ink">Tighten future packs</p>
-                  <p className="mt-1 text-sm text-ink/60">Bias new runs toward what you keep.</p>
-                </div>
-                <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={improveResults}
-                    onChange={(event) => setImproveResults(event.target.checked)}
-                    className="h-4 w-4 accent-[var(--gold)]"
-                  />
-                  Improve results
-                </label>
-              </div>
-            </div>
-          ) : null}
-        </div>
-        ) : null}
+        {generatorSupportRow}
+        {advancedGeneratorControls}
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           {!isGuest ? (
@@ -1748,127 +1726,9 @@ export function ClipStudio({
           </div>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-6">
-            {!isGuest ? (
-              <div className="mode-switch inline-flex rounded-full p-1">
-                {[
-                  { value: "quick", label: "Quick mode" },
-                  { value: "pro", label: "Pro mode" },
-                ].map((option) => {
-                  const active = generationMode === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setGenerationMode(option.value as "quick" | "pro")}
-                      className={["mode-pill rounded-full px-4 py-2 text-sm font-medium", active ? "mode-pill-active" : ""].join(" ")}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            {!isGuest ? renderSourceModeControls() : null}
-
             {renderSourceInput()}
-
-            {!isGuest ? (
-            <div className="space-y-3">
-              <div className="operator-tile rounded-[24px] p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-ink">Destination</p>
-                    <p className="mt-2 text-sm leading-7 text-ink/72">
-                      {useManualPlatform
-                      ? `Manual override is on for ${platform}.`
-                      : "Auto stays on unless you already know the feed."}
-                    </p>
-                    <p className="mt-1 text-sm text-ink/50">
-                      {useManualPlatform ? "Use this for fixed campaigns." : "Manual override is secondary."}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setUseManualPlatform((current) => !current)}
-                    className="secondary-button inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium"
-                  >
-                    {useManualPlatform ? "Use auto recommendation" : "Set manual override"}
-                  </button>
-                </div>
-              </div>
-
-              {useManualPlatform ? (
-                <div>
-                  <span className="mb-3 block text-sm font-medium text-ink/84">Manual destination override</span>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {platforms.map((item) => {
-                      const active = item === platform;
-                      return (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => setPlatform(item)}
-                          className={[
-                            "rounded-[20px] border px-4 py-3 text-sm font-medium transition",
-                            active
-                              ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]"
-                              : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20 hover:bg-white/[0.06] hover:text-ink",
-                          ].join(" ")}
-                        >
-                          {item}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            ) : null}
-
-            {!isGuest ? (
-            <div className={["grid gap-4", generationMode === "pro" ? "md:grid-cols-2" : ""].join(" ")}>
-              <div className="operator-tile rounded-[24px] p-4">
-                <p className="text-sm font-medium text-ink">Flow</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  {deliveryMoments.map((item) => (
-                    <div key={item.label} className="rounded-[18px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-ink/76">
-                      <span className="block font-medium text-ink">{item.label}</span>
-                      <span className="mt-2 block leading-6 text-ink/56">{item.detail}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {generationMode === "pro" ? (
-                <div className="metric-tile rounded-[24px] p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-ink">Tighten future packs</p>
-                      <p className="mt-1 text-sm text-ink/60">Learn from what you keep.</p>
-                      {preferenceProfile.topPackagingAngle || preferenceProfile.topHookStyle ? (
-                        <p className="mt-3 text-sm text-accent">
-                          Favoring {preferenceProfile.topPackagingAngle || "strong"} packaging
-                          {preferenceProfile.topHookStyle ? ` and ${preferenceProfile.topHookStyle} hooks` : ""}.
-                        </p>
-                      ) : (
-                        <p className="mt-3 text-sm text-ink/46">Mark what lands.</p>
-                      )}
-                    </div>
-                    <label className="secondary-button inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium">
-                      <input
-                        type="checkbox"
-                        checked={improveResults}
-                        onChange={(event) => setImproveResults(event.target.checked)}
-                        className="h-4 w-4 accent-[var(--gold)]"
-                      />
-                      Improve results
-                    </label>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            ) : null}
+            {generatorSupportRow}
+            {advancedGeneratorControls}
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               {!isGuest ? (
@@ -1953,15 +1813,6 @@ export function ClipStudio({
               />
             </label>
           </div>
-
-          <div className="glass-panel rounded-[28px] p-5">
-            <p className="section-kicker">Flow</p>
-            <div className="mt-4 space-y-3 text-sm leading-7 text-ink/68">
-              <p>1. LWA finds the moments worth cutting and recommends the first destination.</p>
-              <p>2. Review finished previews before you spend time on ideas-only cuts.</p>
-              <p>3. Queue the winners and export the assets that are already ready.</p>
-            </div>
-          </div>
         </aside>
         ) : null}
       </div>
@@ -1971,285 +1822,251 @@ export function ClipStudio({
   const resultsSection = activeResult ? (
     <section id="lwa-results-section" className={["result-screen space-y-6", motionLocked ? "result-screen--locked" : ""].join(" ")}>
       <div className="hero-card rounded-[32px] p-6 sm:p-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <p className="section-kicker">{RESULTS_COPY.kicker}</p>
-            <h3 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">{RESULTS_COPY.title}</h3>
-            <p className="mt-4 text-sm leading-7 text-subtext">{RESULTS_COPY.subhead}</p>
+            <h3 className="page-title mt-3 text-3xl font-semibold text-ink sm:text-[2.4rem]">Best clip first. Then move the stack.</h3>
+            <p className="mt-4 text-sm leading-7 text-subtext">
+              LWA separates playable outputs from strategy-only ideas so you know what to post now, what to rerun, and why the lead clip is on top.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatPill tone="signal">{renderedClipCount} finished previews</StatPill>
-            {strategyOnlyClipCount ? <StatPill tone="neutral">{strategyOnlyClipCount} ideas only</StatPill> : null}
             <StatPill tone="accent">{effectiveTargetPlatform}</StatPill>
-            {platformDecision === "manual" ? <StatPill tone="neutral">Manual</StatPill> : <StatPill tone="signal">Auto</StatPill>}
+            <StatPill tone="signal">{renderedClipCount} rendered</StatPill>
+            {strategyOnlyClipCount ? <StatPill tone="neutral">{strategyOnlyClipCount} strategy only</StatPill> : null}
+            {shotPlanReadyCount ? <StatPill tone="neutral">{shotPlanReadyCount} shot plans</StatPill> : null}
           </div>
+        </div>
+
+        <div className="mt-5 flex flex-col gap-3 border-t border-white/8 pt-5 sm:flex-row sm:flex-wrap sm:items-center">
+          {recommendedPlatform ? <StatPill tone="accent">Recommended: {recommendedPlatform}</StatPill> : null}
+          {platformDecision === "manual" ? <StatPill tone="neutral">Manual destination</StatPill> : <StatPill tone="signal">Auto recommendation</StatPill>}
+          {leadClipIsRendered ? <StatPill tone="signal">Lead clip is playable</StatPill> : <StatPill tone="neutral">Lead clip is strategy only</StatPill>}
+          {activeResult.processing_summary?.recommended_next_step ? (
+            <span className="text-sm text-ink/62">{activeResult.processing_summary.recommended_next_step}</span>
+          ) : null}
         </div>
       </div>
 
-      <div className={["grid gap-6", isGuest ? "" : "xl:grid-cols-[minmax(0,1fr),340px]"].join(" ")}>
-        <div className="space-y-6">
-          <div className="glass-panel rounded-[28px] p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl">
-                <p className="section-kicker">LWA recommendation</p>
-                <h4 className="mt-3 text-2xl font-semibold text-ink">Best clip first. Then move the stack.</h4>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {orderedClips.length ? <StatPill tone="accent">Best clip first</StatPill> : null}
-                  {shotPlanReadyCount ? <StatPill tone="neutral">Shot plan ready</StatPill> : null}
-                  {renderedClipCount ? <StatPill tone="signal">Rendered by LWA</StatPill> : null}
-                  {visualEngineReadyCount ? <StatPill tone="accent">Visual render ready</StatPill> : null}
-                  {strategyOnlyClipCount ? <StatPill tone="neutral">Strategy only</StatPill> : null}
-                  {visualEngineFailedCount ? <StatPill tone="signal">Recover render</StatPill> : null}
-                  {recommendedPlatform ? <StatPill tone="accent">Recommended: {recommendedPlatform}</StatPill> : null}
-                  {recommendedContentType ? <StatPill tone="signal">{recommendedContentType}</StatPill> : null}
-                  {recommendedOutputStyle ? <StatPill tone="neutral">{recommendedOutputStyle}</StatPill> : null}
-                </div>
-                {platformRecommendationReason ? (
-                  <p className="mt-4 max-w-2xl text-sm leading-7 text-ink/58">{platformRecommendationReason}</p>
-                ) : null}
-                {visualEngineEnabled ? (
-                  <p className="mt-3 text-sm text-ink/60">
-                    Director Brain is attached to this stack. Render attempts stay additive and never block the clip pack.
-                  </p>
-                ) : null}
-                {activeResult.processing_summary?.recommended_next_step ? (
-                  <p className="mt-3 text-sm font-medium text-ink/82">{activeResult.processing_summary.recommended_next_step}</p>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {leadPreviewReady ? (
-                  <a
-                    href={leadPreviewUrl || undefined}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
-                  >
-                    Open lead preview
-                  </a>
-                ) : null}
-                {leadExportReady ? (
-                  <a
-                    href={leadExportUrl || undefined}
-                    download
-                    className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
-                  >
-                    Export lead asset
-                  </a>
-                ) : isGuest ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleExportBundle()}
-                    disabled={bundleExportState === "exporting" || !activeResult?.clips?.length}
-                    className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {bundleExportState === "exporting" ? "Building bundle..." : "Export bundle"}
-                  </button>
-                ) : (
-                  <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-4 py-2 text-sm text-[var(--gold)]">
-                    Bundle export available below
-                  </span>
-                )}
-              </div>
-              {isGuest && bundleExportMessage ? (
-                <p className={["mt-3 text-sm", bundleExportState === "failed" ? "text-red-200" : "text-[var(--gold)]"].join(" ")}>
-                  {bundleExportMessage}
-                </p>
-              ) : null}
-            </div>
+      {isGuest && hasStrategyOnlyWithoutPreview ? (
+        <InlineAlert tone="violet" title="Strategy only — shot plan ready">
+          Hooks, packaging, and shot plans are ready. Preview video requires a standard uploaded source, not a blocked or live source.
+        </InlineAlert>
+      ) : !renderedClipCount ? (
+        <InlineAlert tone="violet" title="Strategy only — shot plan ready">
+          This run returned useful packaging and shot plans, but no playable media. Review the strategy lane first, then retry with a cleaner source if you need rendered output.
+        </InlineAlert>
+      ) : !previewReadyCount ? (
+        <InlineAlert tone="violet" title="Rendered lane is partial">
+          Some clips came back without a playable preview. Export the ready cuts first, then use the strategy lane to decide what is worth recovering.
+        </InlineAlert>
+      ) : null}
+
+      {leadClip ? (
+        <div className="space-y-3">
+          <p className="section-kicker">Lead clip</p>
+          <HeroClip
+            clip={leadClip}
+            compact={isGuest}
+            feedbackVote={!isGuest ? feedbackByClipId[leadClip.record_id || leadClip.clip_id || leadClip.id] || null : null}
+            onVote={!isGuest ? handleFeedbackVote : undefined}
+            queued={isQueued(leadClip)}
+            onToggleQueue={handleToggleQueue}
+            recoveryState={clipRecoveryStates[resolveClipQueueId(leadClip)] || null}
+            onRecover={handleRecoverClip}
+          />
+        </div>
+      ) : null}
+
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-kicker">Rendered</p>
+            <h4 className="mt-2 text-2xl font-semibold text-ink">Playable clips ready now</h4>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-ink/60">
+              Use this lane when you need something you can preview, export, and move immediately.
+            </p>
           </div>
-
-          {isGuest && hasStrategyOnlyWithoutPreview ? (
-            <InlineAlert tone="violet" title="Strategy only — shot plan ready">
-              Hooks, packaging, and shot plans are ready. Preview video requires a standard YouTube video — not a live stream.
-            </InlineAlert>
-          ) : !renderedClipCount ? (
-            <InlineAlert tone="violet" title="Strategy only — shot plan ready">
-              LWA returned the package, hooks, captions, posting order, and shot plans, but this run did not produce preview media. Review the ideas now, then retry with a longer or cleaner source if you need playable output.
-            </InlineAlert>
-          ) : !previewReadyCount ? (
-            <InlineAlert tone="violet" title="Playable preview pending">
-              This run returned media, but not a playable preview for every cut. Review the ready clips first, then use the ideas-only stack to decide what is worth rerunning.
-            </InlineAlert>
-          ) : null}
-
-          {renderedHeroClip ? (
-            <div className="space-y-3">
-              {!isGuest ? <p className="section-kicker">Lead answer</p> : null}
-              <HeroClip
-                clip={renderedHeroClip}
-                compact={isGuest}
-                feedbackVote={!isGuest ? feedbackByClipId[renderedHeroClip.record_id || renderedHeroClip.clip_id || renderedHeroClip.id] || null : null}
-                onVote={!isGuest ? handleFeedbackVote : undefined}
-                queued={isQueued(renderedHeroClip)}
-                onToggleQueue={handleToggleQueue}
-                recoveryState={clipRecoveryStates[resolveClipQueueId(renderedHeroClip)] || null}
-                onRecover={handleRecoverClip}
-              />
-            </div>
-          ) : null}
-
-          {renderedGridClips.length ? (
-            <div className="space-y-4">
-              {!isGuest ? (
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="section-kicker">{RESULT_COPY.finishedPreviews}</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">READY TO POST NOW</h4>
-                  <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-                    Finished previews ready for distribution.
-                  </p>
-                </div>
-              </div>
-              ) : null}
-              <div className={["grid gap-5 md:grid-cols-2", isGuest ? "" : "xl:grid-cols-3"].join(" ")}>
-                {renderedGridClips.map((clip) => (
-                  <ClipCard
-                    key={clip.id}
-                    clip={clip}
-                    compact={isGuest}
-                    feedbackVote={!isGuest ? feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null : null}
-                    onVote={!isGuest ? handleFeedbackVote : undefined}
-                    queued={isQueued(clip)}
-                    onToggleQueue={handleToggleQueue}
-                    recoveryState={clipRecoveryStates[resolveClipQueueId(clip)] || null}
-                    onRecover={handleRecoverClip}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {strategyHeroClip ? (
-            <div className="space-y-3">
-              {!isGuest ? <p className="section-kicker">Top high-leverage idea</p> : null}
-              <HeroClip
-                clip={strategyHeroClip}
-                compact={isGuest}
-                feedbackVote={!isGuest ? feedbackByClipId[strategyHeroClip.record_id || strategyHeroClip.clip_id || strategyHeroClip.id] || null : null}
-                onVote={!isGuest ? handleFeedbackVote : undefined}
-                queued={isQueued(strategyHeroClip)}
-                onToggleQueue={handleToggleQueue}
-                recoveryState={clipRecoveryStates[resolveClipQueueId(strategyHeroClip)] || null}
-                onRecover={handleRecoverClip}
-              />
-            </div>
-          ) : null}
-
-          {strategyGridClips.length ? (
-            <div className="space-y-4">
-              {!isGuest ? (
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="section-kicker">{RESULT_COPY.ideasOnly}</p>
-                  <h4 className="mt-2 text-2xl font-semibold text-ink">HIGH-LEVERAGE IDEAS</h4>
-                  <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">
-                    Strong angles waiting on preview.
-                  </p>
-                </div>
-              </div>
-              ) : null}
-              <div className={["grid gap-5 md:grid-cols-2", isGuest ? "" : "xl:grid-cols-3"].join(" ")}>
-                {strategyGridClips.map((clip) => (
-                  <ClipCard
-                    key={clip.id}
-                    clip={clip}
-                    compact={isGuest}
-                    feedbackVote={!isGuest ? feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null : null}
-                    onVote={!isGuest ? handleFeedbackVote : undefined}
-                    queued={isQueued(clip)}
-                    onToggleQueue={handleToggleQueue}
-                    recoveryState={clipRecoveryStates[resolveClipQueueId(clip)] || null}
-                    onRecover={handleRecoverClip}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
+          <StatPill tone="signal">{renderedClipCount} rendered</StatPill>
         </div>
 
-        {!isGuest ? (
-        <div className="space-y-5">
-          <ReadyQueuePanel items={readyQueue} onMove={handleMoveQueue} onRemove={handleRemoveQueue} onClear={handleClearQueue} />
+        {renderedLaneClips.length ? (
+          <div className={["grid gap-5 md:grid-cols-2", isGuest ? "" : "xl:grid-cols-3"].join(" ")}>
+            {renderedLaneClips.map((clip) => (
+              <ClipCard
+                key={clip.id}
+                clip={clip}
+                compact={isGuest}
+                feedbackVote={!isGuest ? feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null : null}
+                onVote={!isGuest ? handleFeedbackVote : undefined}
+                queued={isQueued(clip)}
+                onToggleQueue={handleToggleQueue}
+                recoveryState={clipRecoveryStates[resolveClipQueueId(clip)] || null}
+                onRecover={handleRecoverClip}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="glass-panel rounded-[28px] p-5 text-sm leading-7 text-ink/60">
+            {leadClipIsRendered
+              ? "The lead clip is the only rendered asset in this pack right now."
+              : "No additional rendered clips are ready yet."}
+          </div>
+        )}
+      </div>
 
-          {orderedClips.length ? <ReviewOrderPanel clips={orderedClips} /> : null}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-kicker">Strategy only</p>
+            <h4 className="mt-2 text-2xl font-semibold text-ink">Hooks and packaging worth testing</h4>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-ink/60">
+              These cuts are useful ideas, not fake previews. Review the hook variants, why it matters, and recovery path before rerendering.
+            </p>
+          </div>
+          <StatPill tone="neutral">{strategyOnlyClipCount} strategy only</StatPill>
+        </div>
 
-          <div className="glass-panel rounded-[28px] p-5">
-            <p className="section-kicker">Packaging + export rail</p>
-            <h4 className="mt-3 text-xl font-semibold text-ink">What is ready to move now</h4>
-            <button
-              type="button"
-              onClick={() => void handleExportBundle()}
-              disabled={bundleExportState === "exporting" || !activeResult?.clips?.length}
-              className="secondary-button mt-4 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {bundleExportState === "exporting" ? "Building bundle..." : "Export bundle"}
-            </button>
-            {bundleExportMessage ? (
-              <p className={["mt-3 text-sm", bundleExportState === "failed" ? "text-red-200" : "text-[var(--gold)]"].join(" ")}>
-                {bundleExportMessage}
-              </p>
+        {strategyLaneClips.length ? (
+          <div className={["grid gap-5 md:grid-cols-2", isGuest ? "" : "xl:grid-cols-3"].join(" ")}>
+            {strategyLaneClips.map((clip) => (
+              <ClipCard
+                key={clip.id}
+                clip={clip}
+                compact={isGuest}
+                feedbackVote={!isGuest ? feedbackByClipId[clip.record_id || clip.clip_id || clip.id] || null : null}
+                onVote={!isGuest ? handleFeedbackVote : undefined}
+                queued={isQueued(clip)}
+                onToggleQueue={handleToggleQueue}
+                recoveryState={clipRecoveryStates[resolveClipQueueId(clip)] || null}
+                onRecover={handleRecoverClip}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="glass-panel rounded-[28px] p-5 text-sm leading-7 text-ink/60">
+            {!leadClipIsRendered && leadClip
+              ? "The lead clip is currently the only strategy-only idea in this pack."
+              : "No extra strategy-only clips were returned in this run."}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-kicker">Packaging + export</p>
+            <h4 className="mt-2 text-2xl font-semibold text-ink">What to post next and how to package it</h4>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-ink/60">
+              Use the lead hook, caption, thumbnail text, CTA, and post order together. Export rendered media first, then queue or recover the rest.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {leadPreviewReady ? (
+              <a
+                href={leadPreviewUrl || undefined}
+                target="_blank"
+                rel="noreferrer"
+                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium"
+              >
+                Open lead preview
+              </a>
             ) : null}
-            <div className="mt-4 grid gap-3">
-              <MetricTile
-                label={RESULT_COPY.finishedPreviews}
-                value={String(renderedClipCount)}
-                detail={renderedClipCount ? "These are ready to distribute right now" : "No finished preview came back yet"}
-              />
-              <MetricTile
-                label={RESULT_COPY.ideasOnly}
-                value={String(strategyOnlyClipCount)}
-                detail={strategyOnlyClipCount ? "Retry preview when you want media generated" : "Every visible clip has a preview"}
-              />
-              <MetricTile
-                label="Export unlocked"
-                value={String(exportReadyCount)}
-                detail={
-                  exportReadyCount
-                    ? "Downloads are live now"
-                    : activeFeatureFlags.premium_exports
-                      ? "No clip export came back yet"
-                      : "Upgrade unlocks direct clip export"
-                }
-              />
-              <MetricTile
-                label="Lead preview"
-                value={leadPreviewReady ? "Yes" : "No"}
-                detail={leadPreviewReady ? "Open the lead asset and move immediately" : "No lead preview asset came back yet"}
-              />
-            </div>
-          </div>
-
-          <div className="glass-panel rounded-[28px] p-5">
-            <p className="section-kicker">Signals</p>
-            <h4 className="mt-3 text-xl font-semibold text-ink">What this workspace is learning</h4>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {(topAngles.length ? topAngles : ["curiosity", "value", "story"]).slice(0, 4).map((angle) => (
-                <span key={angle} className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-ink/82">
-                  {angle}
-                </span>
-              ))}
-            </div>
-            <p className="mt-4 text-sm leading-7 text-ink/60">
-              {preferenceProfile.preferredHookStyles.length
-                ? `Preferred hook styles: ${preferenceProfile.preferredHookStyles.join(", ")}.`
-                : "No strong hook signal yet. Mark what hits."}
-            </p>
-          </div>
-
-          <div className="glass-panel rounded-[28px] p-5">
-            <p className="section-kicker">{RESULTS_COPY.executionGuide}</p>
-            <h4 className="mt-3 text-xl font-semibold text-ink">Decision rail</h4>
-            <div className="mt-4 space-y-3 text-sm text-ink/72">
-              <p>1. Post the lead clip first.</p>
-              <p>2. Export the ready-now cuts before you spend time on ideas-only cuts.</p>
-              <p>3. Use the high-leverage lane for testing and rerender decisions.</p>
-            </div>
-            <p className="mt-4 text-sm text-accent">
-              {improveResults ? "Preference learning is on." : "Turn on Improve results to apply local learning."}
-            </p>
+            {leadExportReady ? (
+              <a
+                href={leadExportUrl || undefined}
+                download
+                className="primary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
+              >
+                Export lead clip
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void handleExportBundle()}
+                disabled={bundleExportState === "exporting" || !activeResult?.clips?.length}
+                className="secondary-button inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {bundleExportState === "exporting" ? "Building bundle..." : "Export bundle"}
+              </button>
+            )}
           </div>
         </div>
-        ) : null}
+
+        <div className={["grid gap-6", !isGuest ? "xl:grid-cols-[minmax(0,0.58fr),minmax(320px,0.42fr)]" : ""].join(" ")}>
+          <div className="space-y-6">
+            {leadClip ? (
+              <div className="glass-panel rounded-[28px] p-5">
+                <p className="section-kicker">Lead package</p>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <MetricTile
+                    label="Hook"
+                    value={leadClip.hook || leadClip.title}
+                    detail={leadClip.why_this_matters || leadClip.reason || "This is the best opening move in the current stack."}
+                  />
+                  <MetricTile
+                    label="Thumbnail"
+                    value={leadClip.thumbnail_text || leadClip.title}
+                    detail="Use this line on the cover or opening frame."
+                  />
+                  <MetricTile
+                    label="CTA"
+                    value={leadClip.cta_suggestion || "Ask viewers what they want next."}
+                    detail="Keep the action simple and immediate."
+                  />
+                  <MetricTile
+                    label="Post order"
+                    value={`#${leadClip.post_rank || leadClip.best_post_order || leadClip.rank || 1}`}
+                    detail="Lead with this before moving into the rest of the stack."
+                  />
+                </div>
+                <div className="mt-4 rounded-[22px] border border-[var(--divider)] bg-[var(--surface-soft)] p-4">
+                  <p className="text-xs uppercase tracking-[0.22em] text-muted">Caption</p>
+                  <p className="mt-3 text-sm leading-7 text-ink/76">{leadClip.caption}</p>
+                </div>
+              </div>
+            ) : null}
+
+            {orderedClips.length ? <ReviewOrderPanel clips={orderedClips} /> : null}
+          </div>
+
+          {!isGuest ? (
+            <div className="space-y-5">
+              <ReadyQueuePanel items={readyQueue} onMove={handleMoveQueue} onRemove={handleRemoveQueue} onClear={handleClearQueue} />
+
+              <div className="glass-panel rounded-[28px] p-5">
+                <p className="section-kicker">Export state</p>
+                <div className="mt-4 grid gap-3">
+                  <MetricTile
+                    label="Rendered lane"
+                    value={String(renderedClipCount)}
+                    detail={renderedClipCount ? "Playable clips you can move right now." : "No playable clips were returned."}
+                  />
+                  <MetricTile
+                    label="Strategy lane"
+                    value={String(strategyOnlyClipCount)}
+                    detail={strategyOnlyClipCount ? "Ideas that need review or recovery." : "Everything visible is rendered."}
+                  />
+                  <MetricTile
+                    label="Downloads"
+                    value={String(exportReadyCount)}
+                    detail={exportReadyCount ? "Clip exports are ready now." : "Use bundle export or recover clips first."}
+                  />
+                  <MetricTile
+                    label="Shot plans"
+                    value={String(shotPlanReadyCount)}
+                    detail="Director Brain guidance returned with this pack."
+                  />
+                </div>
+                {bundleExportMessage ? (
+                  <p className={["mt-4 text-sm", bundleExportState === "failed" ? "text-red-200" : "text-[var(--gold)]"].join(" ")}>
+                    {bundleExportMessage}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
     </section>
   ) : null;
