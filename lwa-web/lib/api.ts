@@ -1,3 +1,25 @@
+const PLATFORM_BLOCKED_SOURCE_MESSAGE =
+  "This platform blocked server access. Upload the video/audio file directly, try another public source, or use prompt mode.";
+
+function sanitizeApiErrorMessage(message: string): string {
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("sign in to confirm") ||
+    lower.includes("not a bot") ||
+    lower.includes("yt-dlp") ||
+    lower.includes("cookies") ||
+    lower.includes("--cookies") ||
+    lower.includes("use --cookies-from-browser") ||
+    lower.includes("github.com/yt-dlp") ||
+    lower.includes("platform_blocked")
+  ) {
+    return PLATFORM_BLOCKED_SOURCE_MESSAGE;
+  }
+
+  return message;
+}
+
 import {
   AuthResponse,
   BatchSourceRef,
@@ -105,7 +127,7 @@ async function jsonRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
     if (!response.ok) {
       const message = data.detail || data.error || data.message || "Request failed.";
       logApiError(path, response.status, message);
-      throw new ApiError(message, response.status);
+      throw new ApiError(sanitizeApiErrorMessage(message), response.status);
     }
 
     return data as T;

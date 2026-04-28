@@ -106,6 +106,49 @@ import { useStableResults } from "../hooks/useStableResults";
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 type SourceMode = "video" | "image" | "idea";
 
+const PLATFORM_BLOCKED_SOURCE_MESSAGE =
+  "This platform blocked server access. Upload the video/audio file directly, try another public source, or use prompt mode.";
+
+function cleanSourceFailureMessage(raw?: string | null) {
+  const value = (raw || "").trim();
+  const lower = value.toLowerCase();
+
+  if (
+    lower.includes("sign in to confirm") ||
+    lower.includes("not a bot") ||
+    lower.includes("yt-dlp") ||
+    lower.includes("cookies") ||
+    lower.includes("--cookies") ||
+    lower.includes("use --cookies-from-browser") ||
+    lower.includes("github.com/yt-dlp") ||
+    lower.includes("blocked")
+  ) {
+    return PLATFORM_BLOCKED_SOURCE_MESSAGE;
+  }
+
+  if (lower.includes("live") || lower.includes("premiere")) {
+    return "Live streams cannot be clipped from a public link yet. Upload the stream recording after it ends, or use prompt mode.";
+  }
+
+  if (lower.includes("timeout") || lower.includes("too long") || lower.includes("504")) {
+    return "This source took too long to process. Try a shorter source, upload a trimmed file, or use prompt mode.";
+  }
+
+  if (
+    lower.includes("private") ||
+    lower.includes("removed") ||
+    lower.includes("unavailable") ||
+    lower.includes("region") ||
+    lower.includes("age-restricted") ||
+    lower.includes("age restricted")
+  ) {
+    return "This source is private, removed, unavailable, or region-locked. Upload your own file, try another public source, or use prompt mode.";
+  }
+
+  return value || "Could not process that source. Upload the file directly, try another public source, or use prompt mode.";
+}
+
+
 const sourceModeOptions: Array<{ value: SourceMode; label: string; detail: string }> = [
   { value: "video", label: "Video", detail: "Clip a source" },
   { value: "image", label: "Image", detail: "Generate motion" },
@@ -701,7 +744,7 @@ export function ClipStudio({
       const fallbackReason = (reconciledData.processing_summary as { fallback_reason?: string } | undefined)?.fallback_reason;
 
       if (allStrategyOnly && fallbackReason) {
-        setError(`Could not process this source: ${fallbackReason}. Try a different public link, upload, or prompt.`);
+        setError(cleanSourceFailureMessage(fallbackReason));
         return;
       }
       setError(null);
@@ -733,11 +776,11 @@ export function ClipStudio({
         const isTimeout = lower.includes("timeout") || lower.includes("too long") || lower.includes("504");
         const isUnavailable = lower.includes("unavailable") || lower.includes("private") || lower.includes("removed");
 
-        if (isBot) setError("This platform blocked server access. Upload the video/audio file directly, try another public source, or use prompt mode to generate the package.");
-        else if (isLive) setError("Live streams can't be clipped yet. Upload the stream later as a file, or use prompt mode.");
-        else if (isTimeout) setError("Video took too long. Try a shorter source under 10 minutes, or upload a pre-trimmed file.");
-        else if (isUnavailable) setError("This video is private, removed, or region-locked. Upload your own file, try another URL, or use prompt mode.");
-        else setError(raw === "Unable to generate clips." ? "Could not process that source. Try a different file, URL, or use prompt mode to generate content." : raw);
+        if (isBot) setError(cleanSourceFailureMessage(raw));
+        else if (isLive) setError(cleanSourceFailureMessage(raw));
+        else if (isTimeout) setError(cleanSourceFailureMessage(raw));
+        else if (isUnavailable) setError(cleanSourceFailureMessage(raw));
+        else setError(raw === "Unable to generate clips." ? "Could not process that source. Upload the file directly, try another public source, or use prompt mode." : cleanSourceFailureMessage(raw));
       }
     } finally {
       if (generationControllerRef.current === controller) {

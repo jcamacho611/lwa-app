@@ -28,6 +28,7 @@ from ...services.entitlements import UsageStore, resolve_entitlement
 from ...services.event_log import emit_event
 from ...services.export_bundle import create_export_bundle
 from ...services.source_ingest import infer_source_type
+from app.services.source_errors import classify_source_failure, source_failure_detail
 
 router = APIRouter()
 settings = get_settings()
@@ -160,12 +161,46 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
             platform_store=platform_store,
             source_path=source_path,
         )
-    except HTTPException:
+    except HTTPException as http_error:
+        source_failure = classify_source_failure(http_error)
+        if source_failure:
+            usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
+            logger.warning(
+                "source_ingest_blocked request_id=%s code=%s technical=%s",
+                request_id,
+                source_failure.code.value,
+                source_failure.technical_message,
+            )
+            raise HTTPException(status_code=422, detail=source_failure_detail(source_failure)) from None
+
         # Re-raise HTTP exceptions (including 402 quota errors) without releasing usage,
         # since the quota was already consumed by resolve_entitlement.
         raise
     except Exception as error:
         usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
+        source_failure = classify_source_failure(error)
+        if source_failure:
+            logger.warning(
+                "source_ingest_blocked request_id=%s code=%s technical=%s",
+                request_id,
+                source_failure.code.value,
+                source_failure.technical_message,
+            )
+            emit_event(
+                settings=settings,
+                event="generation_failed",
+                request_id=request_id,
+                plan_code=entitlement.plan.code,
+                subject_source=entitlement.subject_source,
+                status="failed",
+                metadata={
+                    "target_platform": resolved_request.target_platform or "auto",
+                    "source_type": resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
+                    "error_code": source_failure.code.value,
+                },
+            )
+            raise HTTPException(status_code=422, detail=source_failure_detail(source_failure)) from None
+
         emit_event(
             settings=settings,
             event="quota_released",
