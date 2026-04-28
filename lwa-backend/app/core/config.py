@@ -164,8 +164,11 @@ class Settings:
             1,
             minimum=1,
         )
+        self.enable_whop_verification = _env_bool("LWA_ENABLE_WHOP_VERIFICATION", "false")
         self.whop_api_key = os.getenv("WHOP_API_KEY", "")
         self.whop_company_id = os.getenv("WHOP_COMPANY_ID", "")
+        self.whop_product_id = os.getenv("WHOP_PRODUCT_ID", "").strip()
+        self.whop_webhook_secret = os.getenv("WHOP_WEBHOOK_SECRET", "").strip()
         self.google_api_key = os.getenv("GOOGLE_API_KEY", "")
         self.youtube_api_key = os.getenv("YOUTUBE_API_KEY", "")
         self.tiktok_client_key = os.getenv("TIKTOK_CLIENT_KEY", "")

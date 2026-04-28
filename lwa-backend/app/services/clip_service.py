@@ -53,6 +53,7 @@ from ..services.visual_render_provider import (
     render_visual_clip,
     resolve_visual_render_provider_state,
 )
+from ..services.whop_service import build_whop_provider_health, describe_whop_verification_state
 from ..style_engine import build_script_pack
 from ..trends import fetch_public_trends, trends_timestamp
 
@@ -75,12 +76,15 @@ def enforce_api_key(request: Request, settings: Settings) -> None:
 
 
 def dependency_health(settings: Settings) -> dict[str, object]:
+    whop_state = describe_whop_verification_state(settings)
     return {
         "ffmpeg": ffmpeg_available(settings),
         "yt_dlp": importlib.util.find_spec("yt_dlp") is not None,
         "openai_key_present": bool(settings.openai_api_key),
         "anthropic_key_present": bool(settings.anthropic_api_key),
         "whop_key_present": bool(settings.whop_api_key),
+        "whop_verification_enabled": whop_state.enabled,
+        "whop_verification_configured": whop_state.configured,
         "google_key_present": bool(settings.google_api_key or settings.youtube_api_key),
         "tiktok_keys_present": bool(settings.tiktok_client_key and settings.tiktok_client_secret),
         "meta_keys_present": bool(
@@ -108,6 +112,7 @@ def provider_health(settings: Settings) -> dict[str, dict[str, object]]:
             if settings.enable_anthropic and settings.anthropic_api_key
             else "disabled" if not settings.enable_anthropic else "missing-key",
         },
+        "whop": build_whop_provider_health(settings),
         "visual_generation": visual_generation_status(settings),
     }
 
