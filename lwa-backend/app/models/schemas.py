@@ -463,6 +463,7 @@ class UploadResponse(BaseModel):
     size_bytes: int
     public_url: Optional[str] = None
     storage_path: str
+    source_type: Optional[str] = None
     source_ref: dict[str, str]
 
 
