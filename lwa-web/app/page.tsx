@@ -88,6 +88,12 @@ const actionPaths: ActionPath[] = [
     external: false,
   },
   {
+    label: "Open workspace",
+    detail: "Review saved clip packs, queue state, campaigns, and account controls.",
+    href: "/dashboard",
+    external: false,
+  },
+  {
     label: "Operator command center",
     detail: "Open the internal launch checklist for quality, reliability, and Director Brain readiness.",
     href: "/operator",

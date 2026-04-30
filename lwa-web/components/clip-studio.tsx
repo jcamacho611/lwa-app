@@ -292,7 +292,8 @@ const appNavItems = [
 
 const marketingNavItems = [
   { href: "/generate", label: rewriteSurfaceLabel("Generate") },
-  { href: "/campaigns", label: rewriteSurfaceLabel("Campaigns") },
+  { href: "/operator", label: "Operator" },
+  { href: "/realm", label: "Realms" },
 ] as const;
 
 const VIDEO_LOADING_STAGES = ["Source ingest", "Moment scan", "Clip ranking", "Packaging", "Render/export", "Delivery"];
