@@ -1,0 +1,32 @@
+Continue only as DIRECTOR BRAIN V0 TRACK.
+
+Task:
+Implement per-platform Director Brain scoring and packaging without breaking the existing generation flow.
+
+Output should include:
+- moments[]
+- hooks[]
+- captions[]
+- thumbnail_text
+- cta_suggestion
+- packaging_angle
+- platform_fit
+- score/confidence
+- reason/explanation
+
+Platform logic:
+- TikTok: completion, rewatch, shares, first 1-3 seconds
+- Instagram Reels: DM shares, saves, watch time, first 2 seconds
+- YouTube Shorts: engaged views, rewatches, swipe-away, first second
+- LinkedIn: dwell, comment depth, saves, first 3 seconds
+
+Content category modifiers:
+podcast, gaming, finance, coaching, beauty, medspa, music, sports, education, debate, reaction, product demo, AI/tech, local business.
+
+Preserve current API response compatibility. Add fields without breaking old fields.
+Do not touch iOS.
+
+Verification:
+cd apps/backend && python -m py_compile $(git ls-files '*.py')
+cd apps/backend && pytest -x
+cd apps/web && npm run type-check
