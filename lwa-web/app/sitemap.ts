@@ -12,6 +12,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/settings",
     "/history",
     "/upload",
+    "/compare",
+    "/use-cases",
   ];
 
   const dynamicRoutes = [...comparisonPages, ...useCasePages].map((page) => page.path);
@@ -19,7 +21,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [...staticRoutes, ...dynamicRoutes].map((route) => ({
     url: absoluteUrl(route),
     lastModified: new Date(),
-    changeFrequency: route === "" ? "weekly" : "monthly",
-    priority: route === "" ? 1 : route === "/generate" ? 0.95 : 0.72,
+    changeFrequency: route === "" ? "weekly" : route === "/generate" ? "weekly" : "monthly",
+    priority:
+      route === ""
+        ? 1
+        : route === "/generate"
+          ? 0.95
+          : route === "/compare" || route === "/use-cases"
+            ? 0.82
+            : 0.72,
   }));
 }
