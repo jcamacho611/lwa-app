@@ -41,6 +41,7 @@ export type UploadAsset = {
   source_ref?: {
     source_kind: string;
     upload_id?: string;
+    source_type?: string;
   };
 };
 
@@ -264,11 +265,17 @@ export type ClipResult = {
   confidence?: number | null;
   confidence_score?: number | null;
   confidence_label?: string | null;
+  algorithm_version?: string | null;
   hook_score?: number | null;
   hook_strength?: string | number | null;
   render_readiness_score?: number | null;
+  quality_gate_status?: "pass" | "warning" | "fail" | "unknown" | string | null;
+  quality_gate_warnings?: string[] | null;
+  revenue_intent_score?: number | null;
+  offer_fit_score?: number | null;
   rank?: number | null;
   post_rank?: number | null;
+  suggested_post_order?: number | null;
   is_best_clip?: boolean;
   reason?: string | null;
   why_this_matters?: string | null;
@@ -280,8 +287,13 @@ export type ClipResult = {
   thumbnail_text?: string | null;
   packaging_angle?: string | null;
   platform_fit?: string | null;
+  platform_recommendation_reason?: string | null;
+  recommended_platform?: string | null;
+  recommended_content_type?: string | null;
+  recommended_output_style?: string | null;
   caption_preset?: string | null;
   target_platform?: string | null;
+  suggested_platform?: string | null;
   detected_category?: string | null;
   category?: string | null;
   source_index?: number | null;
@@ -300,11 +312,16 @@ export type ClipResult = {
   hooks?: Array<Record<string, unknown>> | null;
   caption_variants?: Record<string, string>;
   caption_style?: string | null;
+  caption_style_reason?: string | null;
+  suggested_caption_style?: string | null;
+  suggested_caption_position?: string | null;
+  emphasis_words?: string[] | null;
   duration?: number | null;
   timestamp_start?: string | null;
   timestamp_end?: string | null;
   transcript?: string | null;
   cta?: string | null;
+  suggested_cta?: string | null;
   preview_url?: string | null;
   download_url?: string | null;
   thumbnail_url?: string | null;
@@ -319,9 +336,13 @@ export type ClipResult = {
   export_filename?: string | null;
   approval_state?: string | null;
   campaign_requirement_checks?: CampaignRequirementCheck[];
+  campaign_role?: string | null;
+  campaign_reason?: string | null;
+  funnel_stage?: string | null;
   is_rendered?: boolean;
   is_strategy_only?: boolean;
   strategy_only?: boolean;
+  reason_not_rendered?: string | null;
   rendered_status?: string | null;
   render_status?: "pending" | "rendering" | "ready" | "failed" | string | null;
   render_error?: string | null;
