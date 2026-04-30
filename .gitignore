@@ -12,6 +12,8 @@ generated/
 lwa-backend/generated/
 lwa-backend/uploads/
 lwa-backend/downloads/
+poc/fixtures/
+poc/source-matrix-results.*
 
 DerivedData/
 *.xcuserstate

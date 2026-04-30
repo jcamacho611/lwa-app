@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import json
 from pathlib import Path
 from uuid import uuid4
 
@@ -10,6 +11,10 @@ from ...core.config import get_settings
 from ...dependencies.auth import get_optional_user, get_platform_store, require_user
 from ...models.schemas import UploadResponse
 from ...services.entitlements import UsageStore, get_plan_for_user
+from ...services.source_ingest import classify_upload_source
+from ...worlds.dependencies import get_worlds_store
+from ...worlds.jobs.schemas import JobCreateRequest
+from ...worlds.jobs.service import JobService
 
 router = APIRouter(prefix="/v1/uploads", tags=["uploads"])
 settings = get_settings()
@@ -47,7 +52,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
     plan = get_plan_for_user(settings=settings, user=user) if user else None
-    upload_limit = int(plan.feature_flags.max_uploads_per_day if plan else 2)
+    upload_limit = -1 if settings.free_launch_mode and not user else int(plan.feature_flags.max_uploads_per_day if plan else 2)
     usage_day: str | None = None
     if upload_limit >= 0:
         try:
@@ -93,6 +98,29 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
             content_type=file.content_type,
             file_size=total_size,
         )
+        source_type = classify_upload_source(upload)
+        try:
+            JobService(get_worlds_store()).create_job(
+                payload=JobCreateRequest(
+                    job_type="upload_processing",
+                    title=f"Process upload: {upload['file_name']}",
+                    description="Probe media metadata, scan file, and prepare source for clipping.",
+                    priority="normal",
+                    source_public_id=upload["id"],
+                    target_type="upload",
+                    target_public_id=upload["id"],
+                    input_json=json.dumps(
+                        {
+                            "storage_path": upload["stored_path"],
+                            "public_url": upload["public_url"],
+                            "source_type": source_type,
+                        }
+                    ),
+                ),
+                owner_user_id=subject_id,
+            )
+        except Exception as error:
+            logger.warning("worlds_upload_job_create_failed upload_id=%s error=%s", upload["id"], error)
         logger.info("upload_validated subject_id=%s upload_id=%s size_bytes=%s", subject_id, upload["id"], total_size)
         return UploadResponse(
             file_id=upload["id"],
@@ -101,7 +129,8 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
             size_bytes=upload["file_size"],
             public_url=upload["public_url"],
             storage_path=upload["stored_path"],
-            source_ref={"source_kind": "upload", "upload_id": upload["id"]},
+            source_type=source_type,
+            source_ref={"source_kind": "upload", "upload_id": upload["id"], "source_type": source_type},
         )
     except Exception:
         if usage_day:

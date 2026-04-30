@@ -51,6 +51,8 @@ class Settings:
         self.default_plan_name = os.getenv("LWA_DEFAULT_PLAN_NAME", "Guest access")
         self.default_credits_remaining = _env_int("LWA_DEFAULT_CREDITS_REMAINING", 10, minimum=0)
         self.default_turnaround = os.getenv("LWA_DEFAULT_TURNAROUND", "45 seconds")
+        self.free_launch_mode = _env_bool("FREE_LAUNCH_MODE", "false")
+        self.rate_limit_guest_rpm = _env_int("RATE_LIMIT_GUEST_RPM", 30, minimum=1)
         self.free_daily_limit = _env_int("LWA_FREE_DAILY_LIMIT", self.default_credits_remaining, minimum=0)
         self.pro_daily_limit = _env_int("LWA_PRO_DAILY_LIMIT", 25, minimum=-1)
         self.scale_daily_limit = _env_int("LWA_SCALE_DAILY_LIMIT", 100, minimum=-1)
@@ -129,6 +131,12 @@ class Settings:
             else os.path.join(os.getcwd(), "generated", "lwa-platform.sqlite3")
         )
         self.platform_db_path = os.getenv("LWA_PLATFORM_DB_PATH", default_platform_db)
+        default_worlds_db = (
+            os.path.join(railway_volume_mount_path, "lwa-worlds.sqlite3")
+            if railway_volume_mount_path
+            else os.path.join(os.getcwd(), "generated", "lwa-worlds.sqlite3")
+        )
+        self.worlds_db_path = os.getenv("LWA_WORLDS_DB_PATH", default_worlds_db)
         default_clipping_db = (
             os.path.join(railway_volume_mount_path, "lwa-clipping.sqlite3")
             if railway_volume_mount_path

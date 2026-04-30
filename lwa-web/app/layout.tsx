@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Poppins } from "next/font/google";
 import { BackgroundCanvas } from "../components/BackgroundCanvas";
 import { CharacterStage } from "../components/CharacterStage";
+import { FreeLaunchBanner } from "../components/FreeLaunchBanner";
 import { resolveDirection, resolveLocale } from "../lib/intl";
 import { siteUrl } from "../lib/seo";
 import "./globals.css";
@@ -68,6 +69,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang={locale} dir={direction} suppressHydrationWarning>
       <body className={`${poppinsBody.variable} ${poppinsDisplay.variable} antialiased`}>
+        <FreeLaunchBanner />
         <BackgroundCanvas />
         <CharacterStage />
         <main className="lwa-ui-layer" style={{ position: "relative", zIndex: 10 }}>

@@ -12,7 +12,10 @@ from fastapi import HTTPException
 
 from app.core.config import Settings
 from app.job_store import RequestThrottle
+from app.models.schemas import ProcessRequest
 from app.services.clip_service import maybe_prune_generated_assets
+from app.services.entitlements import EntitlementContext, build_free_launch_plan
+from app.services.fallbacks import build_degraded_clip_response
 
 
 class RuntimeHardeningTests(unittest.TestCase):
@@ -63,6 +66,41 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertEqual(context.exception.status_code, 429)
 
         asyncio.run(exercise())
+
+    def test_degraded_fallback_response_is_strategy_only_and_ranked(self) -> None:
+        settings = Settings()
+        plan = build_free_launch_plan(settings)
+        entitlement = EntitlementContext(
+            subject="free_launch_ip:test",
+            subject_source="free_launch_ip",
+            usage_day="2026-04-29",
+            plan=plan,
+            credits_remaining=9999,
+            user_id=None,
+        )
+        response = build_degraded_clip_response(
+            request_id="req_test",
+            request=ProcessRequest(
+                video_url="https://example.com/blocked-video",
+                source_type="url",
+                target_platform="TikTok",
+                clip_count=3,
+            ),
+            entitlement=entitlement,
+            reason="Public source blocked server access.",
+            error_class="platform_blocked",
+            trend_context=[],
+        )
+
+        self.assertEqual(response.status, "degraded")
+        self.assertEqual(response.status_reason, "Public source blocked server access.")
+        self.assertEqual(response.processing_summary.processing_mode, "degraded")
+        self.assertEqual(response.processing_summary.rendered_clip_count, 0)
+        self.assertEqual(response.processing_summary.strategy_only_clip_count, 3)
+        self.assertTrue(all(clip.is_strategy_only for clip in response.clips))
+        self.assertFalse(any(clip.is_rendered for clip in response.clips))
+        self.assertEqual([clip.score for clip in response.clips], [64, 60, 56])
+        self.assertEqual([clip.rank for clip in response.clips], [1, 2, 3])
 
 
 if __name__ == "__main__":

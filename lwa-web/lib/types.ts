@@ -37,10 +37,12 @@ export type UploadAsset = {
   file_size?: number;
   public_url?: string | null;
   storage_path?: string;
+  source_type?: string | null;
   created_at?: string;
   source_ref?: {
     source_kind: string;
     upload_id?: string;
+    source_type?: string;
   };
 };
 
@@ -389,6 +391,7 @@ export type GenerateResponse = {
   request_id: string;
   video_url: string;
   status: string;
+  status_reason?: string | null;
   source_type?: string;
   source_title?: string | null;
   source_platform?: string | null;

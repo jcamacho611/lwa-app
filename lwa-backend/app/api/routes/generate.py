@@ -27,15 +27,16 @@ from ...services.clip_service import (
 from ...services.entitlements import UsageStore, resolve_entitlement
 from ...services.event_log import emit_event
 from ...services.export_bundle import create_export_bundle
-from ...services.source_ingest import infer_source_type
+from ...services.fallbacks import build_degraded_clip_response
+from ...services.source_ingest import classify_upload_source, infer_source_type
 from app.services.source_errors import classify_source_failure, source_failure_detail
 
 router = APIRouter()
 settings = get_settings()
 job_store = JobStore()
 request_throttle = RequestThrottle(
-    window_seconds=settings.abuse_window_seconds,
-    max_requests=settings.abuse_max_generation_requests,
+    window_seconds=60 if settings.free_launch_mode else settings.abuse_window_seconds,
+    max_requests=settings.rate_limit_guest_rpm if settings.free_launch_mode else settings.abuse_max_generation_requests,
 )
 usage_store = UsageStore(settings.usage_store_path)
 platform_store = get_platform_store()
@@ -171,6 +172,15 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
                 source_failure.code.value,
                 source_failure.technical_message,
             )
+            if settings.free_launch_mode:
+                return build_degraded_clip_response(
+                    request_id=request_id,
+                    request=resolved_request,
+                    entitlement=entitlement,
+                    reason=source_failure.user_message,
+                    error_class=source_failure.code.value,
+                    trend_context=[],
+                )
             raise HTTPException(status_code=422, detail=source_failure_detail(source_failure)) from None
 
         # Re-raise HTTP exceptions (including 402 quota errors) without releasing usage,
@@ -199,6 +209,15 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
                     "error_code": source_failure.code.value,
                 },
             )
+            if settings.free_launch_mode:
+                return build_degraded_clip_response(
+                    request_id=request_id,
+                    request=resolved_request,
+                    entitlement=entitlement,
+                    reason=source_failure.user_message,
+                    error_class=source_failure.code.value,
+                    trend_context=[],
+                )
             raise HTTPException(status_code=422, detail=source_failure_detail(source_failure)) from None
 
         emit_event(
@@ -223,6 +242,16 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
                 "error_code": type(error).__name__,
             },
         )
+        if settings.free_launch_mode:
+            logger.exception("free_launch_generation_degraded request_id=%s error=%s", request_id, type(error).__name__)
+            return build_degraded_clip_response(
+                request_id=request_id,
+                request=resolved_request,
+                entitlement=entitlement,
+                reason="The full render pipeline failed, so LWA returned a strategy-only fallback package.",
+                error_class=type(error).__name__,
+                trend_context=[],
+            )
         raise
 
 
@@ -402,18 +431,6 @@ def resolve_request_source(
         raise HTTPException(status_code=422, detail="Provide video_url, source_url, or upload_file_id for media sources")
 
     return request.model_copy(update={"source_type": source_type}), None
-
-
-def classify_upload_source(upload: dict[str, object]) -> str:
-    content_type = str(upload.get("content_type") or "").lower()
-    filename = str(upload.get("file_name") or "")
-    suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
-
-    if content_type.startswith("audio/") or suffix in {"mp3", "wav", "m4a", "aac", "ogg", "oga", "flac"}:
-        return "audio_upload"
-    if content_type.startswith("image/") or suffix in {"jpg", "jpeg", "png", "webp", "heic", "heif"}:
-        return "image_upload"
-    return "video_upload"
 
 
 async def enforce_generation_throttle(*, entitlement) -> None:

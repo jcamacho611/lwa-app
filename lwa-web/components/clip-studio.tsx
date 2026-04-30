@@ -105,6 +105,7 @@ import { useStableResults } from "../hooks/useStableResults";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 type SourceMode = "video" | "image" | "idea";
+const FREE_LAUNCH_MODE = process.env.NEXT_PUBLIC_FREE_LAUNCH_MODE === "true";
 
 const PLATFORM_BLOCKED_SOURCE_MESSAGE =
   "This platform blocked server access. Upload the video/audio file directly, try another public source, or use prompt mode.";
@@ -1260,29 +1261,33 @@ export function ClipStudio({
   const paywallCard = paywallMessage ? (
     <div className="rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
       <p className="text-sm font-semibold text-[var(--gold)]">
-        Out of credits.
+        {FREE_LAUNCH_MODE && !user ? "Free launch guard active." : "Out of credits."}
       </p>
       <p className="mt-1 text-sm text-white/55">
         {user
           ? "Choose a checkout path, request a demo, or wait for reset."
-          : "Sign in free to keep generating and save your clips."}
+          : FREE_LAUNCH_MODE
+            ? "Try again in a minute, upload a smaller source, or switch to prompt mode."
+            : "Sign in free to keep generating and save your clips."}
       </p>
-      <div className="mt-3">
-        {!user ? (
-          <button
-            type="button"
-            onClick={() => {
-              setAuthMode("login");
-              setAuthOpen(true);
-            }}
-            className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black hover:opacity-90"
-          >
-            Sign in free
-          </button>
-        ) : (
-          <MoneyCtaPanel variant="compact" source="clip_studio_quota" title="Choose how to keep generating" />
-        )}
-      </div>
+      {FREE_LAUNCH_MODE && !user ? null : (
+        <div className="mt-3">
+          {!user ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("login");
+                setAuthOpen(true);
+              }}
+              className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black hover:opacity-90"
+            >
+              Sign in free
+            </button>
+          ) : (
+            <MoneyCtaPanel variant="compact" source="clip_studio_quota" title="Choose how to keep generating" />
+          )}
+        </div>
+      )}
     </div>
   ) : null;
   function handleFeedbackVote(clip: GenerateResponse["clips"][number], vote: "good" | "bad") {
@@ -2492,22 +2497,28 @@ export function ClipStudio({
                 ) : (
                   <>
                     <span className="credits-bar hidden sm:inline-flex">
-                      <span className="credits-count">{planLimits.generationsPerDay || 1}</span>
-                      credits
+                      <span className="credits-count">{FREE_LAUNCH_MODE ? "Open" : planLimits.generationsPerDay || 1}</span>
+                      {FREE_LAUNCH_MODE ? "free launch" : "credits"}
                     </span>
+                    {FREE_LAUNCH_MODE ? null : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode("login");
+                          setAuthOpen(true);
+                        }}
+                        className="secondary-button inline-flex rounded-full px-4 py-2.5 text-sm font-medium"
+                      >
+                        Sign in
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
-                        setAuthMode("login");
-                        setAuthOpen(true);
-                      }}
-                      className="secondary-button inline-flex rounded-full px-4 py-2.5 text-sm font-medium"
-                    >
-                      Sign in
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
+                        if (FREE_LAUNCH_MODE) {
+                          window.location.assign("/generate");
+                          return;
+                        }
                         setAuthMode("signup");
                         setAuthOpen(true);
                       }}
@@ -2549,7 +2560,7 @@ export function ClipStudio({
                   {HERO_COPY.primaryCta}
                 </Link>
                 <Link
-                  href={user ? "/dashboard" : "/signup"}
+                  href={user ? "/dashboard" : FREE_LAUNCH_MODE ? "/generate" : "/signup"}
                   className="secondary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-medium"
                 >
                   {HERO_COPY.secondaryCta}
@@ -2602,6 +2613,11 @@ export function ClipStudio({
                     Sign out
                   </button>
                 </div>
+              ) : FREE_LAUNCH_MODE ? (
+                <span className="credits-bar hidden sm:inline-flex">
+                  <span className="credits-count">Open</span>
+                  free launch
+                </span>
               ) : (
                 <button
                   type="button"
@@ -2682,7 +2698,7 @@ export function ClipStudio({
                 </section>
               ) : null}
 
-              {requiresAccount && !user ? (
+              {requiresAccount && !user && !FREE_LAUNCH_MODE ? (
                 <section className="hero-card rounded-[34px] p-6 sm:p-8">
                   <p className="section-kicker">Authentication required</p>
                   <h2 className="mt-3 text-3xl font-semibold text-ink">Sign in to open the workspace</h2>
