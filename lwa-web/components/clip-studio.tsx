@@ -105,6 +105,7 @@ import { useStableResults } from "../hooks/useStableResults";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 type SourceMode = "video" | "image" | "idea";
+const FREE_LAUNCH_MODE = process.env.NEXT_PUBLIC_FREE_LAUNCH_MODE === "true";
 
 const PLATFORM_BLOCKED_SOURCE_MESSAGE =
   "This platform blocked server access. Upload the video/audio file directly, try another public source, or use prompt mode.";
@@ -1178,6 +1179,32 @@ export function ClipStudio({
   const recommendedPlatform = activeResult?.processing_summary?.recommended_platform || activeResult?.processing_summary?.target_platform || null;
   const platformDecision = activeResult?.processing_summary?.platform_decision || (useManualPlatform ? "manual" : "auto");
   const platformRecommendationReason = activeResult?.processing_summary?.platform_recommendation_reason || null;
+  const recommendedContentType = activeResult?.processing_summary?.recommended_content_type || null;
+  const recommendedOutputStyle = activeResult?.processing_summary?.recommended_output_style || null;
+  const recommendationRail = activeResult
+    ? [
+        {
+          label: "Destination",
+          value: recommendedPlatform || effectiveTargetPlatform || "Auto",
+          detail: platformRecommendationReason || "LWA picked the first destination from the source and current pack.",
+        },
+        {
+          label: "Content read",
+          value: recommendedContentType || "Auto read",
+          detail: "Used to shape hook angle, packaging, and review order without changing the API contract.",
+        },
+        {
+          label: "Output style",
+          value: recommendedOutputStyle ? "Style locked" : "Auto package",
+          detail: recommendedOutputStyle || "Hook, caption, thumbnail, CTA, and post order are generated as a pack.",
+        },
+        {
+          label: "Truth layer",
+          value: activeResult.processing_summary?.ai_provider || "Fallback-safe",
+          detail: `${planSurface.name}${typeof creditsRemaining === "number" ? ` with ${creditsRemaining} credits left` : ""}; rendered clips stay separate from strategy-only ideas.`,
+        },
+      ]
+    : [];
   const renderedClipCount = renderedClips.length;
   const strategyOnlyClipCount = strategyOnlyClips.length;
   const shotPlanReadyCount = orderedClips.filter((clip) => clipHasShotPlan(clip)).length;
@@ -1234,29 +1261,33 @@ export function ClipStudio({
   const paywallCard = paywallMessage ? (
     <div className="rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
       <p className="text-sm font-semibold text-[var(--gold)]">
-        Out of credits.
+        {FREE_LAUNCH_MODE && !user ? "Free launch guard active." : "Out of credits."}
       </p>
       <p className="mt-1 text-sm text-white/55">
         {user
           ? "Choose a checkout path, request a demo, or wait for reset."
-          : "Sign in free to keep generating and save your clips."}
+          : FREE_LAUNCH_MODE
+            ? "Try again in a minute, upload a smaller source, or switch to prompt mode."
+            : "Sign in free to keep generating and save your clips."}
       </p>
-      <div className="mt-3">
-        {!user ? (
-          <button
-            type="button"
-            onClick={() => {
-              setAuthMode("login");
-              setAuthOpen(true);
-            }}
-            className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black hover:opacity-90"
-          >
-            Sign in free
-          </button>
-        ) : (
-          <MoneyCtaPanel variant="compact" source="clip_studio_quota" title="Choose how to keep generating" />
-        )}
-      </div>
+      {FREE_LAUNCH_MODE && !user ? null : (
+        <div className="mt-3">
+          {!user ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("login");
+                setAuthOpen(true);
+              }}
+              className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black hover:opacity-90"
+            >
+              Sign in free
+            </button>
+          ) : (
+            <MoneyCtaPanel variant="compact" source="clip_studio_quota" title="Choose how to keep generating" />
+          )}
+        </div>
+      )}
     </div>
   ) : null;
   function handleFeedbackVote(clip: GenerateResponse["clips"][number], vote: "good" | "bad") {
@@ -2083,6 +2114,25 @@ export function ClipStudio({
         </InlineAlert>
       ) : null}
 
+      {recommendationRail.length ? (
+        <section className="glass-panel rounded-[28px] p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="section-kicker">LWA recommendation rail</p>
+              <h4 className="mt-2 text-2xl font-semibold text-ink">The first move, the content read, and the safety truth.</h4>
+            </div>
+            <StatPill tone={platformDecision === "manual" ? "neutral" : "signal"}>
+              {platformDecision === "manual" ? "Manual override" : "Auto routed"}
+            </StatPill>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {recommendationRail.map((item) => (
+              <MetricTile key={item.label} label={item.label} value={item.value} detail={item.detail} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {leadClip ? (
         <div className="space-y-3">
           <p className="section-kicker">Lead clip</p>
@@ -2447,22 +2497,28 @@ export function ClipStudio({
                 ) : (
                   <>
                     <span className="credits-bar hidden sm:inline-flex">
-                      <span className="credits-count">{planLimits.generationsPerDay || 1}</span>
-                      credits
+                      <span className="credits-count">{FREE_LAUNCH_MODE ? "Open" : planLimits.generationsPerDay || 1}</span>
+                      {FREE_LAUNCH_MODE ? "free launch" : "credits"}
                     </span>
+                    {FREE_LAUNCH_MODE ? null : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode("login");
+                          setAuthOpen(true);
+                        }}
+                        className="secondary-button inline-flex rounded-full px-4 py-2.5 text-sm font-medium"
+                      >
+                        Sign in
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
-                        setAuthMode("login");
-                        setAuthOpen(true);
-                      }}
-                      className="secondary-button inline-flex rounded-full px-4 py-2.5 text-sm font-medium"
-                    >
-                      Sign in
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
+                        if (FREE_LAUNCH_MODE) {
+                          window.location.assign("/generate");
+                          return;
+                        }
                         setAuthMode("signup");
                         setAuthOpen(true);
                       }}
@@ -2504,7 +2560,7 @@ export function ClipStudio({
                   {HERO_COPY.primaryCta}
                 </Link>
                 <Link
-                  href={user ? "/dashboard" : "/signup"}
+                  href={user ? "/dashboard" : FREE_LAUNCH_MODE ? "/generate" : "/signup"}
                   className="secondary-button inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-medium"
                 >
                   {HERO_COPY.secondaryCta}
@@ -2557,6 +2613,11 @@ export function ClipStudio({
                     Sign out
                   </button>
                 </div>
+              ) : FREE_LAUNCH_MODE ? (
+                <span className="credits-bar hidden sm:inline-flex">
+                  <span className="credits-count">Open</span>
+                  free launch
+                </span>
               ) : (
                 <button
                   type="button"
@@ -2637,7 +2698,7 @@ export function ClipStudio({
                 </section>
               ) : null}
 
-              {requiresAccount && !user ? (
+              {requiresAccount && !user && !FREE_LAUNCH_MODE ? (
                 <section className="hero-card rounded-[34px] p-6 sm:p-8">
                   <p className="section-kicker">Authentication required</p>
                   <h2 className="mt-3 text-3xl font-semibold text-ink">Sign in to open the workspace</h2>

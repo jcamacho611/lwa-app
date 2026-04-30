@@ -36,8 +36,21 @@ def get_optional_user(request: Request) -> UserRecord | None:
     return user
 
 
+def free_launch_guest_user() -> UserRecord:
+    return UserRecord(
+        id="guest",
+        email="guest@free-launch.local",
+        plan="free_launch",
+        role="guest",
+        balance_cents=0,
+        created_at="free_launch",
+    )
+
+
 def require_user(request: Request) -> UserRecord:
     user = get_optional_user(request)
     if not user:
+        if settings.free_launch_mode:
+            return free_launch_guest_user()
         raise HTTPException(status_code=401, detail="Authentication required")
     return user

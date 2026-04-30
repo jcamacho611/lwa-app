@@ -27,6 +27,9 @@ from .api.routes.whop_webhooks import router as whop_webhooks_router
 from .core.config import get_settings
 from .services.asset_retention import cleanup_generated_assets_nonfatal_for_settings
 from .services.db_init import initialize_databases
+from .worlds.clipping.router import router as worlds_clipping_router
+from .worlds.jobs.router import router as worlds_jobs_router
+from .worlds.router import router as worlds_router
 
 settings = get_settings()
 logger = logging.getLogger("uvicorn.error")
@@ -77,6 +80,9 @@ def create_app() -> FastAPI:
     app.include_router(clips_router)
     app.include_router(edit_router)
     app.include_router(whop_webhooks_router)
+    app.include_router(worlds_router)
+    app.include_router(worlds_jobs_router)
+    app.include_router(worlds_clipping_router)
     logger.info(
         "app_ready generated_assets_dir=%s generated_mount=/generated uploads_dir=%s uploads_mount=/uploads log_level=%s",
         settings.generated_assets_dir,

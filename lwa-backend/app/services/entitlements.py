@@ -158,6 +158,11 @@ def resolve_entitlement(
         plan = build_plan_from_user(settings, current_user.plan)
         subject = f"user:{current_user.id}"
         subject_source = "user"
+    elif getattr(settings, "free_launch_mode", False):
+        plan = build_free_launch_plan(settings)
+        remote_host = request.client.host if request.client else "anonymous"
+        subject = f"free_launch_ip:{stable_hash(remote_host)}"
+        subject_source = "free_launch_ip"
     else:
         plan = build_free_plan(settings)
         # Client ID is a quota hint, not an authenticated identity.
@@ -268,6 +273,37 @@ def build_free_plan(settings: Settings) -> PlanDefinition:
             posting_queue=False,
             max_uploads_per_day=2,
             max_generations_per_day=settings.free_daily_limit,
+            premium_exports=False,
+            priority_processing=False,
+            batch_mode=False,
+            thumbnail_preview=True,
+            export_bundle=False,
+            export_profiles=False,
+            analytics_feedback=False,
+        ),
+    )
+
+
+def build_free_launch_plan(settings: Settings) -> PlanDefinition:
+    clip_limit = effective_clip_limit(settings, settings.free_clip_limit)
+    return PlanDefinition(
+        code="free_launch",
+        name="Free Launch",
+        daily_limit=-1,
+        feature_flags=FeatureFlags(
+            clip_limit=clip_limit,
+            high_volume_clips=high_volume_enabled_for_plan(settings=settings, clip_limit=clip_limit),
+            alt_hooks=True,
+            campaign_mode=False,
+            packaging_profiles=False,
+            caption_styles=True,
+            history_limit=0,
+            caption_editor=False,
+            timeline_editor=False,
+            wallet_view=False,
+            posting_queue=False,
+            max_uploads_per_day=-1,
+            max_generations_per_day=-1,
             premium_exports=False,
             priority_processing=False,
             batch_mode=False,

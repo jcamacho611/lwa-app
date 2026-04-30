@@ -133,6 +133,18 @@ def source_value_for_request(request: ProcessRequest) -> str:
     )
 
 
+def classify_upload_source(upload: dict[str, object]) -> str:
+    content_type = str(upload.get("content_type") or "").lower()
+    filename = str(upload.get("file_name") or upload.get("filename") or "")
+    suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+
+    if content_type.startswith("audio/") or suffix in {"mp3", "wav", "m4a", "aac", "ogg", "oga", "flac"}:
+        return "audio_upload"
+    if content_type.startswith("image/") or suffix in {"jpg", "jpeg", "png", "webp", "heic", "heif"}:
+        return "image_upload"
+    return "video_upload"
+
+
 def build_strategy_source_context(*, request: ProcessRequest, source_type: str, source_value: str) -> SourceContext:
     prompt = (request.prompt or request.text_prompt or "").strip()
     campaign = (request.campaign_goal or request.campaign_brief or "").strip()

@@ -125,6 +125,8 @@ class PremiumGuardTests(unittest.TestCase):
                 files={"file": ("source.mp4", b"clip-bytes", "video/mp4")},
             )
             self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["source_type"], "video_upload")
+            self.assertEqual(response.json()["source_ref"]["source_type"], "video_upload")
 
         third_response = self.client.post(
             "/v1/uploads",

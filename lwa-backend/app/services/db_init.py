@@ -32,6 +32,11 @@ def initialize_databases(settings: Settings) -> None:
         from ..services.generated_asset_store import GeneratedAssetStore
         GeneratedAssetStore(settings.generated_asset_store_path)
         logger.info(f"generated_asset_db_initialized path={settings.generated_asset_store_path}")
+
+        # Initialize LWA Worlds marketplace/ledger database
+        from ..worlds.repositories import WorldsStore
+        WorldsStore(settings.worlds_db_path)
+        logger.info(f"worlds_db_initialized path={settings.worlds_db_path}")
         
         # Ensure generated assets directory exists
         generated_dir = Path(settings.generated_assets_dir)
@@ -74,6 +79,11 @@ def migrate_databases(settings: Settings) -> None:
         from ..services.generated_asset_store import GeneratedAssetStore
         GeneratedAssetStore(settings.generated_asset_store_path)
         logger.info("generated_asset_db_migrations_completed")
+
+        # LWA Worlds store migrations
+        from ..worlds.repositories import WorldsStore
+        WorldsStore(settings.worlds_db_path)
+        logger.info("worlds_db_migrations_completed")
         
         logger.info("all_database_migrations_completed")
         
@@ -133,6 +143,24 @@ def get_database_status(settings: Settings) -> dict[str, object]:
                 }
         else:
             status["platform_db"] = {"exists": False, "path": str(platform_db)}
+
+        worlds_db = Path(settings.worlds_db_path)
+        if worlds_db.exists():
+            with sqlite3.connect(worlds_db) as connection:
+                cursor = connection.cursor()
+                cursor.execute("SELECT COUNT(*) FROM marketplace_campaigns")
+                worlds_campaign_count = cursor.fetchone()[0]
+                cursor.execute("SELECT COUNT(*) FROM internal_ledger_entries")
+                worlds_ledger_count = cursor.fetchone()[0]
+                status["worlds_db"] = {
+                    "exists": True,
+                    "path": str(worlds_db),
+                    "size_bytes": worlds_db.stat().st_size,
+                    "campaign_count": worlds_campaign_count,
+                    "ledger_count": worlds_ledger_count,
+                }
+        else:
+            status["worlds_db"] = {"exists": False, "path": str(worlds_db)}
         
         # Check clip analysis database
         analysis_db = Path(settings.clipping_db_path)

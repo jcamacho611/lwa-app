@@ -69,6 +69,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang={locale} dir={direction} suppressHydrationWarning>
       <body className={`${poppinsBody.variable} ${poppinsDisplay.variable} antialiased`}>
+        <FreeLaunchBanner />
         <BackgroundCanvas />
         <CharacterStage />
         <FreeLaunchBanner />

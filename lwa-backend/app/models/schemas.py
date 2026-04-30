@@ -338,6 +338,7 @@ class ClipBatchResponse(BaseModel):
     request_id: str
     video_url: str
     status: str
+    status_reason: Optional[str] = None
     source_type: str = "url"
     source_title: Optional[str] = None
     source_platform: Optional[str] = None
@@ -463,6 +464,7 @@ class UploadResponse(BaseModel):
     size_bytes: int
     public_url: Optional[str] = None
     storage_path: str
+    source_type: Optional[str] = None
     source_ref: dict[str, str]
 
 
