@@ -27,6 +27,7 @@ from ...services.clip_service import (
 from ...services.entitlements import UsageStore, resolve_entitlement
 from ...services.event_log import emit_event
 from ...services.export_bundle import create_export_bundle
+from ...services.source_contract import classify_upload_source_type, normalize_source_type
 from ...services.source_ingest import infer_source_type
 from app.services.source_errors import classify_source_failure, source_failure_detail
 
@@ -117,6 +118,7 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
     await enforce_generation_throttle(entitlement=entitlement)
     request_id = f"req_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
+    resolved_source_type = normalize_source_type(resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"))
     emit_event(
         settings=settings,
         event="generation_requested",
@@ -125,7 +127,7 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
         subject_source=entitlement.subject_source,
         metadata={
             "target_platform": resolved_request.target_platform or "auto",
-            "source_type": resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
+            "source_type": resolved_source_type,
         },
     )
     if resolved_request.campaign_brief:
@@ -141,11 +143,12 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
             },
         )
     logger.info(
-        "route_generate request_id=%s route=%s target_platform=%s video_url=%s plan=%s subject_source=%s",
+        "route_generate request_id=%s route=%s target_platform=%s video_url=%s source_type=%s plan=%s subject_source=%s",
         request_id,
         http_request.url.path,
         resolved_request.target_platform or "auto",
         resolved_request.video_url,
+        resolved_source_type,
         entitlement.plan.code,
         entitlement.subject_source,
     )
@@ -173,8 +176,6 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
             )
             raise HTTPException(status_code=422, detail=source_failure_detail(source_failure)) from None
 
-        # Re-raise HTTP exceptions (including 402 quota errors) without releasing usage,
-        # since the quota was already consumed by resolve_entitlement.
         raise
     except Exception as error:
         usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
@@ -195,7 +196,7 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
                 status="failed",
                 metadata={
                     "target_platform": resolved_request.target_platform or "auto",
-                    "source_type": resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
+                    "source_type": resolved_source_type,
                     "error_code": source_failure.code.value,
                 },
             )
@@ -219,7 +220,7 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
             status="failed",
             metadata={
                 "target_platform": resolved_request.target_platform or "auto",
-                "source_type": resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
+                "source_type": resolved_source_type,
                 "error_code": type(error).__name__,
             },
         )
@@ -244,6 +245,7 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
     await enforce_generation_throttle(entitlement=entitlement)
     job_id = f"job_{uuid4().hex[:10]}"
     public_base_url = (settings.api_base_url or str(http_request.base_url)).rstrip("/")
+    resolved_source_type = normalize_source_type(resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"))
     emit_event(
         settings=settings,
         event="generation_requested",
@@ -252,7 +254,7 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
         subject_source=entitlement.subject_source,
         metadata={
             "target_platform": resolved_request.target_platform or "auto",
-            "source_type": resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
+            "source_type": resolved_source_type,
             "mode": "async_job",
         },
     )
@@ -270,11 +272,12 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
             },
         )
     logger.info(
-        "route_job request_id=%s route=%s target_platform=%s video_url=%s plan=%s subject_source=%s",
+        "route_job request_id=%s route=%s target_platform=%s video_url=%s source_type=%s plan=%s subject_source=%s",
         job_id,
         http_request.url.path,
         resolved_request.target_platform or "auto",
         resolved_request.video_url,
+        resolved_source_type,
         entitlement.plan.code,
         entitlement.subject_source,
     )
@@ -288,7 +291,7 @@ async def create_processing_job(request: ProcessRequest, http_request: Request) 
         job_id=job_id,
         user_id=current_user.id if current_user else None,
         campaign_id=None,
-        source_type=resolved_request.source_type or ("upload" if resolved_request.upload_file_id else "url"),
+        source_type=resolved_source_type,
         source_value=resolved_request.video_url or "",
         status="queued",
         message="Job queued. Starting source analysis.",
@@ -401,19 +404,14 @@ def resolve_request_source(
     if not request.video_url and source_type in {"url", "video", "audio", "twitch", "stream"} and not has_strategy_context:
         raise HTTPException(status_code=422, detail="Provide video_url, source_url, or upload_file_id for media sources")
 
-    return request.model_copy(update={"source_type": source_type}), None
+    return request.model_copy(update={"source_type": normalize_source_type(source_type)}), None
 
 
 def classify_upload_source(upload: dict[str, object]) -> str:
-    content_type = str(upload.get("content_type") or "").lower()
-    filename = str(upload.get("file_name") or "")
-    suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
-
-    if content_type.startswith("audio/") or suffix in {"mp3", "wav", "m4a", "aac", "ogg", "oga", "flac"}:
-        return "audio_upload"
-    if content_type.startswith("image/") or suffix in {"jpg", "jpeg", "png", "webp", "heic", "heif"}:
-        return "image_upload"
-    return "video_upload"
+    return classify_upload_source_type(
+        filename=str(upload.get("file_name") or ""),
+        content_type=str(upload.get("content_type") or ""),
+    )
 
 
 async def enforce_generation_throttle(*, entitlement) -> None:

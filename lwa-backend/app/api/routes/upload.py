@@ -10,30 +10,17 @@ from ...core.config import get_settings
 from ...dependencies.auth import get_optional_user, get_platform_store, require_user
 from ...models.schemas import UploadResponse
 from ...services.entitlements import UsageStore, get_plan_for_user
+from ...services.source_contract import (
+    UNSUPPORTED_UPLOAD_MESSAGE,
+    classify_upload_source_type,
+    is_allowed_upload,
+    upload_source_ref,
+)
 
 router = APIRouter(prefix="/v1/uploads", tags=["uploads"])
 settings = get_settings()
 platform_store = get_platform_store()
 usage_store = UsageStore(settings.usage_store_path)
-ALLOWED_EXTENSIONS = {
-    ".mp4",
-    ".mov",
-    ".m4v",
-    ".webm",
-    ".mp3",
-    ".wav",
-    ".m4a",
-    ".aac",
-    ".ogg",
-    ".oga",
-    ".flac",
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".webp",
-    ".heic",
-    ".heif",
-}
 logger = logging.getLogger("uvicorn.error")
 
 
@@ -43,8 +30,8 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
     subject_id = user.id if user else resolve_guest_upload_id(request)
     logger.info("upload_received subject_id=%s authenticated=%s filename=%s", subject_id, bool(user), file.filename)
     suffix = Path(file.filename or "").suffix.lower()
-    if suffix not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Unsupported file type")
+    if not is_allowed_upload(filename=file.filename, content_type=file.content_type):
+        raise HTTPException(status_code=400, detail=UNSUPPORTED_UPLOAD_MESSAGE)
 
     plan = get_plan_for_user(settings=settings, user=user) if user else None
     upload_limit = int(plan.feature_flags.max_uploads_per_day if plan else 2)
@@ -93,7 +80,17 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
             content_type=file.content_type,
             file_size=total_size,
         )
-        logger.info("upload_validated subject_id=%s upload_id=%s size_bytes=%s", subject_id, upload["id"], total_size)
+        source_type = classify_upload_source_type(
+            filename=upload["file_name"],
+            content_type=upload.get("content_type"),
+        )
+        logger.info(
+            "upload_validated subject_id=%s upload_id=%s size_bytes=%s source_type=%s",
+            subject_id,
+            upload["id"],
+            total_size,
+            source_type,
+        )
         return UploadResponse(
             file_id=upload["id"],
             filename=upload["file_name"],
@@ -101,7 +98,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
             size_bytes=upload["file_size"],
             public_url=upload["public_url"],
             storage_path=upload["stored_path"],
-            source_ref={"source_kind": "upload", "upload_id": upload["id"]},
+            source_ref=upload_source_ref(upload_id=upload["id"], source_type=source_type),
         )
     except Exception:
         if usage_day:
