@@ -87,6 +87,12 @@ const actionPaths: ActionPath[] = [
     external: false,
   },
   {
+    label: "Operator command center",
+    detail: "Open the internal launch checklist for quality, reliability, and Director Brain readiness.",
+    href: "/operator",
+    external: false,
+  },
+  {
     label: "Request custom clip pack",
     detail: "Use a custom workflow or creator brief when direct generation is not the right first step.",
     href: getMoneyLinkByKey("demoForm") || getMoneyLinkByKey("contact") || getMoneyLinkByKey("booking"),
@@ -248,7 +254,7 @@ export default function HomePage() {
         ))}
       </section>
 
-      <section className="mx-auto mt-2 grid w-full max-w-6xl gap-4 pb-10 md:grid-cols-2 xl:grid-cols-5">
+      <section className="mx-auto mt-2 grid w-full max-w-6xl gap-4 pb-10 md:grid-cols-2 xl:grid-cols-6">
         {actionPaths.map((path) => (
           <ActionCard
             key={path.label}
@@ -262,7 +268,7 @@ export default function HomePage() {
       </section>
 
       <p className="mx-auto max-w-6xl pb-10 text-xs leading-6 text-subtext/80">
-        Whop stays available as one live access path today. Demo, booking, support, and referral routes appear as they are configured, without changing the product identity.
+        Whop stays available as one live access path today. Demo, booking, support, referral, and operator routes appear as they are configured, without changing the product identity.
       </p>
 
       <section className="mx-auto grid w-full max-w-5xl gap-4 pb-16 sm:grid-cols-2 lg:grid-cols-3">
