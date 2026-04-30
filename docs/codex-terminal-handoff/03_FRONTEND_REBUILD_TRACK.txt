@@ -1,0 +1,43 @@
+Continue only as FRONTEND TRACK.
+
+You may edit web frontend files only. Do not touch backend or iOS unless a type import/contract fix proves unavoidable and you explain it before editing.
+
+Task:
+Rebuild the web experience layer around the actual LWA product truth:
+- one source input
+- one strong generate action
+- LWA recommendation rail
+- processing phase tracker
+- lead best clip
+- rendered clips lane
+- strategy-only lane
+- packaging/export rail
+
+Preserve:
+- current backend API contract
+- current generation flow
+- auto destination behavior
+- provider truth
+- plan/credits truth
+- recovery flow
+- rendered vs strategy-only separation
+
+Likely files:
+- lwa-web/components/clip-studio.tsx
+- lwa-web/components/HeroClip.tsx
+- lwa-web/components/VideoCard.tsx
+- lwa-web/lib/types.ts
+- lwa-web/lib/api.ts
+- lwa-web/app/page.tsx only if necessary
+
+Before editing, print:
+1. git status --short
+2. exact files planned
+3. confirmation that lwa-ios will not be touched
+
+After editing, run:
+cd apps/web && npm run type-check
+cd apps/web && npm run lint
+cd apps/web && npm run build
+
+Return exact files changed and verification results.
