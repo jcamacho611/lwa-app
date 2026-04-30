@@ -1,0 +1,28 @@
+Continue only as BACKEND HARDENING TRACK.
+
+Task:
+Implement or verify FREE_LAUNCH_MODE and deterministic pipeline fallbacks.
+
+Requirements:
+- Add backend env FREE_LAUNCH_MODE.
+- Add frontend env NEXT_PUBLIC_FREE_LAUNCH_MODE only if frontend needs banner behavior.
+- When FREE_LAUNCH_MODE=true, auth should return a synthetic guest user instead of blocking public use.
+- Skip paywall/Stripe checks only in free launch mode.
+- Enforce anonymous IP rate limit, default 30 requests/IP/min.
+- Wrap pipeline steps: download, transcribe, detect moments, caption/hook generation, render/export.
+- Every expected provider/media failure should return a typed degraded/fallback result, not raw 500.
+- Structured logs should include step, request_id/video_id, error_class, error_msg.
+
+Fallbacks:
+- transcript fallback: 30s windows labeled Segment N
+- moment fallback: three evenly spaced windows
+- caption fallback: transcript verbatim
+- hook fallback: first seven words of segment
+
+Before editing, print files planned.
+Do not touch lwa-ios.
+
+Verification:
+cd apps/backend && python -m py_compile $(git ls-files '*.py')
+cd apps/backend && pytest -x
+cd apps/web && npm run type-check
