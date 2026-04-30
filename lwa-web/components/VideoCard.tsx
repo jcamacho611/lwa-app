@@ -8,6 +8,7 @@ import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore,
 import { buildLeadReason } from "../lib/result-copy";
 import { ClipIntelligencePanel } from "./clip-intelligence-panel";
 import { ClipViewer } from "./ClipViewer";
+import { DirectorBrainPackagePanel } from "./DirectorBrainPackagePanel";
 
 export type VideoCardProps = {
   clip: ClipResult;
@@ -77,6 +78,10 @@ function clipCampaignStatusLabel(clip: ClipResult): ClipMetaLabel | null {
     return { label: "Campaign warning", tone: "warning" };
   }
 
+  if (clip.campaign_role) {
+    return { label: clip.campaign_role.replace(/_/g, " "), tone: "neutral" };
+  }
+
   return null;
 }
 
@@ -124,9 +129,17 @@ function clipEvergreenLabel(clip: ClipResult): ClipMetaLabel | null {
   return null;
 }
 
+function clipQualityGateLabel(clip: ClipResult): ClipMetaLabel | null {
+  const status = clip.quality_gate_status?.trim().toLowerCase();
+  if (!status) return null;
+  if (status === "pass") return { label: "Quality pass", tone: "neutral" };
+  if (status === "fail") return { label: "Quality fail", tone: "danger" };
+  return { label: "Quality warning", tone: "warning" };
+}
+
 function buildBadges(clip: ClipResult, hasRenderProof: boolean): ClipBadge[] {
   const badges: ClipBadge[] = [];
-  if ((clip.post_rank || clip.best_post_order || clip.rank) === 1) {
+  if ((clip.post_rank || clip.suggested_post_order || clip.best_post_order || clip.rank) === 1) {
     badges.push({ label: "Best clip first", tone: "accent" });
   }
   if (hasRenderProof) {
@@ -139,7 +152,10 @@ function buildBadges(clip: ClipResult, hasRenderProof: boolean): ClipBadge[] {
   if (clipHasShotPlan(clip)) {
     badges.push({ label: "Shot plan ready", tone: "neutral" });
   }
-  return badges.slice(0, 3);
+  if (clip.algorithm_version) {
+    badges.push({ label: "Director Brain", tone: "neutral" });
+  }
+  return badges.slice(0, 4);
 }
 
 function badgeClass(tone: ClipBadge["tone"]) {
@@ -171,7 +187,7 @@ export default function VideoCard({
   recoveryState = null,
   onRecover,
 }: VideoCardProps) {
-  const [copiedAction, setCopiedAction] = useState<"hook" | "caption" | "package" | null>(null);
+  const [copiedAction, setCopiedAction] = useState<"hook" | "caption" | "package" | "cta" | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
   const hasRenderProof = isRenderedClip(clip);
@@ -180,7 +196,7 @@ export default function VideoCard({
   const canOpenViewer = Boolean(previewUrl || assetUrl);
   const downloadUrl = clip.download_url || null;
   const artifactLinks = clipCaptionArtifactLinks(clip);
-  const postRank = clip.post_rank || clip.best_post_order || clip.rank || null;
+  const postRank = clip.post_rank || clip.suggested_post_order || clip.best_post_order || clip.rank || null;
   const scoreValue = getClipScore(clip);
   const badges = buildBadges(clip, hasRenderProof);
   const hookVariants = (clip.hook_variants || []).filter((variant) => variant && variant !== clip.hook).slice(0, 3);
@@ -190,6 +206,7 @@ export default function VideoCard({
   const campaignLabel = clipCampaignStatusLabel(clip);
   const approvalLabel = clipApprovalStateLabel(clip);
   const evergreenLabel = clipEvergreenLabel(clip);
+  const qualityLabel = clipQualityGateLabel(clip);
   const whyThisMatters = buildLeadReason(clip.why_this_matters || clip.reason);
   const displayThumbnail = clip.thumbnail_text?.trim() || clip.title;
   const showRetryPreview = Boolean(onRecover) && !hasRenderProof;
@@ -200,11 +217,12 @@ export default function VideoCard({
     ...(clipHasBundleArtifacts(clip) ? [{ label: "Bundle ready", tone: "neutral" as const }] : []),
     ...(clipHasCaptionArtifacts(clip) ? [{ label: "Captions ready", tone: "neutral" as const }] : []),
     ...(evergreenLabel ? [evergreenLabel] : []),
+    ...(qualityLabel ? [qualityLabel] : []),
     ...(campaignLabel ? [campaignLabel] : []),
     ...(approvalLabel ? [approvalLabel] : []),
   ];
 
-  async function handleCopy(text: string, action: "hook" | "caption" | "package") {
+  async function handleCopy(text: string, action: "hook" | "caption" | "package" | "cta") {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedAction(action);
@@ -266,7 +284,7 @@ export default function VideoCard({
                 <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gold)]">Next idea</p>
                 <h3 className="mt-4 text-lg font-semibold leading-7 text-ink">{clip.hook || clip.title}</h3>
                 <p className="mt-3 text-sm leading-6 text-ink/62">
-                  {clip.strategy_only_reason || "Shot plan ready. Use this as a strategy lane clip until media is available."}
+                  {clip.reason_not_rendered || clip.strategy_only_reason || "Shot plan ready. Use this as a strategy lane clip until media is available."}
                 </p>
               </div>
             </div>
@@ -300,6 +318,8 @@ export default function VideoCard({
           </p>
           <p className="text-sm leading-6 text-ink/62">{whyThisMatters}</p>
 
+          <DirectorBrainPackagePanel clip={clip} />
+
           <div className="grid gap-2">
             <div className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Thumbnail</p>
@@ -307,7 +327,7 @@ export default function VideoCard({
             </div>
             <div className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted">CTA</p>
-              <p className="mt-1 text-xs font-medium text-ink/82">{clip.cta_suggestion || "Ask viewers what they want next."}</p>
+              <p className="mt-1 text-xs font-medium text-ink/82">{clip.suggested_cta || clip.cta_suggestion || "Ask viewers what they want next."}</p>
             </div>
           </div>
 
@@ -414,6 +434,14 @@ export default function VideoCard({
               className="secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium sm:w-auto"
             >
               {copiedAction === "caption" ? "Caption copied" : "Copy caption"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void handleCopy(clip.suggested_cta || clip.cta_suggestion || clip.cta || "", "cta")}
+              className="secondary-button inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium sm:w-auto"
+            >
+              {copiedAction === "cta" ? "CTA copied" : "Copy CTA"}
             </button>
 
             <button
