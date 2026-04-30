@@ -105,7 +105,7 @@ export function StudioRail({ clips, onClipSelect, onRetryClip, onDownloadClip, s
                 {/* Hook/CTA */}
                 {clip.hook && (
                   <div className="text-sm text-ink/80 italic">
-                    "{clip.hook}"
+                    &ldquo;{clip.hook}&rdquo;
                   </div>
                 )}
                 

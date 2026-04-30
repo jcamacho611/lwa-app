@@ -167,7 +167,7 @@ export function ClipCard({ clip, index }: ClipCardProps) {
               Transcript excerpt
             </summary>
             <blockquote className="mt-2 rounded-xl border border-white/6 bg-surface-600/50 px-4 py-3 text-xs text-slate-400 italic leading-relaxed">
-              "{clip.transcript_excerpt}"
+              &ldquo;{clip.transcript_excerpt}&rdquo;
             </blockquote>
           </details>
         )}

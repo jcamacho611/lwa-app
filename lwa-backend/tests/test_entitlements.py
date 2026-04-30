@@ -10,7 +10,13 @@ from starlette.requests import Request
 
 from app.core.config import Settings
 from app.services.clip_service import enforce_api_key
-from app.services.entitlements import UsageStore, build_pro_plan, build_scale_plan, resolve_entitlement
+from app.services.entitlements import (
+    UsageStore,
+    build_free_launch_plan,
+    build_pro_plan,
+    build_scale_plan,
+    resolve_entitlement,
+)
 
 
 def build_request(*, client_id: str | None = None, api_key: str | None = None) -> Request:
@@ -46,9 +52,24 @@ class EntitlementsTests(unittest.TestCase):
         self.assertEqual(settings.pro_daily_limit, 25)
         self.assertEqual(settings.generated_assets_max_files, 300)
 
+    def test_free_launch_settings_are_env_driven(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FREE_LAUNCH_MODE": "true",
+                "RATE_LIMIT_GUEST_RPM": "45",
+            },
+            clear=False,
+        ):
+            settings = Settings()
+
+        self.assertTrue(settings.free_launch_mode)
+        self.assertEqual(settings.rate_limit_guest_rpm, 45)
+
     def test_quota_exceeded_returns_structured_detail(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings()
+            settings.free_launch_mode = False
             settings.free_daily_limit = 1
             usage_store = UsageStore(f"{temp_dir}/usage.json")
             request = build_request(client_id="test-client")
@@ -92,6 +113,7 @@ class EntitlementsTests(unittest.TestCase):
     def test_client_id_subjects_are_hashed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings()
+            settings.free_launch_mode = False
             usage_store = UsageStore(f"{temp_dir}/usage.json")
             entitlement = resolve_entitlement(
                 request=build_request(client_id="client-raw-value"),
@@ -106,6 +128,7 @@ class EntitlementsTests(unittest.TestCase):
     def test_remote_ip_subjects_are_hashed_when_client_id_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings()
+            settings.free_launch_mode = False
             usage_store = UsageStore(f"{temp_dir}/usage.json")
             entitlement = resolve_entitlement(
                 request=build_request(),
@@ -116,6 +139,45 @@ class EntitlementsTests(unittest.TestCase):
         self.assertEqual(entitlement.subject_source, "remote_ip")
         self.assertTrue(entitlement.subject.startswith("ip:"))
         self.assertNotIn("127.0.0.1", entitlement.subject)
+
+    def test_free_launch_uses_ip_scoped_unlimited_plan_without_raw_ip(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings()
+            settings.free_launch_mode = True
+            settings.free_daily_limit = 1
+            usage_store = UsageStore(f"{temp_dir}/usage.json")
+
+            first = resolve_entitlement(
+                request=build_request(client_id="ignored-client"),
+                settings=settings,
+                usage_store=usage_store,
+            )
+            second = resolve_entitlement(
+                request=build_request(client_id="ignored-client"),
+                settings=settings,
+                usage_store=usage_store,
+            )
+
+        self.assertEqual(first.plan.code, "free_launch")
+        self.assertEqual(first.subject_source, "free_launch_ip")
+        self.assertTrue(first.subject.startswith("free_launch_ip:"))
+        self.assertNotIn("127.0.0.1", first.subject)
+        self.assertEqual(second.credits_remaining, 9999)
+
+    def test_free_launch_plan_does_not_claim_unshipped_account_features(self) -> None:
+        plan = build_free_launch_plan(Settings())
+
+        self.assertEqual(plan.code, "free_launch")
+        self.assertEqual(plan.daily_limit, -1)
+        self.assertTrue(plan.feature_flags.alt_hooks)
+        self.assertTrue(plan.feature_flags.caption_styles)
+        self.assertEqual(plan.feature_flags.max_uploads_per_day, -1)
+        self.assertEqual(plan.feature_flags.max_generations_per_day, -1)
+        self.assertFalse(plan.feature_flags.wallet_view)
+        self.assertFalse(plan.feature_flags.posting_queue)
+        self.assertFalse(plan.feature_flags.caption_editor)
+        self.assertFalse(plan.feature_flags.timeline_editor)
+        self.assertFalse(plan.feature_flags.campaign_mode)
 
     def test_paid_feature_flags_do_not_claim_unshipped_queue_or_editor_capabilities(self) -> None:
         settings = Settings()

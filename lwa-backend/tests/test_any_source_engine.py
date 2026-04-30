@@ -6,6 +6,7 @@ from app.api.routes.generate import resolve_request_source
 from app.models.schemas import ProcessRequest
 from app.services.source_ingest import (
     build_strategy_source_context,
+    classify_upload_source,
     infer_source_type,
     normalize_source_type,
     source_type_uses_media_pipeline,
@@ -74,6 +75,20 @@ class AnySourceEngineTests(unittest.TestCase):
         self.assertEqual(context.processing_mode, "strategy_only")
         self.assertEqual(context.clip_seeds, [])
         self.assertIn("strategy package", context.visual_summary or "")
+
+    def test_upload_source_classifier_is_shared_across_routes(self) -> None:
+        self.assertEqual(
+            classify_upload_source({"file_name": "source.mp4", "content_type": "video/mp4"}),
+            "video_upload",
+        )
+        self.assertEqual(
+            classify_upload_source({"file_name": "source.wav", "content_type": "application/octet-stream"}),
+            "audio_upload",
+        )
+        self.assertEqual(
+            classify_upload_source({"file_name": "source.heic", "content_type": "application/octet-stream"}),
+            "image_upload",
+        )
 
 
 if __name__ == "__main__":
