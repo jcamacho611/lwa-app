@@ -20,6 +20,8 @@ The following docs/artifacts were committed directly to `main`:
 - `docs/lwa-worlds/sql/lwa_algorithm_foundation.sql`
 - `docs/lwa-worlds/README.md` updates linking new artifacts
 - `docs/lwa-worlds/codex-prompt-pack.md` expanded with algorithm, frontend, Whop, launch, and database prompts
+- `docs/company/lwa-remaining-work-checklist.md`
+- `docs/company/lwa-file-creation-and-duplicate-policy.md`
 
 ## PR status
 
@@ -56,6 +58,30 @@ The following backend support modules exist on `main` and should not be duplicat
 - `lwa-backend/app/services/campaign_engine.py`
 - `lwa-backend/app/services/learning_loop.py`
 
+The support-module tests exist at:
+
+- `lwa-backend/tests/test_director_brain_support_modules.py`
+
+## Frontend Director Brain display audit
+
+The frontend type contract already includes optional Director Brain, quality gate, offer, campaign, render, and strategy-only fields in:
+
+- `lwa-web/lib/types.ts`
+
+The frontend display already renders the Director Brain package panel and separates rendered vs strategy-only clips in:
+
+- `lwa-web/components/VideoCard.tsx`
+
+## Backend generation integration audit
+
+The generation route preserves `/generate`, `/process`, and `/v1/generate` and calls `build_clip_response` in:
+
+- `lwa-backend/app/api/routes/generate.py`
+
+The backend clip service already calls `apply_director_brain_foundation(...)` inside `build_clip_response` and includes rendered/strategy-only counts in the processing summary in:
+
+- `lwa-backend/app/services/clip_service.py`
+
 ## Duplicate decision
 
 No duplicate files were deleted during this audit.
@@ -70,7 +96,10 @@ Council decision:
 
 ## Deployment status note
 
-The active LWA project Railway backend/frontend statuses were observed as successful.
+The active LWA project Railway backend/frontend statuses are successful for the latest checked commit:
+
+- `LWA PROJECT - lwa-backend`: success
+- `LWA PROJECT - lwa the god app`: success
 
 A separate/older Railway status context named `profound-growth - lwa-backend` was observed as failing. Do not treat that as active-app blocking unless it is confirmed to be the active production service.
 
@@ -78,26 +107,20 @@ A separate/older Railway status context named `profound-growth - lwa-backend` wa
 
 ### P0
 
-- Verify backend tests after Whop + Director Brain modules.
-- Verify frontend build/type-check.
+- Run backend compile/tests in local or Codex environment.
+- Run frontend type-check/build in local or Codex environment.
 - Smoke test `/health` and `/v1/generate` on Railway.
-- Confirm Whop env vars on Railway:
-  - `LWA_ENABLE_WHOP_VERIFICATION=true`
-  - `WHOP_WEBHOOK_SECRET`
-  - `WHOP_API_KEY`
-  - `WHOP_COMPANY_ID`
-  - `WHOP_PRODUCT_ID`
+- Confirm Whop webhook delivery before claiming live paid entitlement enforcement.
 
 ### P1
 
-- Wire Director Brain support modules into generation output behind safe optional fields.
-- Display Director Brain optional fields in `lwa-web` without fake playable clips.
-- Add campaign role display after backend campaign fields are proven.
+- Deepen actual scoring output from Director Brain support modules into every generated clip, if current generated output is still using fallbacks.
+- Expand campaign role generation after production smoke tests pass.
+- Add operator dashboard metrics after generation event data is stable.
 
 ### P2
 
 - Decide whether to migrate SQL blueprint into real migrations after current store strategy is confirmed.
-- Add operator dashboard queries/views.
 
 ### Future
 
