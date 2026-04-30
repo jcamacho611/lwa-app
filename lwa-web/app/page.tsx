@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "../components/brand/Logo";
 import { buildUtmUrl, getMoneyLinkByKey, getPrimaryMoneyLink, type MoneyLink } from "../lib/money-links";
+import { COUNCIL_BRAND_LINE } from "../lib/production-council";
 import { buildPageMetadata } from "../lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -119,7 +120,7 @@ const actionPaths: ActionPath[] = [
   {
     label: "Request custom clip pack",
     detail: "Use a custom workflow or creator brief when direct generation is not the right first step.",
-    href: getMoneyLinkByKey("demoForm") || getMoneyLinkByKey("contact") || getMoneyLinkByKey("booking"),
+    href: getMoneyLinkByKey("demoForm") || getMoneyLinkByKey("contact") || getMoneyLinkByKey("booking") || getPrimaryMoneyLink(),
     source: "homepage_custom_clip_pack",
   },
   {
@@ -131,13 +132,13 @@ const actionPaths: ActionPath[] = [
   {
     label: "Book demo",
     detail: "Use a guided walkthrough when a human operator path fits better.",
-    href: getMoneyLinkByKey("booking") || getMoneyLinkByKey("demoForm"),
+    href: getMoneyLinkByKey("booking") || getMoneyLinkByKey("demoForm") || getMoneyLinkByKey("contact") || getPrimaryMoneyLink(),
     source: "homepage_book_demo",
   },
   {
     label: "Join creator/referral program",
     detail: "Keep partner and early-operator lanes visible before every external form is configured.",
-    href: getMoneyLinkByKey("affiliateForm"),
+    href: getMoneyLinkByKey("affiliateForm") || getMoneyLinkByKey("contact") || getPrimaryMoneyLink(),
     source: "homepage_referral",
   },
 ];
@@ -276,6 +277,11 @@ export default function HomePage() {
             <p className="mt-2 text-sm leading-6 text-subtext">{mode.detail}</p>
           </div>
         ))}
+      </section>
+
+      <section className="mx-auto mt-8 max-w-6xl pb-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--accent-wine)]">How LWA is built</p>
+        <p className="mt-2 text-base font-semibold text-ink sm:text-lg">{COUNCIL_BRAND_LINE}</p>
       </section>
 
       <section className="mx-auto mt-2 grid w-full max-w-6xl gap-4 pb-10 md:grid-cols-2 xl:grid-cols-5">

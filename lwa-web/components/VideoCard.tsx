@@ -271,21 +271,28 @@ export default function VideoCard({
               </div>
             </div>
           ) : (
-            <div className="flex aspect-[9/16] min-h-[260px] flex-col justify-between bg-[radial-gradient(circle_at_top,var(--surface-gold-glow),transparent_24%),linear-gradient(180deg,var(--bg-card)_0%,var(--bg)_100%)] p-5">
+            <div className="flex min-h-[260px] flex-col justify-between rounded-[22px] border border-[var(--divider)] bg-[radial-gradient(circle_at_top,var(--surface-gold-glow),transparent_24%),linear-gradient(180deg,var(--bg-card)_0%,var(--bg)_100%)] p-5">
               <div className="flex items-center justify-between gap-3">
-                <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] font-medium text-ink/78">
-                  Strategy only
+                <span className="rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-3 py-1 text-[11px] font-semibold text-[var(--gold)]">
+                  Strategy-only package
                 </span>
                 <span className="rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] text-ink/62">
                   {clipAuthorityLabel(postRank)}
                 </span>
               </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gold)]">Next idea</p>
-                <h3 className="mt-4 text-lg font-semibold leading-7 text-ink">{clip.hook || clip.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-ink/62">
-                  {clip.reason_not_rendered || clip.strategy_only_reason || "Shot plan ready. Use this as a strategy lane clip until media is available."}
+              <div className="space-y-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-ink/58">
+                  No playable preview was created for this source.
                 </p>
+                <p className="text-sm leading-6 text-ink/80">
+                  Use the hooks, captions, timestamps, and posting plan below.
+                </p>
+                <a
+                  href="/generate"
+                  className="inline-flex items-center rounded-full border border-[var(--gold-border)] bg-[var(--gold-dim)] px-4 py-2 text-xs font-semibold text-[var(--gold)] transition hover:opacity-80"
+                >
+                  Upload source file for rendered clips
+                </a>
               </div>
             </div>
           )}
@@ -313,9 +320,51 @@ export default function VideoCard({
           ) : null}
 
           {!compact ? <h3 className="line-clamp-2 text-lg font-semibold leading-tight text-ink">{clip.title}</h3> : null}
-          <p className={compact ? "text-base font-semibold leading-7 text-ink" : "text-sm leading-6 text-ink/88"}>
-            {clip.hook || clip.title}
-          </p>
+
+          <div className="space-y-2">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Hook</p>
+              <p className={compact ? "mt-1 text-base font-semibold leading-7 text-ink" : "mt-1 text-sm font-medium leading-6 text-ink/90"}>
+                {clip.hook || clip.title}
+              </p>
+            </div>
+
+            {clip.caption ? (
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Caption</p>
+                <p className="mt-1 text-sm leading-6 text-ink/80">{clip.caption}</p>
+              </div>
+            ) : null}
+
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Score</p>
+              <p className="mt-1 text-sm font-semibold text-ink/88">{scoreValue}</p>
+            </div>
+
+            {(clip.timestamp_start || clip.timestamp_end) ? (
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Timestamp</p>
+                <p className="mt-1 text-sm text-ink/72">
+                  {[clip.timestamp_start, clip.timestamp_end].filter(Boolean).join(" – ")}
+                </p>
+              </div>
+            ) : null}
+
+            {showRecoverRender && clip.recovery_recommendation ? (
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Recovery guidance</p>
+                <p className="mt-1 text-sm leading-6 text-ink/68">{clip.recovery_recommendation}</p>
+              </div>
+            ) : null}
+
+            {clip.target_platform ? (
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-muted">Platform</p>
+                <p className="mt-1 text-sm text-ink/72">{clip.target_platform}</p>
+              </div>
+            ) : null}
+          </div>
+
           <p className="text-sm leading-6 text-ink/62">{whyThisMatters}</p>
 
           <DirectorBrainPackagePanel clip={clip} />
