@@ -1,0 +1,16 @@
+PAUSE.
+
+Do not commit.
+Do not continue editing.
+
+Report only:
+1. current branch
+2. git status --short
+3. files changed by this run
+4. whether backend was touched
+5. whether frontend was touched
+6. whether iOS was touched
+7. verification commands run, if any
+8. whether any changes should be reverted
+
+Wait after reporting.
