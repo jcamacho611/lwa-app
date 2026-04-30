@@ -152,6 +152,11 @@ class Settings:
         self.anthropic_model_sonnet = os.getenv("ANTHROPIC_MODEL_SONNET", "claude-sonnet-4-6")
         self.anthropic_model_haiku = os.getenv("ANTHROPIC_MODEL_HAIKU", "claude-haiku-4-5-20251001")
         self.premium_reasoning_provider = os.getenv("LWA_PREMIUM_REASONING_PROVIDER", "anthropic").strip().lower() or "anthropic"
+        self.seedance_enabled = _env_bool("SEEDANCE_ENABLED", os.getenv("LWA_SEEDANCE_ENABLED", "false"))
+        self.seedance_api_key = os.getenv("SEEDANCE_API_KEY", os.getenv("LWA_SEEDANCE_API_KEY", "")).strip()
+        self.seedance_base_url = os.getenv("SEEDANCE_BASE_URL", os.getenv("LWA_SEEDANCE_BASE_URL", "")).strip().rstrip("/")
+        self.seedance_model = os.getenv("SEEDANCE_MODEL", os.getenv("LWA_SEEDANCE_MODEL", "seedance-2.0")).strip() or "seedance-2.0"
+        self.seedance_timeout_seconds = _env_int("SEEDANCE_TIMEOUT_SECONDS", os.getenv("LWA_SEEDANCE_TIMEOUT_SECONDS", "180"), minimum=1)
         self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "")
         self.ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2")
         self.visual_generation_enabled = os.getenv("LWA_VISUAL_GENERATION_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
