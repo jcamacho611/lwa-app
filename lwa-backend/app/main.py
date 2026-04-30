@@ -18,6 +18,7 @@ from .api.routes.intelligence_data import router as intelligence_data_router
 from .api.routes.me import router as me_router
 from .api.routes.posting import router as posting_router
 from .api.routes.seedance import router as seedance_router
+from .api.routes.twitch_intelligence import router as twitch_intelligence_router
 from .api.routes.upload import router as upload_router
 from .api.routes.video_analysis import router as video_analysis_router
 from .api.routes.visual_generation import router as visual_generation_router
@@ -41,7 +42,6 @@ def create_app() -> FastAPI:
             cleanup_stats.get("deleted_count", 0),
             cleanup_stats.get("retained_count", 0),
             cleanup_stats.get("bytes_deleted", 0),
-            cleanup_stats.get("store_removed", 0),
         )
     initialize_databases(settings)
     app = FastAPI(
@@ -62,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(generation_router)
     app.include_router(capabilities_router)
     app.include_router(intelligence_data_router)
+    app.include_router(twitch_intelligence_router)
     app.include_router(video_analysis_router)
     app.include_router(visual_generation_router)
     app.include_router(seedance_router)
