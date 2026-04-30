@@ -41,9 +41,9 @@ const metrics: MetricCard[] = [
     status: "watch",
   },
   {
-    label: "Marketplace payouts",
-    value: "Later",
-    detail: "Do not expose live payouts until ledger, dispute, KYC, and admin review are ready.",
+    label: "Marketplace layer",
+    value: "Preview",
+    detail: "Marketplace shell exists; keep money movement behind later review gates.",
     status: "planned",
   },
 ];
@@ -65,6 +65,15 @@ const lanes = [
     title: "Launch readiness",
     items: ["Backend health", "Frontend deploy", "Generate smoke test", "Whop event smoke test"],
   },
+];
+
+const councilRoutes = [
+  { label: "Generator", href: "/generate", detail: "Run the main source-to-package flow." },
+  { label: "Signal Realms", href: "/realm", detail: "Preview classes, factions, quests, and cosmetic identity." },
+  { label: "Marketplace", href: "/marketplace", detail: "Preview template, hook, caption, brand kit, and campaign assets." },
+  { label: "Social", href: "/social", detail: "Track future provider readiness without fake posting claims." },
+  { label: "Proof", href: "/proof", detail: "Review provenance rules without wallet or unlock claims." },
+  { label: "Home", href: "/", detail: "Return to the public landing page." },
 ];
 
 function statusClass(status: MetricCard["status"]) {
@@ -133,6 +142,18 @@ export default function OperatorPage() {
               </div>
             </article>
           ))}
+        </section>
+
+        <section className="mt-6 rounded-[30px] border border-white/12 bg-white/[0.04] p-6">
+          <p className="section-kicker">Council lanes</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {councilRoutes.map((route) => (
+              <Link key={route.href} href={route.href} className="rounded-[20px] border border-white/10 bg-black/10 p-4 transition hover:border-white/22 hover:bg-white/[0.06]">
+                <p className="text-sm font-semibold text-ink">{route.label}</p>
+                <p className="mt-2 text-sm leading-6 text-ink/62">{route.detail}</p>
+              </Link>
+            ))}
+          </div>
         </section>
 
         <section className="mt-6 rounded-[30px] border border-white/12 bg-white/[0.04] p-6">
