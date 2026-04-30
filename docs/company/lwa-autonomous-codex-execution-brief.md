@@ -7,9 +7,11 @@ This is the consolidated execution brief for the next time Codex is available.
 It combines:
 
 - ChatGPT doctrine
+- Claude doctrine/spec/code requirements
 - Codex execution ledger
 - LWA Worlds direction
 - source/revenue/CTA/backend intelligence work already reported
+- latest multi-source doctrine intake from uploaded ChatGPT/Claude/Codex files
 - the instruction to integrate provided Claude code only after repo reconciliation proves exactly where it fits
 
 This document exists so Codex can work autonomously without losing context.
@@ -28,9 +30,11 @@ Before coding, Codex must read:
 
 1. `docs/lwa-worlds-mandatory-doctrine.md`
 2. `docs/company/lwa-codex-execution-ledger.md`
-3. `docs/lwa-worlds-integrated-architecture.md` if present
-4. `docs/lwa-ios-app-store-mobile-readiness-bridge.md` if present
-5. Any Claude doctrine/spec/code file added under `docs/company/`, `docs/`, or attached by the operator
+3. `docs/company/lwa-autonomous-codex-execution-brief.md`
+4. `docs/company/lwa-multi-source-doctrine-intake.md`
+5. `docs/lwa-worlds-integrated-architecture.md` if present
+6. `docs/lwa-ios-app-store-mobile-readiness-bridge.md` if present
+7. Any Claude doctrine/spec/code file added under `docs/company/`, `docs/`, or attached by the operator
 
 ## Execution Philosophy
 
@@ -163,15 +167,16 @@ Before coding, Codex must output:
 3. dirty files
 4. doctrine files found
 5. ledger files found
-6. Claude files found
-7. installed Codex slices
-8. missing Codex slices
-9. partially installed slices
-10. conflicts
-11. files Codex plans to touch
-12. files Codex will not touch
-13. tests Codex will run
-14. commit plan
+6. multi-source intake files found
+7. Claude files found
+8. installed Codex slices
+9. missing Codex slices
+10. partially installed slices
+11. conflicts
+12. files Codex plans to touch
+13. files Codex will not touch
+14. tests Codex will run
+15. commit plan
 
 ## Installation Priority
 
@@ -195,7 +200,17 @@ After audit, install missing pieces in this order:
 - any-source source engine
 - company ops docs
 
-### P2 — Marketplace skeleton + internal economy placeholders + RPG profile shell
+### P2 — Frontend rebuild
+
+- source-first console
+- auto destination recommendation
+- rendered proof first
+- strategy-only lane secondary
+- lead clip card
+- packaging/export rail
+- mobile-safe containment
+
+### P3 — Marketplace skeleton + internal economy placeholders + RPG profile shell
 
 Implement as a vertical slice:
 
@@ -209,7 +224,7 @@ Implement as a vertical slice:
 
 No real payouts yet. No real crypto yet. No token yet.
 
-### P3 — UGC foundation
+### P4 — UGC foundation
 
 - UGC asset/template/quest submissions
 - review/moderation statuses
@@ -217,7 +232,7 @@ No real payouts yet. No real crypto yet. No token yet.
 - reporting/takedown hooks
 - seller-safe language
 
-### P4 — Social integration scaffold
+### P5 — Social integration scaffold
 
 - YouTube
 - TikTok
@@ -233,7 +248,7 @@ No real payouts yet. No real crypto yet. No token yet.
 
 All clients must be isolated. No hardcoded secrets.
 
-### P5 — iOS/mobile readiness bridge
+### P6 — iOS/mobile readiness bridge
 
 Only after mobile/backend compatibility audit:
 
@@ -306,10 +321,12 @@ git status --short
 Use small commits:
 
 - `docs: reconcile LWA doctrine and Codex ledger`
+- `docs: add multi-source doctrine intake for Codex`
 - `backend: restore revenue event tracking foundation`
 - `web: restore multi-destination money CTA system`
 - `backend: add clip intelligence contract hardening`
 - `backend: realign source engine for any-source input`
+- `web: rebuild rendered-proof-first studio experience`
 - `docs: add elite recruitment and MVO operating system`
 - `platform: add marketplace economy worlds skeleton`
 
@@ -328,6 +345,7 @@ Read these first:
 - docs/lwa-worlds-mandatory-doctrine.md
 - docs/company/lwa-codex-execution-ledger.md
 - docs/company/lwa-autonomous-codex-execution-brief.md
+- docs/company/lwa-multi-source-doctrine-intake.md
 - docs/lwa-worlds-integrated-architecture.md if present
 - docs/lwa-ios-app-store-mobile-readiness-bridge.md if present
 - any Claude doctrine/spec/code files present in docs or provided by the operator
@@ -346,21 +364,23 @@ Execution mode:
 - Do not rebuild completed Codex work from scratch; inspect and extend.
 
 First task:
-Perform a repo reconciliation audit against the doctrine and ledger.
+Perform a repo reconciliation audit against the doctrine, ledger, and multi-source intake.
 
-Mark each reported Codex slice as installed, missing, partially installed, conflicting, needs tests, or ready.
+Mark each reported Codex/Claude/source-bundle slice as installed, missing, partially installed, conflicting, needs tests, or ready.
 
 Then install missing work in this order:
 1. current app route/source stability
-2. backend revenue event tracking if missing
-3. web multi-destination money CTA if missing
-4. backend clip intelligence/entitlement hardening if missing
-5. any-source source-engine realignment if missing
-6. docs/company elite recruitment and MVO operating system if missing
-7. marketplace skeleton + internal economy placeholders + RPG profile shell
-8. UGC foundation
-9. social integration scaffolds
-10. mobile readiness bridge
+2. source upload/source-type hardening
+3. backend revenue event tracking if missing
+4. web multi-destination money CTA if missing
+5. backend clip intelligence/entitlement hardening if missing
+6. any-source source-engine realignment if missing
+7. frontend rendered-proof-first rebuild
+8. docs/company elite recruitment and MVO operating system if missing
+9. marketplace skeleton + internal economy placeholders + RPG profile shell
+10. UGC foundation
+11. social integration scaffolds
+12. mobile readiness bridge
 
 Hard boundaries:
 - Do not destroy working routes.
@@ -378,7 +398,7 @@ Run the right checks for each slice and commit only clean, scoped changes.
 Final report every time:
 1. branch and commit started from
 2. files inspected
-3. doctrine/ledger/Claude sources used
+3. doctrine/ledger/intake/Claude sources used
 4. files changed
 5. features installed
 6. features still missing
@@ -396,6 +416,7 @@ Codex is ready when:
 
 - the docs are present
 - the execution ledger is present
+- the multi-source intake is present
 - Claude code/specs are preserved and reconciled
 - existing Codex work is audited against the actual repo
 - missing foundations are installed
