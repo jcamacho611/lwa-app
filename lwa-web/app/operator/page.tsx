@@ -1,0 +1,150 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { buildPageMetadata } from "../../lib/seo";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Operator Command Center",
+  description: "Internal LWA command center for generation health, clip quality, revenue intent, and launch readiness.",
+  path: "/operator",
+  keywords: [
+    "LWA operator dashboard",
+    "AI clipping command center",
+    "creator operations",
+    "generation health",
+  ],
+});
+
+type MetricCard = {
+  label: string;
+  value: string;
+  detail: string;
+  status: "ready" | "watch" | "planned";
+};
+
+const metrics: MetricCard[] = [
+  {
+    label: "Generation flow",
+    value: "Live",
+    detail: "Track source-to-clip generation, fallback use, and result quality.",
+    status: "ready",
+  },
+  {
+    label: "Director Brain",
+    value: "Wired",
+    detail: "Support modules and frontend fields exist; keep deepening scoring output.",
+    status: "ready",
+  },
+  {
+    label: "Whop verification",
+    value: "Merged",
+    detail: "Signed webhook MVP is merged; confirm live delivery before claiming paid enforcement.",
+    status: "watch",
+  },
+  {
+    label: "Marketplace payouts",
+    value: "Later",
+    detail: "Do not expose live payouts until ledger, dispute, KYC, and admin review are ready.",
+    status: "planned",
+  },
+];
+
+const lanes = [
+  {
+    title: "Clip quality",
+    items: ["Rendered clips", "Raw-only clips", "Strategy-only outputs", "Quality gate warnings"],
+  },
+  {
+    title: "Sales signals",
+    items: ["Revenue intent", "Offer fit", "CTA copies", "Demo and upgrade clicks"],
+  },
+  {
+    title: "Reliability",
+    items: ["Provider failures", "Fallback reasons", "Blocked URLs", "Upload readiness"],
+  },
+  {
+    title: "Launch readiness",
+    items: ["Backend health", "Frontend deploy", "Generate smoke test", "Whop event smoke test"],
+  },
+];
+
+function statusClass(status: MetricCard["status"]) {
+  if (status === "ready") {
+    return "border-emerald-300/25 bg-emerald-300/10 text-emerald-100";
+  }
+  if (status === "watch") {
+    return "border-amber-300/25 bg-amber-300/10 text-amber-100";
+  }
+  return "border-white/12 bg-white/[0.05] text-ink/68";
+}
+
+export default function OperatorPage() {
+  return (
+    <main className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl">
+        <div className="rounded-[36px] border border-white/12 bg-[radial-gradient(circle_at_top_left,rgba(109,92,255,0.18),transparent_30%),linear-gradient(180deg,var(--bg-card),var(--bg))] p-6 shadow-card sm:p-8">
+          <p className="section-kicker">LWA internal operations</p>
+          <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr),320px] lg:items-end">
+            <div>
+              <h1 className="text-4xl font-semibold leading-tight text-ink sm:text-6xl">
+                Operator Command Center
+              </h1>
+              <p className="mt-4 max-w-3xl text-base leading-8 text-ink/66">
+                A launch-safe control room for watching the parts that make LWA valuable: generation reliability,
+                Director Brain packaging, clip quality, revenue intent, and smoke-test readiness. This shell does not
+                claim marketplace payouts, direct posting, or blockchain systems are live.
+              </p>
+            </div>
+            <div className="grid gap-3 rounded-[28px] border border-white/12 bg-white/[0.04] p-4">
+              <Link href="/generate" className="primary-button rounded-full px-5 py-3 text-center text-sm font-semibold">
+                Open generator
+              </Link>
+              <Link href="/" className="secondary-button rounded-full px-5 py-3 text-center text-sm font-medium">
+                Return home
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {metrics.map((metric) => (
+            <article key={metric.label} className="rounded-[28px] border border-white/12 bg-white/[0.04] p-5 shadow-card">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-ink">{metric.label}</p>
+                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusClass(metric.status)}`}>
+                  {metric.status}
+                </span>
+              </div>
+              <p className="mt-5 text-3xl font-semibold text-ink">{metric.value}</p>
+              <p className="mt-3 text-sm leading-6 text-ink/62">{metric.detail}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="mt-6 grid gap-4 lg:grid-cols-4">
+          {lanes.map((lane) => (
+            <article key={lane.title} className="rounded-[28px] border border-white/12 bg-white/[0.04] p-5">
+              <h2 className="text-sm font-semibold text-ink">{lane.title}</h2>
+              <div className="mt-4 grid gap-2">
+                {lane.items.map((item) => (
+                  <div key={item} className="rounded-[18px] border border-white/10 bg-black/10 px-3 py-2 text-sm text-ink/70">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section className="mt-6 rounded-[30px] border border-white/12 bg-white/[0.04] p-6">
+          <p className="section-kicker">Next execution order</p>
+          <ol className="mt-4 grid gap-3 text-sm leading-6 text-ink/70 md:grid-cols-2">
+            <li className="rounded-[18px] border border-white/10 bg-black/10 p-4">1. Run backend compile and tests.</li>
+            <li className="rounded-[18px] border border-white/10 bg-black/10 p-4">2. Run frontend type-check and build.</li>
+            <li className="rounded-[18px] border border-white/10 bg-black/10 p-4">3. Smoke test health and generation on Railway.</li>
+            <li className="rounded-[18px] border border-white/10 bg-black/10 p-4">4. Confirm Whop event delivery before paid claims.</li>
+          </ol>
+        </section>
+      </section>
+    </main>
+  );
+}
