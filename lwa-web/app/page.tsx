@@ -93,6 +93,30 @@ const actionPaths: ActionPath[] = [
     external: false,
   },
   {
+    label: "Signal Realms",
+    detail: "Preview the future creator progression layer: classes, factions, quests, badges, and cosmetic identity.",
+    href: "/realm",
+    external: false,
+  },
+  {
+    label: "Marketplace preview",
+    detail: "See the future template, hook, caption, brand kit, and campaign asset layer.",
+    href: "/marketplace",
+    external: false,
+  },
+  {
+    label: "Social status",
+    detail: "Track future provider readiness without pretending direct posting is already approved.",
+    href: "/social",
+    external: false,
+  },
+  {
+    label: "Proof layer",
+    detail: "Review the future off-chain provenance plan without wallet, token, or unlock claims.",
+    href: "/proof",
+    external: false,
+  },
+  {
     label: "Request custom clip pack",
     detail: "Use a custom workflow or creator brief when direct generation is not the right first step.",
     href: getMoneyLinkByKey("demoForm") || getMoneyLinkByKey("contact") || getMoneyLinkByKey("booking"),
@@ -254,7 +278,7 @@ export default function HomePage() {
         ))}
       </section>
 
-      <section className="mx-auto mt-2 grid w-full max-w-6xl gap-4 pb-10 md:grid-cols-2 xl:grid-cols-6">
+      <section className="mx-auto mt-2 grid w-full max-w-6xl gap-4 pb-10 md:grid-cols-2 xl:grid-cols-5">
         {actionPaths.map((path) => (
           <ActionCard
             key={path.label}
@@ -268,7 +292,7 @@ export default function HomePage() {
       </section>
 
       <p className="mx-auto max-w-6xl pb-10 text-xs leading-6 text-subtext/80">
-        Whop stays available as one live access path today. Demo, booking, support, referral, and operator routes appear as they are configured, without changing the product identity.
+        Whop stays available as one live access path today. Demo, booking, support, referral, operator, marketplace, social, proof, and Realms routes appear as they are configured, without changing the product identity.
       </p>
 
       <section className="mx-auto grid w-full max-w-5xl gap-4 pb-16 sm:grid-cols-2 lg:grid-cols-3">
