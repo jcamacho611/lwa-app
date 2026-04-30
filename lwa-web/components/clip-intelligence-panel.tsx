@@ -35,11 +35,43 @@ function scoreRows(clip: ClipResult, compact?: boolean) {
     .slice(0, maxRows);
 }
 
+function metricValue(value?: string | number | null) {
+  if (value === null || value === undefined) return null;
+  const normalized = typeof value === "number" ? String(Math.round(value)) : value.trim();
+  return normalized || null;
+}
+
+function directorMetric(label: string, value?: string | number | null) {
+  const normalized = metricValue(value);
+  if (!normalized) return null;
+  return (
+    <div className="rounded-[16px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">
+      <p className="text-[10px] uppercase tracking-[0.2em] text-muted">{label}</p>
+      <p className="mt-1 text-xs font-medium text-ink/82">{labelize(normalized)}</p>
+    </div>
+  );
+}
+
 export function ClipIntelligencePanel({ clip, compact = false }: ClipIntelligencePanelProps) {
   const rows = scoreRows(clip, compact);
   const badges = normalizeBadges(clip.frontend_badges);
   const fallbackMessage = getClipFallbackMessage(clip);
   const whyThisRanks = buildLeadReason(clip.why_this_matters || clip.reason || clip.retention_reason || clip.scoring_explanation);
+  const directorMetrics = [
+    directorMetric("Platform", clip.recommended_platform || clip.suggested_platform || clip.platform_fit),
+    directorMetric("Content type", clip.recommended_content_type),
+    directorMetric("Output style", clip.recommended_output_style || clip.caption_style || clip.suggested_caption_style || clip.caption_preset),
+    directorMetric("Quality gate", clip.quality_gate_status),
+    directorMetric("Offer fit", clip.offer_fit_score),
+    directorMetric("Revenue intent", clip.revenue_intent_score),
+  ].filter(Boolean);
+  const directorNotes = [
+    clip.platform_recommendation_reason ? `Platform logic: ${clip.platform_recommendation_reason}` : null,
+    clip.caption_style_reason ? `Caption logic: ${clip.caption_style_reason}` : null,
+    clip.reason_not_rendered ? `Render note: ${clip.reason_not_rendered}` : null,
+  ].filter((note): note is string => Boolean(note));
+  const warnings = (clip.quality_gate_warnings || []).slice(0, 3);
+  const hasDirectorDetails = Boolean(clip.algorithm_version || directorMetrics.length || directorNotes.length || warnings.length);
   const hasDetails = Boolean(
     rows.length ||
       badges.length ||
@@ -49,7 +81,8 @@ export function ClipIntelligencePanel({ clip, compact = false }: ClipIntelligenc
       clip.first_three_seconds_assessment ||
       clip.hook_strength ||
       clip.platform_fit ||
-      fallbackMessage,
+      fallbackMessage ||
+      hasDirectorDetails,
   );
 
   if (!hasDetails) {
@@ -67,6 +100,30 @@ export function ClipIntelligencePanel({ clip, compact = false }: ClipIntelligenc
           {getClipScore(clip)}
         </span>
       </div>
+
+      {hasDirectorDetails ? (
+        <div className="mt-4 rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gold)]">Director Brain</p>
+            {clip.algorithm_version ? <span className="text-[10px] text-ink/58">{clip.algorithm_version}</span> : null}
+          </div>
+          {directorMetrics.length ? <div className="mt-3 grid gap-2 sm:grid-cols-2">{directorMetrics}</div> : null}
+          {directorNotes.length ? (
+            <div className="mt-3 space-y-1 text-xs leading-5 text-ink/72">
+              {directorNotes.map((note) => (
+                <p key={note}>{note}</p>
+              ))}
+            </div>
+          ) : null}
+          {warnings.length ? (
+            <div className="mt-3 rounded-[14px] border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-50">
+              {warnings.map((warning) => (
+                <p key={warning}>{warning}</p>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {clip.confidence_score || clip.confidence_label || clip.platform_fit ? (
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
