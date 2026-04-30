@@ -82,6 +82,30 @@ The backend clip service already calls `apply_director_brain_foundation(...)` in
 
 - `lwa-backend/app/services/clip_service.py`
 
+## Council shell implementation audit
+
+The following frontend routes were added as safe council-approved shells:
+
+- `lwa-web/app/operator/page.tsx` — internal operator command center shell
+- `lwa-web/app/realm/page.tsx` — Signal Realms static shell
+- `lwa-web/app/marketplace/page.tsx` — marketplace future shell
+- `lwa-web/app/social/page.tsx` — social integration status shell
+- `lwa-web/app/proof/page.tsx` — off-chain proof status shell
+
+The homepage links to these routes in:
+
+- `lwa-web/app/page.tsx`
+
+These shells are intentionally limited:
+
+- no iOS changes
+- no direct social posting
+- no live marketplace launch claim
+- no blockchain deploy
+- no wallet requirement
+- no feature unlocks from relics/proof
+- no guaranteed income or investment language
+
 ## Duplicate decision
 
 No duplicate files were deleted during this audit.
@@ -92,24 +116,28 @@ Council decision:
 - Keep `docs/lwa-worlds/*` as execution artifacts and prompt packs.
 - Keep `docs/lwa-worlds/sql/lwa_algorithm_foundation.sql` as a SQL migration blueprint, not a live production migration.
 - Keep backend service modules as implementation scaffolds.
+- Keep the frontend shell routes because they represent different future lanes.
 - Do not merge `feat/director-brain-support-modules` because it has no unique commits ahead of `main`.
 
 ## Deployment status note
 
-The active LWA project Railway backend/frontend statuses are successful for the latest checked commit:
+The latest frontend shell commit is deploying at the time of this audit.
+
+Previously, the active LWA project Railway backend/frontend statuses were observed as successful:
 
 - `LWA PROJECT - lwa-backend`: success
 - `LWA PROJECT - lwa the god app`: success
 
-A separate/older Railway status context named `profound-growth - lwa-backend` was observed as failing. Do not treat that as active-app blocking unless it is confirmed to be the active production service.
+A separate/older Railway status context named `profound-growth - lwa-backend` was observed separately. Do not treat that as active-app blocking unless it is confirmed to be the active production service.
 
 ## Remaining work
 
 ### P0
 
+- Wait for latest Railway deploy checks to finish.
 - Run backend compile/tests in local or Codex environment.
 - Run frontend type-check/build in local or Codex environment.
-- Smoke test `/health` and `/v1/generate` on Railway.
+- Smoke test `/health`, `/generate`, `/operator`, `/realm`, `/marketplace`, `/social`, and `/proof` on Railway.
 - Confirm Whop webhook delivery before claiming live paid entitlement enforcement.
 
 ### P1
@@ -125,6 +153,6 @@ A separate/older Railway status context named `profound-growth - lwa-backend` wa
 ### Future
 
 - Marketplace scaffold only after trust/safety and webhook verification.
-- Realms static shell only after core clipping flow is strong.
+- Realms progression only after core clipping flow is strong.
 - Social OAuth/status shell only after token encryption and provider scope plan.
 - Off-chain proof dry run only; no mainnet/blockchain feature unlocks.
