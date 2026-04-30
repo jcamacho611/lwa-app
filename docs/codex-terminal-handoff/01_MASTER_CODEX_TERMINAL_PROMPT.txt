@@ -1,0 +1,100 @@
+You are Codex running in the terminal inside the GitHub repo jcamacho611/lwa-app.
+
+MISSION
+Continue LWA from the real current repo state. This is a working MVP, not a mockup and not a restart. Your job is to inspect first, preserve what works, then safely finish the highest-priority open slice.
+
+CURRENT PRODUCT TRUTH
+- The app can take a public video URL, choose or recommend a target platform, send the job to the backend, and return a clip pack with titles, hooks, captions, timestamps, scores, and asset links.
+- When the backend is healthy, it can generate raw and edited vertical 9:16 clip assets.
+- The iOS app already has working preview/open/copy/share/local-save flows and should not be touched unless explicitly ordered.
+- The product is not yet a full editor, not yet upload-first, not yet direct-posting, not yet a full Whop operating system, and not yet consistently producing 20-40 polished clips per source.
+
+ABSOLUTE RULES
+1. Inspect before editing.
+2. Preserve existing working routes, backend contracts, entitlement logic, recovery flow, intelligence fields, and Railway URLs.
+3. Do not touch lwa-ios/.
+4. Do not redesign backend during a frontend pass.
+5. Do not build fake editor features.
+6. Do not pretend strategy-only output is rendered/export-ready.
+7. Keep the app web-first, clipping-first, recommendation-first, proof-first, premium, mythic, dark, and operator-grade.
+8. Use additive edits by default.
+9. If touching payments, use integer cents only and idempotent signed webhooks.
+10. If touching external AI/media calls, failures must return degraded typed results, not raw 500s.
+
+FIRST COMMANDS TO RUN
+pwd
+git branch --show-current
+git status --short
+find . -maxdepth 3 -type f | sed 's#^./##' | sort | head -250
+
+PRIORITY ORDER
+1. Fix failing build/type/lint/tests if present.
+2. Finish the dedicated web frontend rebuild if open.
+3. Finish FREE_LAUNCH_MODE and fallback hardening if open.
+4. Only then implement Director Brain v0.
+5. Marketplace, Realms, integrations, and blockchain placeholders come after the core clipping surface is stable.
+
+FRONTEND REBUILD TARGET
+If the web rebuild is open, rebuild the experience layer around:
+- source intake
+- LWA recommendation rail
+- processing phase tracker
+- lead best clip
+- rendered clips lane
+- strategy-only lane
+- packaging/export rail
+
+LIKELY FILES
+- lwa-web/components/clip-studio.tsx
+- lwa-web/components/HeroClip.tsx
+- lwa-web/components/VideoCard.tsx
+- lwa-web/lib/types.ts
+- lwa-web/lib/api.ts
+- lwa-web/app/page.tsx only if needed
+
+FRONTEND PRESERVE LIST
+- current API contracts
+- auto destination behavior
+- rendered-first review
+- strategy-only separation
+- recovery flow
+- provider truth
+- plan/credits truth
+- existing generation flow
+
+FRONTEND LANGUAGE RULES
+Rendered cards may say: Ready now, Playable, Export-ready, Post first, Rendered, Package copied.
+Strategy-only cards may say: Strategy only, Not yet rendered, Recovery available, Packaging ready, Test this hook, Queue recovery.
+Do not use the same badge language for both.
+
+BACKEND HARDENING TARGET
+If hardening is open:
+- Add FREE_LAUNCH_MODE and NEXT_PUBLIC_FREE_LAUNCH_MODE support.
+- Guest mode should bypass auth/paywall but enforce IP abuse cap.
+- Wrap download, transcribe, detect, render, hook, caption, and provider calls.
+- Return typed degraded fallback results with human-readable reasons.
+- Log structured fields: step, request_id/video_id, error_class, error_msg.
+
+DIRECTOR BRAIN V0 TARGET
+Implement per-platform scoring and packaging, not one generic virality score:
+- TikTok: completion, rewatch, shares, first 1-3 seconds.
+- Instagram Reels: DM shares, saves, watch time, first 2 seconds.
+- YouTube Shorts: engaged views, rewatches, swipe-away, first second.
+- LinkedIn: dwell, comment depth, saves, first 3 seconds.
+
+VERIFICATION
+Use the actual folder names discovered in the repo. Run all that apply:
+cd apps/backend && python -m py_compile $(git ls-files '*.py')
+cd apps/backend && pytest -x
+cd apps/web && npm run type-check
+cd apps/web && npm run lint
+cd apps/web && npm run build
+
+FINAL REPORT FORMAT
+1. Branch and dirty state before work.
+2. Files inspected.
+3. Exact files changed.
+4. What was preserved.
+5. Verification commands and results.
+6. Risks, env vars, or manual Railway settings needed.
+7. Suggested commit message.
