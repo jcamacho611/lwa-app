@@ -2,25 +2,21 @@
 
 ## Rule
 
-The existing repo is the source of truth.
+The existing repository is the source of truth.
 
-This project is a continuation mission, not a restart.
+This is a continuation mission, not a restart. Do not create replacement apps, parallel backends, duplicate web apps, or generic templates unless a repo audit proves the existing structure is unusable.
 
-Do not create parallel apps, duplicate backend structures, or replacement frontends unless an audit proves the existing structure is unusable.
+## Actual repo direction
 
-## Actual repo paths
+Expected working paths in this repo:
 
-Use the actual repo paths discovered by audit.
-
-Expected current paths:
-
-- backend: `lwa-backend`
-- frontend: `lwa-web`
+- Backend: `lwa-backend`
+- Frontend: `lwa-web`
 - iOS: `lwa-ios`
-- tooling: `tools`
-- company docs: `docs/company`
+- Tools: `tools`
+- Company docs: `docs/company`
 
-If a master prompt says `apps/backend` or `apps/web`, adapt it to the real repo structure instead of creating new folders.
+If any outside prompt says `apps/backend` or `apps/web`, adapt it to the real repo structure instead of creating new folders.
 
 ## Product
 
@@ -28,13 +24,17 @@ LWA / IWA is an AI content repurposing product.
 
 Primary promise:
 
-Drop in one long-form source and get ranked short-form outputs with hooks, captions, timestamps, scores, and workflow-ready assets.
+> Drop in one long-form source and get ranked short-form outputs with hooks, captions, timestamps, scores, and workflow-ready assets.
+
+Operational promise:
+
+> Move from generation to queue to campaigns to payout-readiness inside one premium creator workspace.
 
 ## Current MVP truth
 
-The app should be treated as a real MVP, not a mock.
+Treat the app as a real MVP, not a mock. Verify every item in the repo before claiming it as shipped.
 
-Known current or near-current capabilities may include:
+Known working or near-current directions may include:
 
 - public video URL generation
 - target platform selection
@@ -50,35 +50,9 @@ Known current or near-current capabilities may include:
 - source matrix tooling
 - revenue intent event tracking
 
-Codex must verify every item in the repo before claiming it as shipped.
-
-## Repo evidence observed during Chunk 15 preparation
-
-GitHub search on `main` shows current evidence for:
-
-- `lwa-backend/app/api/routes/generate.py`
-- `lwa-backend/app/api/routes/generation.py`
-- `lwa-backend/app/api/routes/me.py`
-- `lwa-backend/app/services/source_ingest.py`
-- `lwa-backend/app/services/video_service.py`
-- `lwa-backend/app/services/clip_service.py`
-- `lwa-backend/app/services/platform_store.py`
-- `lwa-backend/app/models/schemas.py`
-- `lwa-backend/tests/test_any_source_engine.py`
-- `lwa-backend/tests/test_platform_store.py`
-- `lwa-backend/tests/test_clip_strategy.py`
-- `lwa-web/lib/types.ts`
-- `docs/company/lwa-any-source-engine-spec.md`
-- `docs/company/lwa-ai-output-schema-map.md`
-- `docs/company/lwa-source-output-event-protocols.md`
-- `docs/company/lwa-connector-protocol-map.md`
-- `docs/company/lwa-master-prompt-library.md`
-
-GitHub search did not find revenue event route/logger files by the queried terms `revenue_events`, `RevenueEvent`, `revenue_event_log`, or `authoritative` during this preparation pass. Codex must verify locally before marking revenue tracking as installed.
-
 ## Planned systems
 
-The following are strategic plans unless repo evidence proves they are implemented:
+The following remain planned unless repo evidence proves they are implemented:
 
 - Director Brain
 - full marketplace
@@ -88,33 +62,11 @@ The following are strategic plans unless repo evidence proves they are implement
 - social posting APIs
 - Polymarket trend ingestion
 - blockchain/NFT proof layer
-- full mobile/iOS App Store system
+- full mobile/App Store system
 
-## Safe customer claim
+## Engineering order
 
-Use:
-
-LWA supports upload-first clipping for common video/audio sources plus strategy generation for prompt, music, campaign, and image-style inputs. Public URLs are best-effort because platforms can block server extraction.
-
-Do not claim guaranteed YouTube, TikTok, Instagram, or Twitch extraction.
-
-## Safety rules
-
-Do not claim:
-
-- guaranteed virality
-- guaranteed income
-- payment verified without webhook verification
-- payout ready without KYC/tax/fraud controls
-- NFT value appreciation
-- investment return
-- platform posting approved before API review
-
-## Engineering rule
-
-One safe implementation slice at a time.
-
-Preferred order:
+Build one safe slice at a time:
 
 1. source handling hardening
 2. free launch mode
@@ -128,3 +80,21 @@ Preferred order:
 10. Realms static shell
 11. social API OAuth shell
 12. off-chain proof dry run
+
+## Safe customer-facing claim
+
+LWA supports upload-first clipping for common video/audio sources plus strategy generation for prompt, music, campaign, and image-style inputs. Public URLs are best-effort because platforms can block server extraction.
+
+Do not claim guaranteed YouTube, TikTok, Instagram, Twitch, or Instagram extraction.
+
+## Safety rules
+
+Do not claim:
+
+- guaranteed virality
+- guaranteed income
+- payment verified without server-side webhook verification
+- payout ready without KYC/tax/fraud controls
+- NFT value appreciation
+- investment return
+- platform posting approved before API review
