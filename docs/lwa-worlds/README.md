@@ -8,6 +8,7 @@ This folder contains the internal artifact system for building, selling, launchi
 - [Codex Prompt Pack](./codex-prompt-pack.md)
 - [Director Brain Algorithm Artifact](./director-brain-algorithm-artifact.md)
 - [Master Algorithm + Database Stack](./master-algorithm-database-stack.md)
+- [Algorithm Foundation SQL](./sql/lwa_algorithm_foundation.sql)
 
 ## Execution artifacts
 
@@ -26,7 +27,7 @@ Use the Master Build Bible as the source of truth.
 
 Use child artifacts for execution by lane:
 
-- Codex/engineering: Codex Prompt Pack, Director Brain Algorithm Artifact, and Master Algorithm + Database Stack
+- Codex/engineering: Codex Prompt Pack, Director Brain Algorithm Artifact, Master Algorithm + Database Stack, and Algorithm Foundation SQL
 - Frontend/design: Frontend Rebuild Artifact
 - Maria/ops: Operations Playbook
 - Sales/investors: Investor and Sales Artifact
@@ -34,5 +35,7 @@ Use child artifacts for execution by lane:
 - Launch: Railway Smoke Test Runbook
 
 Do not paste the entire Master Build Bible into Codex as one task. Give Codex one narrow prompt at a time.
+
+Do not apply the SQL blueprint directly to production until the repo database strategy is confirmed.
 
 Do not claim future systems are live until repo evidence, deployment, and smoke tests prove they are live.
