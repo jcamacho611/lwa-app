@@ -364,3 +364,177 @@ def trim_chars(value: str, limit: int) -> str:
 
 def title_case_words(value: str) -> str:
     return " ".join(word[:1].upper() + word[1:] for word in compact_sentence(value).split())
+
+def _director_api_platform(value: str | None) -> str:
+    normalized = normalize_platform(value)
+    if normalized == "instagram reels":
+        return "instagram_reels"
+    if normalized == "youtube shorts":
+        return "youtube_shorts"
+    if normalized == "reels":
+        return "reels"
+    return normalized.replace(" ", "_")
+
+
+def _director_quality_gate(transcript: str) -> tuple[str, list[str], int]:
+    text = (transcript or "").lower()
+    risky_terms = ["guaranteed", "risk free", "passive income", "investment"]
+    warnings = [term for term in risky_terms if term in text]
+    if warnings:
+        return "warning", [f"Risk language detected: {term}" for term in warnings], min(len(warnings) * 10, 40)
+    return "pass", [], 0
+
+
+def director_brain_package(
+    *,
+    transcript: str,
+    target_platform: str | None = None,
+    category: str | None = None,
+    caption_preset: str | None = None,
+) -> dict[str, object]:
+    platform_code = _director_api_platform(target_platform)
+    category_code = normalize_category(category) or infer_category(
+        ClipResult(
+            id="director_package_source",
+            title=transcript[:80] or "Director Brain package",
+            hook=transcript[:80] or "Director Brain package",
+            caption=transcript or "Director Brain package",
+            score=60,
+            transcript_excerpt=transcript,
+        )
+    )
+    quality_status, warnings, risk_penalty = _director_quality_gate(transcript)
+    display_category = category_code.replace("_", " ").title()
+    if display_category == "Ai Tech":
+        display_category = "AI Tech"
+
+    base_clip = ClipResult(
+        id="director_package_source",
+        title=transcript[:80] or "Director Brain package",
+        hook=transcript[:80] or "Director Brain package",
+        caption=transcript or "Director Brain package",
+        score=max(55, 72 - risk_penalty),
+        transcript_excerpt=transcript,
+        category=category_code,
+        target_platform=target_platform,
+    )
+    plan = build_director_brain_plan(
+        base_clip,
+        target_platform=target_platform,
+        category=category_code,
+        rendered_state="strategy_only",
+    )
+    score = max(35, plan.score - risk_penalty)
+
+    return {
+        "algorithm_version": "director-brain-v1",
+        "target_platform": platform_code,
+        "recommended_platform": platform_code,
+        "recommended_content_type": display_category,
+        "recommended_output_style": plan.packaging_angle,
+        "platform_recommendation_reason": plan.platform_fit,
+        "caption_preset": (caption_preset or "clean_op").replace("-", "_"),
+        "hook_formula_codes": ["contrarian_claim", "dataset-pattern", "open-loop"],
+        "hooks": plan.hook_variants,
+        "captions": [plan.caption],
+        "moments": [
+            {
+                "start_seconds": 0,
+                "end_seconds": 30,
+                "hook_window_seconds": 2,
+                "reason": plan.explanation,
+            }
+        ],
+        "score": score,
+        "quality_gate_status": quality_status,
+        "quality_gate_warnings": warnings,
+        "risk_penalty": risk_penalty,
+        "rationale": f"Director Brain packaged this as {display_category} for {platform_code}.",
+    }
+
+def _director_api_platform(value: str | None) -> str:
+    normalized = normalize_platform(value)
+    if normalized == "instagram reels":
+        return "instagram_reels"
+    if normalized == "youtube shorts":
+        return "youtube_shorts"
+    if normalized == "reels":
+        return "reels"
+    return normalized.replace(" ", "_")
+
+
+def _director_quality_gate(transcript: str) -> tuple[str, list[str], int]:
+    text = (transcript or "").lower()
+    risky_terms = ["guaranteed", "risk free", "passive income", "investment"]
+    warnings = [term for term in risky_terms if term in text]
+    if warnings:
+        return "warning", [f"Risk language detected: {term}" for term in warnings], min(len(warnings) * 10, 40)
+    return "pass", [], 0
+
+
+def director_brain_package(
+    *,
+    transcript: str,
+    target_platform: str | None = None,
+    category: str | None = None,
+    caption_preset: str | None = None,
+) -> dict[str, object]:
+    platform_code = _director_api_platform(target_platform)
+    category_code = normalize_category(category) or infer_category(
+        ClipResult(
+            id="director_package_source",
+            title=transcript[:80] or "Director Brain package",
+            hook=transcript[:80] or "Director Brain package",
+            caption=transcript or "Director Brain package",
+            score=60,
+            transcript_excerpt=transcript,
+        )
+    )
+    quality_status, warnings, risk_penalty = _director_quality_gate(transcript)
+    display_category = category_code.replace("_", " ").title()
+    if display_category == "Ai Tech":
+        display_category = "AI Tech"
+
+    base_clip = ClipResult(
+        id="director_package_source",
+        title=transcript[:80] or "Director Brain package",
+        hook=transcript[:80] or "Director Brain package",
+        caption=transcript or "Director Brain package",
+        score=max(55, 72 - risk_penalty),
+        transcript_excerpt=transcript,
+        category=category_code,
+        target_platform=target_platform,
+    )
+    plan = build_director_brain_plan(
+        base_clip,
+        target_platform=target_platform,
+        category=category_code,
+        rendered_state="strategy_only",
+    )
+    score = max(35, plan.score - risk_penalty)
+
+    return {
+        "algorithm_version": "director-brain-v1",
+        "target_platform": platform_code,
+        "recommended_platform": platform_code,
+        "recommended_content_type": display_category,
+        "recommended_output_style": plan.packaging_angle,
+        "platform_recommendation_reason": plan.platform_fit,
+        "caption_preset": (caption_preset or "clean_op").replace("-", "_"),
+        "hook_formula_codes": ["contrarian_claim", "dataset-pattern", "open-loop"],
+        "hooks": plan.hook_variants,
+        "captions": [plan.caption],
+        "moments": [
+            {
+                "start_seconds": 0,
+                "end_seconds": 30,
+                "hook_window_seconds": 2,
+                "reason": plan.explanation,
+            }
+        ],
+        "score": score,
+        "quality_gate_status": quality_status,
+        "quality_gate_warnings": warnings,
+        "risk_penalty": risk_penalty,
+        "rationale": f"Director Brain packaged this as {display_category} for {platform_code}.",
+    }

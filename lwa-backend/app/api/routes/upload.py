@@ -98,6 +98,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
             size_bytes=upload["file_size"],
             public_url=upload["public_url"],
             storage_path=upload["stored_path"],
+            source_type=source_type,
             source_ref=upload_source_ref(upload_id=upload["id"], source_type=source_type),
         )
     except Exception:
