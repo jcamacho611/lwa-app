@@ -27,6 +27,7 @@ from ...services.clip_service import (
 from ...services.entitlements import UsageStore, resolve_entitlement
 from ...services.event_log import emit_event
 from ...services.export_bundle import create_export_bundle
+from ...services.source_formats import source_type_for_upload
 from ...services.source_ingest import infer_source_type
 from app.services.source_errors import classify_source_failure, source_failure_detail
 
@@ -172,9 +173,6 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
                 source_failure.technical_message,
             )
             raise HTTPException(status_code=422, detail=source_failure_detail(source_failure)) from None
-
-        # Re-raise HTTP exceptions (including 402 quota errors) without releasing usage,
-        # since the quota was already consumed by resolve_entitlement.
         raise
     except Exception as error:
         usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
@@ -405,15 +403,11 @@ def resolve_request_source(
 
 
 def classify_upload_source(upload: dict[str, object]) -> str:
-    content_type = str(upload.get("content_type") or "").lower()
-    filename = str(upload.get("file_name") or "")
-    suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
-
-    if content_type.startswith("audio/") or suffix in {"mp3", "wav", "m4a", "aac", "ogg", "oga", "flac"}:
-        return "audio_upload"
-    if content_type.startswith("image/") or suffix in {"jpg", "jpeg", "png", "webp", "heic", "heif"}:
-        return "image_upload"
-    return "video_upload"
+    source_type = source_type_for_upload(
+        str(upload.get("file_name") or ""),
+        str(upload.get("content_type") or ""),
+    )
+    return source_type if source_type != "unknown" else "video_upload"
 
 
 async def enforce_generation_throttle(*, entitlement) -> None:
