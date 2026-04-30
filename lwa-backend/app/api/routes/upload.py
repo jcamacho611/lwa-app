@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
@@ -10,30 +9,13 @@ from ...core.config import get_settings
 from ...dependencies.auth import get_optional_user, get_platform_store, require_user
 from ...models.schemas import UploadResponse
 from ...services.entitlements import UsageStore, get_plan_for_user
+from ...services.source_formats import SUPPORTED_UPLOAD_EXTENSIONS, UNSUPPORTED_UPLOAD_MESSAGE, validate_upload_format
 
 router = APIRouter(prefix="/v1/uploads", tags=["uploads"])
 settings = get_settings()
 platform_store = get_platform_store()
 usage_store = UsageStore(settings.usage_store_path)
-ALLOWED_EXTENSIONS = {
-    ".mp4",
-    ".mov",
-    ".m4v",
-    ".webm",
-    ".mp3",
-    ".wav",
-    ".m4a",
-    ".aac",
-    ".ogg",
-    ".oga",
-    ".flac",
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".webp",
-    ".heic",
-    ".heif",
-}
+ALLOWED_EXTENSIONS = SUPPORTED_UPLOAD_EXTENSIONS
 logger = logging.getLogger("uvicorn.error")
 
 
@@ -42,9 +24,10 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
     user = get_optional_user(request)
     subject_id = user.id if user else resolve_guest_upload_id(request)
     logger.info("upload_received subject_id=%s authenticated=%s filename=%s", subject_id, bool(user), file.filename)
-    suffix = Path(file.filename or "").suffix.lower()
-    if suffix not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Unsupported file type")
+    try:
+        source_format = validate_upload_format(file.filename, file.content_type)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error) or UNSUPPORTED_UPLOAD_MESSAGE) from None
 
     plan = get_plan_for_user(settings=settings, user=user) if user else None
     upload_limit = int(plan.feature_flags.max_uploads_per_day if plan else 2)
@@ -64,9 +47,13 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
                 ),
             ) from error
 
-    destination_dir = Path(settings.uploads_dir) / subject_id
+    destination_dir = settings.uploads_path / subject_id if hasattr(settings, "uploads_path") else None
+    if destination_dir is None:
+        from pathlib import Path
+
+        destination_dir = Path(settings.uploads_dir) / subject_id
     destination_dir.mkdir(parents=True, exist_ok=True)
-    stored_name = f"{uuid4().hex[:12]}{suffix}"
+    stored_name = f"{uuid4().hex[:12]}{source_format.extension}"
     stored_path = destination_dir / stored_name
     size_limit = settings.max_upload_mb * 1024 * 1024
     total_size = 0
@@ -90,18 +77,29 @@ async def upload_file(request: Request, file: UploadFile = File(...)) -> UploadR
             file_name=file.filename or stored_name,
             stored_path=str(stored_path),
             public_url=public_url,
-            content_type=file.content_type,
+            content_type=source_format.content_type,
             file_size=total_size,
         )
-        logger.info("upload_validated subject_id=%s upload_id=%s size_bytes=%s", subject_id, upload["id"], total_size)
+        logger.info(
+            "upload_validated subject_id=%s upload_id=%s source_type=%s size_bytes=%s",
+            subject_id,
+            upload["id"],
+            source_format.source_type,
+            total_size,
+        )
         return UploadResponse(
             file_id=upload["id"],
             filename=upload["file_name"],
-            content_type=upload["content_type"] or "application/octet-stream",
+            content_type=upload["content_type"] or source_format.content_type,
             size_bytes=upload["file_size"],
             public_url=upload["public_url"],
             storage_path=upload["stored_path"],
-            source_ref={"source_kind": "upload", "upload_id": upload["id"]},
+            source_type=source_format.source_type,
+            source_ref={
+                "source_kind": "upload",
+                "source_type": source_format.source_type,
+                "upload_id": upload["id"],
+            },
         )
     except Exception:
         if usage_day:
