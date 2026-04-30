@@ -35,6 +35,7 @@ from ..services.attention_compiler import compile_attention
 from ..services.caption_artifacts import create_caption_artifacts
 from ..services.clip_status_store import register_clip_batch
 from ..services.confidence_engine import build_confidence_label, resolve_confidence_score
+from ..services.director_brain import build_director_brain_plan
 from ..services.entitlements import EntitlementContext, UsageStore
 from ..services.event_log import emit_event
 from ..services.intelligence_data_core import get_intelligence_core
@@ -619,6 +620,7 @@ async def apply_director_brain_foundation(
 
     for clip in clips:
         try:
+            director_plan = build_director_brain_plan(clip, target_platform=target_platform)
             shot_plan = build_shot_plan_for_clip(clip, target_platform=target_platform)
             render_result: VisualRenderProviderResult | None = None
             if not clip_has_rendered_media(clip):
@@ -653,6 +655,7 @@ async def apply_director_brain_foundation(
 
             evaluation = evaluate_render_quality(clip=clip, render_result=render_result)
             update: dict[str, object] = {
+                **director_plan.as_clip_update(clip),
                 **shot_plan.as_clip_update(),
                 **evaluation.as_clip_update(),
                 "render_provider": clip.render_provider or RENDER_PROVIDER_PUBLIC_ID,
