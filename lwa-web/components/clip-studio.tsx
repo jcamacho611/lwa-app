@@ -1178,6 +1178,32 @@ export function ClipStudio({
   const recommendedPlatform = activeResult?.processing_summary?.recommended_platform || activeResult?.processing_summary?.target_platform || null;
   const platformDecision = activeResult?.processing_summary?.platform_decision || (useManualPlatform ? "manual" : "auto");
   const platformRecommendationReason = activeResult?.processing_summary?.platform_recommendation_reason || null;
+  const recommendedContentType = activeResult?.processing_summary?.recommended_content_type || null;
+  const recommendedOutputStyle = activeResult?.processing_summary?.recommended_output_style || null;
+  const recommendationRail = activeResult
+    ? [
+        {
+          label: "Destination",
+          value: recommendedPlatform || effectiveTargetPlatform || "Auto",
+          detail: platformRecommendationReason || "LWA picked the first destination from the source and current pack.",
+        },
+        {
+          label: "Content read",
+          value: recommendedContentType || "Auto read",
+          detail: "Used to shape hook angle, packaging, and review order without changing the API contract.",
+        },
+        {
+          label: "Output style",
+          value: recommendedOutputStyle ? "Style locked" : "Auto package",
+          detail: recommendedOutputStyle || "Hook, caption, thumbnail, CTA, and post order are generated as a pack.",
+        },
+        {
+          label: "Truth layer",
+          value: activeResult.processing_summary?.ai_provider || "Fallback-safe",
+          detail: `${planSurface.name}${typeof creditsRemaining === "number" ? ` with ${creditsRemaining} credits left` : ""}; rendered clips stay separate from strategy-only ideas.`,
+        },
+      ]
+    : [];
   const renderedClipCount = renderedClips.length;
   const strategyOnlyClipCount = strategyOnlyClips.length;
   const shotPlanReadyCount = orderedClips.filter((clip) => clipHasShotPlan(clip)).length;
@@ -2081,6 +2107,25 @@ export function ClipStudio({
         <InlineAlert tone="violet" title="Rendered lane is partial">
           Some clips came back without a playable preview. Export the ready cuts first, then use the strategy lane to decide what is worth recovering.
         </InlineAlert>
+      ) : null}
+
+      {recommendationRail.length ? (
+        <section className="glass-panel rounded-[28px] p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="section-kicker">LWA recommendation rail</p>
+              <h4 className="mt-2 text-2xl font-semibold text-ink">The first move, the content read, and the safety truth.</h4>
+            </div>
+            <StatPill tone={platformDecision === "manual" ? "neutral" : "signal"}>
+              {platformDecision === "manual" ? "Manual override" : "Auto routed"}
+            </StatPill>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {recommendationRail.map((item) => (
+              <MetricTile key={item.label} label={item.label} value={item.value} detail={item.detail} />
+            ))}
+          </div>
+        </section>
       ) : null}
 
       {leadClip ? (
