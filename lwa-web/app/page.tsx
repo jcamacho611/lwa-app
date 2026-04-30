@@ -1,19 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "../components/brand/Logo";
-import { buildUtmUrl, getMoneyLinkByKey, getPrimaryMoneyLink, type MoneyLink } from "../lib/money-links";
+import { PathPortal } from "../components/PathPortal";
+import { buildUtmUrl, getPrimaryMoneyLink } from "../lib/money-links";
+import { COUNCIL_BRAND_LINE } from "../lib/production-council";
 import { buildPageMetadata } from "../lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Any-Source AI Content Engine",
-  description: "Give LWA video, audio, streams, prompts, campaigns, or files and build ranked creator-ready packages.",
+  title: "LWA — AI Content Engine",
+  description:
+    "LWA turns long-form videos, uploads, and creator sources into short-form content packages with hooks, captions, timestamps, scores, and platform strategy.",
   path: "/",
   keywords: [
-    "any source ai content engine",
-    "ranked clip packages",
-    "audio repurposing",
-    "twitch stream clipping",
+    "LWA ai content engine",
+    "viral clip packages",
+    "hooks captions timestamps",
     "creator workflow",
+    "twitch stream clipping",
   ],
 });
 
@@ -26,285 +29,136 @@ const proofPoints = [
   "Copy-ready package",
 ];
 
-const sourceModes = [
-  {
-    label: "Video",
-    status: "Live now",
-    detail: "Clip-ready packages from public links and owned media workflows when they are enabled.",
-    tone: "from-[rgba(109,92,255,0.14)] to-white",
-  },
-  {
-    label: "Audio",
-    status: "Expanding",
-    detail: "Turn podcasts, voice notes, and sound-led sources into captions, scripts, and packaging angles.",
-    tone: "from-[rgba(49,130,246,0.14)] to-white",
-  },
-  {
-    label: "Music",
-    status: "Expanding",
-    detail: "Shape music ideas into promo hooks, visual direction, and posting packages without pretending a full editor already exists.",
-    tone: "from-[rgba(236,72,153,0.14)] to-white",
-  },
-  {
-    label: "Prompt",
-    status: "In studio",
-    detail: "Start from an idea when no finished media exists yet and build the package from intent first.",
-    tone: "from-[rgba(16,185,129,0.14)] to-white",
-  },
-  {
-    label: "Twitch / Stream",
-    status: "Foundation",
-    detail: "Keep VOD and stream highlight workflows visible so the product does not collapse back into a YouTube-only tool.",
-    tone: "from-[rgba(245,158,11,0.16)] to-white",
-  },
-  {
-    label: "Campaign / Objective",
-    status: "Manual prep",
-    detail: "Translate goals into hooks, captions, thumbnails, and manual-review briefs without fake submission automation.",
-    tone: "from-[rgba(139,92,246,0.14)] to-white",
-  },
-  {
-    label: "Upload / File",
-    status: "When enabled",
-    detail: "Use owned source files when the active workflow can actually process them.",
-    tone: "from-[rgba(20,184,166,0.14)] to-white",
-  },
-];
-
-type ActionPath = {
-  label: string;
-  detail: string;
-  href: string | MoneyLink | null;
-  source?: string;
-  external?: boolean;
-};
-
-const actionPaths: ActionPath[] = [
-  {
-    label: "Generate from source",
-    detail: "Open the live source engine and move into clip review.",
-    href: "/generate",
-    external: false,
-  },
-  {
-    label: "Operator command center",
-    detail: "Open the internal launch checklist for quality, reliability, and Director Brain readiness.",
-    href: "/operator",
-    external: false,
-  },
-  {
-    label: "Signal Realms",
-    detail: "Preview the future creator progression layer: classes, factions, quests, badges, and cosmetic identity.",
-    href: "/realm",
-    external: false,
-  },
-  {
-    label: "Marketplace preview",
-    detail: "See the future template, hook, caption, brand kit, and campaign asset layer.",
-    href: "/marketplace",
-    external: false,
-  },
-  {
-    label: "Social status",
-    detail: "Track future provider readiness without pretending direct posting is already approved.",
-    href: "/social",
-    external: false,
-  },
-  {
-    label: "Proof layer",
-    detail: "Review the future off-chain provenance plan without wallet, token, or unlock claims.",
-    href: "/proof",
-    external: false,
-  },
-  {
-    label: "Request custom clip pack",
-    detail: "Use a custom workflow or creator brief when direct generation is not the right first step.",
-    href: getMoneyLinkByKey("demoForm") || getMoneyLinkByKey("contact") || getMoneyLinkByKey("booking"),
-    source: "homepage_custom_clip_pack",
-  },
-  {
-    label: "Support the build",
-    detail: "Use the live support path without making checkout the whole product story.",
-    href: getPrimaryMoneyLink(),
-    source: "homepage_support_the_build",
-  },
-  {
-    label: "Book demo",
-    detail: "Use a guided walkthrough when a human operator path fits better.",
-    href: getMoneyLinkByKey("booking") || getMoneyLinkByKey("demoForm"),
-    source: "homepage_book_demo",
-  },
-  {
-    label: "Join creator/referral program",
-    detail: "Keep partner and early-operator lanes visible before every external form is configured.",
-    href: getMoneyLinkByKey("affiliateForm"),
-    source: "homepage_referral",
-  },
-];
-
-function ActionCard({
-  label,
-  detail,
-  href,
-  source,
-  external = true,
-}: {
-  label: string;
-  detail: string;
-  href: string | MoneyLink | null;
-  source?: string;
-  external?: boolean;
-}) {
-  const className =
-    "rounded-[24px] border border-white/66 bg-white/78 px-5 py-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--gold-border)] hover:shadow-[var(--shadow-card)]";
-
-  if (!href) {
-    return (
-      <div className={[className, "opacity-80"].join(" ")}>
-        <p className="text-sm font-semibold text-ink">{label}</p>
-        <p className="mt-2 text-sm leading-6 text-subtext">{detail}</p>
-        <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-wine)]">
-          Add path when configured
-        </p>
-      </div>
-    );
-  }
-
-  if (!external && typeof href === "string") {
-    return (
-      <Link href={href} className={className}>
-        <p className="text-sm font-semibold text-ink">{label}</p>
-        <p className="mt-2 text-sm leading-6 text-subtext">{detail}</p>
-        <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-wine)]">
-          Open now
-        </p>
-      </Link>
-    );
-  }
-
-  const link = typeof href === "string" ? href : buildUtmUrl(href, source || "homepage");
-
-  return (
-    <a href={link} target="_blank" rel="noreferrer" className={className}>
-      <p className="text-sm font-semibold text-ink">{label}</p>
-      <p className="mt-2 text-sm leading-6 text-subtext">{detail}</p>
-      <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-wine)]">
-        Open path
-      </p>
-    </a>
-  );
-}
-
 export default function HomePage() {
+  const primaryLink = getPrimaryMoneyLink();
+  const primaryLinkUrl = buildUtmUrl(primaryLink, "homepage_hero");
+
   return (
-    <section className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center gap-10 py-10 lg:grid-cols-[minmax(0,1fr),420px]">
-        <div className="text-center lg:text-left">
+    <section className="relative min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+      {/* Cinematic background radial layers */}
+      <div
+        className="pointer-events-none fixed inset-0 -z-10"
+        aria-hidden="true"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(109,92,255,0.22), transparent 70%), radial-gradient(ellipse 60% 50% at 90% 80%, rgba(185,28,28,0.18), transparent 60%), radial-gradient(ellipse 50% 40% at 10% 90%, rgba(16,185,129,0.12), transparent 60%)",
+        }}
+      />
+
+      {/* Header */}
+      <header className="mx-auto flex max-w-7xl items-center justify-between gap-4 pb-6">
+        <Link href="/" aria-label="LWA home">
           <Logo animated />
+        </Link>
+        <nav className="hidden items-center gap-2 sm:flex">
+          <Link
+            href="/generate"
+            className="primary-button rounded-full px-5 py-2.5 text-sm font-semibold"
+          >
+            Enter Clip Engine
+          </Link>
+          <a
+            href={primaryLinkUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="secondary-button rounded-full px-5 py-2.5 text-sm font-medium"
+          >
+            Support LWA
+          </a>
+        </nav>
+      </header>
 
-          <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.32em] text-[var(--accent-wine)]">
-            Any source in. Creator-ready content out.
-          </p>
-          <h1 className="mt-10 text-4xl font-semibold leading-tight text-ink sm:text-6xl">
-            Give LWA the source, stream, prompt, music idea, or objective. It builds the content package.
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-8 text-subtext sm:text-lg">
-            LWA is the any-source creator engine: video, audio, music, Twitch or stream material, prompt-led ideas, campaign objectives, and owned files when the workflow supports them. Ranked hooks, captions, visuals, post order, and rendered proof stay in one path.
-          </p>
+      {/* Hero */}
+      <section className="mx-auto max-w-7xl pt-10 pb-14 text-center">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[var(--accent-wine)]">
+          Any source in. Creator-ready content out.
+        </p>
+        <h1 className="mx-auto mt-6 max-w-4xl text-5xl font-semibold leading-[0.96] text-ink sm:text-7xl lg:text-[5.5rem]">
+          LWA
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-subtext sm:text-lg">
+          A deployed AI clipping engine that turns long-form videos, uploads,
+          and creator sources into short-form content packages — hooks,
+          captions, timestamps, scores, and platform strategy.
+        </p>
 
-          <form action="/generate" method="get" className="mt-10 w-full space-y-4">
-            <input
-              type="text"
-              inputMode="text"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              name="url"
-              placeholder="Drop a video, audio file, stream link, Twitch VOD, music idea, campaign, or prompt..."
-              className="source-command-input input-surface input-command w-full rounded-[28px] px-5 py-5 text-base"
-              aria-label="Source, campaign, or prompt"
-            />
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button type="submit" className="primary-button w-full rounded-full px-6 py-4 text-base font-semibold sm:w-auto sm:min-w-[220px]">
-                Generate from source
-              </button>
-              <Link
-                href="/generate"
-                className="inline-flex w-full items-center justify-center rounded-full border border-[var(--gold-border)] bg-white/72 px-6 py-4 text-base font-semibold text-ink transition hover:bg-[var(--surface-gold-ghost)] sm:w-auto"
-              >
-                Open source engine
-              </Link>
-            </div>
-          </form>
-
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-subtext">
-            Public links work now. Prompt, upload, audio, stream, and campaign lanes keep expanding inside the same studio without pretending every backend path is already fully finished.
-          </p>
-        </div>
-
-        <aside className="relative overflow-hidden rounded-[38px] border border-white/70 bg-white/74 p-4 shadow-[0_28px_90px_rgba(88,70,140,0.16)] backdrop-blur-xl">
+        {/* Cinematic character visual */}
+        <div className="relative mx-auto mt-10 max-w-xs overflow-hidden rounded-[38px] border border-white/14 shadow-[0_28px_90px_rgba(88,70,140,0.22)]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(236,72,153,0.20),transparent_30%),radial-gradient(circle_at_78%_24%,rgba(109,92,255,0.18),transparent_34%),radial-gradient(circle_at_56%_86%,rgba(16,185,129,0.18),transparent_30%)]" />
-          <div className="relative overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.42))]">
+          <div className="relative overflow-hidden rounded-[38px] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.18))]">
             <img
               src="/brand-source/chars/athena.png"
-              alt="LWA character command interface"
-              className="h-full min-h-[320px] w-full object-cover object-center"
+              alt="LWA — the signal engine"
+              className="h-full min-h-[280px] w-full object-cover object-center"
             />
-            <div className="absolute inset-x-4 bottom-4 rounded-[24px] border border-white/62 bg-white/78 p-4 shadow-[0_18px_50px_rgba(41,31,68,0.18)] backdrop-blur-md">
-              <p className="section-kicker">Muse source engine</p>
-              <p className="mt-2 text-lg font-semibold text-ink">Signal scan, package, render when possible.</p>
-              <p className="mt-2 text-sm leading-6 text-subtext">
-                Existing Athena art is the current hero signature while the dedicated character-girl system is tightened further.
+            <div className="absolute inset-x-4 bottom-4 rounded-[22px] border border-white/12 bg-black/58 p-4 backdrop-blur-md">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--gold)]">
+                Signal engine active
+              </p>
+              <p className="mt-1 text-sm font-semibold text-ink">
+                The characters guide the world.
               </p>
             </div>
           </div>
-        </aside>
-      </div>
+        </div>
 
-      <section className="mx-auto mt-8 grid w-full max-w-6xl gap-3 pb-8 sm:grid-cols-2 lg:grid-cols-4">
-        {sourceModes.map((mode) => (
-          <div
-            key={mode.label}
-            className={`rounded-[24px] border border-white/66 bg-gradient-to-br ${mode.tone} px-5 py-5 shadow-sm`}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/generate"
+            className="primary-button inline-flex items-center justify-center rounded-full px-7 py-3.5 text-base font-semibold"
           >
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-ink">{mode.label}</p>
-              <span className="rounded-full border border-[var(--gold-border)] bg-white/72 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-wine)]">
-                {mode.status}
-              </span>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-subtext">{mode.detail}</p>
-          </div>
-        ))}
+            Enter Clip Engine
+          </Link>
+          <Link
+            href="/operator"
+            className="secondary-button inline-flex items-center justify-center rounded-full px-7 py-3.5 text-base font-medium"
+          >
+            Operator Center
+          </Link>
+        </div>
       </section>
 
-      <section className="mx-auto mt-2 grid w-full max-w-6xl gap-4 pb-10 md:grid-cols-2 xl:grid-cols-5">
-        {actionPaths.map((path) => (
-          <ActionCard
-            key={path.label}
-            label={path.label}
-            detail={path.detail}
-            href={path.href}
-            source={path.source}
-            external={path.external}
-          />
-        ))}
+      {/* Path portal */}
+      <section className="mx-auto max-w-7xl pb-10">
+        <div className="mb-6 text-center">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--accent-wine)]">
+            Choose your path
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-ink sm:text-3xl">
+            Where do you want to go?
+          </h2>
+          <p className="mt-2 text-sm text-ink/52">
+            Hover or focus a card to see what each path takes you to.
+          </p>
+        </div>
+        <PathPortal />
       </section>
 
-      <p className="mx-auto max-w-6xl pb-10 text-xs leading-6 text-subtext/80">
-        Whop stays available as one live access path today. Demo, booking, support, referral, operator, marketplace, social, proof, and Realms routes appear as they are configured, without changing the product identity.
-      </p>
+      {/* Council line */}
+      <section className="mx-auto max-w-7xl pb-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--accent-wine)]">
+          How LWA is built
+        </p>
+        <p className="mt-2 text-base font-semibold text-ink sm:text-lg">
+          {COUNCIL_BRAND_LINE}
+        </p>
+      </section>
 
-      <section className="mx-auto grid w-full max-w-5xl gap-4 pb-16 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Proof points */}
+      <section className="mx-auto grid w-full max-w-7xl gap-3 pb-16 sm:grid-cols-3 lg:grid-cols-6">
         {proofPoints.map((item) => (
           <div
             key={item}
-            className="metric-tile rounded-[24px] px-5 py-5 text-sm font-medium text-ink/84 backdrop-blur-sm"
+            className="metric-tile rounded-[22px] px-4 py-4 text-sm font-medium text-ink/80 backdrop-blur-sm"
           >
             {item}
           </div>
         ))}
       </section>
+
+      <p className="mx-auto max-w-7xl pb-10 text-xs leading-6 text-subtext/70">
+        No guaranteed virality or income claims. No live marketplace payouts, live social posting, or blockchain economy. Whop is the live access path. All other features are in active development.
+      </p>
     </section>
   );
 }

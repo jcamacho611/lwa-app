@@ -5,6 +5,9 @@ __pycache__/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+.env.development
 /package-lock.json
 node_modules/
 .next/

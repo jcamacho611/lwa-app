@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getAllCouncilRoles, COUNCIL_BRAND_LINE } from "../../lib/production-council";
 import { buildPageMetadata } from "../../lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -66,6 +67,8 @@ const lanes = [
     items: ["Backend health", "Frontend deploy", "Generate smoke test", "Whop event smoke test"],
   },
 ];
+
+const councilRoles = getAllCouncilRoles();
 
 const councilRoutes = [
   { label: "Generator", href: "/generate", detail: "Run the main source-to-package flow." },
@@ -152,6 +155,27 @@ export default function OperatorPage() {
                 <p className="text-sm font-semibold text-ink">{route.label}</p>
                 <p className="mt-2 text-sm leading-6 text-ink/62">{route.detail}</p>
               </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-[30px] border border-white/12 bg-white/[0.04] p-6">
+          <p className="section-kicker">Production council</p>
+          <div className="mt-2 flex items-end justify-between gap-3">
+            <h2 className="text-2xl font-semibold text-ink">Who builds this</h2>
+            <p className="text-xs font-semibold text-ink/42">{COUNCIL_BRAND_LINE}</p>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {councilRoles.map((role) => (
+              <div key={role.id} className="rounded-[20px] border border-white/10 bg-black/10 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-ink">{role.realTitle}</p>
+                    <p className="mt-0.5 text-[11px] font-medium text-[var(--gold)]">{role.mythicTitle}</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-ink/55">{role.owns}</p>
+              </div>
             ))}
           </div>
         </section>

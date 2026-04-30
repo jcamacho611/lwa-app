@@ -27,7 +27,7 @@ export default function Navbar({
   variant = "workspace",
 }: NavbarProps) {
   const pathname = usePathname();
-  const primaryItems = ["/generate", "/dashboard", "/campaigns", "/wallet"]
+  const primaryItems = ["/generate", "/dashboard", "/history", "/campaigns", "/wallet"]
     .map((href) => items.find((item) => item.href === href))
     .filter(Boolean) as NavItem[];
   const visibleItems = primaryItems.length ? primaryItems : items.slice(0, 4);
@@ -45,7 +45,7 @@ export default function Navbar({
         <nav className="order-3 flex w-full gap-1.5 overflow-x-auto pb-1 md:order-2 md:w-auto md:flex-1 md:justify-center md:pb-0">
           {visibleItems.map((item) => {
             const active = pathname === item.href;
-            const label = item.href === "/dashboard" ? "Queue" : rewriteSurfaceLabel(item.label);
+            const label = rewriteSurfaceLabel(item.label);
             return (
               <Link
                 key={item.href}

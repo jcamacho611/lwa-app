@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { buildUtmUrl, getPrimaryMoneyLink } from "../lib/money-links";
 import { AccountWorkspace } from "./account-workspace";
 import { AuthPanel } from "./auth-panel";
 import { BatchPanel } from "./batch-panel";
@@ -105,6 +106,15 @@ import { useStableResults } from "../hooks/useStableResults";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 type SourceMode = "video" | "image" | "idea";
+
+function isLiveStreamUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("twitch.tv/") ||
+    lower.includes("youtube.com/live") ||
+    lower.includes("/live/")
+  );
+}
 const FREE_LAUNCH_MODE = process.env.NEXT_PUBLIC_FREE_LAUNCH_MODE === "true";
 
 const PLATFORM_BLOCKED_SOURCE_MESSAGE =
@@ -282,7 +292,8 @@ const appNavItems = [
 
 const marketingNavItems = [
   { href: "/generate", label: rewriteSurfaceLabel("Generate") },
-  { href: "/campaigns", label: rewriteSurfaceLabel("Campaigns") },
+  { href: "/operator", label: "Operator" },
+  { href: "/realm", label: "Realms" },
 ] as const;
 
 const VIDEO_LOADING_STAGES = ["Source ingest", "Moment scan", "Clip ranking", "Packaging", "Render/export", "Delivery"];
@@ -359,6 +370,7 @@ export function ClipStudio({
   const [bundleExportState, setBundleExportState] = useState<"idle" | "exporting" | "ready" | "failed">("idle");
   const [bundleExportMessage, setBundleExportMessage] = useState<string | null>(null);
   const [latestBundleExport, setLatestBundleExport] = useState<ExportBundleResponse | null>(null);
+  const [liveStreamWarning, setLiveStreamWarning] = useState(false);
   const [copiedPackageAction, setCopiedPackageAction] = useState<"lead" | "rendered" | "strategy" | "all" | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
   const [generatorHovered, setGeneratorHovered] = useState(false);
@@ -686,10 +698,15 @@ export function ClipStudio({
     await refreshAccount(token);
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>, bypassLiveCheck = false) {
     event.preventDefault();
     if (sourceMode === "video" && !videoUrl.trim() && !selectedUploadId) {
       setError(isGuest ? "Paste a public source URL to generate your clip pack." : "Paste a public source URL or upload a file to generate your clip pack.");
+      return;
+    }
+
+    if (sourceMode === "video" && videoUrl.trim() && !bypassLiveCheck && isLiveStreamUrl(videoUrl)) {
+      setLiveStreamWarning(true);
       return;
     }
     if (sourceMode === "image" && !selectedUploadId) {
@@ -1258,35 +1275,46 @@ export function ClipStudio({
         : generatorHovered
           ? "hover"
           : "idle";
+  const primaryLink = getPrimaryMoneyLink();
+  const primaryLinkUrl = buildUtmUrl(primaryLink, "clip_studio_quota");
+
   const paywallCard = paywallMessage ? (
-    <div className="rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-4">
-      <p className="text-sm font-semibold text-[var(--gold)]">
-        {FREE_LAUNCH_MODE && !user ? "Free launch guard active." : "Out of credits."}
-      </p>
-      <p className="mt-1 text-sm text-white/55">
-        {user
-          ? "Choose a checkout path, request a demo, or wait for reset."
-          : FREE_LAUNCH_MODE
-            ? "Try again in a minute, upload a smaller source, or switch to prompt mode."
-            : "Sign in free to keep generating and save your clips."}
-      </p>
-      {FREE_LAUNCH_MODE && !user ? null : (
-        <div className="mt-3">
-          {!user ? (
+    <div className="rounded-[18px] border border-[var(--gold-border)] bg-[var(--gold-dim)] px-5 py-5">
+      {!user ? (
+        <>
+          <p className="text-base font-semibold text-[var(--gold)]">You have used your free launch credits.</p>
+          <p className="mt-2 text-sm leading-6 text-white/70">Create an account or upgrade when paid plans open.</p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <a
+              href={primaryLinkUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black hover:opacity-90"
+            >
+              Join Waitlist
+            </a>
             <button
               type="button"
               onClick={() => {
-                setAuthMode("login");
-                setAuthOpen(true);
+                const text = activeResult ? JSON.stringify(activeResult, null, 2) : "";
+                if (text) void navigator.clipboard?.writeText(text);
               }}
-              className="rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black hover:opacity-90"
+              className="inline-flex items-center justify-center rounded-full border border-[var(--gold-border)] px-5 py-2.5 text-sm font-medium text-[var(--gold)] hover:opacity-80"
             >
-              Sign in free
+              Save my work
             </button>
-          ) : (
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-semibold text-[var(--gold)]">
+            {FREE_LAUNCH_MODE ? "Free launch guard active." : "Out of credits."}
+          </p>
+          <p className="mt-1 text-sm text-white/55">Choose a checkout path, request a demo, or wait for reset.</p>
+          <div className="mt-3">
             <MoneyCtaPanel variant="compact" source="clip_studio_quota" title="Choose how to keep generating" />
-          )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   ) : null;
@@ -1337,6 +1365,12 @@ export function ClipStudio({
     setBundleExportState("exporting");
     setBundleExportMessage(null);
 
+    const hasRenderedClip = orderedClips.some((clip) => clipHasRenderedMedia(clip));
+    const requestId = activeResult.request_id || "bundle";
+    const suggestedFilename = hasRenderedClip
+      ? `lwa-clip-package-${requestId}.json`
+      : `lwa-strategy-bundle-${requestId}.json`;
+
     try {
       const bundle = await exportClipBundle(
         {
@@ -1345,12 +1379,27 @@ export function ClipStudio({
         },
         token,
       );
-      const link = document.createElement("a");
-      link.href = bundle.download_url;
-      link.download = bundle.file_name || "lwa-bundle.zip";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+
+      if (bundle.download_url && !bundle.download_url.endsWith(".json")) {
+        const link = document.createElement("a");
+        link.href = bundle.download_url;
+        link.download = bundle.file_name || suggestedFilename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        const payload = bundle.download_url ? bundle : { ...bundle, clips: activeResult.clips, request_id: requestId };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = bundle.file_name || suggestedFilename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+
       setLatestBundleExport(bundle);
       setBundleExportState("ready");
       setBundleExportMessage(
@@ -1941,6 +1990,34 @@ export function ClipStudio({
 
         {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} onCancel={handleCancelGeneration} /> : null}
 
+        {liveStreamWarning ? (
+          <div className="rounded-[18px] border border-amber-300/30 bg-amber-300/10 px-5 py-4">
+            <p className="text-sm font-semibold text-amber-100">Live streams and blocked platform URLs may not render clips directly.</p>
+            <p className="mt-1 text-sm text-amber-100/70">Upload the source file for best results, or continue for a strategy-only package.</p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={(e) => {
+                  setLiveStreamWarning(false);
+                  void onSubmit(e as unknown as FormEvent<HTMLFormElement>, true);
+                }}
+                className="inline-flex items-center justify-center rounded-full border border-amber-300/40 bg-amber-300/15 px-4 py-2 text-sm font-medium text-amber-100 hover:opacity-80"
+              >
+                Continue anyway
+              </button>
+              <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-4 py-2 text-sm font-medium text-ink/80 hover:opacity-80">
+                Upload file instead
+                <input
+                  type="file"
+                  accept=".mp4,.mov,.m4v,.webm,.mp3,.wav,.m4a,.aac,.ogg,.oga,.flac,video/*,audio/*"
+                  className="hidden"
+                  onChange={(e) => { setLiveStreamWarning(false); void onUploadSelected(e); }}
+                />
+              </label>
+            </div>
+          </div>
+        ) : null}
+
         {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
         {paywallCard}
       </form>
@@ -2012,6 +2089,34 @@ export function ClipStudio({
             </div>
 
             {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} onCancel={handleCancelGeneration} /> : null}
+
+            {liveStreamWarning ? (
+              <div className="rounded-[18px] border border-amber-300/30 bg-amber-300/10 px-5 py-4">
+                <p className="text-sm font-semibold text-amber-100">Live streams and blocked platform URLs may not render clips directly.</p>
+                <p className="mt-1 text-sm text-amber-100/70">Upload the source file for best results, or continue for a strategy-only package.</p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      setLiveStreamWarning(false);
+                      void onSubmit(e as unknown as FormEvent<HTMLFormElement>, true);
+                    }}
+                    className="inline-flex items-center justify-center rounded-full border border-amber-300/40 bg-amber-300/15 px-4 py-2 text-sm font-medium text-amber-100 hover:opacity-80"
+                  >
+                    Continue anyway
+                  </button>
+                  <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-4 py-2 text-sm font-medium text-ink/80 hover:opacity-80">
+                    Upload file instead
+                    <input
+                      type="file"
+                      accept=".mp4,.mov,.m4v,.webm,.mp3,.wav,.m4a,.aac,.ogg,.oga,.flac,video/*,audio/*"
+                      className="hidden"
+                      onChange={(e) => { setLiveStreamWarning(false); void onUploadSelected(e); }}
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : null}
 
             {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
 
@@ -2314,7 +2419,11 @@ export function ClipStudio({
               disabled={bundleExportState === "exporting" || !activeResult?.clips?.length}
               className="secondary-button inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
-              {bundleExportState === "exporting" ? "Building bundle..." : "Export full bundle"}
+              {bundleExportState === "exporting"
+                ? "Building bundle..."
+                : renderedClipCount > 0
+                  ? "Download Clip Package"
+                  : "Download Strategy Bundle"}
             </button>
             {visibleManifestUrl ? (
               <a

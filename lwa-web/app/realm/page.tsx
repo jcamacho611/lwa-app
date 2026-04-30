@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getAllLwaAgents } from "../../lib/lwa-agents";
+import { COUNCIL_BRAND_LINE } from "../../lib/production-council";
 import { buildPageMetadata } from "../../lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -13,6 +15,8 @@ const classes = ["Hookwright", "Captioneer", "Reframer", "Trendseer", "Loremaste
 const factions = ["Crimson Court", "Black Loom", "Verdant Pact", "Iron Choir", "Saffron Wake", "Glass Synod", "Tide Marshal", "Driftborn", "Emberkin", "Chorus of Thoth", "House Polis", "Outer Signal"];
 const principles = ["XP cannot be bought", "Badges are earned", "Relics are cosmetic only", "No investment language", "No feature unlocks from NFTs", "Web-first before chain"];
 
+const agents = getAllLwaAgents();
+
 export default function RealmPage() {
   return (
     <main className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
@@ -23,11 +27,43 @@ export default function RealmPage() {
           <p className="mt-4 max-w-3xl text-base leading-8 text-ink/66">
             Signal Realms is the future creator identity system for LWA. This page is a static shell: no XP purchases, no blockchain requirement, no marketplace money movement, and no feature unlocks from relics.
           </p>
+          <p className="mt-4 text-sm font-semibold text-ink/50">{COUNCIL_BRAND_LINE}</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/generate" className="primary-button rounded-full px-5 py-3 text-sm font-semibold">Generate clips</Link>
             <Link href="/operator" className="secondary-button rounded-full px-5 py-3 text-sm font-medium">Operator center</Link>
           </div>
         </div>
+
+        <section className="mt-6">
+          <div className="mb-4">
+            <p className="section-kicker">AI guides</p>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">The Seven Agents</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/58">
+              Each agent is an in-world AI guide assigned to a product area. They advise, flag, and assist — they do not publish, deploy, or act without human review.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {agents.map((agent) => (
+              <article
+                key={agent.id}
+                className="rounded-[28px] border border-white/12 bg-[radial-gradient(circle_at_top_left,rgba(109,92,255,0.10),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-wine)]">{agent.productArea}</p>
+                    <h3 className="mt-2 text-lg font-semibold text-ink">{agent.name}</h3>
+                    <p className="mt-0.5 text-xs text-ink/52">{agent.title}</p>
+                  </div>
+                  <span className="rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink/50">
+                    Review required
+                  </span>
+                </div>
+                <p className="mt-4 text-sm italic leading-6 text-ink/70">&ldquo;{agent.tagline}&rdquo;</p>
+                <p className="mt-3 text-sm leading-6 text-ink/55">{agent.aiRole}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <section className="mt-6 grid gap-4 lg:grid-cols-2">
           <article className="rounded-[30px] border border-white/12 bg-white/[0.04] p-6">
