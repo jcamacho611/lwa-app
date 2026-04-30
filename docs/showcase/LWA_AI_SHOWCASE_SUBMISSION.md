@@ -1,5 +1,11 @@
 # LWA / IWA — AI Showcase Submission
 
+## Pronunciation
+LWA is pronounced **lee-wuh**.
+
+## Visual identity
+African / Black anime / Afro-futurist mythic sci-fi creator engine. Premium, cinematic, character-driven. The Seven Agents are the in-world AI guides and the foundation for future creator-customizable base models.
+
 ## Recommended project title
 LWA / IWA
 

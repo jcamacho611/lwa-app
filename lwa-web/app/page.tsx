@@ -76,6 +76,9 @@ export default function HomePage() {
         <h1 className="mx-auto mt-6 max-w-4xl text-5xl font-semibold leading-[0.96] text-ink sm:text-7xl lg:text-[5.5rem]">
           LWA
         </h1>
+        <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.32em] text-ink/55">
+          pronounced <span className="text-[var(--gold)]">lee-wuh</span>
+        </p>
         <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-subtext sm:text-lg">
           A deployed AI clipping engine that turns long-form videos, uploads,
           and creator sources into short-form content packages — hooks,

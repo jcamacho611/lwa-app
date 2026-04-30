@@ -8,6 +8,7 @@ This folder contains the internal artifact system for building, selling, launchi
 - [Codex Prompt Pack](./codex-prompt-pack.md)
 - [Director Brain Algorithm Artifact](./director-brain-algorithm-artifact.md)
 - [Master Algorithm + Database Stack](./master-algorithm-database-stack.md)
+- [Seven Agents Customization Foundation](./seven-agents-customization-foundation.md)
 - [Algorithm Foundation SQL](./sql/lwa_algorithm_foundation.sql)
 
 ## Execution artifacts

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllLwaAgents } from "../../lib/lwa-agents";
+import { LWA_AGENT_MODEL_FOUNDATION_NOTE, getAllLwaAgents } from "../../lib/lwa-agents";
 import { COUNCIL_BRAND_LINE } from "../../lib/production-council";
 import { buildPageMetadata } from "../../lib/seo";
 
@@ -16,6 +16,7 @@ const factions = ["Crimson Court", "Black Loom", "Verdant Pact", "Iron Choir", "
 const principles = ["XP cannot be bought", "Badges are earned", "Relics are cosmetic only", "No investment language", "No feature unlocks from NFTs", "Web-first before chain"];
 
 const agents = getAllLwaAgents();
+const formatSlot = (slot: string) => slot.replace(/([A-Z])/g, " $1").toLowerCase();
 
 export default function RealmPage() {
   return (
@@ -41,6 +42,9 @@ export default function RealmPage() {
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/58">
               Each agent is an in-world AI guide assigned to a product area. They advise, flag, and assist — they do not publish, deploy, or act without human review.
             </p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/66">
+              {LWA_AGENT_MODEL_FOUNDATION_NOTE}
+            </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {agents.map((agent) => (
@@ -60,6 +64,28 @@ export default function RealmPage() {
                 </div>
                 <p className="mt-4 text-sm italic leading-6 text-ink/70">&ldquo;{agent.tagline}&rdquo;</p>
                 <p className="mt-3 text-sm leading-6 text-ink/55">{agent.aiRole}</p>
+                {agent.customizable && agent.customizationSlots?.length ? (
+                  <div className="mt-4 rounded-[18px] border border-white/10 bg-black/15 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-[var(--gold)]/25 bg-[var(--gold)]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--gold)]">
+                        Base model
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/58">
+                        Future editor
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs leading-5 text-ink/58">
+                      Planned identity slots. These do not activate a live avatar editor, paid game economy, wallet, or NFT system.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {agent.customizationSlots.map((slot) => (
+                        <span key={slot} className="rounded-full border border-white/10 bg-white/[0.035] px-2 py-1 text-[10px] font-medium text-ink/62">
+                          {formatSlot(slot)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>
