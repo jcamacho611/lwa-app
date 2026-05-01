@@ -30,19 +30,23 @@ async function getEconomyData() {
 
     return { credits, creditTransactions, earnings, earningEvents, payoutPlaceholders, ledger };
   } catch {
-    return {
-      credits: mockCreditBalance,
-      creditTransactions: mockCreditTransactions,
-      earnings: mockEarningsAccount,
-      earningEvents: mockEarningEvents,
-      payoutPlaceholders: mockPayoutPlaceholders,
-      ledger: mockLedger,
-    };
+    return null;
   }
 }
 
 export default async function EconomyPage() {
   const data = await getEconomyData();
+
+  if (!data) {
+    return (
+      <LwaShell title="Economy Ledger">
+        <div className="glass-panel rounded-[28px] p-8 text-center">
+          <p className="text-lg font-semibold text-ink">Live data unavailable</p>
+          <p className="mt-2 text-sm text-ink/62">Connect or sign in to view your economy ledger.</p>
+        </div>
+      </LwaShell>
+    );
+  }
 
   return (
     <LwaShell title="Economy Ledger">
