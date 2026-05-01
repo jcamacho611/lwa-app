@@ -9,6 +9,7 @@ import { buildLeadReason } from "../lib/result-copy";
 import { ClipIntelligencePanel } from "./clip-intelligence-panel";
 import { ClipViewer } from "./ClipViewer";
 import { DirectorBrainPackagePanel } from "./DirectorBrainPackagePanel";
+import { AutoEditorBrainPanel } from "./AutoEditorBrainPanel";
 
 export type VideoCardProps = {
   clip: ClipResult;
@@ -368,6 +369,10 @@ export default function VideoCard({
           <p className="text-sm leading-6 text-ink/62">{whyThisMatters}</p>
 
           <DirectorBrainPackagePanel clip={clip} />
+
+          {clip.auto_editor && (
+            <AutoEditorBrainPanel brain={clip.auto_editor} />
+          )}
 
           <div className="grid gap-2">
             <div className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">

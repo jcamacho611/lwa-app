@@ -26,25 +26,37 @@ const metrics: MetricCard[] = [
   {
     label: "Generation flow",
     value: "Live",
-    detail: "Track source-to-clip generation, fallback use, and result quality.",
+    detail: "Source-to-clip pipeline active on Railway. URL ingest, upload, and idea modes wired.",
     status: "ready",
   },
   {
     label: "Director Brain",
     value: "Wired",
-    detail: "Support modules and frontend fields exist; keep deepening scoring output.",
+    detail: "Enrichment + scoring active. Rendered vs strategy-only separation enforced per clip.",
+    status: "ready",
+  },
+  {
+    label: "Auto Editor Brain",
+    value: "Active",
+    detail: "Attaches scores, caption style, font, edit style, filter, b-roll, and export profile to every clip. AI upgrade path runs if Anthropic/OpenAI keys are present; heuristic fallback always fires.",
     status: "ready",
   },
   {
     label: "Whop verification",
     value: "Merged",
-    detail: "Signed webhook MVP is merged; confirm live delivery before claiming paid enforcement.",
+    detail: "Signed webhook MVP is merged. Confirm live delivery before claiming paid enforcement.",
     status: "watch",
+  },
+  {
+    label: "Stripe Connect",
+    value: "Wired",
+    detail: "stripe_connect.py exists in lwa-backend/app/worlds/. Env vars documented. Not live until STRIPE_SECRET_KEY is set.",
+    status: "planned",
   },
   {
     label: "Marketplace layer",
     value: "Preview",
-    detail: "Marketplace shell exists; keep money movement behind later review gates.",
+    detail: "Seller shell, opportunities page, and inquiry flow exist. Money movement gated behind review.",
     status: "planned",
   },
 ];
@@ -117,7 +129,7 @@ export default function OperatorPage() {
           </div>
         </div>
 
-        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {metrics.map((metric) => (
             <article key={metric.label} className="rounded-[28px] border border-white/12 bg-white/[0.04] p-5 shadow-card">
               <div className="flex items-center justify-between gap-3">

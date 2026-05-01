@@ -405,6 +405,54 @@ export type ClipResult = {
   caption_style_override?: string | null;
   approved?: boolean;
   created_at?: string | null;
+  auto_editor?: AutoEditorBrain | null;
+};
+
+// ---------------------------------------------------------------------------
+// Auto Editor Brain — additive enrichment types
+// ---------------------------------------------------------------------------
+export type AutoEditorStatus = "ai" | "heuristic" | "skipped";
+
+export type AutoEditorScores = {
+  viral_score: number;
+  retention_score: number;
+  hook_score: number;
+  clarity_score: number;
+  focus_score: number;
+  silence_risk_score: number;       // higher == worse
+  dead_scene_risk_score: number;    // higher == worse
+  pacing_score: number;
+};
+
+export type AutoEditorRecommendations = {
+  caption_style_recommendation?: string | null;
+  font_style_recommendation?: string | null;
+  edit_style_recommendation?: string | null;
+  filter_recommendation?: string | null;
+  music_sync_notes?: string | null;
+  b_roll_suggestions: string[];
+  pacing_notes?: string | null;
+};
+
+export type AutoEditorExportProfile = {
+  width: number;
+  height: number;
+  fps: number;
+  bitrate: string;
+  container: string;
+  label: string;
+};
+
+export type AutoEditorBrain = {
+  status: AutoEditorStatus;
+  provider: string;
+  provider_note?: string | null;
+  scores: AutoEditorScores;
+  recommendations: AutoEditorRecommendations;
+  export_profile_recommendation: AutoEditorExportProfile;
+  customization: { options: string[] };
+  next_edit_actions: string[];
+  risk_flags: string[];
 };
 
 export type GenerateResponse = {
