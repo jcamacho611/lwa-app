@@ -1,9 +1,16 @@
 import { JobsMonitor } from "../../components/worlds/JobsMonitor";
 import { LwaShell } from "../../components/worlds/LwaShell";
 import { getWorldJobDashboard } from "../../lib/worlds/api";
-import { mockJobDashboard } from "../../lib/worlds/mock-data";
+import { readStoredToken } from "../../lib/auth";
+import type { WorldJobDashboard } from "../../lib/worlds/types";
 
 async function getJobsData() {
+  const token = readStoredToken();
+
+  if (!token) {
+    return null;
+  }
+
   try {
     return await getWorldJobDashboard();
   } catch {
