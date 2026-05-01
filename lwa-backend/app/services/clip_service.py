@@ -35,6 +35,7 @@ from ..services.attention_compiler import compile_attention
 from ..services.caption_artifacts import create_caption_artifacts
 from ..services.clip_status_store import register_clip_batch
 from ..services.confidence_engine import build_confidence_label, resolve_confidence_score
+from ..services.auto_editor_brain import enrich_clips_with_auto_editor_async
 from ..services.director_brain import build_director_brain_plan
 from ..services.entitlements import EntitlementContext, UsageStore
 from ..services.event_log import emit_event
@@ -396,6 +397,17 @@ async def build_clip_response(
         target_platform=target_platform,
     )
     local_asset_paths = resolve_local_asset_paths(settings=settings, request_id=request_id, clips=clips)
+
+    # ---- Auto Editor Brain enrichment (additive, never blocks) -----------
+    try:
+        clips = await enrich_clips_with_auto_editor_async(
+            clips,
+            target_platform=target_platform,
+            source_type=source_type,
+        )
+    except Exception:
+        logger.exception("auto_editor_brain enrichment failed; continuing without it.")
+
     register_clip_batch(request_id=request_id, clips=clips, local_asset_paths=local_asset_paths)
     for clip in clips:
         if clip.preview_url:

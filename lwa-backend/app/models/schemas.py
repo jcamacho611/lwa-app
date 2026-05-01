@@ -245,6 +245,14 @@ class ClipResult(BaseModel):
     platform_notes: List[str] = Field(default_factory=list)
     required_hashtag_suggestions: List[str] = Field(default_factory=list)
     compliance_notes: List[str] = Field(default_factory=list)
+    # Additive enrichment — never required by any existing client
+    auto_editor: Optional["AutoEditorBrain"] = Field(
+        default=None,
+        description=(
+            "Additive enrichment from the Auto Editor Brain. Optional. "
+            "Present with status 'ai', 'heuristic', or 'skipped'."
+        ),
+    )
 
 
 class FeatureFlags(BaseModel):
@@ -592,3 +600,90 @@ class EditClipRequest(BaseModel):
     start_time: Optional[str] = None
     end_time: Optional[str] = None
     caption_text: Optional[str] = None
+
+
+# =============================================================================
+# Auto Editor Brain models — additive enrichment layer
+# Populated by lwa-backend/app/services/auto_editor_brain.py.
+# Defined here so OpenAPI schema generation picks them up automatically.
+# =============================================================================
+
+class AutoEditorScores(BaseModel):
+    model_config = {"extra": "ignore", "protected_namespaces": ()}
+
+    viral_score: float = Field(default=0.0, ge=0.0, le=100.0,
+        description="Estimated viral-grade probability (0-100).")
+    retention_score: float = Field(default=0.0, ge=0.0, le=100.0,
+        description="Estimated audience retention (0-100).")
+    hook_score: float = Field(default=0.0, ge=0.0, le=100.0,
+        description="Strength of the first ~3 seconds (0-100).")
+    clarity_score: float = Field(default=0.0, ge=0.0, le=100.0,
+        description="How clearly the core idea lands (0-100).")
+    focus_score: float = Field(default=0.0, ge=0.0, le=100.0,
+        description="How tightly the clip stays on one idea (0-100).")
+    silence_risk_score: float = Field(default=0.0, ge=0.0, le=100.0,
+        description="Risk that quiet stretches hurt retention (higher==worse).")
+    dead_scene_risk_score: float = Field(default=0.0, ge=0.0, le=100.0,
+        description="Risk of visually static frames (higher==worse).")
+    pacing_score: float = Field(default=0.0, ge=0.0, le=100.0,
+        description="Editorial pacing health (higher==better).")
+
+
+class AutoEditorRecommendations(BaseModel):
+    model_config = {"extra": "ignore", "protected_namespaces": ()}
+
+    caption_style_recommendation: Optional[str] = Field(default=None,
+        description="Recommended caption style, e.g. 'bold-centered-yellow'.")
+    font_style_recommendation: Optional[str] = Field(default=None,
+        description="Recommended font, e.g. 'Montserrat ExtraBold'.")
+    edit_style_recommendation: Optional[str] = Field(default=None,
+        description="Recommended edit style, e.g. 'fast-cut-with-zoom-pulses'.")
+    filter_recommendation: Optional[str] = Field(default=None,
+        description="Recommended color/filter direction, e.g. 'warm-cinematic'.")
+    music_sync_notes: Optional[str] = Field(default=None,
+        description="Notes for music/beat alignment.")
+    b_roll_suggestions: List[str] = Field(default_factory=list,
+        description="B-roll concepts that reinforce the clip.")
+    pacing_notes: Optional[str] = Field(default=None,
+        description="Free-form pacing guidance for an editor.")
+
+
+class AutoEditorExportProfile(BaseModel):
+    model_config = {"extra": "ignore", "protected_namespaces": ()}
+
+    width: int = Field(default=1080, gt=0, description="Recommended width in px.")
+    height: int = Field(default=1920, gt=0, description="Recommended height in px.")
+    fps: int = Field(default=30, gt=0, le=120, description="Recommended frame rate.")
+    bitrate: str = Field(default="8M", description="Recommended encoder bitrate.")
+    container: str = Field(default="mp4", description="Recommended container.")
+    label: str = Field(default="1080p-vertical-tiktok",
+        description="Human-readable export label.")
+
+
+class AutoEditorCustomization(BaseModel):
+    model_config = {"extra": "ignore", "protected_namespaces": ()}
+
+    options: List[str] = Field(default_factory=list,
+        description="Customization toggles, e.g. 'add_zoom_pulses'.")
+
+
+class AutoEditorBrain(BaseModel):
+    """Additive enrichment payload attached to ClipResult.auto_editor."""
+    model_config = {"extra": "ignore", "protected_namespaces": ()}
+
+    status: str = Field(default="heuristic",
+        description="One of: 'ai', 'heuristic', 'skipped'.")
+    provider: str = Field(default="heuristic",
+        description="Provider: 'anthropic', 'openai', 'internal', 'heuristic'.")
+    provider_note: Optional[str] = Field(default=None,
+        description="Sanitized operator note.")
+    scores: AutoEditorScores = Field(default_factory=AutoEditorScores)
+    recommendations: AutoEditorRecommendations = Field(default_factory=AutoEditorRecommendations)
+    export_profile_recommendation: AutoEditorExportProfile = Field(default_factory=AutoEditorExportProfile)
+    customization: AutoEditorCustomization = Field(default_factory=AutoEditorCustomization)
+    next_edit_actions: List[str] = Field(default_factory=list)
+    risk_flags: List[str] = Field(default_factory=list)
+
+
+# Resolve the forward reference on ClipResult.auto_editor
+ClipResult.model_rebuild()
