@@ -7,6 +7,7 @@ import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore, getPreviewUrl, isRenderedClip } from "../lib/clip-utils";
 import { buildLeadReason } from "../lib/result-copy";
 import { ClipIntelligencePanel } from "./clip-intelligence-panel";
+import { AutoEditorBrainPanel } from "./AutoEditorBrainPanel";
 import { ClipViewer } from "./ClipViewer";
 
 type HeroClipProps = {
@@ -456,6 +457,8 @@ export default function HeroClip({
             ) : null}
 
             <ClipIntelligencePanel clip={clip} compact={compact} />
+
+            <AutoEditorBrainPanel clip={clip} compact={compact} />
 
             {clipHasShotPlan(clip) ? (
               <details className="rounded-[22px] border border-[var(--divider)] bg-[var(--surface-veil)] p-4">
