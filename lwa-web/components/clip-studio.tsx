@@ -2199,6 +2199,12 @@ export function ClipStudio({
           {recommendedPlatform ? <StatPill tone="accent">Recommended: {recommendedPlatform}</StatPill> : null}
           {platformDecision === "manual" ? <StatPill tone="neutral">Manual destination</StatPill> : <StatPill tone="signal">Auto recommendation</StatPill>}
           {leadClipIsRendered ? <StatPill tone="signal">Lead clip is playable</StatPill> : <StatPill tone="neutral">Lead clip is strategy only</StatPill>}
+          {leadClip?.auto_editor ? (
+            <>
+              <StatPill tone="signal">Auto Editor Brain · {leadClip.auto_editor.status === "ai" ? `AI · ${leadClip.auto_editor.provider}` : "Heuristic"}</StatPill>
+              <StatPill tone="accent">{Math.round(leadClip.auto_editor.scores.viral_score)} viral</StatPill>
+            </>
+          ) : null}
           {activeResult.processing_summary?.recommended_next_step ? (
             <span className="text-sm text-ink/62">{activeResult.processing_summary.recommended_next_step}</span>
           ) : null}
@@ -3194,12 +3200,12 @@ function LoadingSequence({
   const progress = Math.min(((activeIndex + 1) / safeLength) * 100, 100);
   const etaSeconds = Math.max((safeLength - activeIndex - 1) * 8, 6);
   const stageDetails: Record<string, string> = {
-    "Source ingest": "Reading source and validating access.",
-    "Moment scan": "Scanning replay-worthy moments.",
-    "Clip ranking": "Ranking hooks and post order.",
-    Packaging: "Building captions, thumbnail lines, and CTA package.",
-    "Render/export": "Preparing vertical assets when available.",
-    Delivery: "Returning the clip pack to the studio.",
+    "Source ingest": "Validating source, resolving download path, checking URL or upload.",
+    "Moment scan": "Detecting viral moments, silence zones, and dead-scene windows.",
+    "Clip ranking": "Scoring hooks, retention curves, and post order by platform.",
+    Packaging: "Building captions, thumbnail lines, CTA variants, and Auto Editor profiles.",
+    "Render/export": "Preparing vertical assets, caption burns, and export bundles.",
+    Delivery: "Assembling the full clip pack with Director Brain + Auto Editor intelligence.",
   };
 
   return (

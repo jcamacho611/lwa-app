@@ -8,6 +8,7 @@ import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore,
 import { buildLeadReason } from "../lib/result-copy";
 import { ClipIntelligencePanel } from "./clip-intelligence-panel";
 import { ClipViewer } from "./ClipViewer";
+import { AutoEditorBrainPanel } from "./AutoEditorBrainPanel";
 
 type HeroClipProps = {
   clip: ClipResult;
@@ -456,6 +457,10 @@ export default function HeroClip({
             ) : null}
 
             <ClipIntelligencePanel clip={clip} compact={compact} />
+
+            {clip.auto_editor && (
+              <AutoEditorBrainPanel brain={clip.auto_editor} />
+            )}
 
             {clipHasShotPlan(clip) ? (
               <details className="rounded-[22px] border border-[var(--divider)] bg-[var(--surface-veil)] p-4">
