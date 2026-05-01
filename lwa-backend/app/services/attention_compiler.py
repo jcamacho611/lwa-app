@@ -614,6 +614,7 @@ async def compile_attention(
     content_angle: Optional[str],
     source_context: Optional[SourceContext],
     premium_reasoning: bool = False,
+    user_id: str = "guest:unknown",
 ) -> tuple[list[ClipResult], str]:
     mode = resolve_attention_mode(settings, premium_reasoning=premium_reasoning)
     logger.info("attention_compiler_start mode=%s clips=%s", mode, len(clips))
@@ -633,6 +634,7 @@ async def compile_attention(
                 content_angle,
                 source_context,
                 premium_reasoning,
+                user_id,
             )
             logger.info("attention_compiler_end mode=anthropic clips=%s", len(compiled))
             return compiled, "anthropic-opus" if premium_reasoning else "anthropic-sonnet"
@@ -678,6 +680,7 @@ def compile_with_anthropic(
     content_angle: Optional[str],
     source_context: Optional[SourceContext],
     premium_reasoning: bool,
+    user_id: str = "guest:unknown",
 ) -> list[ClipResult]:
     prompt = build_attention_prompt(
         clips=clips,
@@ -687,9 +690,9 @@ def compile_with_anthropic(
         source_context=source_context,
     )
     if premium_reasoning:
-        raw = generate_clip_packaging_with_opus(settings=settings, prompt=prompt)
+        raw = generate_clip_packaging_with_opus(settings=settings, user_id=user_id, prompt=prompt)
     else:
-        raw = generate_clip_packaging_with_sonnet(settings=settings, prompt=prompt)
+        raw = generate_clip_packaging_with_sonnet(settings=settings, user_id=user_id, prompt=prompt)
 
     try:
         payload = json.loads(raw)

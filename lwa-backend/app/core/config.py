@@ -160,6 +160,12 @@ class Settings:
         self.anthropic_model_sonnet = os.getenv("ANTHROPIC_MODEL_SONNET", "claude-sonnet-4-6")
         self.anthropic_model_haiku = os.getenv("ANTHROPIC_MODEL_HAIKU", "claude-haiku-4-5-20251001")
         self.premium_reasoning_provider = os.getenv("LWA_PREMIUM_REASONING_PROVIDER", "anthropic").strip().lower() or "anthropic"
+        # AI Cost Control Settings
+        self.ai_cost_control_enabled = _env_bool("LWA_AI_COST_CONTROL_ENABLED", "true")
+        self.ai_daily_budget_guest = _env_int("LWA_AI_DAILY_BUDGET_GUEST", 10.0, minimum=0)
+        self.ai_daily_budget_user = _env_int("LWA_AI_DAILY_BUDGET_USER", 50.0, minimum=0)
+        self.ai_daily_requests_guest = _env_int("LWA_AI_DAILY_REQUESTS_GUEST", 30, minimum=1)
+        self.ai_daily_requests_user = _env_int("LWA_AI_DAILY_REQUESTS_USER", 100, minimum=1)
         self.seedance_enabled = _env_bool("SEEDANCE_ENABLED", os.getenv("LWA_SEEDANCE_ENABLED", "false"))
         self.seedance_api_key = os.getenv("SEEDANCE_API_KEY", os.getenv("LWA_SEEDANCE_API_KEY", "")).strip()
         self.seedance_base_url = os.getenv("SEEDANCE_BASE_URL", os.getenv("LWA_SEEDANCE_BASE_URL", "")).strip().rstrip("/")
