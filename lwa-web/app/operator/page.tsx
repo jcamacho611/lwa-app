@@ -47,6 +47,12 @@ const metrics: MetricCard[] = [
     detail: "Marketplace shell exists; keep money movement behind later review gates.",
     status: "planned",
   },
+  {
+    label: "World / Blender / God Meat System",
+    value: "Foundation",
+    detail: "Worldbuilding docs, Blender asset pipeline, and God Meat power system established; AI control and interactive world are future-only.",
+    status: "planned",
+  },
 ];
 
 const lanes = [
