@@ -405,6 +405,24 @@ export type ClipResult = {
   caption_style_override?: string | null;
   approved?: boolean;
   created_at?: string | null;
+  auto_editor?: {
+    status?: string;
+    viral_score?: number;
+    confidence_score?: number;
+    processing_stages?: Array<{
+      name: string;
+      description: string;
+      completed: boolean;
+    }>;
+    recommendations?: Array<{
+      title: string;
+      description: string;
+    }>;
+    issues?: Array<{
+      title: string;
+      description: string;
+    }>;
+  };
 };
 
 export type GenerateResponse = {

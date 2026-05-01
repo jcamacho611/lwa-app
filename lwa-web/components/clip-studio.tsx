@@ -296,7 +296,7 @@ const marketingNavItems = [
   { href: "/realm", label: "Realms" },
 ] as const;
 
-const VIDEO_LOADING_STAGES = ["Source ingest", "Moment scan", "Clip ranking", "Packaging", "Render/export", "Delivery"];
+const VIDEO_LOADING_STAGES = ["Source ingest", "Silence detection", "Dead-scene removal", "Clip ranking", "Director Brain packaging", "Auto Editor profile building", "Render/export", "Delivery"];
 
 type StudioSection =
   | "home"
@@ -391,9 +391,9 @@ export function ClipStudio({
 
   const loadingStages =
     sourceMode === "idea"
-      ? ["Source ingest", "Moment scan", "Clip ranking", "Packaging", "Render/export", "Delivery"]
+      ? ["Source ingest", "Silence detection", "Dead-scene removal", "Clip ranking", "Director Brain packaging", "Auto Editor profile building", "Render/export", "Delivery"]
       : sourceMode === "image"
-        ? ["Source ingest", "Moment scan", "Clip ranking", "Packaging", "Render/export", "Delivery"]
+        ? ["Source ingest", "Silence detection", "Dead-scene removal", "Clip ranking", "Director Brain packaging", "Auto Editor profile building", "Render/export", "Delivery"]
         : VIDEO_LOADING_STAGES;
 
   const activeSourceLabel = useMemo(() => {
@@ -2199,6 +2199,14 @@ export function ClipStudio({
           {recommendedPlatform ? <StatPill tone="accent">Recommended: {recommendedPlatform}</StatPill> : null}
           {platformDecision === "manual" ? <StatPill tone="neutral">Manual destination</StatPill> : <StatPill tone="signal">Auto recommendation</StatPill>}
           {leadClipIsRendered ? <StatPill tone="signal">Lead clip is playable</StatPill> : <StatPill tone="neutral">Lead clip is strategy only</StatPill>}
+          {leadClip?.auto_editor?.status ? (
+            <StatPill tone={leadClip.auto_editor.status === "completed" ? "signal" : "neutral"}>
+              Auto Editor: {leadClip.auto_editor.status === "completed" ? "Analysis complete" : leadClip.auto_editor.status}
+            </StatPill>
+          ) : null}
+          {leadClip?.auto_editor?.viral_score ? (
+            <StatPill tone="accent">Viral Score: {Math.round(leadClip.auto_editor.viral_score)}%</StatPill>
+          ) : null}
           {activeResult.processing_summary?.recommended_next_step ? (
             <span className="text-sm text-ink/62">{activeResult.processing_summary.recommended_next_step}</span>
           ) : null}
