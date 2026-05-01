@@ -1,11 +1,34 @@
 import { IntegrationsDashboard } from "../../components/worlds/IntegrationsDashboard";
 import { LwaShell } from "../../components/worlds/LwaShell";
-import { getIntegrations } from "../../lib/worlds/api";
-import { mockIntegrations } from "../../lib/worlds/mock-data";
+import { loadPostingConnections } from "../../lib/api";
+import { readStoredToken } from "../../lib/auth";
+import type { PostingConnection } from "../../lib/types";
+import type { IntegrationCard } from "../../lib/worlds/types";
 
 async function getIntegrationData() {
+  const token = readStoredToken();
+
+  if (!token) {
+    return null;
+  }
+
   try {
-    return await getIntegrations();
+    const connections = await loadPostingConnections(token);
+
+    // Transform PostingConnection data to match IntegrationCard interface
+    const integrations: IntegrationCard[] = connections.map((connection: PostingConnection) => ({
+      id: connection.id,
+      name: connection.provider,
+      category: "social" as const, // All posting connections are social integrations
+      status: connection.is_active ? "connected" as const : "configured" as const,
+      description: connection.account_label
+        ? `Posting connection for ${connection.provider} (${connection.account_label})`
+        : `Posting connection for ${connection.provider}`,
+      envVars: [], // No env vars exposed for existing connections
+      adminOnly: false,
+    }));
+
+    return integrations;
   } catch {
     return null;
   }
