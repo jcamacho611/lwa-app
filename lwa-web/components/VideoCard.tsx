@@ -137,6 +137,53 @@ function clipQualityGateLabel(clip: ClipResult): ClipMetaLabel | null {
   return { label: "Quality warning", tone: "warning" };
 }
 
+function getCampaignRoleLabel(role?: string | null): string | null {
+  if (!role) return null;
+  const labels: Record<string, string> = {
+    lead_clip: "Lead",
+    trust_clip: "Trust",
+    sales_clip: "Sales",
+    educational_clip: "Teach",
+    controversy_clip: "Debate",
+    retargeting_clip: "Retarget",
+    community_clip: "Community",
+  };
+  return labels[role] || role.replace(/_/g, " ");
+}
+
+export function CampaignMetaPanel({ clip }: { clip: ClipResult }) {
+  const role = getCampaignRoleLabel(clip.campaign_role);
+  const hasCampaignData = role || clip.funnel_stage || clip.campaign_reason || clip.suggested_post_order || clip.suggested_cta;
+
+  if (!hasCampaignData) return null;
+
+  return (
+    <div className="rounded-[18px] border border-violet-300/20 bg-violet-300/[0.06] p-4">
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-100/70">Campaign</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {role && (
+          <span className="rounded-full bg-violet-300/15 px-3 py-1 text-xs font-bold text-violet-100">{role}</span>
+        )}
+        {clip.funnel_stage && (
+          <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs text-white/70">{clip.funnel_stage}</span>
+        )}
+        {clip.suggested_post_order && (
+          <span className="rounded-full bg-[var(--gold-dim)] px-3 py-1 text-xs font-bold text-[var(--gold)]">
+            Post #{clip.suggested_post_order}
+          </span>
+        )}
+      </div>
+      {clip.campaign_reason && <p className="mt-3 text-sm leading-6 text-white/70">{clip.campaign_reason}</p>}
+      {clip.suggested_cta && (
+        <div className="mt-3">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">Suggested CTA</p>
+          <p className="mt-1 text-sm font-semibold text-white/80">{clip.suggested_cta}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function buildBadges(clip: ClipResult, hasRenderProof: boolean): ClipBadge[] {
   const badges: ClipBadge[] = [];
   if ((clip.post_rank || clip.suggested_post_order || clip.best_post_order || clip.rank) === 1) {
@@ -438,6 +485,8 @@ export default function VideoCard({
           <p className="text-sm leading-6 text-ink/62">{whyThisMatters}</p>
 
           <DirectorBrainPackagePanel clip={clip} />
+
+          <CampaignMetaPanel clip={clip} />
 
           <div className="grid gap-2">
             <div className="rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] px-3 py-2.5">

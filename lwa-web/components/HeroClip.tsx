@@ -5,7 +5,7 @@ import { ClipResult } from "../lib/types";
 import { LiveClipPreview } from "./results/LiveClipPreview";
 import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore, getPreviewUrl, isRenderedClip } from "../lib/clip-utils";
-import { getRenderState } from "./VideoCard";
+import { getRenderState, CampaignMetaPanel } from "./VideoCard";
 import { buildLeadReason } from "../lib/result-copy";
 import { ClipIntelligencePanel } from "./clip-intelligence-panel";
 import { AutoEditorBrainPanel } from "./AutoEditorBrainPanel";
@@ -480,6 +480,8 @@ export default function HeroClip({
             <ClipIntelligencePanel clip={clip} compact={compact} />
 
             <AutoEditorBrainPanel clip={clip} compact={compact} />
+
+            <CampaignMetaPanel clip={clip} />
 
             {clipHasShotPlan(clip) ? (
               <details className="rounded-[22px] border border-[var(--divider)] bg-[var(--surface-veil)] p-4">
