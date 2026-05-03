@@ -1,233 +1,127 @@
-import type { Metadata } from "next";
+"use client";
+
 import Link from "next/link";
-import { buildPageMetadata } from "../../lib/seo";
+import { LeeWuhCharacter } from "../../components/lee-wuh";
 
-export const metadata: Metadata = buildPageMetadata({
-  title: "LWA Opportunities",
-  description:
-    "Support, advertise, partner, invest, or apply to sell with LWA. Every opportunity starts with a compliant inquiry so we can protect both sides and build trust first.",
-  path: "/opportunities",
-  keywords: [
-    "LWA opportunities",
-    "LWA sponsorship",
-    "LWA advertising",
-    "LWA investor inquiry",
-    "LWA marketplace seller",
-    "support LWA",
-  ],
-});
-
-type OpportunityCard = {
-  id: string;
-  title: string;
-  badge: string;
-  badgeColor: string;
-  description: string;
-  legalNote?: string;
-  cta: string;
-  href: string;
-  accentStyle: string;
-};
-
-const opportunities: OpportunityCard[] = [
+const opportunities = [
   {
-    id: "support",
-    title: "Support LWA",
-    badge: "Open",
-    badgeColor: "border-emerald-300/30 bg-emerald-300/15 text-emerald-100",
-    description:
-      "Back the mission directly. Every contribution funds infrastructure, tooling, and the team building the signal engine.",
-    cta: "Support Now",
-    href: "#inquiry-support",
-    accentStyle:
-      "radial-gradient(circle at top left, rgba(16,185,129,0.22), transparent 55%)",
+    id: "opp_001",
+    title: "Podcast Clip Campaign",
+    payout: "$500",
+    difficulty: "Medium",
+    platform: "TikTok",
+    description: "Create 10 viral clips from 3 podcast episodes",
+    requirements: ["2+ years editing experience", "TikTok native"],
   },
   {
-    id: "sponsorship",
-    title: "Sponsorship Inquiry",
-    badge: "Inquiry",
-    badgeColor: "border-amber-300/30 bg-amber-300/15 text-amber-100",
-    description:
-      "Align your brand with LWA's creator audience. Placement opportunities exist across the platform, content packages, and launch events.",
-    legalNote:
-      "Sponsorship terms reviewed internally before confirmation. No binding agreement until countersigned.",
-    cta: "Submit Sponsorship Inquiry",
-    href: "#inquiry-sponsorship",
-    accentStyle:
-      "radial-gradient(circle at top left, rgba(245,158,11,0.22), transparent 55%)",
+    id: "opp_002",
+    title: "YouTube Shorts Series",
+    payout: "$800",
+    difficulty: "Hard",
+    platform: "YouTube",
+    description: "Turn long tutorials into engaging Shorts",
+    requirements: ["YouTube experience", "Storytelling skills"],
   },
   {
-    id: "advertising",
-    title: "Ad Placement Inquiry",
-    badge: "Inquiry",
-    badgeColor: "border-amber-300/30 bg-amber-300/15 text-amber-100",
-    description:
-      "Reach creators at the clip engine. Placement options include featured surfaces, notification slots, and co-branded packages.",
-    legalNote:
-      "Ad placements are approved on a case-by-case basis. Rates confirmed only after internal review.",
-    cta: "Submit Ad Inquiry",
-    href: "#inquiry-advertising",
-    accentStyle:
-      "radial-gradient(circle at top left, rgba(245,158,11,0.20), transparent 55%)",
-  },
-  {
-    id: "invest",
-    title: "Investor Portal",
-    badge: "Legal Review",
-    badgeColor: "border-purple-300/30 bg-purple-300/15 text-purple-100",
-    description:
-      "Investment, share interest, and equity inquiries. No securities are offered or sold through this website. Legal review is required before any substantive discussion takes place.",
-    legalNote:
-      "This is an inquiry form only. Nothing on this page constitutes an offer to sell, a solicitation of an offer to buy, or a recommendation of any security. All investment discussions require legal counsel on both sides.",
-    cta: "Submit Investor Inquiry",
-    href: "#inquiry-invest",
-    accentStyle:
-      "radial-gradient(circle at top left, rgba(139,92,246,0.22), transparent 55%)",
-  },
-  {
-    id: "crypto",
-    title: "Crypto Support Interest",
-    badge: "Legal Review",
-    badgeColor: "border-purple-300/30 bg-purple-300/15 text-purple-100",
-    description:
-      "Interest in supporting LWA via cryptocurrency. No wallet address is live on this page. All crypto support pathways require legal and compliance review before activation.",
-    legalNote:
-      "No crypto payment is collected here. This is an interest-capture form only. No blockchain economy, token, or NFT is offered by LWA at this time.",
-    cta: "Register Interest",
-    href: "#inquiry-crypto",
-    accentStyle:
-      "radial-gradient(circle at top left, rgba(109,92,255,0.22), transparent 55%)",
-  },
-  {
-    id: "buy-services",
-    title: "Buy Services from LWA",
-    badge: "Open",
-    badgeColor: "border-emerald-300/30 bg-emerald-300/15 text-emerald-100",
-    description:
-      "Content packages, clip engine runs, strategy consulting, and done-for-you production available through approved service agreements.",
-    cta: "Inquire About Services",
-    href: "#inquiry-services",
-    accentStyle:
-      "radial-gradient(circle at top left, rgba(16,185,129,0.18), transparent 55%)",
-  },
-  {
-    id: "marketplace",
-    title: "Sell Through LWA Marketplace",
-    badge: "Apply",
-    badgeColor: "border-amber-300/30 bg-amber-300/15 text-amber-100",
-    description:
-      "Apply to become a verified LWA seller. Reach an audience of active creators. LWA collects a platform percentage only through approved, signed terms.",
-    legalNote:
-      "Seller approval is not guaranteed. Terms are set per seller. No commissions are collected until a seller agreement is signed.",
-    cta: "Apply to Sell",
-    href: "#inquiry-marketplace",
-    accentStyle:
-      "radial-gradient(circle at top left, rgba(236,72,153,0.22), transparent 55%)",
+    id: "opp_003",
+    title: "Brand Launch Package",
+    payout: "$1,200",
+    difficulty: "Expert",
+    platform: "Multi-platform",
+    description: "Full campaign: 20 clips + strategy",
+    requirements: ["Portfolio required", "Fast turnaround"],
   },
 ];
 
 export default function OpportunitiesPage() {
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
-      <section className="mx-auto max-w-7xl">
-        {/* Hero */}
-        <div className="rounded-[36px] border border-white/12 bg-[radial-gradient(circle_at_top_left,rgba(109,92,255,0.18),transparent_32%),linear-gradient(180deg,var(--bg-card),var(--bg))] p-6 shadow-card sm:p-10">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--accent-wine)]">
-            Compliant by design
-          </p>
-          <h1 className="mt-4 text-4xl font-semibold leading-tight text-ink sm:text-6xl">
-            LWA Opportunities
-          </h1>
-          <p className="mt-4 max-w-3xl text-base leading-8 text-ink/70 sm:text-lg">
-            Support, advertise, partner, invest, or apply to sell with LWA.
-            Every opportunity starts with a compliant inquiry so we can protect
-            both sides and build trust first.
-          </p>
-          <p className="mt-4 text-sm leading-6 text-ink/48">
-            No income guarantees. No securities sold through this website. No
-            live crypto collection. No binding agreement until documented and
-            countersigned.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/generate"
-              className="primary-button rounded-full px-5 py-3 text-sm font-semibold"
-            >
-              Enter Clip Engine
-            </Link>
-            <Link
-              href="/"
-              className="secondary-button rounded-full px-5 py-3 text-sm font-medium"
-            >
-              Back to Portal
-            </Link>
+    <main className="min-h-screen bg-[#0A0A0B] text-[#F5F1E8] p-6">
+      <div className="mx-auto max-w-4xl">
+        {/* Header */}
+        <div className="mb-8">
+          <LeeWuhCharacter
+            mood="victory"
+            size="md"
+            showMessage={true}
+            customMessage="Found 3 paid opportunities that match your skills!"
+          />
+        </div>
+
+        {/* Stats */}
+        <div className="mb-8 grid grid-cols-3 gap-4">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-center">
+            <div className="text-2xl font-bold text-green-400">$2,500</div>
+            <div className="text-xs text-white/50">Total Available</div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-center">
+            <div className="text-2xl font-bold text-[#C9A24A]">3</div>
+            <div className="text-xs text-white/50">Open Jobs</div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-center">
+            <div className="text-2xl font-bold text-[#6D3BFF]">12h</div>
+            <div className="text-xs text-white/50">Avg Response</div>
           </div>
         </div>
 
-        {/* Opportunity cards */}
-        <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" id="opportunities-grid">
+        {/* Opportunities List */}
+        <h2 className="mb-4 text-xl font-bold text-white">Available Work</h2>
+        <div className="space-y-4">
           {opportunities.map((opp) => (
-            <article
+            <div
               key={opp.id}
-              id={opp.id}
-              className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-6"
+              className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 transition hover:border-[#C9A24A]/50"
             >
-              <div
-                className="pointer-events-none absolute inset-0 rounded-[28px]"
-                style={{ background: opp.accentStyle }}
-              />
-              <div className="relative">
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-ink">
-                    {opp.title}
-                  </h2>
-                  <span
-                    className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${opp.badgeColor}`}
-                  >
-                    {opp.badge}
-                  </span>
+              <div className="mb-3 flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white">{opp.title}</h3>
+                  <p className="mt-1 text-sm text-white/60">{opp.description}</p>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-ink/68">
-                  {opp.description}
-                </p>
-                {opp.legalNote && (
-                  <p className="mt-3 rounded-[14px] border border-white/8 bg-black/20 px-3 py-2 text-xs leading-5 text-ink/48">
-                    {opp.legalNote}
-                  </p>
-                )}
-                <a
-                  href={`mailto:opportunities@lwa.app?subject=${encodeURIComponent(opp.title)}`}
-                  className="mt-4 inline-flex items-center justify-center rounded-full bg-[var(--gold)] px-5 py-2.5 text-sm font-semibold text-black transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--gold)]"
-                >
-                  {opp.cta} →
-                </a>
+                <div className="text-right">
+                  <div className="text-xl font-bold text-green-400">{opp.payout}</div>
+                  <div className="text-xs text-white/50">{opp.difficulty}</div>
+                </div>
               </div>
-            </article>
-          ))}
-        </section>
 
-        {/* Legal footer */}
-        <section className="mt-8 rounded-[24px] border border-white/8 bg-white/[0.02] p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-ink/38">
-            Legal disclosure
+              <div className="mb-4 flex flex-wrap gap-2">
+                <span className="rounded-full bg-white/[0.04] px-3 py-1 text-sm text-white/60">
+                  {opp.platform}
+                </span>
+                {opp.requirements.map((req, idx) => (
+                  <span
+                    key={idx}
+                    className="rounded-full bg-[#C9A24A]/10 px-3 py-1 text-sm text-[#E9C77B]"
+                  >
+                    {req}
+                  </span>
+                ))}
+              </div>
+
+              <Link
+                href={`/opportunities/${opp.id}/apply`}
+                className="block w-full rounded-xl bg-[#C9A24A] py-3 text-center font-bold text-black transition hover:bg-[#E9C77B]"
+              >
+                Apply Now →
+              </Link>
+            </div>
+          ))}
+        </div>
+
+        {/* Upgrade CTA */}
+        <div className="mt-8 rounded-2xl border border-[#C9A24A]/30 bg-[#C9A24A]/10 p-6 text-center">
+          <p className="text-lg font-medium text-white">
+            Get priority access to high-payout jobs
           </p>
-          <p className="mt-3 text-xs leading-6 text-ink/48">
-            Nothing on this page constitutes an offer to sell securities, an
-            investment contract, a guarantee of return, or a binding service
-            agreement. All inquiries are acknowledged only — no transaction,
-            commitment, or obligation is created until a separate written
-            agreement is signed by both parties. LWA does not collect payments,
-            donations, crypto, or investment funds through this page. Equity and
-            securities discussions require independent legal counsel. LWA
-            reserves the right to decline any inquiry without explanation.
+          <p className="mt-2 text-sm text-white/60">
+            Pro creators see opportunities 24h before everyone else
           </p>
-          <p className="mt-3 text-xs leading-6 text-ink/38">
-            Whop is the live and approved access path for LWA product purchases.
-            All other commercial relationships are in active development and
-            subject to internal review.
-          </p>
-        </section>
-      </section>
+          <Link
+            href="https://whop.com/lwa/"
+            className="mt-4 inline-block rounded-xl bg-[#C9A24A] px-6 py-3 font-bold text-black hover:bg-[#E9C77B]"
+          >
+            Upgrade to Pro — $29/mo
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }

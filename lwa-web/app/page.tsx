@@ -1,61 +1,135 @@
-import type { Metadata } from "next";
-import CinematicHero from "../components/landing/CinematicHero";
-import PathPortal from "../components/landing/PathPortal";
-import ClipEnginePreview from "../components/landing/ClipEnginePreview";
-import SevenAgentsReveal from "../components/landing/SevenAgentsReveal";
-import CouncilSection from "../components/landing/CouncilSection";
-import Footer from "../components/landing/Footer";
-import { buildPageMetadata } from "../lib/seo";
+"use client";
 
-export const metadata: Metadata = buildPageMetadata({
-  title: "LWA — The Creator Engine",
-  description:
-    "LWA (lee-wuh) is the AI clipping and creator workflow platform. One source in. Best clip first. Rendered proof over vague strategy.",
-  path: "/",
-  keywords: [
-    "lwa",
-    "afro-futurist creator engine",
-    "ai clipping engine",
-    "rendered clips",
-    "seven agents",
-    "signal relics",
-  ],
-});
+import Link from "next/link";
+import { useState } from "react";
+import { LeeWuhCharacter } from "../components/lee-wuh";
 
 export default function HomePage() {
+  const [selectedMission, setSelectedMission] = useState<"content" | "money" | null>(null);
+
   return (
-    <main className="relative bg-[#0A0A0B] text-[#F5F1E8] min-h-screen overflow-hidden">
-      {/* Cinematic stage — pure CSS, zero WebGL, zero JS cost */}
+    <main className="relative flex min-h-screen items-center justify-center bg-[#0A0A0B] text-[#F5F1E8] overflow-hidden p-6">
+      {/* Background aura effect */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
-      >
-        <div
-          className="absolute -inset-[10%]"
-          style={{
-            background:
-              "radial-gradient(60% 50% at 50% 30%, rgba(201,162,74,0.10), transparent 60%)," +
-              "radial-gradient(50% 40% at 80% 70%, rgba(75,58,140,0.12), transparent 65%)," +
-              "radial-gradient(120% 80% at 50% 110%, rgba(0,0,0,0.9), transparent 60%)",
-            filter: "blur(40px)",
-          }}
-        />
-        <div
-          className="absolute inset-0 mix-blend-overlay opacity-50"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.96 0 0 0 0 0.94 0 0 0 0 0.91 0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
-          }}
-        />
-      </div>
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: `
+            radial-gradient(circle at 70% 30%, rgba(201,162,74,0.15) 0%, transparent 50%),
+            radial-gradient(circle at 30% 70%, rgba(109,59,255,0.1) 0%, transparent 50%)
+          `
+        }}
+      />
 
-      <div className="relative z-10">
-        <CinematicHero />
-        <PathPortal />
-        <ClipEnginePreview />
-        <SevenAgentsReveal />
-        <CouncilSection />
-        <Footer />
+      {/* LWA Core Loop Entry */}
+      <div className="relative z-10 w-full max-w-lg">
+        {/* Lee-Wuh Header */}
+        <div className="mb-8 text-center">
+          <LeeWuhCharacter
+            mood={selectedMission ? "victory" : "idle"}
+            size="xl"
+            showMessage={true}
+            customMessage={
+              selectedMission
+                ? selectedMission === "content"
+                  ? "Let's make some clips! Paste your source."
+                  : "Let's find you some paid work."
+                : "You got content or you tryna make money today?"
+            }
+          />
+        </div>
+
+        {/* Mission Selection */}
+        <div className="space-y-4">
+          {/* Content Mission */}
+          <button
+            onClick={() => setSelectedMission("content")}
+            className={`group w-full rounded-2xl border p-6 text-left transition ${
+              selectedMission === "content"
+                ? "border-[#C9A24A] bg-[#C9A24A]/20"
+                : "border-white/10 bg-white/[0.04] hover:border-[#C9A24A]/50"
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">🎬</span>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-white">Content Mission</h2>
+                <p className="mt-1 text-sm text-white/60">
+                  Turn one video into a pack of short-form clips
+                </p>
+              </div>
+              {selectedMission === "content" && (
+                <span className="text-2xl text-[#C9A24A]">→</span>
+              )}
+            </div>
+          </button>
+
+          {/* Money Mission */}
+          <button
+            onClick={() => setSelectedMission("money")}
+            className={`group w-full rounded-2xl border p-6 text-left transition ${
+              selectedMission === "money"
+                ? "border-green-400 bg-green-400/20"
+                : "border-white/10 bg-white/[0.04] hover:border-green-400/50"
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">💰</span>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-white">Money Mission</h2>
+                <p className="mt-1 text-sm text-white/60">
+                  Find paid clip jobs and campaign opportunities
+                </p>
+              </div>
+              {selectedMission === "money" && (
+                <span className="text-2xl text-green-400">→</span>
+              )}
+            </div>
+          </button>
+        </div>
+
+        {/* Action Button */}
+        {selectedMission && (
+          <div className="mt-8 animate-pulse">
+            <Link
+              href={selectedMission === "content" ? "/generate" : "/opportunities"}
+              className="block w-full rounded-2xl bg-[#C9A24A] py-4 text-center text-lg font-bold text-black transition hover:bg-[#E9C77B]"
+            >
+              {selectedMission === "content"
+                ? "🎬 Start Creating Clips →"
+                : "💰 Find Paid Work →"}
+            </Link>
+          </div>
+        )}
+
+        {/* Stats / Trust */}
+        <div className="mt-12 grid grid-cols-3 gap-4 text-center">
+          <div>
+            <div className="text-2xl font-bold text-[#C9A24A]">50K+</div>
+            <div className="text-xs text-white/40">Clips Created</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-[#C9A24A]">$2M+</div>
+            <div className="text-xs text-white/40">Creator Earnings</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-[#C9A24A]">4.9★</div>
+            <div className="text-xs text-white/40">User Rating</div>
+          </div>
+        </div>
+
+        {/* Footer nav */}
+        <div className="mt-8 flex justify-center gap-6 text-sm text-white/40">
+          <Link href="/command-center" className="hover:text-white">
+            Command Center
+          </Link>
+          <Link href="/company-os" className="hover:text-white">
+            Company OS
+          </Link>
+          <Link href="/worlds" className="hover:text-white">
+            Worlds
+          </Link>
+        </div>
       </div>
     </main>
   );
