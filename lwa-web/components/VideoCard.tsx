@@ -177,6 +177,76 @@ function metaLabelClass(tone: ClipMetaLabel["tone"]) {
   return "rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-2.5 py-1 text-[10px] font-medium text-ink/68";
 }
 
+// =========================
+// RENDER STATE HELPERS (Slice 3)
+// =========================
+
+export function getClipPreviewUrl(clip: ClipResult): string | null {
+  return clip.preview_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
+}
+
+export function getClipDownloadUrl(clip: ClipResult): string | null {
+  return clip.download_url || clip.edited_clip_url || clip.clip_url || clip.raw_clip_url || null;
+}
+
+export type RenderState = "rendered" | "raw_only" | "strategy_only" | "failed" | "queued" | "processing";
+
+export function getRenderState(clip: ClipResult): RenderState {
+  // Check explicit render status first
+  if (clip.render_status) {
+    const status = clip.render_status.toLowerCase();
+    if (status === "ready" || status === "rendered") return "rendered";
+    if (status === "failed") return "failed";
+    if (status === "queued") return "queued";
+    if (status === "processing" || status === "rendering") return "processing";
+  }
+
+  // Check for playable media URL
+  const hasPreview = getClipPreviewUrl(clip);
+  const hasDownload = getClipDownloadUrl(clip);
+
+  if (hasPreview || hasDownload) {
+    return "rendered";
+  }
+
+  // Check for raw-only (source available but not edited)
+  if (clip.raw_clip_url) {
+    return "raw_only";
+  }
+
+  // Explicit strategy-only flag
+  if (clip.strategy_only || clip.is_strategy_only) {
+    return "strategy_only";
+  }
+
+  // Default to strategy-only if no media URLs
+  return "strategy_only";
+}
+
+export function getRenderStateLabel(state: RenderState): { label: string; tone: "neutral" | "warning" | "danger" | "accent" } {
+  switch (state) {
+    case "rendered":
+      return { label: "Rendered — Ready", tone: "accent" };
+    case "raw_only":
+      return { label: "Raw Only — Needs Edit", tone: "warning" };
+    case "strategy_only":
+      return { label: "Strategy Only — Not Rendered", tone: "warning" };
+    case "failed":
+      return { label: "Render Failed — Recovery Available", tone: "danger" };
+    case "queued":
+      return { label: "Queued — Waiting to Render", tone: "neutral" };
+    case "processing":
+      return { label: "Rendering — In Progress", tone: "neutral" };
+    default:
+      return { label: "Strategy Only", tone: "warning" };
+  }
+}
+
+export function canPlayClip(clip: ClipResult): boolean {
+  const state = getRenderState(clip);
+  return state === "rendered" && !!getClipPreviewUrl(clip);
+}
+
 export default function VideoCard({
   clip,
   compact = false,
