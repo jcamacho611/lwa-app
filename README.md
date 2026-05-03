@@ -217,6 +217,50 @@ Use the returned `file_id` as `upload_file_id` in `/generate`.
 4. **Storage:** Monitor generated-assets volume usage and adjust retention settings as needed
 5. **Monitoring:** Check `/health` endpoint regularly to verify system status
 
+### Railway Environment Variables
+```bash
+# Core Configuration
+FREE_LAUNCH_MODE=false
+RATE_LIMIT_GUEST_RPM=30
+NEXT_PUBLIC_FREE_LAUNCH_MODE=false
+NEXT_PUBLIC_API_BASE_URL=https://your-backend.railway.app
+
+# Video OS & Rendering
+LWA_VIDEO_OS_ENABLED=true
+LWA_VIDEO_PROVIDER=mock
+LWA_ALLOW_LIVE_PROVIDERS=false
+LWA_LOCAL_RENDER_ENABLED=false
+LWA_VIDEO_ENCODER=libx264
+
+# Storage
+LWA_STORAGE_PROVIDER=local_placeholder
+LWA_GENERATED_ASSETS_DIR=/data/generated
+LWA_UPLOADS_DIR=/data/uploads
+
+# Lee-Wuh Brain
+LWA_LEE_WUH_BRAIN_ENABLED=true
+
+# Marketplace & Game World
+LWA_MARKETPLACE_ENABLED=false
+LWA_GAME_WORLD_ENABLED=false
+
+# VR/AR/XR
+LWA_XR_ENABLED=false
+
+# AI Providers (Optional)
+OPENAI_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here
+LWA_AI_PROVIDER=auto
+
+# FFmpeg (Optional)
+FFMPEG_PATH=/usr/bin/ffmpeg
+
+# Rate Limits & Quotas
+LWA_FREE_DAILY_LIMIT=10
+LWA_PRO_DAILY_LIMIT=25
+LWA_SCALE_DAILY_LIMIT=100
+```
+
 ## Verification
 
 Backend:
