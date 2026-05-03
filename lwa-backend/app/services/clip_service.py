@@ -2355,3 +2355,128 @@ def maybe_prune_generated_assets(settings: Settings, *, force: bool = False) -> 
         )
         logger.warning("generated_asset_cleanup_failed error=%s", error)
         return {"scanned": 0, "removed": 0, "store_removed": 0}
+
+
+# =========================
+# SLICE 6: CAPTION STYLE + QUALITY GATE HELPERS
+# =========================
+
+def _clip_media_url(clip: ClipResult) -> str | None:
+    """Get the best available media URL for a clip."""
+    return (
+        clip.preview_url
+        or clip.edited_clip_url
+        or clip.download_url
+        or clip.clip_url
+        or None
+    )
+
+
+def _clip_raw_url(clip: ClipResult) -> str | None:
+    """Get the raw source URL if available."""
+    return clip.raw_clip_url or None
+
+
+def classify_render_state(clip: ClipResult) -> dict[str, object]:
+    """
+    Determine the render state and quality gate status for a clip.
+    Returns update dict to apply to clip.
+    """
+    media_url = _clip_media_url(clip)
+    raw_url = _clip_raw_url(clip)
+    warnings: list[str] = list(clip.quality_gate_warnings or [])
+
+    # Determine render status
+    if clip.strategy_only or clip.is_strategy_only:
+        status = "strategy_only"
+        readiness = 0.25
+        warnings.append("This result is strategy-only and does not include playable media.")
+    elif media_url:
+        status = "rendered"
+        readiness = 0.9
+    elif raw_url:
+        status = "raw_only"
+        readiness = 0.62
+        warnings.append("Raw clip exists, but edited/export-ready media is not available yet.")
+    else:
+        status = "strategy_only"
+        readiness = 0.25
+        warnings.append("No playable media URL is available for this clip.")
+
+    # Validate timestamps if available
+    start = clip.start_time or clip.timestamp_start
+    end = clip.end_time or clip.timestamp_end
+    if start is not None and end is not None:
+        try:
+            if float(end) <= float(start):
+                warnings.append("Clip timestamps are invalid or reversed.")
+                readiness = min(readiness, 0.35)
+        except (TypeError, ValueError):
+            pass
+
+    # Determine quality gate status
+    quality_gate_status = "pass" if readiness >= 0.8 else "warning" if readiness >= 0.5 else "fail"
+
+    # Deduplicate warnings
+    unique_warnings = list(dict.fromkeys(warnings))
+
+    return {
+        "render_status": status,
+        "strategy_only": status == "strategy_only",
+        "quality_gate_status": quality_gate_status,
+        "quality_gate_warnings": unique_warnings,
+        "render_readiness_score": round(readiness, 2),
+        "reason_not_rendered": (
+            clip.reason_not_rendered
+            or (unique_warnings[0] if unique_warnings and status != "rendered" else None)
+        ),
+    }
+
+
+def recommend_caption_style(clip: ClipResult, platform: str | None = None) -> dict[str, object]:
+    """
+    Recommend a caption style based on clip content and platform.
+    Returns update dict to apply to clip.
+    """
+    # Combine relevant text fields
+    text = " ".join(
+        str(value or "")
+        for value in [clip.title, clip.hook, clip.caption, clip.transcript]
+    ).lower()
+
+    # Determine style based on content signals
+    if any(word in text for word in ["stop", "wrong", "mistake", "truth", "lie"]):
+        style = "bold_interrupt"
+        reason = "The clip has tension language that benefits from bold interruption captions."
+    elif any(word in text for word in ["how", "step", "learn", "because", "why", "tip"]):
+        style = "educational_clean"
+        reason = "The clip teaches or explains, so readable educational captions fit best."
+    elif platform and platform.lower() in {"tiktok", "instagram", "instagram reels", "reels", "shorts"}:
+        style = "fast_punchy"
+        reason = "Short-form platform fit favors quick, punchy caption beats."
+    else:
+        style = "clean_standard"
+        reason = "Default clean caption style is safest for this clip."
+
+    # Extract emphasis words
+    emphasis_words = [word for word in ["stop", "truth", "mistake", "money", "proof", "watch", "system", "now"] if word in text]
+
+    return {
+        "caption_style": clip.caption_style or style,
+        "caption_style_reason": clip.caption_style_reason or reason,
+        "emphasis_words": clip.emphasis_words or emphasis_words[:4],
+        "suggested_caption_position": clip.suggested_caption_position or "lower_middle",
+    }
+
+
+def enrich_clip_quality_metadata(clip: ClipResult, platform: str | None = None) -> ClipResult:
+    """
+    Enrich a clip with quality gate status and caption style recommendations.
+    Apply this to clips before returning the final response.
+    """
+    render_updates = classify_render_state(clip)
+    caption_updates = recommend_caption_style(clip, platform)
+
+    # Merge updates with existing clip data
+    all_updates = {**render_updates, **caption_updates}
+    return clip.model_copy(update=all_updates)
