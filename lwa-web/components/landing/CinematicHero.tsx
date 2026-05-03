@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { LeeWuhPresence } from "../brand/LeeWuhPresence";
 
 export default function CinematicHero() {
   return (
     <section className="relative min-h-[88vh] flex items-center">
-      <div className="mx-auto max-w-6xl px-6 w-full">
+      <div className="mx-auto max-w-6xl px-6 w-full lg:grid lg:grid-cols-[1fr_auto] lg:gap-8">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-[#16161B] ring-1 ring-[#2E2E38]">
             <span className="text-[#C9A24A] text-lg leading-none font-semibold">L</span>
@@ -58,6 +59,15 @@ export default function CinematicHero() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Lee-Wuh side guardian - visible on larger screens */}
+        <div className="hidden lg:block">
+          <LeeWuhPresence
+            screen="home"
+            state="idle"
+            message="Drop one source. I'll find the strongest first move."
+          />
         </div>
       </div>
     </section>
