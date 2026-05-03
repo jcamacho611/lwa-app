@@ -211,6 +211,14 @@ class Settings:
             or os.getenv("RAILWAY_GIT_COMMIT_SHA")
             or "local"
         )
+        # Video OS Configuration
+        self.video_os_enabled = _env_bool("LWA_VIDEO_OS_ENABLED", "false")
+        self.video_provider = os.getenv("LWA_VIDEO_PROVIDER", "mock").strip() or "mock"
+        self.video_max_duration_seconds = _env_int("LWA_VIDEO_MAX_DURATION_SECONDS", "30", minimum=1)
+        self.video_max_inputs = _env_int("LWA_VIDEO_MAX_INPUTS", "10", minimum=1)
+        self.video_max_resolution = os.getenv("LWA_VIDEO_MAX_RESOLUTION", "1080p").strip() or "1080p"
+        self.video_allow_live_providers = _env_bool("LWA_VIDEO_ALLOW_LIVE_PROVIDERS", "false")
+        self.video_storage_provider = os.getenv("LWA_VIDEO_STORAGE_PROVIDER", "local_placeholder").strip() or "local_placeholder"
 
 
 @lru_cache
