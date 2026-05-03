@@ -572,6 +572,193 @@ export async function getSourceAssetStats(token: string) {
   });
 }
 
+export async function getTimelineComposerCapabilities(token: string) {
+  return jsonRequest<{
+    track_types: string[];
+    aspect_ratios: string[];
+    platforms: string[];
+    style_presets: string[];
+    caption_styles: string[];
+    music_styles: string[];
+    max_duration_seconds: number;
+    default_duration_seconds: number;
+    default_aspect_ratio: string;
+    features: Record<string, boolean>;
+  }>("/api/timeline-composer/capabilities", {
+    headers: authHeaders(token, false),
+  });
+}
+
+// Batch Workflow API
+export interface WorkflowItemCreateRequest {
+  item_type: string;
+  title: string;
+  description?: string;
+  external_ref?: string;
+  external_type?: string;
+  platform?: string;
+  goal?: string;
+  best_use_case?: string;
+  score_confidence?: number;
+  metadata?: Record<string, any>;
+}
+
+export interface WorkflowItem {
+  item_id: string;
+  user_id: string;
+  item_type: string;
+  status: string;
+  title: string;
+  description?: string;
+  external_ref?: string;
+  external_type?: string;
+  platform?: string;
+  goal?: string;
+  best_use_case?: string;
+  score_confidence?: number;
+  target_platform?: string;
+  linked_asset_ids: string[];
+  available_actions: string[];
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowItemListResponse {
+  items: WorkflowItem[];
+  total_count: number;
+}
+
+export interface WorkflowActionRequest {
+  action_type: string;
+  notes?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface BulkActionRequest {
+  item_ids: string[];
+  action_type: string;
+  notes?: string;
+}
+
+export interface WorkflowAction {
+  action_id: string;
+  item_id: string;
+  user_id: string;
+  action_type: string;
+  notes?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
+export interface WorkflowFilterRequest {
+  item_types?: string[];
+  statuses?: string[];
+  platforms?: string[];
+  goals?: string[];
+  ready_to_render?: boolean;
+  needs_review?: boolean;
+  created_after?: string;
+  created_before?: string;
+}
+
+export interface WorkflowSummary {
+  total_items: number;
+  by_status: Record<string, number>;
+  by_type: Record<string, number>;
+  by_platform: Record<string, number>;
+  ready_to_render: number;
+  needs_review: number;
+  approved_items: number;
+  rejected_items: number;
+  avg_score_confidence?: number;
+}
+
+export async function createWorkflowItem(token: string, payload: WorkflowItemCreateRequest) {
+  return jsonRequest<WorkflowItem>("/api/batch-workflow/items", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getWorkflowItem(token: string, itemId: string) {
+  return jsonRequest<WorkflowItem>(`/api/batch-workflow/items/${itemId}`, {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function listWorkflowItems(token: string, filters?: WorkflowFilterRequest) {
+  const params = new URLSearchParams();
+  if (filters) {
+    if (filters.item_types) params.append('item_types', filters.item_types.join(','));
+    if (filters.statuses) params.append('statuses', filters.statuses.join(','));
+    if (filters.platforms) params.append('platforms', filters.platforms.join(','));
+    if (filters.goals) params.append('goals', filters.goals.join(','));
+    if (filters.ready_to_render !== undefined) params.append('ready_to_render', filters.ready_to_render.toString());
+    if (filters.needs_review !== undefined) params.append('needs_review', filters.needs_review.toString());
+    if (filters.created_after) params.append('created_after', filters.created_after);
+    if (filters.created_before) params.append('created_before', filters.created_before);
+  }
+
+  const queryString = params.toString();
+  const url = queryString ? `/api/batch-workflow/items?${queryString}` : "/api/batch-workflow/items";
+
+  const payload = await jsonRequest<WorkflowItemListResponse>(url, {
+    headers: authHeaders(token, false),
+  });
+  return payload;
+}
+
+export async function executeWorkflowAction(token: string, itemId: string, payload: WorkflowActionRequest) {
+  return jsonRequest<WorkflowAction>(`/api/batch-workflow/items/${itemId}/action`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function executeBulkWorkflowAction(token: string, payload: BulkActionRequest) {
+  const response = await jsonRequest<WorkflowAction[]>("/api/batch-workflow/bulk-action", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  return response;
+}
+
+export async function getWorkflowSummary(token: string) {
+  return jsonRequest<WorkflowSummary>("/api/batch-workflow/summary", {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function getWorkflowCapabilities(token: string) {
+  return jsonRequest<{
+    item_types: string[];
+    statuses: string[];
+    action_types: string[];
+    platforms: string[];
+    goals: string[];
+    features: Record<string, boolean>;
+  }>("/api/batch-workflow/capabilities", {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function deleteWorkflowItem(token: string, itemId: string) {
+  return jsonRequest<{ message: string; item_id: string }>(`/api/batch-workflow/items/${itemId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
+export async function getWorkflowItemActions(token: string, itemId: string) {
+  return jsonRequest<WorkflowAction[]>(`/api/batch-workflow/items/${itemId}/actions`, {
+    headers: authHeaders(token, false),
+  });
+}
+
 export async function createSourceAssetsBatch(token: string, payloads: SourceAssetCreatePayload[]) {
   return jsonRequest<SourceAssetListResponse>("/api/source-assets/batch", {
     method: "POST",
