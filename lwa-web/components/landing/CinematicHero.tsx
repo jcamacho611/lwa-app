@@ -42,6 +42,12 @@ export default function CinematicHero() {
               Generate My Clip Pack
             </Link>
             <Link
+              href="/company-os"
+              className="inline-flex h-12 items-center justify-center rounded-[10px] bg-[#1D1D24] px-5 text-base font-medium text-[#F5F1E8] ring-1 ring-[#2E2E38] transition-all duration-200 hover:-translate-y-px hover:bg-[#24242E]"
+            >
+              Open Company OS
+            </Link>
+            <Link
               href="/realm"
               className="inline-flex h-12 items-center justify-center rounded-[10px] bg-[#1D1D24] px-5 text-base font-medium text-[#F5F1E8] ring-1 ring-[#2E2E38] transition-all duration-200 hover:-translate-y-px hover:bg-[#24242E]"
             >
@@ -71,7 +77,7 @@ export default function CinematicHero() {
         <div className="relative z-10">
           <div className="relative overflow-hidden rounded-[28px] border border-[#C9A24A]/25 bg-[#111116] shadow-[0_32px_120px_-48px_rgba(201,162,74,0.55)]">
             <Image
-              src="/brand/lee-wuh-hero-16x9.png"
+              src="/brand/lee-wuh-hero-16x9.svg"
               alt="Lee-Wuh, the LWA mascot"
               width={1600}
               height={900}
