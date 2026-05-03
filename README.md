@@ -88,22 +88,48 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run dev
 
 ## Required Env Vars
 
-| Var | Service | Purpose |
-| --- | --- | --- |
-| `FREE_LAUNCH_MODE` | backend | Enables public launch mode without forcing auth on protected backend dependencies. |
-| `RATE_LIMIT_GUEST_RPM` | backend | Requests per IP per minute for free-launch anonymous generate traffic. Default: `30`. |
-| `NEXT_PUBLIC_FREE_LAUNCH_MODE` | web | Shows the free-launch banner and hides sign-in CTAs from the first-use flow. |
-| `NEXT_PUBLIC_API_BASE_URL` | web | Backend base URL used by the browser app. |
-| `LWA_GENERATED_ASSETS_DIR` | backend | Directory or Railway volume path for generated clips/assets. |
-| `LWA_GENERATED_ASSETS_RETENTION_HOURS` | backend | Max age before generated asset cleanup removes old files. |
-| `LWA_GENERATED_ASSETS_MAX_FILES` | backend | Max generated file count before oldest files are trimmed. |
-| `LWA_ASSET_CLEANUP_ON_STARTUP` | backend | Runs nonfatal generated asset cleanup during startup when true. |
-| `LWA_UPLOADS_DIR` | backend | Upload storage directory. |
-| `LWA_USAGE_STORE_PATH` | backend | Local JSON quota store path for free/API-key usage. |
-| `OPENAI_API_KEY` | backend | Optional AI provider key. Product must still degrade if unavailable. |
-| `ANTHROPIC_API_KEY` | backend | Optional AI provider key. Product must still degrade if unavailable. |
-| `FFMPEG_PATH` | backend | Optional ffmpeg binary path override. |
-| `MAX_UPLOAD_MB` | backend | Upload size cap. Default: `500`. |
+### Core Configuration
+| Var | Service | Purpose | Default |
+| --- | --- | --- | --- |
+| `FREE_LAUNCH_MODE` | backend | Enables public launch mode without forcing auth. Set to `true` for public testing. | `false` |
+| `RATE_LIMIT_GUEST_RPM` | backend | Requests per IP per minute for free-launch anonymous traffic. | `30` |
+| `NEXT_PUBLIC_FREE_LAUNCH_MODE` | web | Shows free-launch banner and hides sign-in CTAs. | `false` |
+| `NEXT_PUBLIC_API_BASE_URL` | web | Backend base URL used by the browser app. | Required |
+
+### Storage & Processing
+| Var | Service | Purpose | Default |
+| --- | --- | --- | --- |
+| `LWA_GENERATED_ASSETS_DIR` | backend | Directory or Railway volume path for generated clips/assets. | Auto-detected |
+| `LWA_GENERATED_ASSETS_RETENTION_HOURS` | backend | Max age before generated asset cleanup removes old files. | `24` |
+| `LWA_GENERATED_ASSETS_MAX_FILES` | backend | Max generated file count before oldest files are trimmed. | `300` |
+| `LWA_ASSET_CLEANUP_ON_STARTUP` | backend | Runs nonfatal generated asset cleanup during startup. | `true` |
+| `LWA_UPLOADS_DIR` | backend | Upload storage directory. | Auto-detected |
+| `LWA_USAGE_STORE_PATH` | backend | Local JSON quota store path for free/API-key usage. | Auto-detected |
+| `MAX_UPLOAD_MB` | backend | Upload size cap in megabytes. | `500` |
+
+### AI Providers (Optional)
+| Var | Service | Purpose | Default |
+| --- | --- | --- | --- |
+| `OPENAI_API_KEY` | backend | OpenAI API key. Product degrades gracefully if unavailable. | Optional |
+| `ANTHROPIC_API_KEY` | backend | Anthropic API key. Product degrades gracefully if unavailable. | Optional |
+| `LWA_AI_PROVIDER` | backend | Preferred AI provider (`auto`, `openai`, `anthropic`). | `auto` |
+
+### Media Processing
+| Var | Service | Purpose | Default |
+| --- | --- | --- | --- |
+| `FFMPEG_PATH` | backend | FFmpeg binary path override. | Auto-detected |
+| `LWA_VIDEO_ENCODER` | backend | Video encoder for rendering. | `libx264` |
+| `YT_COOKIES_B64` | backend | Base64-encoded YouTube cookies for improved access. | Optional |
+
+### Rate Limiting & Quotas
+| Var | Service | Purpose | Default |
+| --- | --- | --- | --- |
+| `LWA_FREE_DAILY_LIMIT` | backend | Daily generation limit for free users. | `10` |
+| `LWA_PRO_DAILY_LIMIT` | backend | Daily generation limit for pro users. | `25` |
+| `LWA_SCALE_DAILY_LIMIT` | backend | Daily generation limit for scale users. | `100` |
+| `LWA_FREE_CLIP_LIMIT` | backend | Max clips per request for free users. | `3` |
+| `LWA_PRO_CLIP_LIMIT` | backend | Max clips per request for pro users. | `6` |
+| `LWA_SCALE_CLIP_LIMIT` | backend | Max clips per request for scale users. | `12` |
 
 ## API Surface
 
@@ -166,20 +192,74 @@ Use the returned `file_id` as `upload_file_id` in `/generate`.
 
 ## Railway Deploy
 
-Backend service:
+### Backend Service
+- **Root directory:** `lwa-backend/`
+- **Start command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Volume:** Attach generated-assets volume and set `LWA_GENERATED_ASSETS_DIR` to mount path
+- **Environment:**
+  - `FREE_LAUNCH_MODE=true` for public testing (set to `false` for production)
+  - `RATE_LIMIT_GUEST_RPM=30` (adjust based on traffic needs)
+  - `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` for AI processing
+  - `MAX_UPLOAD_MB=500` (adjust based on storage limits)
 
-- Root directory: `lwa-backend/`
-- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- Attach the generated-assets volume and set `LWA_GENERATED_ASSETS_DIR` to that mount path.
-- Keep `FREE_LAUNCH_MODE=true` only while public launch testing is intended.
+### Frontend Service
+- **Root directory:** `lwa-web/`
+- **Build command:** `npm install && npm run build`
+- **Start command:** `npm run start`
+- **Required environment:**
+  - `NEXT_PUBLIC_API_BASE_URL=https://lwa-backend-production-c9cc.up.railway.app`
+  - `NEXT_PUBLIC_FREE_LAUNCH_MODE=true` (match backend setting)
 
-Frontend service:
+### Production Deployment Notes
+1. **FREE_LAUNCH_MODE:** Set to `false` for production with authentication, `true` for public testing
+2. **Rate Limiting:** Adjust `RATE_LIMIT_GUEST_RPM` based on expected traffic and server capacity
+3. **AI Keys:** Ensure at least one AI provider key is configured for optimal performance
+4. **Storage:** Monitor generated-assets volume usage and adjust retention settings as needed
+5. **Monitoring:** Check `/health` endpoint regularly to verify system status
 
-- Root directory: `lwa-web/`
-- Build command: `npm install && npm run build`
-- Start command: `npm run start`
-- Required env: `NEXT_PUBLIC_API_BASE_URL=https://lwa-backend-production-c9cc.up.railway.app`
-- Set `NEXT_PUBLIC_FREE_LAUNCH_MODE=true` only when backend `FREE_LAUNCH_MODE=true`.
+### Railway Environment Variables
+```bash
+# Core Configuration
+FREE_LAUNCH_MODE=false
+RATE_LIMIT_GUEST_RPM=30
+NEXT_PUBLIC_FREE_LAUNCH_MODE=false
+NEXT_PUBLIC_API_BASE_URL=https://your-backend.railway.app
+
+# Video OS & Rendering
+LWA_VIDEO_OS_ENABLED=true
+LWA_VIDEO_PROVIDER=mock
+LWA_ALLOW_LIVE_PROVIDERS=false
+LWA_LOCAL_RENDER_ENABLED=false
+LWA_VIDEO_ENCODER=libx264
+
+# Storage
+LWA_STORAGE_PROVIDER=local_placeholder
+LWA_GENERATED_ASSETS_DIR=/data/generated
+LWA_UPLOADS_DIR=/data/uploads
+
+# Lee-Wuh Brain
+LWA_LEE_WUH_BRAIN_ENABLED=true
+
+# Marketplace & Game World
+LWA_MARKETPLACE_ENABLED=false
+LWA_GAME_WORLD_ENABLED=false
+
+# VR/AR/XR
+LWA_XR_ENABLED=false
+
+# AI Providers (Optional)
+OPENAI_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here
+LWA_AI_PROVIDER=auto
+
+# FFmpeg (Optional)
+FFMPEG_PATH=/usr/bin/ffmpeg
+
+# Rate Limits & Quotas
+LWA_FREE_DAILY_LIMIT=10
+LWA_PRO_DAILY_LIMIT=25
+LWA_SCALE_DAILY_LIMIT=100
+```
 
 ## Verification
 

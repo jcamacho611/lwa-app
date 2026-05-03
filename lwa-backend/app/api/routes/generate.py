@@ -29,6 +29,7 @@ from ...services.event_log import emit_event
 from ...services.export_bundle import create_export_bundle
 from ...services.source_contract import classify_upload_source_type, normalize_source_type
 from ...services.source_ingest import infer_source_type
+from ...services.source_contract_normalizer import source_contract_normalizer
 from app.services.source_errors import classify_source_failure, source_failure_detail
 
 router = APIRouter()
@@ -104,7 +105,7 @@ async def get_trends(http_request: Request) -> TrendsResponse:
 async def generate_clips(request: ProcessRequest, http_request: Request) -> ClipBatchResponse:
     enforce_api_key(http_request, settings)
     current_user = get_optional_user(http_request)
-    resolved_request, source_path = resolve_request_source(
+    resolved_request, source_path = await resolve_request_source(
         request=request,
         current_user=current_user,
         base_url=(settings.api_base_url or str(http_request.base_url)).rstrip("/"),
@@ -231,7 +232,7 @@ async def generate_clips(request: ProcessRequest, http_request: Request) -> Clip
 async def create_processing_job(request: ProcessRequest, http_request: Request) -> JobCreatedResponse:
     enforce_api_key(http_request, settings)
     current_user = get_optional_user(http_request)
-    resolved_request, source_path = resolve_request_source(
+    resolved_request, source_path = await resolve_request_source(
         request=request,
         current_user=current_user,
         base_url=(settings.api_base_url or str(http_request.base_url)).rstrip("/"),
@@ -365,13 +366,19 @@ async def get_processing_job(job_id: str, http_request: Request) -> JobStatusRes
     )
 
 
-def resolve_request_source(
+async def resolve_request_source(
     *,
     request: ProcessRequest,
     current_user: UserRecord | None,
     base_url: str,
 ) -> tuple[ProcessRequest, str | None]:
+    # Use source contract normalizer for consistent handling
+    normalizer = source_contract_normalizer(settings)
+    
     upload_file_id = request.upload_file_id or request.uploaded_file_ref
+    upload_info = None
+    source_path = None
+    
     if upload_file_id:
         upload = platform_store.get_upload(
             upload_file_id,
@@ -379,22 +386,44 @@ def resolve_request_source(
         )
         if not upload:
             raise HTTPException(status_code=404, detail="Upload not found")
-        source_type = classify_upload_source(upload)
+        upload_info = upload
+        source_path = upload.get("stored_path")
+        
+        # Normalize the request with upload info
+        normalized_contract = await normalizer.normalize_request(request, upload_info)
+        
+        # Update request with normalized values
         resolved = request.model_copy(
             update={
                 "video_url": upload["public_url"],
                 "source_url": upload["public_url"],
                 "upload_file_id": upload_file_id,
-                "source_type": source_type,
+                "source_type": normalized_contract.source_type,
                 "upload_content_type": upload.get("content_type"),
             }
         )
-        return resolved, upload["stored_path"]
+        
+        # Store normalized contract metadata for processing
+        if hasattr(request, 'source_contract'):
+            request.source_contract = normalized_contract
+        
+        return resolved, source_path
 
+    # Handle URL and other input types
     if request.source_url and not request.video_url:
         request = request.model_copy(update={"video_url": request.source_url})
 
-    source_type = infer_source_type(request)
+    # Normalize the request without upload info
+    normalized_contract = await normalizer.normalize_request(request)
+    
+    # Validate the normalized contract
+    if normalized_contract.validation_result and normalized_contract.validation_result.status.value == "invalid":
+        raise HTTPException(
+            status_code=422, 
+            detail=f"Invalid source input: {'; '.join(normalized_contract.validation_result.validation_errors)}"
+        )
+
+    source_type = normalized_contract.source_type
     has_strategy_context = bool(
         (request.prompt or "").strip()
         or (request.text_prompt or "").strip()
@@ -403,6 +432,10 @@ def resolve_request_source(
     )
     if not request.video_url and source_type in {"url", "video", "audio", "twitch", "stream"} and not has_strategy_context:
         raise HTTPException(status_code=422, detail="Provide video_url, source_url, or upload_file_id for media sources")
+
+    # Store normalized contract metadata for processing
+    if hasattr(request, 'source_contract'):
+        request.source_contract = normalized_contract
 
     return request.model_copy(update={"source_type": normalize_source_type(source_type)}), None
 

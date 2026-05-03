@@ -74,6 +74,10 @@ STRATEGY_EXPORT_PROFILE = "strategy_only_package"
 
 
 def enforce_api_key(request: Request, settings: Settings) -> None:
+    # Skip API key enforcement in free launch mode for public testing
+    if settings.free_launch_mode:
+        return
+        
     if not settings.api_key_secret:
         return
 
@@ -267,42 +271,56 @@ async def build_clip_response(
             )
             await emit_progress(progress_callback, "Scoring breakout moments and building ranked packaging angles.")
         except Exception as error:
-            fallback_reason = str(error)
-            logger.warning(
-                "source_context_fallback request_id=%s route=%s built=%s reason=%s",
+            # Use enhanced fallback service for graceful degradation
+            from .source_fallback import source_fallback_service
+            fallback_service = source_fallback_service(settings)
+            fallback_result = await fallback_service.handle_source_failure(
+                request=request,
+                error=error,
+                source_url=video_url
+            )
+            
+            # Convert fallback result to SourceContext
+            from ..processor import SourceContext
+            source_context = SourceContext(**fallback_result.source_context)
+            fallback_reason = fallback_result.fallback_reason
+            
+            logger.info(
+                "source_context_fallback_enhanced request_id=%s route=%s strategy=%s reason=%s",
                 request_id,
                 route_path,
-                False,
+                fallback_result.strategy.value,
                 fallback_reason,
             )
-            await emit_progress(progress_callback, "Source ingest failed. Falling back to lightweight packaging.")
-            source_context = None
+            await emit_progress(progress_callback, f"Source ingest failed. Using {fallback_result.strategy.value} fallback.")
     else:
-        fallback_reason = (
-            "strategy-only source type; media extraction was not required"
-            if not source_type_uses_media_pipeline(
-                normalized_source_type,
-                has_source_path=bool(source_path),
-                source_url=video_url,
-            )
-            else "missing runtime dependencies"
+        # Use enhanced fallback service even for strategy-only sources
+        from .source_fallback import source_fallback_service
+        fallback_service = source_fallback_service(settings)
+        
+        # Create a mock error for strategy-only processing
+        class StrategyOnlyError(Exception):
+            pass
+        
+        fallback_result = await fallback_service.handle_source_failure(
+            request=request,
+            error=StrategyOnlyError("Strategy-only source type"),
+            source_url=video_url
         )
-        logger.warning(
-            "source_context_skipped request_id=%s route=%s built=%s ffmpeg=%s yt_dlp=%s source_type=%s reason=%s",
+        
+        # Convert fallback result to SourceContext
+        from ..processor import SourceContext
+        source_context = SourceContext(**fallback_result.source_context)
+        fallback_reason = fallback_result.fallback_reason
+        
+        logger.info(
+            "source_context_strategy_only_enhanced request_id=%s route=%s strategy=%s reason=%s",
             request_id,
             route_path,
-            False,
-            ffmpeg_is_available,
-            yt_dlp_is_available,
-            normalized_source_type,
+            fallback_result.strategy.value,
             fallback_reason,
         )
-        source_context = build_strategy_source_context(
-            request=request,
-            source_type=normalized_source_type,
-            source_value=source_value,
-        )
-        await emit_progress(progress_callback, "Building a strategy package from the provided source context.")
+        await emit_progress(progress_callback, f"Building {fallback_result.strategy.value} package from provided context.")
 
     source_platform = source_context.source_platform if source_context else detect_platform(video_url)
     auto_target_platform, recommendation_reason, recommended_content_type, recommended_output_style = (
