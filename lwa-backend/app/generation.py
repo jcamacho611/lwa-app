@@ -46,6 +46,7 @@ async def generate_clips(
     trend_context: List[TrendItem],
     source_context: Optional[SourceContext] = None,
     premium_reasoning: bool = False,
+    user_id: str = "guest:unknown",
 ) -> tuple[List[ClipResult], str]:
     provider = determine_provider(settings)
 
@@ -198,10 +199,10 @@ async def generate_with_anthropic(
         source_context,
     )
     if premium_reasoning:
-        raw = generate_clip_packaging_with_opus(settings=settings, prompt=prompt)
+        raw = generate_clip_packaging_with_opus(settings=settings, user_id=user_id, prompt=prompt)
         used_provider = "anthropic-opus"
     else:
-        raw = generate_clip_packaging_with_sonnet(settings=settings, prompt=prompt)
+        raw = generate_clip_packaging_with_sonnet(settings=settings, user_id=user_id, prompt=prompt)
         used_provider = "anthropic-sonnet"
 
     return parse_generated_clips(
