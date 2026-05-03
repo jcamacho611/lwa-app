@@ -8,6 +8,14 @@ import { LeeWuhBrainPanel } from "../command-center/LeeWuhBrainPanel";
 import { SafetyRightsCostPanel } from "../command-center/SafetyRightsCostPanel";
 import { CaptionEnginePanel } from "../command-center/CaptionEnginePanel";
 import { AudioMusicVoicePanel } from "../command-center/AudioMusicVoicePanel";
+import { CharacterSystemPanel } from "../command-center/CharacterSystemPanel";
+import { GameWorldPanel } from "../command-center/GameWorldPanel";
+import { MarketplacePanel } from "../command-center/MarketplacePanel";
+import { CampaignExportPanel } from "../command-center/CampaignExportPanel";
+import { CreativeEnginesPanel } from "../command-center/CreativeEnginesPanel";
+import { VideoOSPanel } from "../command-center/VideoOSPanel";
+import { SourceTimelinePanel } from "../command-center/SourceTimelinePanel";
+import { BatchReviewPanel } from "../command-center/BatchReviewPanel";
 
 export function CommandCenter() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -15,6 +23,14 @@ export function CommandCenter() {
   const tabs = [
     { id: "overview", label: "Overview", icon: "🏠" },
     { id: "leewuh", label: "Lee-Wuh Brain", icon: "🧠" },
+    { id: "character", label: "Character System", icon: "👤" },
+    { id: "gameworld", label: "Game World", icon: "🌍" },
+    { id: "marketplace", label: "Marketplace", icon: "🛒" },
+    { id: "export", label: "Campaign Export", icon: "📤" },
+    { id: "creative", label: "Creative Engines", icon: "🎨" },
+    { id: "video", label: "Video OS", icon: "🎬" },
+    { id: "timeline", label: "Source Timeline", icon: "📁" },
+    { id: "batch", label: "Batch Review", icon: "📋" },
     { id: "safety", label: "Safety & Rights", icon: "🛡️" },
     { id: "captions", label: "Captions", icon: "💬" },
     { id: "audio", label: "Audio & Music", icon: "🎵" }
@@ -24,6 +40,22 @@ export function CommandCenter() {
     switch (activeTab) {
       case "leewuh":
         return <LeeWuhBrainPanel />;
+      case "character":
+        return <CharacterSystemPanel />;
+      case "gameworld":
+        return <GameWorldPanel />;
+      case "marketplace":
+        return <MarketplacePanel />;
+      case "export":
+        return <CampaignExportPanel />;
+      case "creative":
+        return <CreativeEnginesPanel />;
+      case "video":
+        return <VideoOSPanel />;
+      case "timeline":
+        return <SourceTimelinePanel />;
+      case "batch":
+        return <BatchReviewPanel />;
       case "safety":
         return <SafetyRightsCostPanel />;
       case "captions":

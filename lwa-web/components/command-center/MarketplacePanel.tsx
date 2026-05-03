@@ -1,0 +1,342 @@
+"use client";
+
+import { useState } from "react";
+
+interface MarketplaceProduct {
+  id: string;
+  name: string;
+  description: string;
+  product_type: string;
+  price: number;
+  creator_name: string;
+  status: string;
+  rating: number;
+  review_count: number;
+  preview_url?: string;
+}
+
+interface MarketplaceJob {
+  id: string;
+  title: string;
+  description: string;
+  campaign_type: string;
+  budget: number;
+  status: string;
+  deadline?: string;
+  requirements: string[];
+  applicant_count: number;
+}
+
+const mockProducts: MarketplaceProduct[] = [
+  {
+    id: "prod_001",
+    name: "Clip Pack Starter Template",
+    description: "Pre-configured clip pack template for beginners",
+    product_type: "template",
+    price: 29,
+    creator_name: "LWA Official",
+    status: "active",
+    rating: 4.8,
+    review_count: 127,
+  },
+  {
+    id: "prod_002",
+    name: "Viral Hook Library",
+    description: "100 proven hooks for short-form content",
+    product_type: "library",
+    price: 49,
+    creator_name: "ClipMaster Pro",
+    status: "active",
+    rating: 4.6,
+    review_count: 89,
+  },
+  {
+    id: "prod_003",
+    name: "TikTok Caption Styles",
+    description: "Premium caption templates for TikTok",
+    product_type: "template",
+    price: 19,
+    creator_name: "StyleStudio",
+    status: "active",
+    rating: 4.5,
+    review_count: 56,
+  },
+];
+
+const mockJobs: MarketplaceJob[] = [
+  {
+    id: "job_001",
+    title: "Podcast Clip Campaign",
+    description: "Create 10 clips from 5 podcast episodes for social media",
+    campaign_type: "content_series",
+    budget: 500,
+    status: "open",
+    deadline: "2025-05-15",
+    requirements: ["Experience with podcast content", "Knowledge of podcast platforms"],
+    applicant_count: 12,
+  },
+  {
+    id: "job_002",
+    title: "YouTube Shorts Series",
+    description: "Turn long-form tutorials into engaging Shorts",
+    campaign_type: "repurpose",
+    budget: 800,
+    status: "open",
+    deadline: "2025-05-20",
+    requirements: ["YouTube experience", "Short-form expertise"],
+    applicant_count: 8,
+  },
+  {
+    id: "job_003",
+    title: "Brand Awareness Campaign",
+    description: "Create viral-ready clips for brand launch",
+    campaign_type: "brand",
+    budget: 1200,
+    status: "open",
+    deadline: "2025-05-10",
+    requirements: ["Brand marketing experience", "High engagement history"],
+    applicant_count: 23,
+  },
+];
+
+export function MarketplacePanel() {
+  const [activeTab, setActiveTab] = useState<"products" | "jobs" | "profiles">("products");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00D9FF]/20 text-3xl">
+            🛒
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-semibold text-white">Opportunity Marketplace</h3>
+            <p className="text-sm text-white/50">Find jobs, campaigns, and creator resources</p>
+          </div>
+          <div className="flex gap-4 text-right">
+            <div>
+              <div className="text-sm text-white/50">Active Jobs</div>
+              <div className="text-xl font-bold text-[#00D9FF]">47</div>
+            </div>
+            <div>
+              <div className="text-sm text-white/50">Products</div>
+              <div className="text-xl font-bold text-[#00D9FF]">128</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2">
+        {[
+          { id: "products", label: "Products", icon: "📦" },
+          { id: "jobs", label: "Jobs", icon: "💼" },
+          { id: "profiles", label: "Creators", icon: "👥" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+              activeTab === tab.id
+                ? "bg-[#C9A24A] text-black"
+                : "border border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08]"
+            }`}
+          >
+            <span>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Products Tab */}
+      {activeTab === "products" && (
+        <div className="space-y-4">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2">
+            {["all", "template", "library", "preset"].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setFilterCategory(cat)}
+                className={`rounded-full px-3 py-1 text-xs transition ${
+                  filterCategory === cat
+                    ? "bg-[#C9A24A] text-black"
+                    : "border border-white/10 bg-white/[0.04] text-white/50 hover:bg-white/[0.08]"
+                }`}
+              >
+                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Product Grid */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {mockProducts.map((product) => (
+              <div
+                key={product.id}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition hover:border-white/20"
+              >
+                <div className="mb-3 flex items-start justify-between">
+                  <div>
+                    <span className="mb-2 inline-block rounded-full bg-white/10 px-2 py-1 text-xs capitalize text-white/50">
+                      {product.product_type}
+                    </span>
+                    <h4 className="font-medium text-white">{product.name}</h4>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-[#E9C77B]">${product.price}</div>
+                  </div>
+                </div>
+
+                <p className="mb-4 text-sm text-white/50">{product.description}</p>
+
+                <div className="mb-4 flex items-center gap-2 text-sm">
+                  <span className="text-white/50">By {product.creator_name}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[#E9C77B]">★</span>
+                    <span className="text-sm font-medium text-white">{product.rating}</span>
+                    <span className="text-xs text-white/30">({product.review_count})</span>
+                  </div>
+                  <button className="rounded-lg bg-[#C9A24A] px-3 py-2 text-sm font-medium text-black transition hover:bg-[#E9C77B]">
+                    View
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Jobs Tab */}
+      {activeTab === "jobs" && (
+        <div className="space-y-4">
+          {/* Job Filters */}
+          <div className="flex flex-wrap gap-2">
+            {["all", "content_series", "repurpose", "brand"].map((type) => (
+              <button
+                key={type}
+                className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs capitalize text-white/50 transition hover:bg-white/[0.08]"
+              >
+                {type.replace("_", " ")}
+              </button>
+            ))}
+          </div>
+
+          {/* Job List */}
+          <div className="space-y-4">
+            {mockJobs.map((job) => (
+              <div
+                key={job.id}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition hover:border-white/20"
+              >
+                <div className="mb-3 flex items-start justify-between">
+                  <div>
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="rounded-full bg-green-400/20 px-2 py-1 text-xs text-green-400">
+                        {job.status}
+                      </span>
+                      <span className="text-xs capitalize text-white/30">{job.campaign_type}</span>
+                    </div>
+                    <h4 className="text-lg font-medium text-white">{job.title}</h4>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-[#E9C77B]">${job.budget}</div>
+                    <div className="text-xs text-white/30">budget</div>
+                  </div>
+                </div>
+
+                <p className="mb-4 text-sm text-white/50">{job.description}</p>
+
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {job.requirements.map((req, idx) => (
+                    <span
+                      key={idx}
+                      className="rounded-full bg-white/[0.02] px-2 py-1 text-xs text-white/50"
+                    >
+                      {req}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-white/50">{job.applicant_count} applicants</span>
+                    {job.deadline && (
+                      <span className="text-white/30">Deadline: {job.deadline}</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white transition hover:bg-white/[0.08]">
+                      Details
+                    </button>
+                    <button className="rounded-lg bg-[#C9A24A] px-3 py-2 text-sm font-medium text-black transition hover:bg-[#E9C77B]">
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Profiles Tab */}
+      {activeTab === "profiles" && (
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              { name: "ClipMaster Pro", specialty: "TikTok Shorts", rating: 4.9, jobs: 127, earnings: 15400 },
+              { name: "StyleStudio", specialty: "Captions & Text", rating: 4.7, jobs: 89, earnings: 12300 },
+              { name: "ViralVault", specialty: "Hook Writing", rating: 4.8, jobs: 203, earnings: 28700 },
+              { name: "EditElite", specialty: "Long-form to Short", rating: 4.6, jobs: 67, earnings: 8900 },
+            ].map((creator, idx) => (
+              <div
+                key={idx}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-center transition hover:border-white/20"
+              >
+                <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#C9A24A] to-[#6D3BFF] text-2xl text-white">
+                  {creator.name.charAt(0)}
+                </div>
+                <h4 className="mb-1 font-medium text-white">{creator.name}</h4>
+                <p className="mb-3 text-sm text-white/50">{creator.specialty}</p>
+
+                <div className="mb-3 flex items-center justify-center gap-1">
+                  <span className="text-[#E9C77B]">★</span>
+                  <span className="font-medium text-white">{creator.rating}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-lg bg-white/[0.02] p-2">
+                    <div className="font-medium text-white">{creator.jobs}</div>
+                    <div className="text-xs text-white/30">Jobs</div>
+                  </div>
+                  <div className="rounded-lg bg-white/[0.02] p-2">
+                    <div className="font-medium text-[#E9C77B]">${(creator.earnings / 1000).toFixed(1)}k</div>
+                    <div className="text-xs text-white/30">Earned</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-3">
+        <button className="rounded-xl bg-[#C9A24A] px-4 py-3 text-sm font-semibold text-black transition hover:bg-[#E9C77B]">
+          Post a Job
+        </button>
+        <button className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08]">
+          Sell Product
+        </button>
+        <button className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08]">
+          My Listings
+        </button>
+      </div>
+    </div>
+  );
+}
