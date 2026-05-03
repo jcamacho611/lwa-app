@@ -219,6 +219,12 @@ class Settings:
         self.video_max_resolution = os.getenv("LWA_VIDEO_MAX_RESOLUTION", "1080p").strip() or "1080p"
         self.video_allow_live_providers = _env_bool("LWA_VIDEO_ALLOW_LIVE_PROVIDERS", "false")
         self.video_storage_provider = os.getenv("LWA_VIDEO_STORAGE_PROVIDER", "local_placeholder").strip() or "local_placeholder"
+        # Ingest Engine Configuration
+        self.ingest_engine_enabled = _env_bool("LWA_INGEST_ENGINE_ENABLED", "true")
+        self.ingest_storage_provider = os.getenv("LWA_INGEST_STORAGE_PROVIDER", "local_placeholder").strip() or "local_placeholder"
+        self.ingest_max_file_size_mb = _env_int("LWA_INGEST_MAX_FILE_SIZE_MB", "100", minimum=1)
+        self.ingest_max_assets_per_user = _env_int("LWA_INGEST_MAX_ASSETS_PER_USER", "50", minimum=1)
+        self.ingest_allowed_file_types = os.getenv("LWA_INGEST_ALLOWED_FILE_TYPES", "mp4,mov,avi,mkv,mp3,wav,m4a,jpg,jpeg,png,gif,txt,md").strip() or "mp4,mov,avi,mkv,mp3,wav,m4a,jpg,jpeg,png,gif,txt,md"
 
 
 @lru_cache
