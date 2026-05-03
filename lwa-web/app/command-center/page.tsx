@@ -1,40 +1,19 @@
 import Link from "next/link";
+import { useState } from "react";
 import {
   CompanyOsShell,
   SectionHeader,
   StatusBadge,
 } from "../../components/company-os/CompanyOsShell";
-
-const mockClips = [
-  {
-    title: "The strongest opener",
-    status: "ready" as const,
-    type: "Rendered",
-    detail: "Best clip first. Use this as the lead post when a rendered asset is available.",
-    action: "Open generate flow",
-  },
-  {
-    title: "The hook test",
-    status: "building" as const,
-    type: "Strategy",
-    detail: "Hook variants, caption style, CTA, and thumbnail text live here when media is not ready.",
-    action: "Copy strategy",
-  },
-  {
-    title: "Campaign export",
-    status: "queued" as const,
-    type: "Package",
-    detail: "Future export bundle for clips, captions, CTAs, platform, and campaign requirements.",
-    action: "Queue export",
-  },
-];
+import { LeeWuhCharacter } from "../../components/lee-wuh";
+import { ClipResultsPanel } from "../../components/command-center/ClipResultsPanel";
 
 const phases = [
-  "Source ingest",
-  "Moment finding",
-  "Ranking / packaging",
-  "Render / export",
-  "Delivery",
+  { name: "Source ingest", status: "complete" },
+  { name: "Moment finding", status: "complete" },
+  { name: "Ranking / packaging", status: "complete" },
+  { name: "Render / export", status: "complete" },
+  { name: "Delivery", status: "complete" },
 ];
 
 export default function CommandCenterPage() {
@@ -100,18 +79,65 @@ export default function CommandCenterPage() {
           </div>
         </section>
 
+        {/* SOURCE INPUT - THE KILLER DEMO STARTS HERE */}
+        <section className="rounded-[28px] border-2 border-[#C9A24A]/50 bg-gradient-to-b from-[#C9A24A]/20 to-transparent p-8">
+          <div className="mb-6 flex items-center gap-4">
+            <LeeWuhCharacter mood="idle" size="md" showMessage={false} />
+            <div>
+              <h2 className="text-2xl font-bold text-white">Drop one source. Get the best clips first.</h2>
+              <p className="text-white/60">Paste a YouTube, TikTok, Twitch, or podcast URL. Lee-Wuh finds the moments worth posting.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <input
+              type="text"
+              placeholder="Paste video URL here... (YouTube, TikTok, Twitch, podcast)"
+              className="flex-1 rounded-2xl border border-white/20 bg-black/40 px-6 py-4 text-white outline-none placeholder:text-white/30 focus:border-[#C9A24A]"
+            />
+            <button className="rounded-2xl bg-[#C9A24A] px-8 py-4 text-base font-bold text-black transition hover:bg-[#E9C77B]">
+              🎬 Generate Clip Pack
+            </button>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-6 text-sm text-white/40">
+            <span>✓ YouTube</span>
+            <span>✓ TikTok</span>
+            <span>✓ Twitch</span>
+            <span>✓ Podcasts</span>
+            <span>✓ MP4 Upload (coming)</span>
+          </div>
+        </section>
+
+        {/* CLIP RESULTS - BEST CLIP FIRST */}
+        <section>
+          <ClipResultsPanel />
+        </section>
+
+        {/* PROCESSING PHASES */}
         <section>
           <SectionHeader
             eyebrow="Processing"
-            title="Useful status instead of a dead spinner"
+            title="How LWA creates your clip pack"
           />
           <div className="grid gap-3 md:grid-cols-5">
             {phases.map((phase, index) => (
               <div
-                key={phase}
-                className="rounded-[20px] border border-white/10 bg-white/[0.04] p-4"
+                key={phase.name}
+                className={`rounded-[20px] border p-4 ${
+                  phase.status === "complete"
+                    ? "border-green-400/30 bg-green-400/10"
+                    : "border-white/10 bg-white/[0.04]"
+                }`}
               >
-                <p className="text-sm font-semibold text-white">{phase}</p>
+                <div className="flex items-center gap-2">
+                  {phase.status === "complete" ? (
+                    <span className="text-green-400">✓</span>
+                  ) : (
+                    <span className="text-white/30">○</span>
+                  )}
+                  <p className="text-sm font-semibold text-white">{phase.name}</p>
+                </div>
                 <p className="mt-2 text-xs text-white/45">
                   Step {index + 1}
                 </p>
@@ -120,34 +146,28 @@ export default function CommandCenterPage() {
           </div>
         </section>
 
-        <section>
-          <SectionHeader
-            eyebrow="Review lanes"
-            title="Rendered proof first. Strategy second. Packaging always visible."
-          />
-          <div className="grid gap-5 lg:grid-cols-3">
-            {mockClips.map((clip) => (
-              <div
-                key={clip.title}
-                className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/45">
-                    {clip.type}
-                  </p>
-                  <StatusBadge status={clip.status} />
-                </div>
-                <h3 className="mt-4 text-xl font-semibold text-white">
-                  {clip.title}
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-white/60">
-                  {clip.detail}
-                </p>
-                <button className="mt-5 rounded-full border border-white/15 px-4 py-2 text-sm text-white/75">
-                  {clip.action}
-                </button>
-              </div>
-            ))}
+        {/* NEXT ACTIONS - KILLER DEMO PATH CONTINUATION */}
+        <section className="rounded-[28px] border border-[#C9A24A]/30 bg-gradient-to-r from-[#C9A24A]/10 to-transparent p-6">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="text-2xl">🎯</span>
+            <h3 className="text-lg font-semibold text-white">Next Best Action</h3>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <button className="rounded-2xl border border-green-400/30 bg-green-400/10 p-4 text-left transition hover:border-green-400/50">
+              <p className="text-xs text-green-400">STEP 1</p>
+              <p className="mt-1 font-medium text-white">Play Best Clip</p>
+              <p className="mt-1 text-xs text-white/50">Verify it&apos;s the one</p>
+            </button>
+            <button className="rounded-2xl border border-[#C9A24A]/30 bg-[#C9A24A]/10 p-4 text-left transition hover:border-[#C9A24A]/50">
+              <p className="text-xs text-[#E9C77B]">STEP 2</p>
+              <p className="mt-1 font-medium text-white">Save to Proof Vault</p>
+              <p className="mt-1 text-xs text-white/50">Train Lee-Wuh</p>
+            </button>
+            <button className="rounded-2xl border border-[#6D3BFF]/30 bg-[#6D3BFF]/10 p-4 text-left transition hover:border-[#6D3BFF]/50">
+              <p className="text-xs text-[#6D3BFF]">STEP 3</p>
+              <p className="mt-1 font-medium text-white">Package &amp; Export</p>
+              <p className="mt-1 text-xs text-white/50">Ready to post</p>
+            </button>
           </div>
         </section>
       </div>
