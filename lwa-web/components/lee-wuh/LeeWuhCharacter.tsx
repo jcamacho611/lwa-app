@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-export type LeeWuhMood = "idle" | "analyzing" | "rendering" | "complete" | "victory" | "error" | "helping";
+export type LeeWuhMood = "idle" | "analyzing" | "rendering" | "complete" | "victory" | "error" | "helping" | "focused" | "confident" | "playful";
 
 interface LeeWuhCharacterProps {
   mood?: LeeWuhMood;
@@ -55,6 +55,24 @@ const moodConfig: Record<LeeWuhMood, { emoji: string; animation: string; color: 
     animation: "animate-pulse",
     color: "#E9C77B",
     defaultMessage: "Here's what I recommend...",
+  },
+  focused: {
+    emoji: "🎯",
+    animation: "animate-pulse",
+    color: "#00D9FF",
+    defaultMessage: "Locked in. Let's get this done.",
+  },
+  confident: {
+    emoji: "😎",
+    animation: "animate-bounce",
+    color: "#C9A24A",
+    defaultMessage: "I know exactly what to do.",
+  },
+  playful: {
+    emoji: "🎮",
+    animation: "animate-bounce",
+    color: "#6D3BFF",
+    defaultMessage: "Let's have some fun with this!",
   },
 };
 
@@ -139,9 +157,9 @@ export function LeeWuhCharacter({
 export function LeeWuhAvatar({ mood = "idle", size = "sm" }: { mood?: LeeWuhMood; size?: "xs" | "sm" | "md" }) {
   const config = moodConfig[mood];
   const sizeClasses = {
-    xs: "w-8 h-8 text-lg",
-    sm: "w-10 h-10 text-xl",
-    md: "w-14 h-14 text-2xl",
+    xs: "w-6 h-6 text-base",
+    sm: "w-8 h-8 text-lg",
+    md: "w-10 h-10 text-xl",
   };
 
   return (

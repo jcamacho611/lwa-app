@@ -4,6 +4,7 @@ import { Poppins } from "next/font/google";
 import { BackgroundCanvas } from "../components/BackgroundCanvas";
 import { CharacterStage } from "../components/CharacterStage";
 import { FreeLaunchBanner } from "../components/FreeLaunchBanner";
+import { LeeWuhAgent } from "../components/lee-wuh";
 import { resolveDirection, resolveLocale } from "../lib/intl";
 import { siteUrl } from "../lib/seo";
 import "./globals.css";
@@ -76,6 +77,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <main className="lwa-ui-layer" style={{ position: "relative", zIndex: 10 }}>
           {children}
         </main>
+        <LeeWuhAgent />
       </body>
     </html>
   );
