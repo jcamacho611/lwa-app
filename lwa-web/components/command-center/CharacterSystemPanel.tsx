@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LeeWuhCharacter, LeeWuhAvatar } from "../lee-wuh";
 
 interface CharacterAttribute {
   name: string;
@@ -74,9 +75,11 @@ export function CharacterSystemPanel() {
       {/* Header */}
       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#C9A24A]/20 text-3xl">
-            🦁
-          </div>
+          <LeeWuhCharacter 
+            mood={character.state.mood === "inspired" ? "victory" : "idle"} 
+            size="lg" 
+            showMessage={false} 
+          />
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <h3 className="text-xl font-semibold text-white">{character.display_name}</h3>
