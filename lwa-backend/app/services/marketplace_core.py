@@ -19,6 +19,15 @@ class ProductType(StrEnum):
     BRAND_KIT = "brand_kit"
     PROMPT_PACK = "prompt_pack"
     CLIP_COMMISSION = "clip_commission"
+    CLIP_PACK = "clip_pack"
+    CAPTION_STYLE = "caption_style"
+    THUMBNAIL_PACK = "thumbnail_pack"
+    RENDER_PRESET = "render_preset"
+    CREATOR_WORKFLOW = "creator_workflow"
+    CHARACTER_SKIN = "character_skin"
+    LEE_WUH_MERCH = "lee_wuh_merch"
+    BRAND_JOB = "brand_job"
+    CAMPAIGN_PACK = "campaign_pack"
 
 
 class ProductStatus(StrEnum):
@@ -70,6 +79,11 @@ class MarketplaceProduct:
     tags: list[str] = field(default_factory=list)
     ftc_disclosure_required: bool = False
     rail: str = "stripe"
+    asset_urls: list[str] = field(default_factory=list)
+    preview_url: str | None = None
+    download_count: int = 0
+    rating: float = 0.0
+    review_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -166,4 +180,76 @@ def product_to_public_dict(product: MarketplaceProduct) -> dict[str, Any]:
         "tags": product.tags,
         "ftc_disclosure_required": product.ftc_disclosure_required,
         "disclosure": public_marketplace_disclosure(),
+        "preview_url": product.preview_url,
+        "download_count": product.download_count,
+        "rating": product.rating,
+        "review_count": product.review_count,
     }
+
+
+@dataclass(frozen=True)
+class CreatorProfile:
+    """Creator profile for marketplace sellers."""
+    id: str
+    user_id: str
+    display_name: str
+    bio: str | None = None
+    avatar_url: str | None = None
+    social_links: dict[str, str] = field(default_factory=dict)
+    verified: bool = False
+    total_sales: int = 0
+    total_products: int = 0
+    average_rating: float = 0.0
+
+
+@dataclass(frozen=True)
+class MarketplaceListing:
+    """Marketplace listing with search and filter metadata."""
+    product: MarketplaceProduct
+    seller: CreatorProfile
+    featured: bool = False
+    trending: bool = False
+    category_rank: int | None = None
+
+
+def search_listings(
+    listings: list[MarketplaceListing],
+    query: str | None = None,
+    product_type: ProductType | None = None,
+    category: str | None = None,
+    min_price: int | None = None,
+    max_price: int | None = None,
+    min_rating: float | None = None,
+    featured_only: bool = False
+) -> list[MarketplaceListing]:
+    """Search and filter marketplace listings."""
+    filtered = listings
+    
+    if featured_only:
+        filtered = [l for l in filtered if l.featured]
+    
+    if query:
+        query_lower = query.lower()
+        filtered = [
+            l for l in filtered
+            if query_lower in l.product.title.lower()
+            or query_lower in l.product.description.lower()
+            or any(query_lower in tag.lower() for tag in l.product.tags)
+        ]
+    
+    if product_type:
+        filtered = [l for l in filtered if l.product.product_type == product_type]
+    
+    if category:
+        filtered = [l for l in filtered if l.product.category == category]
+    
+    if min_price is not None:
+        filtered = [l for l in filtered if l.product.price_cents >= min_price]
+    
+    if max_price is not None:
+        filtered = [l for l in filtered if l.product.price_cents <= max_price]
+    
+    if min_rating is not None:
+        filtered = [l for l in filtered if l.product.rating >= min_rating]
+    
+    return filtered
