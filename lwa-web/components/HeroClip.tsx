@@ -5,6 +5,7 @@ import { ClipResult } from "../lib/types";
 import { LiveClipPreview } from "./results/LiveClipPreview";
 import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore, getPreviewUrl, isRenderedClip } from "../lib/clip-utils";
+import { getRenderState } from "./VideoCard";
 import { buildLeadReason } from "../lib/result-copy";
 import { ClipIntelligencePanel } from "./clip-intelligence-panel";
 import { AutoEditorBrainPanel } from "./AutoEditorBrainPanel";
@@ -158,8 +159,26 @@ function metaLabelClass(tone: ClipMetaLabel["tone"]) {
   return "rounded-full border border-[var(--divider)] bg-[var(--surface-soft)] px-2.5 py-1 text-[11px] font-medium text-ink/68";
 }
 
+export function chooseLeadClip(clips: ClipResult[]): ClipResult | null {
+  if (!clips.length) return null;
+
+  // Prefer rendered clips, then fall back to any clip
+  const rendered = clips.filter((c) => getRenderState(c) === "rendered");
+  const candidates = rendered.length > 0 ? rendered : clips;
+
+  // Sort by post_rank/rank, then by score
+  return candidates.sort((a, b) => {
+    const aRank = a.post_rank || a.rank || 999;
+    const bRank = b.post_rank || b.rank || 999;
+    const aScore = a.score || a.confidence_score || 0;
+    const bScore = b.score || b.confidence_score || 0;
+    return aRank - bRank || bScore - aScore;
+  })[0];
+}
+
 export default function HeroClip({
   clip,
+  clips,
   compact = false,
   queued = false,
   feedbackVote = null,
@@ -167,7 +186,9 @@ export default function HeroClip({
   onVote,
   recoveryState = null,
   onRecover,
-}: HeroClipProps) {
+}: HeroClipProps & { clips?: ClipResult[] }) {
+  // Use lead selection if clips array provided
+  const lead = clips && clips.length > 0 ? chooseLeadClip(clips) : clip;
   const [copiedAction, setCopiedAction] = useState<"hook" | "caption" | "package" | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
