@@ -53,6 +53,12 @@ export default function CinematicHero() {
               Generate My Clip Pack
             </Link>
             <Link
+              href="/company-os"
+              className="inline-flex h-12 items-center justify-center rounded-[10px] bg-[#1D1D24] px-5 text-base font-medium text-[#F5F1E8] ring-1 ring-[#2E2E38] transition-all duration-200 hover:-translate-y-px hover:bg-[#24242E]"
+            >
+              Open Company OS
+            </Link>
+            <Link
               href="/realm"
               className="inline-flex h-12 items-center justify-center rounded-[10px] bg-[#1D1D24] px-5 text-base font-medium text-[#F5F1E8] ring-1 ring-[#2E2E38] transition-all duration-200 hover:-translate-y-px hover:bg-[#24242E]"
             >
@@ -67,10 +73,7 @@ export default function CinematicHero() {
               { label: "Output", value: "Best clip first" },
               { label: "Truth", value: "Rendered" },
             ].map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-[10px] bg-[#16161B] p-4 ring-1 ring-[#23232C]"
-              >
+              <div key={stat.label} className="rounded-[10px] bg-[#16161B] p-4 ring-1 ring-[#23232C]">
                 <div className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-[#7A7568]">
                   {stat.label}
                 </div>
@@ -85,40 +88,20 @@ export default function CinematicHero() {
         <div className="relative z-10">
           <div className="relative overflow-hidden rounded-[28px] border border-[#C9A24A]/25 bg-[#111116] shadow-[0_32px_120px_-48px_rgba(201,162,74,0.55)]">
             <Image
-              src="/brand/lee-wuh-hero-16x9.png"
-              alt="Lee-Wuh, the LWA mascot and final boss of lazy content"
+              src="/brand/lee-wuh-hero-16x9.svg"
+              alt="Lee-Wuh, the LWA mascot"
               width={1600}
               height={900}
               priority
               className="h-auto w-full object-cover"
             />
-
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-mono text-xs uppercase tracking-[0.22em] text-[#E9C77B]">
-                    Lee-Wuh // The Last Creator
-                  </p>
-                  <p className="mt-1 text-sm text-[#D8D0BF]">
-                    Create. Inspire. Take over.
-                  </p>
-                </div>
-                <span className="rounded-full border border-[#C9A24A]/30 bg-[#C9A24A]/10 px-3 py-1 text-xs font-semibold text-[#E9C77B]">
-                  16:9 Hero Ready
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-3 gap-3 text-center text-xs text-[#B8B3A7]">
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-              Afro-futurist
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-              Anime boss
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-              Creator engine
+              <p className="font-mono text-xs uppercase tracking-[0.22em] text-[#E9C77B]">
+                Lee-Wuh // The Last Creator
+              </p>
+              <p className="mt-1 text-sm text-[#D8D0BF]">
+                Create. Inspire. Clip smarter.
+              </p>
             </div>
           </div>
         </div>
