@@ -34,32 +34,32 @@ export function SourceAssetsPanel({ token, onAssetsSelected, selectedAssetIds = 
   // Load assets and types on mount
   useEffect(() => {
     if (token) {
+      const loadAssets = async () => {
+        try {
+          setIsLoading(true);
+          const response = await listSourceAssets(token);
+          setAssets(response.assets || []);
+        } catch (err) {
+          console.error("Failed to load assets:", err);
+          setError("Failed to load assets");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      const loadAssetTypes = async () => {
+        try {
+          const response = await getSourceAssetTypes(token);
+          setAssetTypes(response.asset_types || []);
+        } catch (err) {
+          console.error("Failed to load asset types:", err);
+        }
+      };
+
       loadAssets();
       loadAssetTypes();
     }
   }, [token]);
-
-  const loadAssets = async () => {
-    try {
-      setIsLoading(true);
-      const response = await listSourceAssets(token);
-      setAssets(response.assets || []);
-    } catch (err) {
-      console.error("Failed to load assets:", err);
-      setError("Failed to load assets");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadAssetTypes = async () => {
-    try {
-      const response = await getSourceAssetTypes(token);
-      setAssetTypes(response.asset_types || []);
-    } catch (err) {
-      console.error("Failed to load asset types:", err);
-    }
-  };
 
   const createAsset = async () => {
     setError("");
