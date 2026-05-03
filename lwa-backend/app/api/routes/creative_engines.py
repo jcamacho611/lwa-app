@@ -6,7 +6,7 @@ Handles all creative AI engines: hooks, captions, thumbnails, campaign packaging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 router = APIRouter(prefix="/api/v1/creative-engines", tags=["creative_engines"])
@@ -340,7 +340,7 @@ async def package_campaign(request: CampaignPackageRequest):
         "download_url": f"/api/v1/creative-engines/download/{package_id}",
         "estimated_size_mb": 245.5,
         "created_at": datetime.utcnow().isoformat(),
-        "expires_at": (datetime.utcnow() + datetime.timedelta(days=7)).isoformat()
+        "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat()
     }
 
 @router.get("/jobs", response_model=Dict[str, Any])
