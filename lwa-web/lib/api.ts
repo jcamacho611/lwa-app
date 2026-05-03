@@ -480,3 +480,102 @@ export async function updateScheduledPost(token: string, postId: string, payload
     body: JSON.stringify(payload),
   });
 }
+
+// Source Assets API
+
+export interface SourceAsset {
+  asset_id: string;
+  user_id: string;
+  asset_type: string;
+  status: string;
+  source_url?: string;
+  source_content?: string;
+  storage_provider: string;
+  storage_path?: string;
+  storage_url?: string;
+  error_message?: string;
+  metadata?: {
+    filename?: string;
+    file_size_bytes?: number;
+    mime_type?: string;
+    duration_seconds?: number;
+    width?: number;
+    height?: number;
+    frame_rate?: number;
+    sample_rate?: number;
+    channels?: number;
+    format?: string;
+    checksum?: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourceAssetCreatePayload {
+  asset_type: string;
+  source_url?: string;
+  source_content?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface SourceAssetListResponse {
+  assets: SourceAsset[];
+  total_count: number;
+}
+
+export async function createSourceAsset(token: string, payload: SourceAssetCreatePayload) {
+  return jsonRequest<SourceAsset>("/api/source-assets", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getSourceAsset(token: string, assetId: string) {
+  return jsonRequest<SourceAsset>(`/api/source-assets/${assetId}`, {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function listSourceAssets(token: string) {
+  const payload = await jsonRequest<SourceAssetListResponse>("/api/source-assets", {
+    headers: authHeaders(token, false),
+  });
+  return payload;
+}
+
+export async function deleteSourceAsset(token: string, assetId: string) {
+  return jsonRequest<{ message: string; asset_id: string; deleted: boolean }>(`/api/source-assets/${assetId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
+export async function getSourceAssetTypes(token: string) {
+  return jsonRequest<{
+    asset_types: string[];
+    descriptions: Record<string, string>;
+  }>("/api/source-assets/types", {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function getSourceAssetStats(token: string) {
+  return jsonRequest<{
+    total_assets: number;
+    by_type: Record<string, number>;
+    by_status: Record<string, number>;
+    storage_provider: string;
+    metadata_only: boolean;
+  }>("/api/source-assets/stats", {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function createSourceAssetsBatch(token: string, payloads: SourceAssetCreatePayload[]) {
+  return jsonRequest<SourceAssetListResponse>("/api/source-assets/batch", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payloads),
+  });
+}
