@@ -579,3 +579,151 @@ export async function createSourceAssetsBatch(token: string, payloads: SourceAss
     body: JSON.stringify(payloads),
   });
 }
+
+// Timeline Composer API
+
+export interface TimelineComposerRequest {
+  source_asset_ids?: string[];
+  clip_ids?: string[];
+  input_urls?: string[];
+  prompt?: string;
+  goal?: string;
+  platform?: string;
+  aspect_ratio?: string;
+  duration_seconds?: number;
+  style_preset?: string;
+  caption_style?: string;
+  music_style?: string;
+  include_cta?: boolean;
+  include_hook?: boolean;
+  include_broll?: boolean;
+  include_captions?: boolean;
+}
+
+export interface Timeline {
+  timeline_id: string;
+  user_id: string;
+  status: string;
+  title: string;
+  strategy_summary: string;
+  total_duration_seconds: number;
+  aspect_ratio: string;
+  render_settings: {
+    aspect_ratio: string;
+    resolution: string;
+    frame_rate: number;
+    quality: string;
+    format: string;
+  };
+  tracks: Array<{
+    track_id: string;
+    track_type: string;
+    segments: Array<{
+      segment_id: string;
+      track_type: string;
+      start_time: number;
+      duration: number;
+      content?: string;
+      style?: string;
+      asset_ref?: {
+        asset_id?: string;
+        asset_type?: string;
+        source_url?: string;
+        start_time: number;
+        end_time?: number;
+        duration?: number;
+      };
+    }>;
+    muted: boolean;
+    volume: number;
+  }>;
+  caption_layer?: {
+    style?: string;
+    position: string;
+    timing: Array<{
+      start: number;
+      end: number;
+      text: string;
+    }>;
+  };
+  audio_layers: Array<{
+    track_type: string;
+    volume: number;
+    metadata?: Record<string, any>;
+  }>;
+  overlay_layers: Array<{
+    overlay_type: string;
+    position: string;
+    opacity: number;
+    content?: string;
+  }>;
+  warnings: string[];
+  recommended_render_job_payload?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TimelineListResponse {
+  timelines: Timeline[];
+  total_count: number;
+}
+
+export interface SendToRenderResponse {
+  success: boolean;
+  timeline_id: string;
+  render_job_payload?: Record<string, any>;
+  message: string;
+  error?: string;
+}
+
+export async function composeTimeline(token: string, payload: TimelineComposerRequest) {
+  return jsonRequest<Timeline>("/api/timeline-composer/compose", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getTimeline(token: string, timelineId: string) {
+  return jsonRequest<Timeline>(`/api/timeline-composer/${timelineId}`, {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function listTimelines(token: string) {
+  const payload = await jsonRequest<TimelineListResponse>("/api/timeline-composer", {
+    headers: authHeaders(token, false),
+  });
+  return payload;
+}
+
+export async function deleteTimeline(token: string, timelineId: string) {
+  return jsonRequest<{ message: string; timeline_id: string }>(`/api/timeline-composer/${timelineId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
+export async function sendTimelineToRender(token: string, timelineId: string) {
+  return jsonRequest<SendToRenderResponse>(`/api/timeline-composer/${timelineId}/send-to-render`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
+export async function getTimelineComposerCapabilities(token: string) {
+  return jsonRequest<{
+    track_types: string[];
+    aspect_ratios: string[];
+    platforms: string[];
+    style_presets: string[];
+    caption_styles: string[];
+    music_styles: string[];
+    max_duration_seconds: number;
+    default_duration_seconds: number;
+    default_aspect_ratio: string;
+    features: Record<string, boolean>;
+  }>("/api/timeline-composer/capabilities", {
+    headers: authHeaders(token, false),
+  });
+}
