@@ -6,10 +6,11 @@ import { LEE_WUH_BRAND, type LeeWuhSize, type LeeWuhState } from "../../lib/bran
 type LeeWuhMascotProps = {
   state?: LeeWuhState;
   size?: LeeWuhSize;
-  variant?: "bust" | "full" | "sticker" | "watermark";
+  variant?: "bust" | "full" | "sticker" | "watermark" | "hero";
   showAura?: boolean;
   showLabel?: boolean;
   className?: string;
+  useHeroAsset?: boolean;
 };
 
 const sizeClass: Record<LeeWuhSize, string> = {
@@ -30,6 +31,7 @@ export function LeeWuhMascot({
   showAura = true,
   showLabel = false,
   className,
+  useHeroAsset = false,
 }: LeeWuhMascotProps) {
   const isWatermark = variant === "watermark";
 
@@ -51,15 +53,16 @@ export function LeeWuhMascot({
 
       <div className="relative">
         <Image
-          src={LEE_WUH_BRAND.assetPath}
+          src={useHeroAsset ? LEE_WUH_BRAND.heroAssetPath : LEE_WUH_BRAND.assetPath}
           alt="Lee-Wuh, the LWA mascot"
-          width={720}
-          height={720}
+          width={useHeroAsset ? 1280 : 720}
+          height={useHeroAsset ? 720 : 720}
           className={cn(
             sizeClass[size],
             "select-none object-contain drop-shadow-[0_0_28px_rgba(139,61,255,0.35)]",
+            useHeroAsset && "rounded-lg",
           )}
-          priority={size === "hero"}
+          priority={size === "hero" || useHeroAsset}
         />
 
         {state === "success" || state === "overlord" ? (

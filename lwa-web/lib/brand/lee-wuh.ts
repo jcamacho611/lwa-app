@@ -18,7 +18,9 @@ export const LEE_WUH_BRAND = {
   productName: "LWA",
   role: "The Last Creator",
   tagline: "Create. Inspire. Takeover.",
+  heroTagline: "The final boss of lazy content",
   assetPath: "/brand/lee-wuh-mascot.png",
+  heroAssetPath: "/brand/lee-wuh-hero-16x9.png",
   colors: {
     black: "#050505",
     charcoal: "#111016",
