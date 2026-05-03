@@ -2480,3 +2480,109 @@ def enrich_clip_quality_metadata(clip: ClipResult, platform: str | None = None) 
     # Merge updates with existing clip data
     all_updates = {**render_updates, **caption_updates}
     return clip.model_copy(update=all_updates)
+
+
+# =========================
+# SLICE 7: CAMPAIGN MODE HELPERS
+# =========================
+
+CAMPAIGN_ROLE_LABELS: dict[str, str] = {
+    "lead_clip": "Lead",
+    "trust_clip": "Trust",
+    "sales_clip": "Sales",
+    "educational_clip": "Teach",
+    "controversy_clip": "Debate",
+    "retargeting_clip": "Retarget",
+    "community_clip": "Community",
+}
+
+DEFAULT_CTA_BY_ROLE: dict[str, str] = {
+    "lead_clip": "Comment if you want the full breakdown.",
+    "trust_clip": "Save this before you plan your next post.",
+    "sales_clip": "Start with LWA and turn one source into a campaign.",
+    "educational_clip": "Save this and use it on your next clip.",
+    "controversy_clip": "Drop your take in the comments.",
+    "retargeting_clip": "Come back and export the full campaign pack.",
+    "community_clip": "Tag someone who needs this system.",
+}
+
+
+def assign_campaign_role(clip: ClipResult, index: int = 0, platform: str | None = None) -> dict[str, object]:
+    """
+    Assign a campaign role to a clip based on its content and position.
+    Returns update dict to apply to clip.
+    """
+    # Combine relevant text for analysis
+    text = " ".join(
+        str(value or "")
+        for value in [clip.title, clip.hook, clip.caption]
+    ).lower()
+
+    # Determine role based on content signals
+    if index == 0 or any(word in text for word in ["stop", "watch", "truth", "nobody", "first", "best"]):
+        role = "lead_clip"
+        stage = "awareness"
+        reason = "Strong opener suited to start the posting sequence."
+    elif any(word in text for word in ["proof", "result", "case", "why", "because", "trust"]):
+        role = "trust_clip"
+        stage = "consideration"
+        reason = "Builds credibility after the lead clip."
+    elif any(word in text for word in ["buy", "book", "join", "offer", "client", "pay", "revenue", "sale"]):
+        role = "sales_clip"
+        stage = "conversion"
+        reason = "Contains action or offer language."
+    elif any(word in text for word in ["how", "learn", "step", "teach", "guide", "tutorial"]):
+        role = "educational_clip"
+        stage = "consideration"
+        reason = "Explains or teaches a useful idea."
+    elif any(word in text for word in ["wrong", "mistake", "controversial", "unpopular", "hot take"]):
+        role = "controversy_clip"
+        stage = "awareness"
+        reason = "Likely to trigger debate or comments."
+    else:
+        role = "community_clip"
+        stage = "engagement"
+        reason = "Best used to keep the audience interacting."
+
+    # Determine post order
+    post_order = clip.post_rank or clip.rank or clip.suggested_post_order or (index + 1)
+
+    # Get default CTA for role
+    default_cta = DEFAULT_CTA_BY_ROLE.get(role, "Follow for the next part.")
+
+    return {
+        "campaign_role": clip.campaign_role or role,
+        "campaign_reason": clip.campaign_reason or reason,
+        "funnel_stage": clip.funnel_stage or stage,
+        "suggested_post_order": clip.suggested_post_order or post_order,
+        "suggested_platform": clip.suggested_platform or clip.recommended_platform or platform or clip.target_platform or "tiktok",
+        "suggested_caption_style": clip.suggested_caption_style or clip.caption_style or "fast_punchy",
+        "suggested_cta": clip.suggested_cta or clip.cta_suggestion or default_cta,
+    }
+
+
+def enrich_campaign_metadata(clips: list[ClipResult], platform: str | None = None) -> list[ClipResult]:
+    """
+    Enrich all clips with campaign metadata.
+    Apply after quality metadata enrichment.
+    """
+    # Sort by post_rank/rank to determine sequence
+    ranked = sorted(
+        clips,
+        key=lambda clip: (
+            clip.post_rank or clip.rank or clip.suggested_post_order or 999,
+            -(clip.score or clip.confidence_score or 0),
+        ),
+    )
+
+    # Create mapping of clip to index
+    clip_indices = {id(clip): index for index, clip in enumerate(ranked)}
+
+    # Apply campaign role to each clip
+    enriched: list[ClipResult] = []
+    for clip in clips:
+        index = clip_indices.get(id(clip), 0)
+        campaign_updates = assign_campaign_role(clip, index, platform)
+        enriched.append(clip.model_copy(update=campaign_updates))
+
+    return enriched
