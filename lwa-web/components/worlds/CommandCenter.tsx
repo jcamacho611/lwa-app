@@ -9,12 +9,14 @@ import { StatPill } from "./StatPill";
 import { CreativeEnginesPanel } from "../command-center/CreativeEnginesPanel";
 import { CharacterSystemPanel } from "../command-center/CharacterSystemPanel";
 import { GameWorldPanel } from "../command-center/GameWorldPanel";
+import { VideoOSPanel } from "../command-center/VideoOSPanel";
 
 export function CommandCenter() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "🏠" },
+    { id: "video", label: "Video OS", icon: "🎬" },
     { id: "creative", label: "Creative Engines", icon: "🎨" },
     { id: "character", label: "Character System", icon: "🤖" },
     { id: "game", label: "Game World", icon: "🌍" }
@@ -22,6 +24,8 @@ export function CommandCenter() {
 
   const renderActiveTab = () => {
     switch (activeTab) {
+      case "video":
+        return <VideoOSPanel />;
       case "creative":
         return <CreativeEnginesPanel />;
       case "character":
