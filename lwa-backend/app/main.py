@@ -18,6 +18,8 @@ from .api.routes.game_world import router as game_world_router
 from .api.routes.marketplace import router as marketplace_router
 from .api.routes.campaign_export import router as campaign_export_router
 from .api.routes.feedback_learning import router as feedback_learning_router
+from .api.routes.proof_vault import router as proof_vault_router
+from .api.routes.style_memory import router as style_memory_router
 from .api.routes.safety import router as safety_router
 from .api.routes.captions import router as captions_router
 from .api.routes.audio import router as audio_router
@@ -88,6 +90,8 @@ def create_app() -> FastAPI:
     app.include_router(marketplace_router)
     app.include_router(campaign_export_router)
     app.include_router(feedback_learning_router)
+    app.include_router(proof_vault_router)
+    app.include_router(style_memory_router)
     app.include_router(safety_router)
     app.include_router(captions_router)
     app.include_router(audio_router)

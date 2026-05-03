@@ -16,6 +16,7 @@ import { CreativeEnginesPanel } from "../command-center/CreativeEnginesPanel";
 import { VideoOSPanel } from "../command-center/VideoOSPanel";
 import { SourceTimelinePanel } from "../command-center/SourceTimelinePanel";
 import { BatchReviewPanel } from "../command-center/BatchReviewPanel";
+import { ProofVaultStyleMemoryPanel } from "../command-center/ProofVaultStyleMemoryPanel";
 
 export function CommandCenter() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -31,6 +32,7 @@ export function CommandCenter() {
     { id: "video", label: "Video OS", icon: "🎬" },
     { id: "timeline", label: "Source Timeline", icon: "📁" },
     { id: "batch", label: "Batch Review", icon: "📋" },
+    { id: "proofvault", label: "Proof Vault", icon: "🏆" },
     { id: "safety", label: "Safety & Rights", icon: "🛡️" },
     { id: "captions", label: "Captions", icon: "💬" },
     { id: "audio", label: "Audio & Music", icon: "🎵" }
@@ -56,6 +58,8 @@ export function CommandCenter() {
         return <SourceTimelinePanel />;
       case "batch":
         return <BatchReviewPanel />;
+      case "proofvault":
+        return <ProofVaultStyleMemoryPanel />;
       case "safety":
         return <SafetyRightsCostPanel />;
       case "captions":
