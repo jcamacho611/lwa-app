@@ -21,3 +21,5 @@ poc/source-matrix-results.*
 DerivedData/
 *.xcuserstate
 xcuserdata/
+.env.local
+.env.local
