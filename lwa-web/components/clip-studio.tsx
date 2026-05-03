@@ -98,6 +98,9 @@ import {
 } from "../lib/queue";
 import { GENERATOR_COPY, HERO_COPY, RESULTS_COPY, rewriteSurfaceLabel } from "../lib/brand-voice";
 import { buildAllPackagesText, buildClipPackageText, getClipScore, isRenderedClip } from "../lib/clip-utils";
+import { LeeWuhEmptyState } from "./brand/LeeWuhEmptyState";
+import { LeeWuhLoadingState } from "./brand/LeeWuhLoadingState";
+import { LeeWuhTip } from "./brand/LeeWuhTip";
 import type { CharacterActionId } from "../lib/character-intelligence";
 import { getPlanSurface } from "../lib/plans";
 import { RESULT_COPY } from "../lib/result-copy";
@@ -1988,7 +1991,15 @@ export function ClipStudio({
           </button>
         </div>
 
-        {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} onCancel={handleCancelGeneration} /> : null}
+        {isLoading ? (
+          <LeeWuhLoadingState
+            title="Lee-Wuh is finding your strongest moments..."
+            message="Scanning hooks, silence, energy, and viral structure."
+            progress={(loadingStageIndex + 1) / loadingStages.length * 100}
+            showProgress={true}
+            size="md"
+          />
+        ) : null}
 
         {liveStreamWarning ? (
           <div className="rounded-[18px] border border-amber-300/30 bg-amber-300/10 px-5 py-4">
@@ -2088,7 +2099,15 @@ export function ClipStudio({
               </button>
             </div>
 
-            {isLoading ? <LoadingSequence stages={loadingStages} activeIndex={loadingStageIndex} onCancel={handleCancelGeneration} /> : null}
+            {isLoading ? (
+          <LeeWuhLoadingState
+            title="Lee-Wuh is finding your strongest moments..."
+            message="Scanning hooks, silence, energy, and viral structure."
+            progress={(loadingStageIndex + 1) / loadingStages.length * 100}
+            showProgress={true}
+            size="md"
+          />
+        ) : null}
 
             {liveStreamWarning ? (
               <div className="rounded-[18px] border border-amber-300/30 bg-amber-300/10 px-5 py-4">
@@ -2548,11 +2567,11 @@ export function ClipStudio({
   ) : null;
 
   const emptyGeneratorState = !activeResult && !isLoading && showGenerator ? (
-    <section className="glass-panel rounded-[28px] p-6 sm:p-8">
-      <p className="section-kicker">Ready</p>
-      <h3 className="mt-3 text-2xl font-semibold text-ink sm:text-3xl">Your next pack lands here</h3>
-      <p className="mt-3 max-w-2xl text-sm leading-7 text-ink/60">{GENERATOR_COPY.outputIdle}</p>
-    </section>
+    <LeeWuhEmptyState
+      title="No clips yet"
+      message="Feed Lee-Wuh a source. Paste a video URL and let the clipping engine find the best short-form moments."
+      size="lg"
+    />
   ) : null;
 
   return (
