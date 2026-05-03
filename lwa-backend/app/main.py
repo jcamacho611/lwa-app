@@ -9,6 +9,8 @@ from .api.routes.ai_costs import router as ai_costs_router
 from .api.routes.auth import router as auth_router
 from .api.routes.opportunity_engine import router as opportunity_engine_router
 from .api.routes.proof_graph import router as proof_graph_router
+from .api.routes.render_engine import router as render_engine_router
+from .api.routes.video_jobs import router as video_jobs_router
 from .api.routes.batches import router as batches_router
 from .api.routes.capabilities import router as capabilities_router
 from .api.routes.campaigns import router as campaigns_router
@@ -67,6 +69,8 @@ def create_app() -> FastAPI:
     app.include_router(ai_costs_router)
     app.include_router(opportunity_engine_router)
     app.include_router(proof_graph_router)
+    app.include_router(render_engine_router)
+    app.include_router(video_jobs_router)
     app.include_router(generate_router)
     app.include_router(generation_router)
     app.include_router(capabilities_router)
