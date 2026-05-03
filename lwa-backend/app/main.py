@@ -12,6 +12,15 @@ from .api.routes.proof_graph import router as proof_graph_router
 from .api.routes.render_engine import router as render_engine_router
 from .api.routes.source_assets import router as source_assets_router
 from .api.routes.video_jobs import router as video_jobs_router
+from .api.routes.creative_engines import router as creative_engines_router
+from .api.routes.character_system import router as character_system_router
+from .api.routes.game_world import router as game_world_router
+from .api.routes.marketplace import router as marketplace_router
+from .api.routes.campaign_export import router as campaign_export_router
+from .api.routes.feedback_learning import router as feedback_learning_router
+from .api.routes.safety import router as safety_router
+from .api.routes.captions import router as captions_router
+from .api.routes.audio import router as audio_router
 from .api.routes.batches import router as batches_router
 from .api.routes.capabilities import router as capabilities_router
 from .api.routes.campaigns import router as campaigns_router
@@ -73,6 +82,15 @@ def create_app() -> FastAPI:
     app.include_router(render_engine_router)
     app.include_router(source_assets_router)
     app.include_router(video_jobs_router)
+    app.include_router(creative_engines_router)
+    app.include_router(character_system_router)
+    app.include_router(game_world_router)
+    app.include_router(marketplace_router)
+    app.include_router(campaign_export_router)
+    app.include_router(feedback_learning_router)
+    app.include_router(safety_router)
+    app.include_router(captions_router)
+    app.include_router(audio_router)
     app.include_router(generate_router)
     app.include_router(generation_router)
     app.include_router(capabilities_router)

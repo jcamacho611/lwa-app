@@ -64,6 +64,12 @@ export default function CinematicHero() {
             >
               Meet the World
             </Link>
+            <Link
+              href="/company-os"
+              className="inline-flex h-12 items-center justify-center rounded-[10px] bg-[#1D1D24] px-5 text-base font-medium text-[#F5F1E8] ring-1 ring-[#2E2E38] transition-all duration-200 hover:-translate-y-px hover:bg-[#24242E]"
+            >
+              Open Company OS
+            </Link>
           </div>
 
           <div className="mt-14 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">

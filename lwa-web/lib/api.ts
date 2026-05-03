@@ -579,3 +579,315 @@ export async function createSourceAssetsBatch(token: string, payloads: SourceAss
     body: JSON.stringify(payloads),
   });
 }
+
+// Marketplace API helpers
+export async function getMarketplaceProducts(limit = 50, offset = 0, category?: string) {
+  return jsonRequest<{
+    success: boolean;
+    products: Array<{
+      id: string;
+      name: string;
+      description: string;
+      product_type: string;
+      price: number;
+      creator_name: string;
+      status: string;
+      created_at: string;
+      download_count: number;
+      rating: number;
+      review_count: number;
+      preview_url?: string;
+      asset_urls: string[];
+    }>;
+  }>(`/api/v1/marketplace/products?limit=${limit}&offset=${offset}${category ? `&category=${category}` : ''}`);
+}
+
+export async function getMarketplaceJobs(limit = 50, offset = 0, status?: string) {
+  return jsonRequest<{
+    success: boolean;
+    jobs: Array<{
+      id: string;
+      title: string;
+      description: string;
+      campaign_type: string;
+      budget: number;
+      status: string;
+      created_at: string;
+      deadline?: string;
+      requirements: string[];
+      applicant_count: number;
+      creator_profile?: {
+        display_name: string;
+        rating: number;
+      };
+    }>;
+  }>(`/api/v1/marketplace/jobs?limit=${limit}&offset=${offset}${status ? `&status=${status}` : ''}`);
+}
+
+export async function getMarketplaceProfiles(limit = 50, offset = 0) {
+  return jsonRequest<{
+    success: boolean;
+    profiles: Array<{
+      id: string;
+      display_name: string;
+      bio: string;
+      specialties: string[];
+      rating: number;
+      completed_jobs: number;
+      earnings: {
+        approved: number;
+        pending: number;
+      };
+      status: string;
+    }>;
+  }>(`/api/v1/marketplace/profiles?limit=${limit}&offset=${offset}`);
+}
+
+// Campaign Export API helpers
+export async function getCampaigns(limit = 50, offset = 0) {
+  return jsonRequest<{
+    success: boolean;
+    campaigns: Array<{
+      id: string;
+      name: string;
+      description: string;
+      platforms: string[];
+      status: string;
+      created_at: string;
+      total_clips: number;
+      exported_clips: number;
+      export_settings: {
+        formats: string[];
+        quality: string;
+        include_captions: boolean;
+        include_thumbnails: boolean;
+      };
+    }>;
+  }>(`/api/v1/campaign-export/campaigns?limit=${limit}&offset=${offset}`);
+}
+
+export async function getExportPackages(limit = 50, offset = 0) {
+  return jsonRequest<{
+    success: boolean;
+    packages: Array<{
+      id: string;
+      campaign_id: string;
+      package_name: string;
+      status: string;
+      created_at: string;
+      completed_at?: string;
+      file_count: number;
+      total_size: number;
+      download_url?: string;
+      formats: string[];
+      quality: string;
+    }>;
+  }>(`/api/v1/campaign-export/packages?limit=${limit}&offset=${offset}`);
+}
+
+// Feedback Learning API helpers
+export async function getFeedbackInsights(limit = 50, offset = 0, campaignId?: string) {
+  return jsonRequest<{
+    success: boolean;
+    insights: Array<{
+      id: string;
+      campaign_id?: string;
+      insight_type: string;
+      title: string;
+      description: string;
+      confidence_score: number;
+      impact_level: string;
+      created_at: string;
+      applied: boolean;
+      recommendations: string[];
+    }>;
+  }>(`/api/v1/feedback-learning/insights?limit=${limit}&offset=${offset}${campaignId ? `&campaign_id=${campaignId}` : ''}`);
+}
+
+export async function getLearningMetrics() {
+  return jsonRequest<{
+    success: boolean;
+    metrics: Array<{
+      metric_name: string;
+      current_value: number;
+      previous_value: number;
+      change_percentage: number;
+      trend: string;
+      last_updated: string;
+    }>;
+  }>("/api/v1/feedback-learning/metrics");
+}
+
+// Safety API helpers
+export async function runSafetyCheck(contentType: string, contentData: any, platform: string) {
+  return jsonRequest<{
+    success: boolean;
+    safety: {
+      overall_safe: boolean;
+      safety_score: number;
+      issues: any[];
+      warnings: any[];
+      recommendations: string[];
+    };
+    rights?: {
+      rights_clear: boolean;
+      rights_score: number;
+      issues: any[];
+      warnings: any[];
+      clearance_status: string;
+      attribution_required: boolean;
+    };
+    cost?: {
+      estimated_cost: number;
+      cost_breakdown: {
+        rendering: number;
+        storage: number;
+        bandwidth: number;
+        platform_fees: number;
+      };
+      cost_factors: string[];
+    };
+  }>("/api/v1/safety/check", {
+    method: "POST",
+    body: JSON.stringify({
+      content_type: contentType,
+      content_data: contentData,
+      platform: platform,
+      check_rights: true,
+      check_cost: true
+    }),
+  });
+}
+
+// Caption API helpers
+export async function generateCaptions(videoId: string, language = "en", style = "standard") {
+  return jsonRequest<{
+    success: boolean;
+    video_id: string;
+    language: string;
+    style: string;
+    captions: Array<{
+      id: string;
+      start_time: number;
+      end_time: number;
+      text: string;
+      confidence: number;
+    }>;
+    total_duration: number;
+    caption_count: number;
+    generated_at: string;
+  }>("/api/v1/captions/generate", {
+    method: "POST",
+    body: JSON.stringify({
+      video_id: videoId,
+      language: language,
+      style: style,
+      include_timestamps: true,
+      max_line_length: 42
+    }),
+  });
+}
+
+export async function getVideoCaptions(videoId: string, language = "en") {
+  return jsonRequest<{
+    success: boolean;
+    video_id: string;
+    language: string;
+    captions: Array<{
+      id: string;
+      start_time: number;
+      end_time: number;
+      text: string;
+      style: string;
+      language: string;
+    }>;
+  }>(`/api/v1/captions/videos/${videoId}/captions?language=${language}`);
+}
+
+// Audio API helpers
+export async function generateAudio(videoId: string, audioType: string, style: string, mood = "energetic") {
+  return jsonRequest<{
+    success: boolean;
+    video_id: string;
+    audio_type: string;
+    segments: Array<{
+      id: string;
+      type: string;
+      start_time: number;
+      end_time: number;
+      style: string;
+      mood: string;
+      volume: number;
+      file_url: string;
+      duration: number;
+    }>;
+    total_duration: number;
+    generated_at: string;
+  }>("/api/v1/audio/generate", {
+    method: "POST",
+    body: JSON.stringify({
+      video_id: videoId,
+      audio_type: audioType,
+      style: style,
+      mood: mood,
+      volume: 0.8
+    }),
+  });
+}
+
+export async function generateMusic(videoId: string, genre: string, mood = "upbeat", intensity = "medium") {
+  return jsonRequest<{
+    success: boolean;
+    music_track: {
+      id: string;
+      video_id: string;
+      genre: string;
+      tempo: number;
+      mood: string;
+      intensity: string;
+      duration: number;
+      file_url: string;
+      waveform_url: string;
+      instruments: string[];
+      key_signature: string;
+      time_signature: string;
+      generated_at: string;
+    };
+  }>("/api/v1/audio/music/generate", {
+    method: "POST",
+    body: JSON.stringify({
+      video_id: videoId,
+      genre: genre,
+      mood: mood,
+      intensity: intensity
+    }),
+  });
+}
+
+export async function synthesizeVoice(text: string, voiceType: string, emotion = "neutral") {
+  return jsonRequest<{
+    success: boolean;
+    voice_audio: {
+      id: string;
+      text: string;
+      voice_type: string;
+      speed: number;
+      pitch: number;
+      emotion: string;
+      duration: number;
+      file_url: string;
+      sample_rate: number;
+      bitrate: number;
+      synthesized_at: string;
+    };
+  }>("/api/v1/audio/voice/synthesize", {
+    method: "POST",
+    body: JSON.stringify({
+      text: text,
+      voice_type: voiceType,
+      speed: 1.0,
+      pitch: 1.0,
+      emotion: emotion
+    }),
+  });
+}
