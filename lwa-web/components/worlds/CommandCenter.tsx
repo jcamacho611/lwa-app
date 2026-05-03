@@ -10,6 +10,7 @@ import { CreativeEnginesPanel } from "../command-center/CreativeEnginesPanel";
 import { CharacterSystemPanel } from "../command-center/CharacterSystemPanel";
 import { GameWorldPanel } from "../command-center/GameWorldPanel";
 import { VideoOSPanel } from "../command-center/VideoOSPanel";
+import { SourceTimelinePanel } from "../command-center/SourceTimelinePanel";
 
 export function CommandCenter() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -17,6 +18,7 @@ export function CommandCenter() {
   const tabs = [
     { id: "overview", label: "Overview", icon: "🏠" },
     { id: "video", label: "Video OS", icon: "🎬" },
+    { id: "source", label: "Source & Timeline", icon: "📁" },
     { id: "creative", label: "Creative Engines", icon: "🎨" },
     { id: "character", label: "Character System", icon: "🤖" },
     { id: "game", label: "Game World", icon: "🌍" }
@@ -26,6 +28,8 @@ export function CommandCenter() {
     switch (activeTab) {
       case "video":
         return <VideoOSPanel />;
+      case "source":
+        return <SourceTimelinePanel />;
       case "creative":
         return <CreativeEnginesPanel />;
       case "character":
