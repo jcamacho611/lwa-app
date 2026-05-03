@@ -579,3 +579,295 @@ export async function createSourceAssetsBatch(token: string, payloads: SourceAss
     body: JSON.stringify(payloads),
   });
 }
+
+// Video Job API (if not already present)
+export interface VideoJobRequest {
+  job_type: string;
+  prompt?: string;
+  input_urls?: string[];
+  source_asset_ids?: string[];
+  aspect_ratio?: string;
+  duration_seconds?: number;
+  resolution?: string;
+  style_preset?: string;
+}
+
+export interface VideoJob {
+  job_id: string;
+  user_id: string;
+  job_type: string;
+  provider: string;
+  status: string;
+  prompt?: string;
+  input_urls?: string[];
+  source_asset_ids?: string[];
+  aspect_ratio: string;
+  duration_seconds?: number;
+  resolution?: string;
+  style_preset?: string;
+  cost_estimate_usd?: number;
+  progress?: number;
+  preview_url?: string;
+  output_url?: string;
+  thumbnail_url?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VideoJobListResponse {
+  jobs: VideoJob[];
+  total_count: number;
+}
+
+export async function createVideoJob(token: string, payload: VideoJobRequest) {
+  return jsonRequest<VideoJob>("/api/video-jobs", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getVideoJob(token: string, jobId: string) {
+  return jsonRequest<VideoJob>(`/api/video-jobs/${jobId}`, {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function listVideoJobs(token: string) {
+  const payload = await jsonRequest<VideoJobListResponse>("/api/video-jobs", {
+    headers: authHeaders(token, false),
+  });
+  return payload;
+}
+
+export async function cancelVideoJob(token: string, jobId: string) {
+  return jsonRequest<{ message: string; job_id: string }>(`/api/video-jobs/${jobId}/cancel`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
+export async function getVideoJobCapabilities(token: string) {
+  return jsonRequest<{
+    job_types: string[];
+    providers: string[];
+    aspect_ratios: string[];
+    resolutions: string[];
+    max_duration_seconds: number;
+    features: Record<string, boolean>;
+  }>("/api/video-jobs/capabilities", {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function estimateVideoJobCost(token: string, payload: VideoJobRequest) {
+  return jsonRequest<{
+    estimated_cost_usd: number;
+    currency: string;
+    breakdown: Record<string, number>;
+  }>("/api/video-jobs/estimate-cost", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+// Campaign Export API (placeholder for future)
+export interface CampaignExportRequest {
+  platform: string;
+  timeline_id?: string;
+  render_job_ids?: string[];
+  style_preset?: string;
+  include_cta?: boolean;
+  include_captions?: boolean;
+}
+
+export interface CampaignExport {
+  export_id: string;
+  user_id: string;
+  platform: string;
+  status: string;
+  manifest: {
+    title: string;
+    captions: string[];
+    ctas: string[];
+    hashtags: string[];
+    posting_notes: string[];
+  };
+  asset_refs: string[];
+  created_at: string;
+}
+
+export async function createCampaignExport(token: string, payload: CampaignExportRequest) {
+  return jsonRequest<CampaignExport>("/api/campaign-exports", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+// Feedback API (placeholder for future)
+export interface FeedbackRequest {
+  target_type: string;
+  target_id: string;
+  feedback_type: string;
+  outcome_type?: string;
+  outcome_value?: number;
+  notes?: string;
+}
+
+export async function createFeedback(token: string, payload: FeedbackRequest) {
+  return jsonRequest<{ message: string; feedback_id: string }>("/api/feedback-learning/feedback", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+// Timeline Composer API
+export interface TimelineComposerRequest {
+  source_asset_ids?: string[];
+  clip_ids?: string[];
+  input_urls?: string[];
+  prompt?: string;
+  goal?: string;
+  platform?: string;
+  aspect_ratio?: string;
+  duration_seconds?: number;
+  style_preset?: string;
+  caption_style?: string;
+  music_style?: string;
+  include_cta?: boolean;
+  include_hook?: boolean;
+  include_broll?: boolean;
+  include_captions?: boolean;
+}
+
+export interface Timeline {
+  timeline_id: string;
+  user_id: string;
+  status: string;
+  title: string;
+  strategy_summary: string;
+  total_duration_seconds: number;
+  aspect_ratio: string;
+  render_settings: {
+    aspect_ratio: string;
+    resolution: string;
+    frame_rate: number;
+    quality: string;
+    format: string;
+  };
+  tracks: Array<{
+    track_id: string;
+    track_type: string;
+    segments: Array<{
+      segment_id: string;
+      track_type: string;
+      start_time: number;
+      duration: number;
+      content?: string;
+      style?: string;
+      asset_ref?: {
+        asset_id?: string;
+        asset_type?: string;
+        source_url?: string;
+        start_time: number;
+        end_time?: number;
+        duration?: number;
+      };
+    }>;
+    muted: boolean;
+    volume: number;
+  }>;
+  caption_layer?: {
+    style?: string;
+    position: string;
+    timing: Array<{
+      start: number;
+      end: number;
+      text: string;
+    }>;
+  };
+  audio_layers: Array<{
+    track_type: string;
+    volume: number;
+    metadata?: Record<string, any>;
+  }>;
+  overlay_layers: Array<{
+    overlay_type: string;
+    position: string;
+    opacity: number;
+    content?: string;
+  }>;
+  warnings: string[];
+  recommended_render_job_payload?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TimelineListResponse {
+  timelines: Timeline[];
+  total_count: number;
+}
+
+export interface SendToRenderResponse {
+  success: boolean;
+  timeline_id: string;
+  render_job_payload?: Record<string, any>;
+  message: string;
+  error?: string;
+}
+
+export async function composeTimeline(token: string, payload: TimelineComposerRequest) {
+  return jsonRequest<Timeline>("/api/timeline-composer/compose", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getTimeline(token: string, timelineId: string) {
+  return jsonRequest<Timeline>(`/api/timeline-composer/${timelineId}`, {
+    headers: authHeaders(token, false),
+  });
+}
+
+export async function listTimelines(token: string) {
+  const payload = await jsonRequest<TimelineListResponse>("/api/timeline-composer", {
+    headers: authHeaders(token, false),
+  });
+  return payload;
+}
+
+export async function deleteTimeline(token: string, timelineId: string) {
+  return jsonRequest<{ message: string; timeline_id: string }>(`/api/timeline-composer/${timelineId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
+export async function sendTimelineToRender(token: string, timelineId: string) {
+  return jsonRequest<SendToRenderResponse>(`/api/timeline-composer/${timelineId}/send-to-render`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
+export async function getTimelineComposerCapabilities(token: string) {
+  return jsonRequest<{
+    track_types: string[];
+    aspect_ratios: string[];
+    platforms: string[];
+    style_presets: string[];
+    caption_styles: string[];
+    music_styles: string[];
+    max_duration_seconds: number;
+    default_duration_seconds: number;
+    default_aspect_ratio: string;
+    features: Record<string, boolean>;
+  }>("/api/timeline-composer/capabilities", {
+    headers: authHeaders(token, false),
+  });
+}
