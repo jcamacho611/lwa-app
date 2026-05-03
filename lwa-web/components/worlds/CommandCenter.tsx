@@ -11,6 +11,9 @@ import { CharacterSystemPanel } from "../command-center/CharacterSystemPanel";
 import { GameWorldPanel } from "../command-center/GameWorldPanel";
 import { VideoOSPanel } from "../command-center/VideoOSPanel";
 import { SourceTimelinePanel } from "../command-center/SourceTimelinePanel";
+import { BatchReviewPanel } from "../command-center/BatchReviewPanel";
+import { MarketplacePanel } from "../command-center/MarketplacePanel";
+import { CampaignExportPanel } from "../command-center/CampaignExportPanel";
 
 export function CommandCenter() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -19,6 +22,9 @@ export function CommandCenter() {
     { id: "overview", label: "Overview", icon: "🏠" },
     { id: "video", label: "Video OS", icon: "🎬" },
     { id: "source", label: "Source & Timeline", icon: "📁" },
+    { id: "batch", label: "Batch Review", icon: "📋" },
+    { id: "marketplace", label: "Marketplace", icon: "🛒" },
+    { id: "campaign", label: "Campaign Export", icon: "📤" },
     { id: "creative", label: "Creative Engines", icon: "🎨" },
     { id: "character", label: "Character System", icon: "🤖" },
     { id: "game", label: "Game World", icon: "🌍" }
@@ -30,6 +36,12 @@ export function CommandCenter() {
         return <VideoOSPanel />;
       case "source":
         return <SourceTimelinePanel />;
+      case "batch":
+        return <BatchReviewPanel />;
+      case "marketplace":
+        return <MarketplacePanel />;
+      case "campaign":
+        return <CampaignExportPanel />;
       case "creative":
         return <CreativeEnginesPanel />;
       case "character":
