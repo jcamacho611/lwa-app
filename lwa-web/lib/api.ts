@@ -1162,3 +1162,97 @@ export type EventStatusResponse = {
 export async function getEventTrackingStatus() {
   return jsonRequest<EventStatusResponse>("/api/v1/events/status");
 }
+
+// =========================
+// ENTITLEMENT / CREDITS API
+// =========================
+
+export type FeatureCost = {
+  clip_generation: number;
+  campaign_export: number;
+  proof_vault_save: number;
+  style_feedback: number;
+  director_brain_score: number;
+  video_render: number;
+  caption_export: number;
+  bulk_operation: number;
+};
+
+export type EntitlementCheckRequest = {
+  feature: string;
+};
+
+export type EntitlementCheckResponse = {
+  success: boolean;
+  user_id: string;
+  feature: string;
+  cost: number;
+  has_access: boolean;
+  credits_required: number;
+  credits_available: number;
+  credits_after: number;
+  unlocked: boolean;
+  free_mode_active: boolean;
+  message: string;
+};
+
+export async function checkEntitlement(feature: string) {
+  return jsonRequest<EntitlementCheckResponse>("/api/v1/entitlements/check", {
+    method: "POST",
+    body: JSON.stringify({ feature }),
+  });
+}
+
+export type SpendCreditRequest = {
+  feature: string;
+  description?: string;
+};
+
+export type SpendCreditResponse = {
+  success: boolean;
+  user_id: string;
+  feature: string;
+  cost: number;
+  credits_remaining: number;
+  credits_spent: number;
+  free_mode: boolean;
+  transaction_id: string;
+  message: string;
+};
+
+export async function spendCredit(request: SpendCreditRequest) {
+  return jsonRequest<SpendCreditResponse>("/api/v1/entitlements/spend", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+export type EntitlementStatusResponse = {
+  success: boolean;
+  user_id: string;
+  credits: {
+    remaining: number;
+    total_ever: number;
+  };
+  unlocked_features: string[];
+  free_mode_active: boolean;
+  feature_costs: FeatureCost;
+  recent_transactions: {
+    id: string;
+    amount: number;
+    type: string;
+    feature: string;
+    description: string;
+    created_at: string;
+  }[];
+};
+
+export async function getEntitlementStatus() {
+  return jsonRequest<EntitlementStatusResponse>("/api/v1/entitlements/status");
+}
+
+export async function getFeatureCosts() {
+  return jsonRequest<{ success: boolean; feature_costs: FeatureCost; free_mode_active: boolean }>(
+    "/api/v1/entitlements/feature-costs"
+  );
+}
