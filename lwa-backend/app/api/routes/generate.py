@@ -30,6 +30,7 @@ from ...services.export_bundle import create_export_bundle
 from ...services.source_contract import classify_upload_source_type, normalize_source_type
 from ...services.source_ingest import infer_source_type
 from app.services.source_errors import classify_source_failure, source_failure_detail
+from ...services.deterministic_clip_engine import generate_clips_offline
 
 router = APIRouter()
 settings = get_settings()
@@ -428,3 +429,84 @@ async def enforce_generation_throttle(*, entitlement) -> None:
             metadata={"reason": "generation_throttle"},
         )
         raise
+
+
+# =============================================================================
+# DETERMINISTIC TEXT-BASED GENERATION (NO AI APIs)
+# =============================================================================
+
+class TextGenerateRequest(BaseModel):
+    text: str
+    campaign_goal: Optional[str] = None
+    target_platforms: List[str] = ["tiktok", "youtube_shorts", "instagram_reels"]
+    min_clips: int = 3
+
+
+class TextGenerateResponse(BaseModel):
+    success: bool
+    job_id: str
+    clips: List[dict]
+    source_type: str = "text"
+    clips_generated: int
+    strategy_only: bool = True
+
+
+@router.post("/generate-text", response_model=TextGenerateResponse)
+async def generate_from_text(
+    request: TextGenerateRequest,
+    authorization: str = Header(default=""),
+):
+    """
+    Generate clips from plain text using deterministic heuristics.
+    NO AI APIs required - fully offline, always returns results.
+    """
+    # Authenticate
+    entitlement = await resolve_entitlement(settings, authorization)
+    if not entitlement or not entitlement.subject:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Enforce throttle
+    await enforce_generation_throttle(entitlement=entitlement)
+
+    # Validate input
+    if not request.text or len(request.text.strip()) < 20:
+        raise HTTPException(status_code=422, detail="Text must be at least 20 characters")
+
+    # Generate using deterministic engine
+    clips = generate_clips_offline(request.text, min_clips=request.min_clips)
+
+    # Create job entry
+    job_id = f"text_{int(time.time())}_{random.randint(1000, 9999)}"
+    job_store.set(
+        job_id,
+        {
+            "status": "completed",
+            "progress": 100,
+            "output": clips,
+            "entitlement": entitlement.dict(),
+        },
+    )
+
+    # Emit event
+    emit_event(
+        settings=settings,
+        event="clips_generated",
+        plan_code=entitlement.plan.code,
+        subject_source=entitlement.subject_source,
+        status="success",
+        metadata={
+            "job_id": job_id,
+            "clips_count": len(clips),
+            "source_type": "text",
+            "method": "deterministic",
+        },
+    )
+
+    return TextGenerateResponse(
+        success=True,
+        job_id=job_id,
+        clips=clips,
+        source_type="text",
+        clips_generated=len(clips),
+        strategy_only=True,
+    )

@@ -1083,6 +1083,50 @@ export async function getDirectorBrainStatus() {
 }
 
 // =========================
+// DETERMINISTIC TEXT GENERATION API (No AI Required)
+// =========================
+
+export type TextGenerateRequest = {
+  text: string;
+  campaign_goal?: string | null;
+  target_platforms?: string[];
+  min_clips?: number;
+};
+
+export type DeterministicClip = {
+  clip_id: string;
+  hook: string;
+  caption: string;
+  text: string;
+  ai_score: number;
+  why_this_matters: string;
+  cta: string;
+  thumbnail_text: string;
+  duration_seconds: number;
+  render_status: string;
+};
+
+export type TextGenerateResponse = {
+  success: boolean;
+  job_id: string;
+  clips: DeterministicClip[];
+  source_type: string;
+  clips_generated: number;
+  strategy_only: boolean;
+};
+
+/**
+ * Generate clips from plain text using deterministic heuristics.
+ * NO AI APIs required - fully offline, always returns results.
+ */
+export async function generateFromText(request: TextGenerateRequest) {
+  return jsonRequest<TextGenerateResponse>("/api/v1/generate-text", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+// =========================
 // EVENT TRACKING API
 // =========================
 
@@ -1643,3 +1687,4 @@ export async function getVideoJobs() {
 export async function getSourceAssets() {
   return jsonRequest<SourceAssetListResponse>("/api/v1/source-assets");
 }
+

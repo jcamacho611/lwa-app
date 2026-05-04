@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getMarketplaceProducts } from "../../lib/api";
 
 interface MarketplaceProduct {
   id: string;
@@ -27,75 +28,28 @@ interface MarketplaceJob {
   applicant_count: number;
 }
 
-const mockProducts: MarketplaceProduct[] = [
-  {
-    id: "prod_001",
-    name: "Clip Pack Starter Template",
-    description: "Pre-configured clip pack template for beginners",
-    product_type: "template",
-    price: 29,
-    creator_name: "LWA Official",
-    status: "active",
-    rating: 4.8,
-    review_count: 127,
-  },
-  {
-    id: "prod_002",
-    name: "Viral Hook Library",
-    description: "100 proven hooks for short-form content",
-    product_type: "library",
-    price: 49,
-    creator_name: "ClipMaster Pro",
-    status: "active",
-    rating: 4.6,
-    review_count: 89,
-  },
-  {
-    id: "prod_003",
-    name: "TikTok Caption Styles",
-    description: "Premium caption templates for TikTok",
-    product_type: "template",
-    price: 19,
-    creator_name: "StyleStudio",
-    status: "active",
-    rating: 4.5,
-    review_count: 56,
-  },
-];
-
 const mockJobs: MarketplaceJob[] = [
   {
     id: "job_001",
-    title: "Podcast Clip Campaign",
-    description: "Create 10 clips from 5 podcast episodes for social media",
-    campaign_type: "content_series",
-    budget: 500,
+    title: "Gaming Channel Clip Pack",
+    description: "Create 10 engaging clips from 3 hours of gameplay footage",
+    campaign_type: "clip_pack",
+    budget: 150,
     status: "open",
     deadline: "2025-05-15",
-    requirements: ["Experience with podcast content", "Knowledge of podcast platforms"],
+    requirements: ["Gaming knowledge", "Fast turnaround", "TikTok experience"],
     applicant_count: 12,
   },
   {
     id: "job_002",
-    title: "YouTube Shorts Series",
-    description: "Turn long-form tutorials into engaging Shorts",
-    campaign_type: "repurpose",
-    budget: 800,
+    title: "Podcast Promotion Series",
+    description: "Generate clips promoting new podcast episodes",
+    campaign_type: "promotion",
+    budget: 300,
     status: "open",
     deadline: "2025-05-20",
-    requirements: ["YouTube experience", "Short-form expertise"],
+    requirements: ["Audio editing", "Storytelling", "Social media savvy"],
     applicant_count: 8,
-  },
-  {
-    id: "job_003",
-    title: "Brand Awareness Campaign",
-    description: "Create viral-ready clips for brand launch",
-    campaign_type: "brand",
-    budget: 1200,
-    status: "open",
-    deadline: "2025-05-10",
-    requirements: ["Brand marketing experience", "High engagement history"],
-    applicant_count: 23,
   },
 ];
 
