@@ -1443,3 +1443,77 @@ export type OperatorStatusResponse = {
 export async function getAdminOpsStatus() {
   return jsonRequest<OperatorStatusResponse>("/api/v1/admin/status");
 }
+
+// =========================
+// BULK OPERATIONS API
+// =========================
+
+export type BulkApproveRequest = {
+  clip_ids: string[];
+};
+
+export type BulkApproveResponse = {
+  success: boolean;
+  approved_count: number;
+  failed_count: number;
+  approved_ids: string[];
+  failed_ids: string[];
+  message: string;
+};
+
+export async function bulkApproveClips(request: BulkApproveRequest) {
+  return jsonRequest<BulkApproveResponse>("/api/v1/clips/bulk-approve", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+export type BulkRejectRequest = {
+  clip_ids: string[];
+  reason?: string;
+};
+
+export type BulkRejectResponse = {
+  success: boolean;
+  rejected_count: number;
+  failed_count: number;
+  rejected_ids: string[];
+  failed_ids: string[];
+  message: string;
+};
+
+export async function bulkRejectClips(request: BulkRejectRequest) {
+  return jsonRequest<BulkRejectResponse>("/api/v1/clips/bulk-reject", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+export type BulkExportRequest = {
+  clip_ids: string[];
+  format?: "json" | "csv" | "txt";
+};
+
+export type BulkExportResponse = {
+  success: boolean;
+  export_url?: string;
+  bundle?: {
+    clips: Array<{
+      clip_id: string;
+      hook: string;
+      caption: string;
+      timestamp_start: number;
+      timestamp_end: number;
+      platform: string;
+    }>;
+    generated_at: string;
+  };
+  message: string;
+};
+
+export async function bulkExportClips(request: BulkExportRequest) {
+  return jsonRequest<BulkExportResponse>("/api/v1/clips/bulk-export", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}

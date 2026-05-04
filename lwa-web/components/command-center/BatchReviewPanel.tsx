@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { bulkApproveClips, bulkRejectClips, bulkExportClips } from "../../lib/api";
 
 interface BatchItem {
   id: string;
@@ -24,6 +25,9 @@ const mockBatch: BatchItem[] = [
 export function BatchReviewPanel() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [filter, setFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [batch, setBatch] = useState<BatchItem[]>(mockBatch);
 
   const toggleSelection = (id: string) => {
     setSelectedItems((prev) =>
@@ -31,13 +35,83 @@ export function BatchReviewPanel() {
     );
   };
 
-  const filteredBatch = filter === "all" ? mockBatch : mockBatch.filter((b) => b.status === filter);
+  const filteredBatch = filter === "all" ? batch : batch.filter((b) => b.status === filter);
 
   const stats = {
-    pending: mockBatch.filter((b) => b.status === "pending").length,
-    approved: mockBatch.filter((b) => b.status === "approved").length,
-    rejected: mockBatch.filter((b) => b.status === "rejected").length,
-    edited: mockBatch.filter((b) => b.status === "edited").length,
+    pending: batch.filter((b) => b.status === "pending").length,
+    approved: batch.filter((b) => b.status === "approved").length,
+    rejected: batch.filter((b) => b.status === "rejected").length,
+    edited: batch.filter((b) => b.status === "edited").length,
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedItems.length === 0) return;
+    setLoading(true);
+    setMessage(null);
+    try {
+      const response = await bulkApproveClips({ clip_ids: selectedItems });
+      if (response.success) {
+        setBatch((prev) =>
+          prev.map((item) =>
+            selectedItems.includes(item.id) ? { ...item, status: "approved" as const } : item
+          )
+        );
+        setMessage(`Approved ${response.approved_count} clips`);
+        setSelectedItems([]);
+      } else {
+        setMessage("Failed to approve clips");
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to approve clips");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    if (selectedItems.length === 0) return;
+    setLoading(true);
+    setMessage(null);
+    try {
+      const response = await bulkRejectClips({ clip_ids: selectedItems });
+      if (response.success) {
+        setBatch((prev) =>
+          prev.map((item) =>
+            selectedItems.includes(item.id) ? { ...item, status: "rejected" as const } : item
+          )
+        );
+        setMessage(`Rejected ${response.rejected_count} clips`);
+        setSelectedItems([]);
+      } else {
+        setMessage("Failed to reject clips");
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to reject clips");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportApproved = async () => {
+    const approvedIds = batch.filter((b) => b.status === "approved").map((b) => b.id);
+    if (approvedIds.length === 0) {
+      setMessage("No approved clips to export");
+      return;
+    }
+    setLoading(true);
+    setMessage(null);
+    try {
+      const response = await bulkExportClips({ clip_ids: approvedIds, format: "json" });
+      if (response.success) {
+        setMessage(`Exported ${response.bundle?.clips?.length || 0} clips`);
+      } else {
+        setMessage("Failed to export clips");
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to export clips");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,6 +125,11 @@ export function BatchReviewPanel() {
           <div className="flex-1">
             <h3 className="text-xl font-semibold text-white">Batch Review</h3>
             <p className="text-sm text-white/50">Review and approve generated clips in bulk</p>
+            {message && (
+              <p className={`mt-2 text-sm ${message.includes("Failed") ? "text-red-400" : "text-green-400"}`}>
+                {message}
+              </p>
+            )}
           </div>
           <div className="flex gap-3 text-right">
             <div className="rounded-lg bg-yellow-400/20 px-3 py-2">
@@ -85,11 +164,19 @@ export function BatchReviewPanel() {
 
         {selectedItems.length > 0 && (
           <div className="flex gap-2">
-            <button className="rounded-lg bg-green-400/20 px-3 py-2 text-sm text-green-400 transition hover:bg-green-400/30">
-              Approve ({selectedItems.length})
+            <button
+              onClick={handleBulkApprove}
+              disabled={loading}
+              className="rounded-lg bg-green-400/20 px-3 py-2 text-sm text-green-400 transition hover:bg-green-400/30 disabled:opacity-50"
+            >
+              {loading ? "Working..." : `Approve (${selectedItems.length})`}
             </button>
-            <button className="rounded-lg bg-red-400/20 px-3 py-2 text-sm text-red-400 transition hover:bg-red-400/30">
-              Reject ({selectedItems.length})
+            <button
+              onClick={handleBulkReject}
+              disabled={loading}
+              className="rounded-lg bg-red-400/20 px-3 py-2 text-sm text-red-400 transition hover:bg-red-400/30 disabled:opacity-50"
+            >
+              {loading ? "Working..." : `Reject (${selectedItems.length})`}
             </button>
             <button
               onClick={() => setSelectedItems([])}
@@ -180,14 +267,25 @@ export function BatchReviewPanel() {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
-        <button className="rounded-xl bg-[#C9A24A] px-4 py-3 text-sm font-semibold text-black transition hover:bg-[#E9C77B]">
-          Approve All Pending
+        <button
+          onClick={handleBulkApprove}
+          disabled={loading || stats.pending === 0}
+          className="rounded-xl bg-[#C9A24A] px-4 py-3 text-sm font-semibold text-black transition hover:bg-[#E9C77B] disabled:opacity-50"
+        >
+          {loading ? "Working..." : `Approve All Pending (${stats.pending})`}
         </button>
-        <button className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08]">
-          Export Approved
+        <button
+          onClick={handleExportApproved}
+          disabled={loading || stats.approved === 0}
+          className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08] disabled:opacity-50"
+        >
+          {loading ? "Working..." : `Export Approved (${stats.approved})`}
         </button>
-        <button className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08]">
-          Regenerate Rejected
+        <button
+          disabled={loading || stats.rejected === 0}
+          className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08] disabled:opacity-50"
+        >
+          Regenerate Rejected ({stats.rejected})
         </button>
       </div>
     </div>
