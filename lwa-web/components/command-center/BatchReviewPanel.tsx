@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { bulkApproveClips, bulkRejectClips, bulkExportClips } from "../../lib/api";
+import { useEffect, useState } from "react";
+import { bulkApproveClips, bulkRejectClips, bulkExportClips, listClips, ClipItem } from "../../lib/api";
 
-interface BatchItem {
+interface DisplayBatchItem {
   id: string;
   thumbnail: string;
   hook: string;
@@ -14,20 +14,44 @@ interface BatchItem {
   platform: string;
 }
 
-const mockBatch: BatchItem[] = [
-  { id: "clip_001", thumbnail: "🎬", hook: "You won't believe what happens...", caption: "The moment that changed everything", duration: 15, ai_score: 0.94, status: "pending", platform: "tiktok" },
-  { id: "clip_002", thumbnail: "✨", hook: "This trick saves hours...", caption: "Time-saving hack revealed", duration: 22, ai_score: 0.88, status: "approved", platform: "instagram" },
-  { id: "clip_003", thumbnail: "🔥", hook: "The truth about...", caption: "Exposing the real story", duration: 18, ai_score: 0.91, status: "pending", platform: "youtube" },
-  { id: "clip_004", thumbnail: "💡", hook: "Stop doing this wrong...", caption: "Common mistake fixed", duration: 25, ai_score: 0.85, status: "rejected", platform: "tiktok" },
-  { id: "clip_005", thumbnail: "🎯", hook: "3 steps to...", caption: "Simple process breakdown", duration: 20, ai_score: 0.92, status: "pending", platform: "instagram" },
-];
+function mapClipToDisplay(clip: ClipItem): DisplayBatchItem {
+  return {
+    id: clip.clip_id,
+    thumbnail: clip.thumbnail_url ? "🎬" : "📄",
+    hook: clip.hook,
+    caption: clip.caption,
+    duration: clip.duration,
+    ai_score: clip.ai_score,
+    status: clip.status,
+    platform: clip.platform,
+  };
+}
 
 export function BatchReviewPanel() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [filter, setFilter] = useState<string>("all");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
-  const [batch, setBatch] = useState<BatchItem[]>(mockBatch);
+  const [batch, setBatch] = useState<DisplayBatchItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadClips() {
+      try {
+        const response = await listClips(filter !== "all" ? filter : null);
+        if (response.success) {
+          setBatch(response.clips.map(mapClipToDisplay));
+        } else {
+          setError("Failed to load clips");
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load clips");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadClips();
+  }, [filter]);
 
   const toggleSelection = (id: string) => {
     setSelectedItems((prev) =>
@@ -125,11 +149,7 @@ export function BatchReviewPanel() {
           <div className="flex-1">
             <h3 className="text-xl font-semibold text-white">Batch Review</h3>
             <p className="text-sm text-white/50">Review and approve generated clips in bulk</p>
-            {message && (
-              <p className={`mt-2 text-sm ${message.includes("Failed") ? "text-red-400" : "text-green-400"}`}>
-                {message}
-              </p>
-            )}
+            {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
           </div>
           <div className="flex gap-3 text-right">
             <div className="rounded-lg bg-yellow-400/20 px-3 py-2">
@@ -189,8 +209,25 @@ export function BatchReviewPanel() {
       </div>
 
       {/* Batch Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredBatch.map((item) => (
+      {loading ? (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-12 text-center">
+          <div className="mb-2 text-4xl">⏳</div>
+          <p className="text-white/50">Loading clips...</p>
+        </div>
+      ) : filteredBatch.length === 0 ? (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-12 text-center">
+          <div className="mb-2 text-4xl">📭</div>
+          <p className="text-white/50">No clips found</p>
+          <button
+            onClick={() => setFilter("all")}
+            className="mt-4 rounded-lg bg-[#C9A24A] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#E9C77B]"
+          >
+            Show All
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredBatch.map((item) => (
           <div
             key={item.id}
             onClick={() => toggleSelection(item.id)}
@@ -242,26 +279,8 @@ export function BatchReviewPanel() {
             <p className="mb-3 text-xs text-white/50 line-clamp-1">{item.caption}</p>
 
             {/* Meta */}
-            <div className="flex items-center justify-between text-xs text-white/30">
-              <span>{item.duration}s</span>
-              <span className="capitalize">{item.platform}</span>
-              <span className="text-[#E9C77B]">{(item.ai_score * 100).toFixed(0)}%</span>
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {filteredBatch.length === 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-12 text-center">
-          <div className="mb-2 text-4xl">📭</div>
-          <p className="text-white/50">No clips found with this filter</p>
-          <button
-            onClick={() => setFilter("all")}
-            className="mt-4 rounded-lg bg-[#C9A24A] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#E9C77B]"
-          >
-            Show All
-          </button>
+          ))}
         </div>
       )}
 
