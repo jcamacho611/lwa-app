@@ -1559,6 +1559,46 @@ export async function bulkExportClips(request: BulkExportRequest) {
 }
 
 // =========================
+// CLIPS LIST API
+// =========================
+
+export type ClipItem = {
+  clip_id: string;
+  hook: string;
+  caption: string;
+  duration: number;
+  ai_score: number;
+  status: "pending" | "approved" | "rejected" | "edited";
+  platform: string;
+  source_url?: string | null;
+  thumbnail_url?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClipListResponse = {
+  success: boolean;
+  clips: ClipItem[];
+  count: number;
+  total_count: number;
+};
+
+export async function listClips(
+  status?: string | null,
+  platform?: string | null,
+  limit: number = 50,
+  offset: number = 0
+) {
+  const params = new URLSearchParams();
+  if (status) params.append("status", status);
+  if (platform) params.append("platform", platform);
+  params.append("limit", limit.toString());
+  params.append("offset", offset.toString());
+  
+  return jsonRequest<ClipListResponse>(`/api/v1/clips?${params.toString()}`);
+}
+
+// =========================
 // VIDEO OS API
 // =========================
 
