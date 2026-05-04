@@ -18,12 +18,14 @@ import { VideoOSPanel } from "../command-center/VideoOSPanel";
 import { SourceTimelinePanel } from "../command-center/SourceTimelinePanel";
 import { BatchReviewPanel } from "../command-center/BatchReviewPanel";
 import { ProofVaultStyleMemoryPanel } from "../command-center/ProofVaultStyleMemoryPanel";
+import { DemoModePanel } from "../command-center/DemoModePanel";
 
 export function CommandCenter() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "🏠" },
+    { id: "demo", label: "Try Demo", icon: "✨" },
     { id: "leewuh", label: "Lee-Wuh Brain", icon: "🧠" },
     { id: "director", label: "Director Brain", icon: "🎯" },
     { id: "character", label: "Character System", icon: "👤" },
@@ -42,6 +44,8 @@ export function CommandCenter() {
 
   const renderActiveTab = () => {
     switch (activeTab) {
+      case "demo":
+        return <DemoModePanel />;
       case "leewuh":
         return <LeeWuhBrainPanel />;
       case "director":
