@@ -2790,7 +2790,7 @@ export function ClipStudio({
               </div>
 
               <div className="flex flex-wrap justify-center gap-2">
-                {featureProof.map((item, index) => (
+                {featureProof?.map((item, index) => (
                   <StatPill key={item} tone={index === 1 ? "signal" : "neutral"}>
                     {item}
                   </StatPill>
