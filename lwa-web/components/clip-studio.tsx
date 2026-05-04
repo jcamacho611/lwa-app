@@ -52,6 +52,7 @@ import {
   createScheduledPost,
   exportClipBundle,
   generateClips,
+  generateFromText,
   loadClipRenderStatus,
   loadClipRecoveryJob,
   loadBatches,
@@ -742,18 +743,67 @@ export function ClipStudio({
     });
 
     try {
-      const data = await generateClips(
-        {
-          mode: sourceMode,
-          url: sourceMode === "video" ? normalizedVideoUrl || undefined : undefined,
-          platform: useManualPlatform ? platform : undefined,
-          uploadFileId: sourceMode === "idea" ? undefined : selectedUploadId || undefined,
-          contentAngle: improveResults ? preferenceProfile.topPackagingAngle : undefined,
-          ideaPrompt: sourceMode === "idea" || sourceMode === "image" ? ideaPrompt.trim() || undefined : undefined,
-        },
-        token,
-        { signal: controller.signal },
-      );
+      let data;
+      
+      // Use deterministic text generation for idea mode (no AI APIs required)
+      if (sourceMode === "idea" && ideaPrompt.trim()) {
+        const textResponse = await generateFromText(
+          {
+            text: ideaPrompt.trim(),
+            campaignGoal: campaignGoal || undefined,
+            target_platforms: useManualPlatform ? [platform] : ["tiktok", "youtube_shorts", "instagram_reels"],
+            min_clips: 3,
+          },
+          token,
+        );
+        
+        // Convert deterministic response to standard format
+        data = {
+          job_id: textResponse.job_id,
+          status: "completed",
+          clips: textResponse.clips.map((clip) => ({
+            clip_id: clip.clip_id,
+            title: clip.hook,
+            hook: clip.hook,
+            caption: clip.caption,
+            text: clip.text,
+            ai_score: clip.ai_score,
+            why_this_matters: clip.why_this_matters,
+            cta: clip.cta,
+            thumbnail_text: clip.thumbnail_text,
+            duration_seconds: clip.duration_seconds,
+            render_status: clip.render_status,
+            // Strategy-only: no video URLs yet
+            original_vertical_url: undefined,
+            vertical_with_captions_url: undefined,
+          })),
+          clips_summary: textResponse.clips.map((clip) => ({
+            clip_id: clip.clip_id,
+            title: clip.hook,
+            duration_seconds: clip.duration_seconds,
+            ai_score: clip.ai_score,
+            render_status: clip.render_status,
+          })),
+          strategy_only: true,
+          source_type: "text",
+          generation_method: "deterministic",
+        };
+      } else {
+        // Use standard video-based generation
+        data = await generateClips(
+          {
+            mode: sourceMode,
+            url: sourceMode === "video" ? normalizedVideoUrl || undefined : undefined,
+            platform: useManualPlatform ? platform : undefined,
+            uploadFileId: sourceMode === "idea" ? undefined : selectedUploadId || undefined,
+            contentAngle: improveResults ? preferenceProfile.topPackagingAngle : undefined,
+            ideaPrompt: sourceMode === "idea" || sourceMode === "image" ? ideaPrompt.trim() || undefined : undefined,
+          },
+          token,
+          { signal: controller.signal },
+        );
+      }
+      
       const reconciledData = reconcileGenerateResponseMediaTruth(data);
       setResult(reconciledData);
       setClipRecoveryStates({});
