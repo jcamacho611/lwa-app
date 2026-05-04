@@ -1,5 +1,181 @@
 "use client";
 
+import/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
+
+// ============================================
+// ELITE DESIGN SYSTEM - /GENERATE PAGE
+// ============================================
+// Philosophy: Clarity over complexity. Hierarchy over features.
+// ============================================
+
+/** Background World Layer - Sets mood without distraction */
+const EliteBackground = ({ children }: { children: React.ReactNode }) => (
+  <div className="relative min-h-screen w-full overflow-hidden bg-[#0A0A0A]">
+    {/* Layer 1: Background World (blurred, atmospheric) */}
+    <div 
+      className="fixed inset-0 z-0"
+      style={{
+        backgroundImage: 'url(/worlds/lee-wuh-realm-blur.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        filter: 'blur(20px) brightness(0.3)',
+        opacity: 0.4,
+      }}
+    />
+    {/* Dark overlay for better contrast */}
+    <div className="fixed inset-0 z-[1] bg-gradient-to-b from-[#0A0A0A]/60 via-transparent to-[#0A0A0A]/80" />
+    
+    {/* Content */}
+    <div className="relative z-10">
+      {children}
+    </div>
+  </div>
+);
+
+/** Character Presence - Lee-Wuh at bottom right (subtle, brand identity) */
+const CharacterPresence = () => (
+  <div className="fixed bottom-0 right-0 z-[5] pointer-events-none hidden lg:block">
+    <div 
+      className="w-[200px] h-[280px] opacity-60"
+      style={{
+        background: 'linear-gradient(135deg, rgba(201,162,74,0.1) 0%, transparent 60%)',
+        transform: 'translate(30%, 20%)',
+        animation: 'breathe 4s ease-in-out infinite',
+      }}
+    >
+      {/* Character glow effect */}
+      <div className="absolute inset-0 bg-[#C9A24A]/20 blur-3xl rounded-full" />
+    </div>
+    <style jsx>{`
+      @keyframes breathe {
+        0%, 100% { opacity: 0.5; transform: translate(30%, 20%) scale(1); }
+        50% { opacity: 0.7; transform: translate(30%, 20%) scale(1.02); }
+      }
+    `}</style>
+  </div>
+);
+
+/** Input Zone - Clean, centered, prominent */
+const EliteInputZone = ({ children, collapsed = false }: { children: React.ReactNode; collapsed?: boolean }) => (
+  <div 
+    className={`mx-auto w-full max-w-[600px] transition-all duration-500 ease-out ${
+      collapsed ? 'pt-4 pb-2' : 'pt-12 pb-8'
+    }`}
+  >
+    <div 
+      className="rounded-2xl border border-white/10 backdrop-blur-xl p-6"
+      style={{ background: 'rgba(0,0,0,0.6)' }}
+    >
+      {children}
+    </div>
+  </div>
+);
+
+/** Hero Card - BEST CLIP section (center, prominent) */
+const EliteHeroCard = ({ children }: { children: React.ReactNode }) => (
+  <div className="mx-auto w-full max-w-[800px] animate-fade-in-up">
+    <div 
+      className="rounded-3xl border-2 border-[#C9A24A] p-8 lg:p-10"
+      style={{
+        background: 'linear-gradient(180deg, #1A1A1A 0%, #0A0A0A 100%)',
+        boxShadow: '0 25px 50px rgba(201,162,74,0.15), 0 0 0 1px rgba(255,255,255,0.05)',
+      }}
+    >
+      {children}
+    </div>
+    <style jsx>{`
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease-out;
+      }
+    `}</style>
+  </div>
+);
+
+/** Ranked Stack - Secondary clips (below hero, dimmed) */
+const EliteRankedStack = ({ children }: { children: React.ReactNode }) => (
+  <div className="mx-auto w-full max-w-[800px] mt-8 space-y-4 opacity-70 hover:opacity-100 transition-opacity duration-300">
+    {children}
+  </div>
+);
+
+/** Ranked Card - Individual ranked clip */
+const EliteRankedCard = ({ children, rank }: { children: React.ReactNode; rank: number }) => (
+  <div 
+    className="rounded-xl border border-white/10 p-4 backdrop-blur-sm hover:border-white/20 transition-all duration-200 hover:scale-[1.01]"
+    style={{ background: 'rgba(26,26,26,0.8)' }}
+  >
+    <div className="flex items-center gap-4">
+      <span className="text-2xl font-bold text-white/40">#{rank}</span>
+      <div className="flex-1">{children}</div>
+    </div>
+  </div>
+);
+
+/** Action Bar - Fixed bottom, copy/export actions */
+const EliteActionBar = ({ children }: { children: React.ReactNode }) => (
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+    <div 
+      className="flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 backdrop-blur-xl"
+      style={{ background: 'rgba(0,0,0,0.8)' }}
+    >
+      {children}
+    </div>
+  </div>
+);
+
+/** Best Clip Badge - "POST THIS FIRST" crown */
+const BestClipBadge = () => (
+  <div className="flex items-center gap-2 mb-4">
+    <span className="text-2xl">👑</span>
+    <span 
+      className="text-sm font-bold uppercase tracking-wider"
+      style={{ color: '#C9A24A' }}
+    >
+      Post This First
+    </span>
+  </div>
+);
+
+/** Score Badge - Visual score indicator */
+const ScoreBadge = ({ score }: { score: number }) => {
+  const color = score >= 85 ? '#10B981' : score >= 70 ? '#3B82F6' : score >= 55 ? '#F59E0B' : '#6B7280';
+  return (
+    <div 
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold"
+      style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}
+    >
+      <span>✦</span>
+      <span>{Math.round(score * 100)}/100</span>
+    </div>
+  );
+};
+
+/** Copy Button - Pill style */
+const EliteCopyButton = ({ onClick, label }: { onClick: () => void; label: string }) => (
+  <button
+    onClick={onClick}
+    className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 hover:scale-105"
+    style={{ background: 'rgba(201,162,74,0.2)', color: '#C9A24A', border: '1px solid rgba(201,162,74,0.3)' }}
+  >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+    {label}
+  </button>
+);
+
+// ============================================
+// END ELITE DESIGN SYSTEM
+// ============================================
+
 import Link from "next/link";
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { buildUtmUrl, getPrimaryMoneyLink } from "../lib/money-links";
@@ -716,7 +892,7 @@ export function ClipStudio({
     
     setResult(demoData);
     setIsLoading(false);
-    emitLWACharacterEvent({ state: "celebrate", trigger: "demo_complete" });
+    emitLWACharacterEvent({ state: "react", trigger: "demo_complete" });
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>, bypassLiveCheck = false) {
@@ -776,20 +952,18 @@ export function ClipStudio({
           });
         } catch {
           // Fallback to deterministic text generation
-          textResponse = await generateFromText(
-            {
-              text: ideaPrompt.trim(),
-              campaignGoal: campaignGoal || undefined,
-              target_platforms: useManualPlatform ? [platform] : ["tiktok", "youtube_shorts", "instagram_reels"],
-              min_clips: 3,
-            },
-            token,
-          );
+          textResponse = await generateFromText({
+            text: ideaPrompt.trim(),
+            campaignGoal: undefined,
+            target_platforms: useManualPlatform ? [platform] : ["tiktok", "youtube_shorts", "instagram_reels"],
+            min_clips: 3,
+          });
         }
         
         // Convert response to standard format
-        data = {
-          job_id: textResponse.job_id || `analysis_${Date.now()}`,
+        const mappedData: GenerateResponse = {
+          request_id: textResponse.job_id || `analysis_${Date.now()}`,
+          video_url: undefined,
           status: "completed",
           clips: textResponse.clips.map((clip) => ({
             clip_id: clip.clip_id,
@@ -797,12 +971,12 @@ export function ClipStudio({
             hook: clip.hook,
             caption: clip.caption,
             text: clip.text,
-            ai_score: clip.score || clip.ai_score,
-            why_this_matters: clip.why || clip.why_this_matters,
+            ai_score: (clip as {score?: number; ai_score?: number}).score ?? (clip as {ai_score?: number}).ai_score ?? 0.5,
+            why_this_matters: (clip as {why?: string; why_this_matters?: string}).why ?? (clip as {why_this_matters?: string}).why_this_matters ?? "",
             cta: clip.cta,
             thumbnail_text: clip.thumbnail_text,
-            duration_seconds: clip.duration_seconds || 20,
-            render_status: clip.render_status || "strategy_only",
+            duration_seconds: (clip as {duration_seconds?: number}).duration_seconds ?? 20,
+            render_status: (clip as {render_status?: string}).render_status ?? "strategy_only",
             // Strategy-only: no video URLs yet
             original_vertical_url: undefined,
             vertical_with_captions_url: undefined,
@@ -810,14 +984,15 @@ export function ClipStudio({
           clips_summary: textResponse.clips.map((clip) => ({
             clip_id: clip.clip_id,
             title: clip.hook,
-            duration_seconds: clip.duration_seconds || 20,
-            ai_score: clip.score || clip.ai_score,
-            render_status: clip.render_status || "strategy_only",
+            duration_seconds: (clip as {duration_seconds?: number}).duration_seconds ?? 20,
+            ai_score: (clip as {score?: number; ai_score?: number}).score ?? (clip as {ai_score?: number}).ai_score ?? 0.5,
+            render_status: (clip as {render_status?: string}).render_status ?? "strategy_only",
           })),
           strategy_only: true,
           source_type: "text",
           generation_method: "analysis_engine",
         };
+        data = mappedData;
       } else {
         // Use standard video-based generation
         data = await generateClips(
@@ -2654,13 +2829,7 @@ export function ClipStudio({
 
   return (
     <section className={["app-shell-grid min-h-screen", motionLocked ? "results-motion-locked" : ""].join(" ")}>
-      <AIBackground
-        variant={isHome ? "home" : "workspace"}
-        worldState={worldState}
-        worldPhase={worldPhase}
-        generationMode={generationMode}
-        signal={worldSignal}
-      />
+      </EliteBackground>
       <CharacterLayer
         isLoading={isLoading}
         loadingStageIndex={loadingStageIndex}
@@ -2807,16 +2976,32 @@ export function ClipStudio({
           {resultsSection ? <div className="space-y-6 pb-8">{resultsSection}</div> : null}
         </div>
       ) : (
-        <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
-          <Navbar
-            items={visibleAppNavItems.map((item) => ({ href: item.href, label: item.label }))}
-            variant="workspace"
-            compactLogo
-            rightSlot={
-              user ? (
-                <div className="flex items-center gap-2">
-                  <span className="credits-bar hidden lg:inline-flex">
-                    <span className="credits-count">{typeof creditsRemaining === "number" ? creditsRemaining : planLimits.generationsPerDay}</span>
+        <EliteBackground>
+          <CharacterPresence />
+          <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+            <Navbar
+              items={visibleAppNavItems.map((item) => ({ href: item.href, label: item.label }))}
+              variant="workspace"
+              compactLogo
+              rightSlot={
+                user ? (
+                  <div className="flex items-center gap-2">
+                    <span className="credits-bar hidden lg:inline-flex">
+                      <span className="credits-count">{typeof creditsRemaining === "number" ? creditsRemaining : planLimits.generationsPerDay}</span>
+                      credits
+                    </span>
+                    <button
+                      type="button"
+                      onClick={onSignOut}
+                      className="secondary-button inline-flex rounded-full px-4 py-2.5 text-sm font-medium"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                ) : FREE_LAUNCH_MODE ? (
+                  <span className="credits-bar hidden sm:inline-flex">
+                    <span className="credits-count">Open</span>
+                    free launch
                     credits
                   </span>
                   <button

@@ -28,6 +28,33 @@ interface MarketplaceJob {
   applicant_count: number;
 }
 
+const mockProducts: MarketplaceProduct[] = [
+  {
+    id: "prod_001",
+    name: "Viral Clip Pack Starter",
+    description: "10 ready-to-post clips optimized for TikTok and Instagram",
+    product_type: "clip_pack",
+    price: 49.99,
+    creator_name: "ViralStudios",
+    status: "active",
+    rating: 4.8,
+    review_count: 124,
+    preview_url: "/previews/starter-pack.jpg",
+  },
+  {
+    id: "prod_002",
+    name: "Gaming Highlights Bundle",
+    description: "Gaming clips with trending music and effects",
+    product_type: "clip_pack",
+    price: 79.99,
+    creator_name: "GameEditPro",
+    status: "active",
+    rating: 4.9,
+    review_count: 89,
+    preview_url: "/previews/gaming-bundle.jpg",
+  },
+];
+
 const mockJobs: MarketplaceJob[] = [
   {
     id: "job_001",
