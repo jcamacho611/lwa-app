@@ -42,6 +42,7 @@ from .api.routes.video_analysis import router as video_analysis_router
 from .api.routes.visual_generation import router as visual_generation_router
 from .api.routes.wallet import router as wallet_router
 from .api.routes.whop_webhooks import router as whop_webhooks_router
+from .api.routes.events import router as events_router
 from .core.config import get_settings
 from .services.asset_retention import cleanup_generated_assets_nonfatal_for_settings
 from .services.db_init import initialize_databases
@@ -119,6 +120,7 @@ def create_app() -> FastAPI:
     app.include_router(worlds_router)
     app.include_router(worlds_jobs_router)
     app.include_router(worlds_clipping_router)
+    app.include_router(events_router)
     logger.info(
         "app_ready generated_assets_dir=%s generated_mount=/generated uploads_dir=%s uploads_mount=/uploads log_level=%s",
         settings.generated_assets_dir,

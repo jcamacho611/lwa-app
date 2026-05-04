@@ -1081,3 +1081,84 @@ export type DirectorBrainStatusResponse = {
 export async function getDirectorBrainStatus() {
   return jsonRequest<DirectorBrainStatusResponse>("/api/v1/director-brain/status");
 }
+
+// =========================
+// EVENT TRACKING API
+// =========================
+
+export type LwaEventType =
+  | "clip_view"
+  | "clip_play"
+  | "clip_save"
+  | "clip_share"
+  | "clip_export"
+  | "clip_vote_good"
+  | "clip_vote_bad"
+  | "clip_queue"
+  | "clip_recover"
+  | "hook_copy"
+  | "caption_copy"
+  | "cta_copy"
+  | "package_copy"
+  | "proof_save"
+  | "style_feedback"
+  | "generate_start"
+  | "generate_complete"
+  | "generate_error"
+  | "page_view"
+  | "feature_click"
+  | "error";
+
+export type TrackEventRequest = {
+  event_type: LwaEventType;
+  clip_id?: string | null;
+  source_id?: string | null;
+  metadata?: Record<string, unknown>;
+  source?: "web" | "api" | "ios" | "extension" | "widget";
+  session_id?: string | null;
+};
+
+export type TrackEventResponse = {
+  success: boolean;
+  event_id: string;
+  message: string;
+};
+
+export async function trackLwaEvent(request: TrackEventRequest) {
+  return jsonRequest<TrackEventResponse>("/api/v1/events/track", {
+    method: "POST",
+    body: JSON.stringify({
+      ...request,
+      source: request.source || "web",
+    }),
+  });
+}
+
+export type BatchTrackRequest = {
+  events: TrackEventRequest[];
+};
+
+export type BatchTrackResponse = {
+  success: boolean;
+  tracked_count: number;
+  failed_count: number;
+  event_ids: string[];
+};
+
+export async function trackLwaEventsBatch(request: BatchTrackRequest) {
+  return jsonRequest<BatchTrackResponse>("/api/v1/events/batch", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+export type EventStatusResponse = {
+  success: boolean;
+  event_tracking_enabled: boolean;
+  supported_event_types: LwaEventType[];
+  supported_sources: string[];
+};
+
+export async function getEventTrackingStatus() {
+  return jsonRequest<EventStatusResponse>("/api/v1/events/status");
+}

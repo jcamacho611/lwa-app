@@ -6,7 +6,7 @@ import { LiveClipPreview } from "./results/LiveClipPreview";
 import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore, getPreviewUrl, isRenderedClip } from "../lib/clip-utils";
 import { buildLeadReason } from "../lib/result-copy";
-import { saveProofAsset, submitClipStyleFeedback } from "../lib/api";
+import { saveProofAsset, submitClipStyleFeedback, trackLwaEvent } from "../lib/api";
 import { ClipIntelligencePanel } from "./clip-intelligence-panel";
 import { ClipViewer } from "./ClipViewer";
 import { DirectorBrainPackagePanel } from "./DirectorBrainPackagePanel";
@@ -345,6 +345,11 @@ export default function VideoCard({
       await navigator.clipboard.writeText(text);
       setCopiedAction(action);
       window.setTimeout(() => setCopiedAction((current) => (current === action ? null : current)), 1600);
+      void trackLwaEvent({
+        event_type: action === "hook" ? "hook_copy" : action === "caption" ? "caption_copy" : action === "cta" ? "cta_copy" : "package_copy",
+        clip_id: clip.clip_id || clip.id || null,
+        metadata: { content_type: action, text_length: text.length },
+      });
     } catch {
       setCopiedAction(null);
     }
@@ -368,6 +373,11 @@ export default function VideoCard({
         feedback_notes: "Saved as winner from clip card.",
         style_tags: ["winner", clip.campaign_role || "clip"].filter(Boolean),
       });
+      void trackLwaEvent({
+        event_type: "proof_save",
+        clip_id: clip.clip_id || clip.id || null,
+        metadata: { action: "save_winner", campaign_role: clip.campaign_role },
+      });
       // eslint-disable-next-line no-console
       console.log("[VideoCard] Saved winner to Proof Vault and Style Memory");
     } catch (error) {
@@ -383,6 +393,11 @@ export default function VideoCard({
         approved: false,
         feedback_notes: clip.reason_not_rendered || "Rejected from clip card.",
         style_tags: ["rejected", clip.render_status || "unknown"].filter(Boolean),
+      });
+      void trackLwaEvent({
+        event_type: "style_feedback",
+        clip_id: clip.clip_id || clip.id || null,
+        metadata: { action: "reject", reason: clip.reason_not_rendered || "manual_reject" },
       });
       // eslint-disable-next-line no-console
       console.log("[VideoCard] Submitted rejection to Style Memory");

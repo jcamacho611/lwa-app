@@ -6,7 +6,7 @@ import { LiveClipPreview } from "./results/LiveClipPreview";
 import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore, getPreviewUrl, isRenderedClip } from "../lib/clip-utils";
 import { getRenderState, CampaignMetaPanel } from "./VideoCard";
-import { saveProofAsset, submitClipStyleFeedback } from "../lib/api";
+import { saveProofAsset, submitClipStyleFeedback, trackLwaEvent } from "../lib/api";
 import { buildLeadReason } from "../lib/result-copy";
 import { ClipIntelligencePanel } from "./clip-intelligence-panel";
 import { AutoEditorBrainPanel } from "./AutoEditorBrainPanel";
@@ -229,6 +229,11 @@ export default function HeroClip({
       window.setTimeout(() => {
         setCopiedAction((current) => (current === action ? null : current));
       }, 1600);
+      void trackLwaEvent({
+        event_type: action === "hook" ? "hook_copy" : action === "caption" ? "caption_copy" : "package_copy",
+        clip_id: clip.clip_id || clip.id || null,
+        metadata: { content_type: action, text_length: text.length, is_lead_clip: true },
+      });
     } catch {
       setCopiedAction(null);
     }
@@ -252,6 +257,11 @@ export default function HeroClip({
         feedback_notes: "Saved lead clip as winner.",
         style_tags: ["winner", "lead_clip", clip.campaign_role || "clip"].filter(Boolean),
       });
+      void trackLwaEvent({
+        event_type: "proof_save",
+        clip_id: clip.clip_id || clip.id || null,
+        metadata: { action: "save_winner", is_lead_clip: true, campaign_role: clip.campaign_role },
+      });
       // eslint-disable-next-line no-console
       console.log("[HeroClip] Saved lead winner to Proof Vault and Style Memory");
     } catch (error) {
@@ -267,6 +277,11 @@ export default function HeroClip({
         approved: false,
         feedback_notes: clip.reason_not_rendered || "Lead clip rejected.",
         style_tags: ["rejected", "lead_clip", clip.render_status || "unknown"].filter(Boolean),
+      });
+      void trackLwaEvent({
+        event_type: "style_feedback",
+        clip_id: clip.clip_id || clip.id || null,
+        metadata: { action: "reject", is_lead_clip: true, reason: clip.reason_not_rendered || "manual_reject" },
       });
       // eslint-disable-next-line no-console
       console.log("[HeroClip] Submitted lead rejection to Style Memory");
