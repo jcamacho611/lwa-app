@@ -1557,3 +1557,49 @@ export async function bulkExportClips(request: BulkExportRequest) {
     body: JSON.stringify(request),
   });
 }
+
+// =========================
+// VIDEO OS API
+// =========================
+
+export type VideoJob = {
+  job_id: string;
+  user_id: string;
+  job_type: string;
+  provider: string;
+  status: string;
+  prompt?: string | null;
+  input_urls: string[];
+  source_asset_ids: string[];
+  aspect_ratio: string;
+  duration_seconds: number;
+  resolution: string;
+  style_preset?: string | null;
+  cost_estimate_usd: number;
+  progress: number;
+  preview_url?: string | null;
+  output_url?: string | null;
+  thumbnail_url?: string | null;
+  error_message?: string | null;
+  timeline_plan?: {
+    id: string;
+    title: string;
+    aspect_ratio: string;
+    duration_seconds: number;
+    track_count: number;
+  } | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VideoJobListResponse = {
+  jobs: VideoJob[];
+};
+
+export async function getVideoJobs() {
+  return jsonRequest<VideoJobListResponse>("/api/v1/video-jobs");
+}
+
+export async function getSourceAssets() {
+  return jsonRequest<SourceAssetListResponse>("/api/v1/source-assets");
+}

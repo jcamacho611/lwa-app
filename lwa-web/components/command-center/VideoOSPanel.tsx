@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getVideoJobs, getSourceAssets, VideoJob, SourceAsset } from "../../lib/api";
 
-interface VideoJob {
+interface DisplayJob {
   id: string;
   title: string;
   status: string;
@@ -12,7 +13,7 @@ interface VideoJob {
   created_at: string;
 }
 
-interface VideoSource {
+interface DisplaySource {
   id: string;
   url: string;
   status: string;
@@ -20,20 +21,53 @@ interface VideoSource {
   processed: boolean;
 }
 
-const mockJobs: VideoJob[] = [
-  { id: "job_001", title: "Podcast Episode #42", status: "processing", progress: 65, duration: 3600, platform: "youtube", created_at: "2025-05-03T10:00:00Z" },
-  { id: "job_002", title: "Tutorial Series #3", status: "completed", progress: 100, duration: 1800, platform: "tiktok", created_at: "2025-05-03T09:30:00Z" },
-  { id: "job_003", title: "Product Demo v2", status: "queued", progress: 0, duration: 900, platform: "instagram", created_at: "2025-05-03T11:00:00Z" },
-];
+function mapVideoJobToDisplay(job: VideoJob): DisplayJob {
+  return {
+    id: job.job_id,
+    title: job.prompt || job.timeline_plan?.title || `Job ${job.job_id.slice(0, 8)}`,
+    status: job.status,
+    progress: job.progress,
+    duration: job.duration_seconds,
+    platform: job.job_type,
+    created_at: job.created_at,
+  };
+}
 
-const mockSources: VideoSource[] = [
-  { id: "src_001", url: "https://youtube.com/watch?v=abc123", status: "ready", duration: 3600, processed: true },
-  { id: "src_002", url: "https://tiktok.com/@user/video/456", status: "downloading", duration: 0, processed: false },
-  { id: "src_003", url: "https://twitch.tv/videos/789", status: "ready", duration: 7200, processed: true },
-];
+function mapSourceAssetToDisplay(asset: SourceAsset): DisplaySource {
+  const isProcessed = asset.status === "ready" || asset.status === "completed";
+  return {
+    id: asset.asset_id,
+    url: asset.source_url || asset.storage_url || "No URL",
+    status: asset.status,
+    duration: asset.metadata?.duration_seconds || 0,
+    processed: isProcessed,
+  };
+}
 
 export function VideoOSPanel() {
   const [activeTab, setActiveTab] = useState<"jobs" | "sources" | "analytics">("jobs");
+  const [jobs, setJobs] = useState<DisplayJob[]>([]);
+  const [sources, setSources] = useState<DisplaySource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [jobsResponse, sourcesResponse] = await Promise.all([
+          getVideoJobs(),
+          getSourceAssets(),
+        ]);
+        setJobs(jobsResponse.jobs.map(mapVideoJobToDisplay));
+        setSources(sourcesResponse.assets.map(mapSourceAssetToDisplay));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -50,11 +84,15 @@ export function VideoOSPanel() {
           <div className="flex gap-4 text-right">
             <div>
               <div className="text-sm text-white/50">Processing</div>
-              <div className="text-xl font-bold text-yellow-400">1</div>
+              <div className="text-xl font-bold text-yellow-400">
+                {loading ? "-" : jobs.filter(j => j.status === "processing").length}
+              </div>
             </div>
             <div>
               <div className="text-sm text-white/50">Completed</div>
-              <div className="text-xl font-bold text-green-400">247</div>
+              <div className="text-xl font-bold text-green-400">
+                {loading ? "-" : jobs.filter(j => j.status === "completed").length}
+              </div>
             </div>
           </div>
         </div>
@@ -85,8 +123,24 @@ export function VideoOSPanel() {
       {/* Jobs Tab */}
       {activeTab === "jobs" && (
         <div className="space-y-4">
-          {mockJobs.map((job) => (
-            <div key={job.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+          {loading ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">
+              <div className="mb-2 text-2xl">⏳</div>
+              <p className="text-white/50">Loading jobs...</p>
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">
+              <div className="mb-2 text-2xl">⚠️</div>
+              <p className="text-red-400">{error}</p>
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">
+              <div className="mb-2 text-2xl">🎬</div>
+              <p className="text-white/50">No video jobs yet</p>
+            </div>
+          ) : (
+            jobs.map((job) => (
+              <div key={job.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="mb-1 flex items-center gap-2">
@@ -122,7 +176,7 @@ export function VideoOSPanel() {
                 </div>
               )}
             </div>
-          ))}
+          )))}
         </div>
       )}
 
@@ -144,7 +198,23 @@ export function VideoOSPanel() {
           </div>
 
           <div className="space-y-3">
-            {mockSources.map((source) => (
+            {loading ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">
+              <div className="mb-2 text-2xl">⏳</div>
+              <p className="text-white/50">Loading sources...</p>
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">
+              <div className="mb-2 text-2xl">⚠️</div>
+              <p className="text-red-400">{error}</p>
+            </div>
+          ) : sources.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">
+              <div className="mb-2 text-2xl">📁</div>
+              <p className="text-white/50">No source assets yet</p>
+            </div>
+          ) : (
+            sources.map((source) => (
               <div key={source.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 truncate">
@@ -164,7 +234,7 @@ export function VideoOSPanel() {
                   </div>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
         </div>
       )}
