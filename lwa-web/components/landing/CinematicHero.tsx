@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { LeeWuhMascotCard } from "../lee-wuh";
+import { LeeWuhCharacterStage } from "../lee-wuh";
 
 export default function CinematicHero() {
   return (
@@ -92,11 +92,12 @@ export default function CinematicHero() {
           </div>
 
           <div className="mt-10 max-w-xl">
-            <LeeWuhMascotCard
+            <LeeWuhCharacterStage
               mood="confident"
+              variant="card"
               title="Meet Lee-Wuh"
               message="I guide creators from one source to ranked clips, hooks, captions, and campaign packages."
-              cta="Drop a source. I’ll help find the signal."
+              posterPath="/brand/lee-wuh/lee-wuh-hero-16x9.png"
             />
           </div>
         </div>

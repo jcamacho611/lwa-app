@@ -20,7 +20,7 @@ import { PostingPanel } from "./posting-panel";
 import { ReadyQueuePanel } from "./ready-queue-panel";
 import { SettingsPanel } from "./settings-panel";
 import { WalletPanel } from "./wallet-panel";
-import { LeeWuhMascotCard } from "./lee-wuh";
+import { LeeWuhCharacterStage } from "./lee-wuh";
 import {
   BatchSummary,
   CampaignAssignment,
@@ -2214,9 +2214,10 @@ export function ClipStudio({
         </div>
       </div>
 
-      {/* Lee-Wuh Mascot Card */}
-      <LeeWuhMascotCard
-        mood={isLoading ? "analyzing" : activeResult ? "complete" : "focused"}
+      {/* Lee-Wuh Character Stage */}
+      <LeeWuhCharacterStage
+        mood={isLoading ? "analyzing" : activeResult ? "victory" : "focused"}
+        variant="card"
         title="Lee-Wuh is on the clip hunt"
         message={
           isLoading
@@ -2225,7 +2226,7 @@ export function ClipStudio({
               ? "Your clip pack is ready. Start with the best rendered result."
               : "Paste a source or upload a file. I'll help turn it into a campaign."
         }
-        cta="Rendered clips first. Strategy-only ideas stay honest."
+        posterPath="/brand/lee-wuh/lee-wuh-hero-16x9.png"
         className="mx-auto max-w-3xl"
       />
 

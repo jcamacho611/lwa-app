@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { LeeWuhCharacter, LeeWuhAvatar } from "./LeeWuhCharacter";
+import { LeeWuhCharacterStage } from "./LeeWuhCharacterStage";
 
 interface ChatMessage {
   id: string;
@@ -223,17 +224,16 @@ export function LeeWuhAgent() {
           className="group fixed bottom-6 right-6 z-50"
           aria-label="Open Lee-Wuh assistant"
         >
-          <div className="flex items-center gap-3 rounded-full border border-[#C9A24A]/30 bg-[#09090d]/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur-xl transition hover:scale-[1.03] hover:border-[#C9A24A]/60">
-            <div className="relative">
-              <LeeWuhAvatar mood={mood} size="md" />
-              <span className="absolute -right-1 -top-1 flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#C9A24A] opacity-75" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-[#C9A24A]" />
-              </span>
-            </div>
-            <div className="hidden text-left sm:block">
+          <div className="flex items-center gap-3 rounded-full border border-[#C9A24A]/35 bg-[#09090d]/95 px-3 py-2 shadow-2xl shadow-black/40 backdrop-blur-xl transition hover:scale-[1.03] hover:border-[#C9A24A]/70">
+            <LeeWuhCharacterStage
+              mood={mood as any}
+              variant="floating"
+              showLabel={false}
+              posterPath="/brand/lee-wuh/lee-wuh-avatar.png"
+            />
+            <div className="hidden pr-2 text-left sm:block">
               <p className="text-sm font-black text-white">Ask Lee-Wuh</p>
-              <p className="text-xs text-white/45">Mascot + clip guide</p>
+              <p className="text-xs text-white/45">3D mascot + clip guide</p>
             </div>
           </div>
         </button>
