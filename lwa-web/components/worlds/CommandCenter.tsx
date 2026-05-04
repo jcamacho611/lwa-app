@@ -5,7 +5,7 @@ import { formatMoney } from "../../lib/worlds/utils";
 import { SafetyNotice } from "./SafetyNotice";
 import { StatPill } from "./StatPill";
 import { LeeWuhBrainPanel } from "../command-center/LeeWuhBrainPanel";
-import { DirectorBrainPanel } from "../command-center/DirectorBrainPanel";
+import DirectorBrainPanel from "../command-center/DirectorBrainPanel";
 import { SafetyRightsCostPanel } from "../command-center/SafetyRightsCostPanel";
 import { CaptionEnginePanel } from "../command-center/CaptionEnginePanel";
 import { AudioMusicVoicePanel } from "../command-center/AudioMusicVoicePanel";

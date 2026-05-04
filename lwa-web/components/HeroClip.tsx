@@ -6,6 +6,7 @@ import { LiveClipPreview } from "./results/LiveClipPreview";
 import { RetryPreviewButton } from "./results/RetryPreviewButton";
 import { buildClipPackageText, clipAuthorityLabel, getBestClipUrl, getClipScore, getPreviewUrl, isRenderedClip } from "../lib/clip-utils";
 import { getRenderState, CampaignMetaPanel } from "./VideoCard";
+import { saveProofAsset, submitClipStyleFeedback } from "../lib/api";
 import { buildLeadReason } from "../lib/result-copy";
 import { ClipIntelligencePanel } from "./clip-intelligence-panel";
 import { AutoEditorBrainPanel } from "./AutoEditorBrainPanel";
@@ -233,6 +234,48 @@ export default function HeroClip({
     }
   }
 
+  async function handleSaveWinner() {
+    try {
+      const mediaUrl = clip.download_url || clip.edited_clip_url || clip.clip_url || null;
+      await saveProofAsset({
+        asset_type: mediaUrl ? "clip" : "hook",
+        clip_url: mediaUrl,
+        hook_text: clip.hook,
+        caption_text: clip.caption,
+        platform: clip.suggested_platform || clip.recommended_platform || clip.target_platform,
+        ai_score: clip.score || clip.confidence_score || undefined,
+        style_tags: [clip.campaign_role, clip.caption_style, clip.render_status].filter(Boolean) as string[],
+      });
+      await submitClipStyleFeedback({
+        clip_id: clip.clip_id || clip.id || "",
+        approved: true,
+        feedback_notes: "Saved lead clip as winner.",
+        style_tags: ["winner", "lead_clip", clip.campaign_role || "clip"].filter(Boolean),
+      });
+      // eslint-disable-next-line no-console
+      console.log("[HeroClip] Saved lead winner to Proof Vault and Style Memory");
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn("[HeroClip] Failed to save winner:", error);
+    }
+  }
+
+  async function handleRejectAndLearn() {
+    try {
+      await submitClipStyleFeedback({
+        clip_id: clip.clip_id || clip.id || "",
+        approved: false,
+        feedback_notes: clip.reason_not_rendered || "Lead clip rejected.",
+        style_tags: ["rejected", "lead_clip", clip.render_status || "unknown"].filter(Boolean),
+      });
+      // eslint-disable-next-line no-console
+      console.log("[HeroClip] Submitted lead rejection to Style Memory");
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn("[HeroClip] Failed to submit rejection:", error);
+    }
+  }
+
   return (
     <>
       {canOpenViewer ? <ClipViewer clip={clip} isOpen={viewerOpen} onClose={() => setViewerOpen(false)} /> : null}
@@ -365,6 +408,26 @@ export default function HeroClip({
                   }
                 />
               ) : null}
+
+              {!compact && (
+                <button
+                  type="button"
+                  onClick={() => void handleSaveWinner()}
+                  className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-5 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20"
+                >
+                  Save winner
+                </button>
+              )}
+
+              {!compact && (
+                <button
+                  type="button"
+                  onClick={() => void handleRejectAndLearn()}
+                  className="rounded-full border border-red-300/20 bg-red-300/10 px-5 py-3 text-sm font-medium text-red-100 transition hover:bg-red-300/20"
+                >
+                  Reject & learn
+                </button>
+              )}
             </div>
 
             {artifactLinks.length ? (

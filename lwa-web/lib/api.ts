@@ -891,3 +891,193 @@ export async function synthesizeVoice(text: string, voiceType: string, emotion =
     }),
   });
 }
+
+// =========================
+// SLICE 9: PROOF VAULT + STYLE MEMORY API
+// =========================
+
+export type ProofAssetPayload = {
+  asset_type: "clip" | "hook" | "caption" | "thumbnail" | "full_video" | "campaign";
+  source_url?: string | null;
+  clip_url?: string | null;
+  hook_text?: string | null;
+  caption_text?: string | null;
+  platform?: string | null;
+  duration_seconds?: number | null;
+  ai_score?: number | null;
+  style_tags?: string[];
+  project_id?: string | null;
+};
+
+export async function saveProofAsset(payload: ProofAssetPayload) {
+  return jsonRequest<{ success: boolean; asset: unknown; message: string }>("/api/v1/proof-vault/assets", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateProofAssetStatus(
+  proofId: string,
+  payload: {
+    status?: "winning" | "rejected" | "pending" | "archived";
+    performance_notes?: Record<string, unknown>;
+    style_tags?: string[];
+    rejected_reason?: string;
+    approved_by?: string;
+  },
+) {
+  return jsonRequest<{ success: boolean; asset: unknown; message: string }>(
+    `/api/v1/proof-vault/assets/${encodeURIComponent(proofId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function submitClipStyleFeedback(payload: {
+  clip_id: string;
+  approved: boolean;
+  feedback_notes?: string;
+  style_tags?: string[];
+}) {
+  const params = new URLSearchParams({ clip_id: payload.clip_id, approved: String(payload.approved) });
+  if (payload.feedback_notes) params.set("feedback_notes", payload.feedback_notes);
+  for (const tag of payload.style_tags || []) params.append("style_tags", tag);
+
+  return jsonRequest<{ success: boolean; message: string; learnings?: string[] }>(
+    `/api/v1/style-memory/learn/clip-feedback?${params.toString()}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+// =========================
+// DIRECTOR BRAIN ML API
+// =========================
+
+export type DirectorBrainContentType =
+  | "hook"
+  | "caption"
+  | "title"
+  | "offer"
+  | "description"
+  | "clip_summary"
+  | "opportunity"
+  | "campaign_angle";
+
+export type DirectorBrainGoal = "engagement" | "conversion" | "viral" | "personal" | "balanced";
+
+export type DirectorBrainScoreRequest = {
+  text: string;
+  content_type?: DirectorBrainContentType;
+  platform?: string | null;
+  goal?: DirectorBrainGoal;
+  style_memory?: Record<string, unknown> | null;
+  proof_signals?: Record<string, unknown> | null;
+};
+
+export type DirectorBrainScoreResponse = {
+  success: boolean;
+  text: string;
+  content_type: DirectorBrainContentType;
+  platform: string;
+  goal: DirectorBrainGoal;
+  score: number;
+  component_scores: {
+    viral_hook_strength: number;
+    retention_engagement: number;
+    conversion_offer_fit: number;
+    user_style_preference: number;
+    proof_history_signal: number;
+  };
+  reasons: string[];
+  lee_wuh_recommendation: string;
+  suggested_improvement: string;
+  confidence: number;
+  mode: string;
+  algorithm_version: string;
+};
+
+export async function scoreDirectorBrain(request: DirectorBrainScoreRequest) {
+  return jsonRequest<DirectorBrainScoreResponse>("/api/v1/director-brain/score", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+export type DirectorBrainRankRequest = {
+  candidates: string[];
+  content_type?: DirectorBrainContentType;
+  platform?: string | null;
+  goal?: DirectorBrainGoal;
+  style_memory?: Record<string, unknown> | null;
+  proof_signals?: Record<string, unknown> | null;
+};
+
+export type DirectorBrainRankResponse = {
+  success: boolean;
+  ranked_candidates: (DirectorBrainScoreResponse & { rank: number; post_rank: number })[];
+  best_candidate: (DirectorBrainScoreResponse & { rank: number; post_rank: number }) | null;
+  count: number;
+  mode: string;
+};
+
+export async function rankDirectorBrain(request: DirectorBrainRankRequest) {
+  return jsonRequest<DirectorBrainRankResponse>("/api/v1/director-brain/rank", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+export type DirectorBrainLearnRequest = {
+  text: string;
+  label?: "winning" | "rejected" | "neutral";
+  signal_type?: "save" | "share" | "click" | "export" | "purchase" | "manual_feedback";
+  weight?: number;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type DirectorBrainLearnResponse = {
+  success: boolean;
+  event: {
+    id: string;
+    text: string;
+    label: string;
+    signal_type: string;
+    weight: number;
+    metadata: Record<string, unknown>;
+    created_at: string;
+  };
+  message: string;
+};
+
+export async function learnDirectorBrain(request: DirectorBrainLearnRequest) {
+  return jsonRequest<DirectorBrainLearnResponse>("/api/v1/director-brain/learn", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+export type DirectorBrainStatusResponse = {
+  success: boolean;
+  mode: string;
+  algorithm_version: string;
+  learning_event_count: number;
+  weights: {
+    viral_hook_strength: number;
+    retention_engagement: number;
+    conversion_offer_fit: number;
+    user_style_preference: number;
+    proof_history_signal: number;
+  };
+  supported_content_types: DirectorBrainContentType[];
+  supported_goals: DirectorBrainGoal[];
+  live_paid_providers_enabled: boolean;
+  binary_model_required: boolean;
+};
+
+export async function getDirectorBrainStatus() {
+  return jsonRequest<DirectorBrainStatusResponse>("/api/v1/director-brain/status");
+}
