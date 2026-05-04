@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { useState } from "react";
-import { mockCampaigns, mockEarnings, mockWorldProfile } from "../../lib/worlds/mock-data";
+import { useEffect, useState } from "react";
+import { getCommandCenterSummary, CommandCenterSummaryResponse } from "../../lib/api";
 import { formatMoney } from "../../lib/worlds/utils";
 import { SafetyNotice } from "./SafetyNotice";
 import { StatPill } from "./StatPill";
@@ -24,6 +24,23 @@ import { LeeWuhCharacterStage } from "../lee-wuh";
 
 export function CommandCenter() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [summary, setSummary] = useState<CommandCenterSummaryResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadSummary() {
+      try {
+        const data = await getCommandCenterSummary();
+        setSummary(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load summary");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadSummary();
+  }, []);
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "🏠" },
@@ -130,16 +147,19 @@ export function CommandCenter() {
                 />
 
                 <p className="section-kicker">World Identity</p>
-                <h3 className="mt-3 text-2xl font-semibold text-ink">{mockWorldProfile.displayName}</h3>
+                <h3 className="mt-3 text-2xl font-semibold text-ink">
+                  {loading ? "Loading..." : summary?.world.display_name || "Creator"}
+                </h3>
                 <p className="mt-2 text-sm leading-7 text-ink/62">
-                  {mockWorldProfile.className} of {mockWorldProfile.faction}
+                  {loading ? "" : `${summary?.world.class_name} of ${summary?.world.faction}`}
                 </p>
+                {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
 
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <StatPill label="Level" value={mockWorldProfile.level} accent />
-                  <StatPill label="XP" value={`${mockWorldProfile.xp}/${mockWorldProfile.nextLevelXp}`} />
-                  <StatPill label="Badges" value={mockWorldProfile.badges.length} />
-                  <StatPill label="Relics" value={mockWorldProfile.relics.length} />
+                  <StatPill label="Level" value={loading ? "-" : summary?.world.level || 1} accent />
+                  <StatPill label="XP" value={loading ? "-" : `${summary?.world.xp || 0}/${summary?.world.next_level_xp || 100}`} />
+                  <StatPill label="Badges" value={loading ? "-" : summary?.world.badges?.length || 0} />
+                  <StatPill label="Relics" value={loading ? "-" : summary?.world.relics?.length || 0} />
                 </div>
 
                 <Link href="/worlds/profile" className="primary-button mt-6 inline-flex rounded-full px-4 py-2 text-sm font-semibold">
@@ -151,17 +171,23 @@ export function CommandCenter() {
             <section className="grid gap-5 md:grid-cols-3">
               <div className="metric-tile rounded-[24px] p-5">
                 <p className="text-sm text-ink/46">Marketplace campaigns</p>
-                <p className="mt-2 text-3xl font-semibold text-ink">{mockCampaigns.length}</p>
+                <p className="mt-2 text-3xl font-semibold text-ink">
+                  {loading ? "-" : summary?.campaigns?.total_count || 0}
+                </p>
                 <p className="mt-2 text-sm text-ink/62">Open and review-ready jobs.</p>
               </div>
               <div className="metric-tile rounded-[24px] p-5">
                 <p className="text-sm text-ink/46">Approved earnings</p>
-                <p className="mt-2 text-3xl font-semibold text-ink">{formatMoney(mockEarnings.approved.amount)}</p>
+                <p className="mt-2 text-3xl font-semibold text-ink">
+                  {loading ? "-" : formatMoney(summary?.earnings?.approved_cents || 0)}
+                </p>
                 <p className="mt-2 text-sm text-ink/62">Not guaranteed until payout clears.</p>
               </div>
               <div className="metric-tile rounded-[24px] p-5">
                 <p className="text-sm text-ink/46">Pending review</p>
-                <p className="mt-2 text-3xl font-semibold text-ink">{formatMoney(mockEarnings.pendingReview.amount)}</p>
+                <p className="mt-2 text-3xl font-semibold text-ink">
+                  {loading ? "-" : formatMoney(summary?.earnings?.pending_review_cents || 0)}
+                </p>
                 <p className="mt-2 text-sm text-ink/62">Admin or buyer approval required.</p>
               </div>
             </section>

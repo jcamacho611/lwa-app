@@ -1445,6 +1445,46 @@ export async function getAdminOpsStatus() {
 }
 
 // =========================
+// COMMAND CENTER API
+// =========================
+
+export type WorldProfileSummary = {
+  display_name: string;
+  class_name: string;
+  faction: string;
+  level: number;
+  xp: number;
+  next_level_xp: number;
+  badges: string[];
+  relics: string[];
+};
+
+export type CommandCenterCampaignSummary = {
+  total_count: number;
+  open_count: number;
+  review_ready_count: number;
+};
+
+export type CommandCenterEarningsSummary = {
+  approved_cents: number;
+  pending_review_cents: number;
+  available_cents: number;
+  eligible_payout_cents: number;
+};
+
+export type CommandCenterSummaryResponse = {
+  success: boolean;
+  world: WorldProfileSummary;
+  campaigns: CommandCenterCampaignSummary;
+  earnings: CommandCenterEarningsSummary;
+  generated_at: string;
+};
+
+export async function getCommandCenterSummary() {
+  return jsonRequest<CommandCenterSummaryResponse>("/api/v1/command-center/summary");
+}
+
+// =========================
 // BULK OPERATIONS API
 // =========================
 

@@ -47,6 +47,7 @@ from .api.routes.entitlements import router as entitlements_router
 from .api.routes.demo_mode import router as demo_mode_router
 from .api.routes.admin import router as admin_router
 from .api.routes.bulk import router as bulk_router
+from .api.routes.command_center import router as command_center_router
 from .core.config import get_settings
 from .services.asset_retention import cleanup_generated_assets_nonfatal_for_settings
 from .services.db_init import initialize_databases
@@ -129,6 +130,7 @@ def create_app() -> FastAPI:
     app.include_router(demo_mode_router)
     app.include_router(admin_router)
     app.include_router(bulk_router)
+    app.include_router(command_center_router)
     logger.info(
         "app_ready generated_assets_dir=%s generated_mount=/generated uploads_dir=%s uploads_mount=/uploads log_level=%s",
         settings.generated_assets_dir,
