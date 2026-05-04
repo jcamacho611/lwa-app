@@ -14,7 +14,8 @@ lee-wuh.poster.png
 * Commit only optimized runtime assets.
 * Do not commit heavy `.blend`, `.fbx`, `.obj`, `.zip`, or raw source files.
 * Keep `.blend` source files outside the repo or in external asset storage.
-* Use `scripts/blender/export_lee_wuh_glb.py` to export optimized GLB files.
+* Use `scripts/blender/create_lee_wuh_character.py` for procedural blockout/testing.
+* Use `scripts/blender/export_lee_wuh_glb.py` for exporting from final Blender files.
 
 ## Frontend runtime path
 

@@ -4,6 +4,19 @@
 
 Lee-Wuh must be a real character system, not an emoji-only mascot.
 
+## Visual Target
+
+Lee-Wuh is a **chibi black cat/lion creator deity** with:
+
+- Purple glowing eyes
+- Black and gold armor/robe/creator coat
+- Dreadlock-like hair tubes with gold cuffs
+- Purple realm energy aura
+- Ornate oversized creator sword
+- Original luxury streetwear sneakers (no trademark logos)
+- Japanese/African/American cultural fusion motifs
+- Creator overlord / final boss / last creator energy
+
 The runtime priority is:
 
 ```text
@@ -173,13 +186,57 @@ cd ..
 python3 -m py_compile scripts/blender/export_lee_wuh_glb.py
 ```
 
+## Procedural Character Generation
+
+For testing and development, generate a procedural Lee-Wuh:
+
+```bash
+blender --background --python scripts/blender/create_lee_wuh_character.py
+```
+
+This creates:
+- `lee-wuh.glb` - Runtime GLB for web
+- `lee-wuh.generated.blend` - Source scene (do not commit)
+
+The procedural character includes:
+- Chibi cat/lion head with ears
+- Purple glowing eyes
+- Dreadlock hair tubes with gold cuffs
+- Black/gold coat with Japanese glyphs (夢, 創)
+- Ornate creator sword with purple edge energy
+- Original luxury sneakers (white/red/black, no logos)
+- Purple realm energy aura rings
+- Gold pedestal with inscription
+
+## VR / AR Readiness
+
+The GLB is designed for future XR compatibility:
+
+- Real-world scale friendly (1 unit ≈ 1 meter)
+- Y-up export for standard compliance
+- No trademarked content
+- Optimized materials (PBR-ready)
+- Animation-ready armature structure
+- Under 5MB runtime size target
+
+Future targets:
+
+```text
+WebXR viewer integration
+Quest/Oculus build path
+ARKit/ARCore anchor support
+Rive/Spine 2D expression overlays
+Full animation state machine
+```
+
 ## Next Steps
 
-1. Create/optimize Lee-Wuh 3D model in Blender
-2. Run export script to generate `lee-wuh.glb`
-3. Place GLB in `lwa-web/public/characters/lee-wuh/`
-4. Test fallback chain by temporarily renaming GLB
-5. Commit optimized runtime assets only
+1. Generate procedural character: `blender --background --python scripts/blender/create_lee_wuh_character.py`
+2. Or create artist-made model in Blender
+3. Run export script to generate `lee-wuh.glb`
+4. Place GLB in `lwa-web/public/characters/lee-wuh/`
+5. Test fallback chain by temporarily renaming GLB
+6. Commit optimized runtime assets only
 
 ## Dependencies
 

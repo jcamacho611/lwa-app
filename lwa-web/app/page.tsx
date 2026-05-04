@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { LeeWuhCharacter } from "../components/lee-wuh";
+import { LeeWuhCharacterStage } from "../components/lee-wuh";
 
 export default function HomePage() {
   const [selectedMission, setSelectedMission] = useState<"content" | "money" | null>(null);
@@ -24,18 +24,19 @@ export default function HomePage() {
       {/* LWA Core Loop Entry */}
       <div className="relative z-10 w-full max-w-lg">
         {/* Lee-Wuh Header */}
-        <div className="mb-8 text-center">
-          <LeeWuhCharacter
-            mood={selectedMission ? "victory" : "idle"}
-            size="xl"
-            showMessage={true}
-            customMessage={
-              selectedMission
-                ? selectedMission === "content"
-                  ? "Let's make some clips! Paste your source."
-                  : "Let's find you some paid work."
-                : "You got content or you tryna make money today?"
+        <div className="mb-8">
+          <LeeWuhCharacterStage
+            mood={selectedMission ? "confident" : "idle"}
+            variant="card"
+            title="Lee-Wuh"
+            message={
+              selectedMission === "content"
+                ? "I'm ready to turn your source into clips, hooks, captions, and a ranked posting package."
+                : selectedMission === "money"
+                  ? "I'm ready to help you find creator work and campaign opportunities."
+                  : "I'm your real-time character guide for clipping, campaigns, proof, style memory, and the money loop."
             }
+            posterPath="/brand/lee-wuh/lee-wuh-hero-16x9.png"
           />
         </div>
 
