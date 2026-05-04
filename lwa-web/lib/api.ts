@@ -1256,3 +1256,125 @@ export async function getFeatureCosts() {
     "/api/v1/entitlements/feature-costs"
   );
 }
+
+// =========================
+// DEMO MODE API
+// =========================
+
+export type DemoSourceResponse = {
+  success: boolean;
+  source: {
+    id: string;
+    title: string;
+    description: string;
+    duration_seconds: number;
+    type: string;
+    is_demo: boolean;
+    clips_available: number;
+  };
+  message: string;
+};
+
+export async function getDemoSource() {
+  return jsonRequest<DemoSourceResponse>("/api/v1/demo/source");
+}
+
+export type DemoClip = {
+  clip_id: string;
+  title: string;
+  hook: string;
+  caption: string;
+  timestamp_start: number;
+  timestamp_end: number;
+  score: number;
+  campaign_role: string;
+  funnel_stage: string;
+  suggested_cta: string;
+  why_this_matters: string;
+  is_demo: boolean;
+  strategy_only: boolean;
+  render_status: string;
+};
+
+export type DemoClipsResponse = {
+  success: boolean;
+  clips: DemoClip[];
+  count: number;
+  source_id: string;
+  is_demo: boolean;
+  message: string;
+};
+
+export async function getDemoClips() {
+  return jsonRequest<DemoClipsResponse>("/api/v1/demo/clips");
+}
+
+export type DemoCampaignResponse = {
+  success: boolean;
+  campaign: {
+    id: string;
+    name: string;
+    source_id: string;
+    created_at: string;
+    clips: DemoClip[];
+    posting_schedule: {
+      day: number;
+      clip_id: string;
+      platform: string;
+      time: string;
+    }[];
+    bundle_contents: {
+      hooks: string[];
+      captions: string[];
+      timestamps: {
+        clip_id: string;
+        start: number;
+        end: number;
+      }[];
+      ctas: string[];
+    };
+    is_demo: boolean;
+  };
+  message: string;
+};
+
+export async function getDemoCampaign() {
+  return jsonRequest<DemoCampaignResponse>("/api/v1/demo/campaign");
+}
+
+export type DemoSaveProofResponse = {
+  success: boolean;
+  user_id: string;
+  saved_assets: {
+    asset_id: string;
+    asset_type: string;
+    clip_id: string;
+    hook_text: string;
+    caption_text: string;
+    ai_score: number;
+    campaign_role: string;
+    is_demo: boolean;
+    saved_at: string;
+  }[];
+  count: number;
+  message: string;
+};
+
+export async function saveDemoProof() {
+  return jsonRequest<DemoSaveProofResponse>("/api/v1/demo/save-proof", {
+    method: "POST",
+  });
+}
+
+export type DemoStatusResponse = {
+  success: boolean;
+  demo_mode_enabled: boolean;
+  sample_source_available: boolean;
+  sample_clips_count: number;
+  features: string[];
+  limitations: string[];
+};
+
+export async function getDemoStatus() {
+  return jsonRequest<DemoStatusResponse>("/api/v1/demo/status");
+}
