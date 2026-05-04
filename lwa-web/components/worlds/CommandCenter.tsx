@@ -19,6 +19,7 @@ import { SourceTimelinePanel } from "../command-center/SourceTimelinePanel";
 import { BatchReviewPanel } from "../command-center/BatchReviewPanel";
 import { ProofVaultStyleMemoryPanel } from "../command-center/ProofVaultStyleMemoryPanel";
 import { DemoModePanel } from "../command-center/DemoModePanel";
+import { AdminOpsPanel } from "../command-center/AdminOpsPanel";
 import { LeeWuhCharacterStage } from "../lee-wuh";
 
 export function CommandCenter() {
@@ -40,7 +41,8 @@ export function CommandCenter() {
     { id: "proofvault", label: "Proof Vault", icon: "🏆" },
     { id: "safety", label: "Safety & Rights", icon: "🛡️" },
     { id: "captions", label: "Captions", icon: "💬" },
-    { id: "audio", label: "Audio & Music", icon: "🎵" }
+    { id: "audio", label: "Audio & Music", icon: "🎵" },
+    { id: "admin", label: "Admin / Ops", icon: "⚙️" }
   ];
 
   const renderActiveTab = () => {
@@ -75,6 +77,8 @@ export function CommandCenter() {
         return <CaptionEnginePanel />;
       case "audio":
         return <AudioMusicVoicePanel />;
+      case "admin":
+        return <AdminOpsPanel />;
       default:
         return (
           <div className="space-y-6">

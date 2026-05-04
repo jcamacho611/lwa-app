@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import logging
@@ -102,3 +102,104 @@ def _sanitize_value(*, key: str, value: Any, max_chars: int) -> Any:
     if len(text) > max_chars:
         return text[: max_chars - 1] + "…"
     return text
+
+
+def get_recent_events(
+    *,
+    settings: Any,
+    minutes: int = 60,
+    event_type: str | None = None,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    """Read recent events from the event log for admin observability.
+
+    Args:
+        settings: Application settings with event_log_path
+        minutes: Time range in minutes to look back
+        event_type: Optional filter by event type
+        limit: Maximum number of events to return
+
+    Returns:
+        List of recent event dictionaries
+    """
+    try:
+        path = Path(getattr(settings, "event_log_path", "/tmp/lwa_events.jsonl"))
+        if not path.exists():
+            return []
+
+        cutoff = datetime.utcnow() - timedelta(minutes=minutes)
+        events: list[dict[str, Any]] = []
+
+        with path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    event = json.loads(line)
+                    # Parse timestamp
+                    ts_str = event.get("timestamp", "")
+                    if ts_str:
+                        try:
+                            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                        except ValueError:
+                            continue
+                        if ts < cutoff:
+                            continue
+
+                    # Filter by event type if specified
+                    if event_type and event.get("event", "").split(":")[-1] != event_type:
+                        continue
+
+                    events.append(event)
+                    if len(events) >= limit:
+                        break
+                except json.JSONDecodeError:
+                    continue
+
+        return events
+    except Exception as error:
+        logger.warning("get_recent_events_failed error=%s", error)
+        return []
+
+
+def get_system_metrics(*, settings: Any) -> list[dict[str, Any]]:
+    """Generate system metrics for admin dashboard.
+
+    Args:
+        settings: Application settings
+
+    Returns:
+        List of metric dictionaries
+    """
+    metrics: list[dict[str, Any]] = []
+    now = datetime.utcnow().isoformat()
+
+    # Event log size
+    try:
+        path = Path(getattr(settings, "event_log_path", "/tmp/lwa_events.jsonl"))
+        if path.exists():
+            size_bytes = path.stat().st_size
+            metrics.append({
+                "name": "event_log_size_bytes",
+                "value": float(size_bytes),
+                "unit": "bytes",
+                "timestamp": now,
+            })
+    except Exception:
+        pass
+
+    # Recent event counts by time window
+    for minutes in [5, 15, 60]:
+        try:
+            count = len(get_recent_events(settings=settings, minutes=minutes, limit=10000))
+            metrics.append({
+                "name": f"events_last_{minutes}m",
+                "value": float(count),
+                "unit": "count",
+                "timestamp": now,
+            })
+        except Exception:
+            pass
+
+    return metrics

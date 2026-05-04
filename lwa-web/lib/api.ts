@@ -1378,3 +1378,68 @@ export type DemoStatusResponse = {
 export async function getDemoStatus() {
   return jsonRequest<DemoStatusResponse>("/api/v1/demo/status");
 }
+
+// =========================
+// ADMIN / OPS API
+// =========================
+
+export type RecentEvent = {
+  event_id: string;
+  event_type: string;
+  timestamp: string;
+  clip_id?: string | null;
+  source_id?: string | null;
+  user_id?: string | null;
+  metadata: Record<string, unknown>;
+};
+
+export type RecentEventsResponse = {
+  success: boolean;
+  events: RecentEvent[];
+  count: number;
+  time_range_minutes: number;
+};
+
+export async function getRecentLwaEvents(
+  minutes: number = 60,
+  event_type?: string | null,
+  limit: number = 100
+) {
+  const params = new URLSearchParams();
+  params.append("minutes", minutes.toString());
+  params.append("limit", limit.toString());
+  if (event_type) params.append("event_type", event_type);
+  
+  return jsonRequest<RecentEventsResponse>(`/api/v1/admin/events/recent?${params.toString()}`);
+}
+
+export type SystemMetric = {
+  metric_name: string;
+  value: number;
+  unit: string;
+  timestamp: string;
+};
+
+export type SystemMetricsResponse = {
+  success: boolean;
+  metrics: SystemMetric[];
+  generated_at: string;
+};
+
+export async function getAdminMetrics() {
+  return jsonRequest<SystemMetricsResponse>("/api/v1/admin/metrics");
+}
+
+export type OperatorStatusResponse = {
+  success: boolean;
+  system_healthy: boolean;
+  event_tracking_enabled: boolean;
+  recent_event_count: number;
+  api_status: string;
+  last_error?: string | null;
+  checked_at: string;
+};
+
+export async function getAdminOpsStatus() {
+  return jsonRequest<OperatorStatusResponse>("/api/v1/admin/status");
+}
