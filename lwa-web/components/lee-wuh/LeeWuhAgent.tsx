@@ -220,14 +220,21 @@ export function LeeWuhAgent() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 group"
+          className="group fixed bottom-6 right-6 z-50"
+          aria-label="Open Lee-Wuh assistant"
         >
-          <div className="relative">
-            <LeeWuhAvatar mood={mood} size="md" />
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C9A24A] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#C9A24A]"></span>
-            </span>
+          <div className="flex items-center gap-3 rounded-full border border-[#C9A24A]/30 bg-[#09090d]/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur-xl transition hover:scale-[1.03] hover:border-[#C9A24A]/60">
+            <div className="relative">
+              <LeeWuhAvatar mood={mood} size="md" />
+              <span className="absolute -right-1 -top-1 flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#C9A24A] opacity-75" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-[#C9A24A]" />
+              </span>
+            </div>
+            <div className="hidden text-left sm:block">
+              <p className="text-sm font-black text-white">Ask Lee-Wuh</p>
+              <p className="text-xs text-white/45">Mascot + clip guide</p>
+            </div>
           </div>
         </button>
       )}

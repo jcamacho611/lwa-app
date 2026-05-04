@@ -186,12 +186,12 @@ export function LeeWuhLoading({ message = "Lee-Wuh is thinking..." }: { message?
 }
 
 // Guide/helper tooltip
-export function LeeWuhGuide({ 
-  tip, 
+export function LeeWuhGuide({
+  tip,
   position = "bottom",
-  children 
-}: { 
-  tip: string; 
+  children
+}: {
+  tip: string;
   position?: "top" | "bottom" | "left" | "right";
   children: React.ReactNode;
 }) {
@@ -205,13 +205,13 @@ export function LeeWuhGuide({
   };
 
   return (
-    <div 
+    <div
       className="relative inline-block"
       onMouseEnter={() => setShowTip(true)}
       onMouseLeave={() => setShowTip(false)}
     >
       {children}
-      
+
       {showTip && (
         <div className={`absolute ${positionClasses[position]} z-50 w-64`}>
           <div className="flex items-start gap-2 rounded-xl bg-[#16161B] border border-[#C9A24A]/30 p-3 shadow-lg">
@@ -220,6 +220,60 @@ export function LeeWuhGuide({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Large mascot card for prominent display
+export function LeeWuhMascotCard({
+  mood = "idle",
+  title = "Lee-Wuh",
+  message,
+  cta = "Your AI clipping mascot is watching the signal.",
+  className = "",
+}: {
+  mood?: LeeWuhMood;
+  title?: string;
+  message?: string;
+  cta?: string;
+  className?: string;
+}) {
+  const config = moodConfig[mood];
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[32px] border border-[#C9A24A]/25 bg-[#09090d] p-5 shadow-2xl shadow-black/30 ${className}`}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,rgba(201,162,74,0.24),transparent_34%),radial-gradient(circle_at_80%_10%,rgba(109,59,255,0.18),transparent_30%)]" />
+
+      <div className="relative z-10 grid gap-5 md:grid-cols-[0.8fr_1.2fr] md:items-center">
+        <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-black/35">
+          <img
+            src="/brand/lee-wuh-hero-16x9.svg"
+            alt="Lee-Wuh LWA mascot"
+            className="aspect-video w-full object-cover"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+          <div className="absolute bottom-3 left-3 rounded-full border border-[#C9A24A]/30 bg-black/70 px-3 py-1 text-xs font-bold text-[#E9C77B]">
+            {config.emoji} {mood}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-[#E9C77B]/80">
+            LWA Mascot
+          </p>
+          <h3 className="mt-2 text-3xl font-black text-white">{title}</h3>
+          <p className="mt-3 text-sm leading-7 text-white/66">
+            {message || config.defaultMessage}
+          </p>
+          <p className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-semibold leading-6 text-white/78">
+            {cta}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

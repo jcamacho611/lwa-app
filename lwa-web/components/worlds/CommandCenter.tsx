@@ -19,6 +19,7 @@ import { SourceTimelinePanel } from "../command-center/SourceTimelinePanel";
 import { BatchReviewPanel } from "../command-center/BatchReviewPanel";
 import { ProofVaultStyleMemoryPanel } from "../command-center/ProofVaultStyleMemoryPanel";
 import { DemoModePanel } from "../command-center/DemoModePanel";
+import { LeeWuhMascotCard } from "../lee-wuh";
 
 export function CommandCenter() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -115,6 +116,14 @@ export function CommandCenter() {
               </div>
 
               <div className="glass-panel rounded-[28px] p-6">
+                <LeeWuhMascotCard
+                  mood="playful"
+                  title="Lee-Wuh Command Guide"
+                  message="I sit across clipping, campaigns, proof, style memory, and creator missions."
+                  cta="Use Command Center to turn clips into a repeatable creator operating system."
+                  className="mb-6"
+                />
+
                 <p className="section-kicker">World Identity</p>
                 <h3 className="mt-3 text-2xl font-semibold text-ink">{mockWorldProfile.displayName}</h3>
                 <p className="mt-2 text-sm leading-7 text-ink/62">

@@ -20,6 +20,7 @@ import { PostingPanel } from "./posting-panel";
 import { ReadyQueuePanel } from "./ready-queue-panel";
 import { SettingsPanel } from "./settings-panel";
 import { WalletPanel } from "./wallet-panel";
+import { LeeWuhMascotCard } from "./lee-wuh";
 import {
   BatchSummary,
   CampaignAssignment,
@@ -2212,6 +2213,21 @@ export function ClipStudio({
           ) : null}
         </div>
       </div>
+
+      {/* Lee-Wuh Mascot Card */}
+      <LeeWuhMascotCard
+        mood={isLoading ? "analyzing" : activeResult ? "complete" : "focused"}
+        title="Lee-Wuh is on the clip hunt"
+        message={
+          isLoading
+            ? "I'm scanning for the strongest moments, hooks, and packaging angles."
+            : activeResult
+              ? "Your clip pack is ready. Start with the best rendered result."
+              : "Paste a source or upload a file. I'll help turn it into a campaign."
+        }
+        cta="Rendered clips first. Strategy-only ideas stay honest."
+        className="mx-auto max-w-3xl"
+      />
 
       {isGuest && hasStrategyOnlyWithoutPreview ? (
         <InlineAlert tone="violet" title="Strategy-only package ready">
