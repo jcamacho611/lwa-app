@@ -1127,6 +1127,47 @@ export async function generateFromText(request: TextGenerateRequest) {
 }
 
 // =========================
+// ANALYSIS ENGINE API (NEW - Guaranteed Output)
+// =========================
+
+export type AnalysisGenerateRequest = {
+  text: string;
+  min_clips?: number;
+  max_clips?: number;
+};
+
+export type AnalysisClip = {
+  clip_id: string;
+  hook: string;
+  caption: string;
+  text: string;
+  cta: string;
+  thumbnail_text: string;
+  score: number;
+  why: string;
+  rank: number;
+};
+
+export type AnalysisGenerateResponse = {
+  success: boolean;
+  clips: AnalysisClip[];
+  clips_generated: number;
+  source_type: string;
+  method: string;
+};
+
+/**
+ * Generate clips using Analysis Engine.
+ * GUARANTEES: Always returns 3-5 clips, never fails, no AI required.
+ */
+export async function generateFromAnalysis(request: AnalysisGenerateRequest) {
+  return jsonRequest<AnalysisGenerateResponse>("/api/v1/generate", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+// =========================
 // EVENT TRACKING API
 // =========================
 

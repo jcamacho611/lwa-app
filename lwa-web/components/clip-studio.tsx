@@ -53,6 +53,7 @@ import {
   exportClipBundle,
   generateClips,
   generateFromText,
+  generateFromAnalysis,
   loadClipRenderStatus,
   loadClipRecoveryJob,
   loadBatches,
@@ -99,6 +100,7 @@ import {
   upsertReadyQueueItem,
 } from "../lib/queue";
 import { GENERATOR_COPY, HERO_COPY, RESULTS_COPY, rewriteSurfaceLabel } from "../lib/brand-voice";
+import { loadDemoClips, DEMO_INPUT_TEXT } from "../lib/demo-data";
 import { buildAllPackagesText, buildClipPackageText, getClipScore, isRenderedClip } from "../lib/clip-utils";
 import type { CharacterActionId } from "../lib/character-intelligence";
 import { getPlanSurface } from "../lib/plans";
@@ -700,6 +702,23 @@ export function ClipStudio({
     await refreshAccount(token);
   }
 
+  // Demo mode - instant clips without backend
+  async function onTryDemo() {
+    setIsLoading(true);
+    setError(null);
+    emitLWACharacterEvent({ state: "react", trigger: "demo_start" });
+    
+    // Simulate slight delay for UX
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Load demo clips (client-side only, no API)
+    const demoData = loadDemoClips();
+    
+    setResult(demoData);
+    setIsLoading(false);
+    emitLWACharacterEvent({ state: "celebrate", trigger: "demo_complete" });
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>, bypassLiveCheck = false) {
     event.preventDefault();
     if (sourceMode === "video" && !videoUrl.trim() && !selectedUploadId) {
@@ -747,19 +766,30 @@ export function ClipStudio({
       
       // Use deterministic text generation for idea mode (no AI APIs required)
       if (sourceMode === "idea" && ideaPrompt.trim()) {
-        const textResponse = await generateFromText(
-          {
+        // Try Analysis Engine first (guaranteed output, no AI)
+        let textResponse;
+        try {
+          textResponse = await generateFromAnalysis({
             text: ideaPrompt.trim(),
-            campaignGoal: campaignGoal || undefined,
-            target_platforms: useManualPlatform ? [platform] : ["tiktok", "youtube_shorts", "instagram_reels"],
             min_clips: 3,
-          },
-          token,
-        );
+            max_clips: 5,
+          });
+        } catch {
+          // Fallback to deterministic text generation
+          textResponse = await generateFromText(
+            {
+              text: ideaPrompt.trim(),
+              campaignGoal: campaignGoal || undefined,
+              target_platforms: useManualPlatform ? [platform] : ["tiktok", "youtube_shorts", "instagram_reels"],
+              min_clips: 3,
+            },
+            token,
+          );
+        }
         
-        // Convert deterministic response to standard format
+        // Convert response to standard format
         data = {
-          job_id: textResponse.job_id,
+          job_id: textResponse.job_id || `analysis_${Date.now()}`,
           status: "completed",
           clips: textResponse.clips.map((clip) => ({
             clip_id: clip.clip_id,
@@ -767,12 +797,12 @@ export function ClipStudio({
             hook: clip.hook,
             caption: clip.caption,
             text: clip.text,
-            ai_score: clip.ai_score,
-            why_this_matters: clip.why_this_matters,
+            ai_score: clip.score || clip.ai_score,
+            why_this_matters: clip.why || clip.why_this_matters,
             cta: clip.cta,
             thumbnail_text: clip.thumbnail_text,
-            duration_seconds: clip.duration_seconds,
-            render_status: clip.render_status,
+            duration_seconds: clip.duration_seconds || 20,
+            render_status: clip.render_status || "strategy_only",
             // Strategy-only: no video URLs yet
             original_vertical_url: undefined,
             vertical_with_captions_url: undefined,
@@ -780,13 +810,13 @@ export function ClipStudio({
           clips_summary: textResponse.clips.map((clip) => ({
             clip_id: clip.clip_id,
             title: clip.hook,
-            duration_seconds: clip.duration_seconds,
-            ai_score: clip.ai_score,
-            render_status: clip.render_status,
+            duration_seconds: clip.duration_seconds || 20,
+            ai_score: clip.score || clip.ai_score,
+            render_status: clip.render_status || "strategy_only",
           })),
           strategy_only: true,
           source_type: "text",
-          generation_method: "deterministic",
+          generation_method: "analysis_engine",
         };
       } else {
         // Use standard video-based generation
