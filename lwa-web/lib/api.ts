@@ -1122,12 +1122,13 @@ export type TextGenerateResponse = {
 export async function generateFromText(request: TextGenerateRequest) {
   return jsonRequest<TextGenerateResponse>("/api/v1/generate-text", {
     method: "POST",
+    headers: authHeaders(null),
     body: JSON.stringify(request),
   });
 }
 
 // =========================
-// ANALYSIS ENGINE API (NEW - Guaranteed Output)
+// ANALYSIS ENGINE API
 // =========================
 
 export type AnalysisGenerateRequest = {
@@ -1157,12 +1158,12 @@ export type AnalysisGenerateResponse = {
 };
 
 /**
- * Generate clips using Analysis Engine.
- * GUARANTEES: Always returns 3-5 clips, never fails, no AI required.
+ * Generate strategy-only clips using the local Analysis Engine path.
  */
 export async function generateFromAnalysis(request: AnalysisGenerateRequest) {
-  return jsonRequest<AnalysisGenerateResponse>("/api/v1/generate", {
+  return jsonRequest<AnalysisGenerateResponse>("/api/v1/generate-analysis", {
     method: "POST",
+    headers: authHeaders(null),
     body: JSON.stringify(request),
   });
 }
@@ -1728,4 +1729,3 @@ export async function getVideoJobs() {
 export async function getSourceAssets() {
   return jsonRequest<SourceAssetListResponse>("/api/v1/source-assets");
 }
-

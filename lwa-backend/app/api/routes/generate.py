@@ -4,7 +4,7 @@ import logging
 from uuid import uuid4
 from typing import List, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from ...core.config import get_settings
@@ -455,42 +455,35 @@ class TextGenerateResponse(BaseModel):
 
 
 @router.post("/generate-text", response_model=TextGenerateResponse)
+@router.post("/v1/generate-text", response_model=TextGenerateResponse)
 async def generate_from_text(
     request: TextGenerateRequest,
-    authorization: str = Header(default=""),
+    http_request: Request,
 ):
     """
     Generate clips from plain text using deterministic heuristics.
-    NO AI APIs required - fully offline, always returns results.
+    No external AI provider is required for this strategy-only route.
     """
-    # Authenticate
-    entitlement = await resolve_entitlement(settings, authorization)
-    if not entitlement or not entitlement.subject:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    # Enforce throttle
-    await enforce_generation_throttle(entitlement=entitlement)
-
-    # Validate input
     if not request.text or len(request.text.strip()) < 20:
         raise HTTPException(status_code=422, detail="Text must be at least 20 characters")
 
-    # Generate using deterministic engine
-    clips = generate_clips_offline(request.text, min_clips=request.min_clips)
-
-    # Create job entry
-    job_id = f"text_{int(time.time())}_{random.randint(1000, 9999)}"
-    job_store.set(
-        job_id,
-        {
-            "status": "completed",
-            "progress": 100,
-            "output": clips,
-            "entitlement": entitlement.dict(),
-        },
+    enforce_api_key(http_request, settings)
+    current_user = get_optional_user(http_request)
+    entitlement = resolve_entitlement(
+        request=http_request,
+        settings=settings,
+        usage_store=usage_store,
+        current_user=current_user,
     )
+    await enforce_generation_throttle(entitlement=entitlement)
 
-    # Emit event
+    try:
+        clips = generate_clips_offline(request.text, min_clips=request.min_clips)
+    except Exception:
+        usage_store.release(subject=entitlement.subject, usage_day=entitlement.usage_day)
+        raise
+
+    job_id = f"text_{uuid4().hex[:10]}"
     emit_event(
         settings=settings,
         event="clips_generated",
@@ -535,28 +528,29 @@ class AnalysisGenerateResponse(BaseModel):
     method: str = "analysis_engine"
 
 
-@router.post("/generate", response_model=AnalysisGenerateResponse)
+@router.post("/generate-analysis", response_model=AnalysisGenerateResponse)
+@router.post("/v1/generate-analysis", response_model=AnalysisGenerateResponse)
 async def generate_from_analysis(
     request: AnalysisGenerateRequest,
-    authorization: str = Header(default=""),
+    http_request: Request,
 ):
     """
-    Generate clips using the Analysis Engine.
-    
-    GUARANTEES:
-    - Always returns at least min_clips
-    - Never fails or errors
-    - No AI APIs required
-    - Works 100% offline
-    
-    Input: raw text content
-    Output: clips with hooks, captions, CTAs, ranking
+    Generate strategy-only clips from raw text using the deterministic
+    Analysis Engine. The primary media route remains POST /generate.
     """
-    # Validate input
     if not request.text or len(request.text.strip()) < 10:
         raise HTTPException(status_code=422, detail="Text must be at least 10 characters")
+
+    enforce_api_key(http_request, settings)
+    current_user = get_optional_user(http_request)
+    entitlement = resolve_entitlement(
+        request=http_request,
+        settings=settings,
+        usage_store=usage_store,
+        current_user=current_user,
+    )
+    await enforce_generation_throttle(entitlement=entitlement)
     
-    # Generate using analysis engine (NEVER fails)
     try:
         clips = analyze_content(
             request.text, 
@@ -573,8 +567,7 @@ async def generate_from_analysis(
             source_type="text",
             method="analysis_engine",
         )
-    except Exception as e:
-        # EMERGENCY FALLBACK: Should never happen, but ensures we NEVER error
+    except Exception:
         fallback_clips = [
             {
                 "clip_id": "clip_001",
