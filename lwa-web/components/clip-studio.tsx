@@ -1555,7 +1555,7 @@ export function ClipStudio({
               Save my work
             </button>
           </div>
-        </div>
+        </>
       ) : (
         <>
           <p className="text-sm font-semibold text-[var(--gold)]">
@@ -2904,7 +2904,7 @@ export function ClipStudio({
                     >
                       Generate clips
                     </button>
-                  </div>
+                  </>
                 )}
               </div>
             }
@@ -3057,7 +3057,7 @@ export function ClipStudio({
                       title="Use the system in order"
                       description="Generate, queue winners, then move into campaign flow."
                     />
-                  </div>
+                  </>
                 ) : null}
               </div>
             </aside>
@@ -3164,8 +3164,9 @@ export function ClipStudio({
                             "Queue management inside the workspace",
                           ]}
                         />
-                      </>
-                    ) : null}
+                      ) : null}
+                    </>
+                  ) : null}
                   </div>
                   ) : null}
 
