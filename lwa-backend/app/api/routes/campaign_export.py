@@ -12,8 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 
-from ...services.campaign_export_packager import campaign_export_packager
-
 router = APIRouter(prefix="/v1/campaign-export", tags=["campaign-export"])
 
 # Request/Response Models

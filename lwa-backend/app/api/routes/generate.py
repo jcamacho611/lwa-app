@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import logging
 from uuid import uuid4
+from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request
+from pydantic import BaseModel
 
 from ...core.config import get_settings
 from ...dependencies.auth import get_optional_user, get_platform_store

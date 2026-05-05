@@ -12,8 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 
-from ...services.feedback_learning_engine import feedback_learning_engine
-
 router = APIRouter(prefix="/v1/feedback-learning", tags=["feedback-learning"])
 
 # Request/Response Models

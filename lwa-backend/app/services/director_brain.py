@@ -45,6 +45,7 @@ class DirectorBrainPlan:
     confidence: int
     explanation: str
     opportunity_insight: OpportunityInsight | None = None
+    proof_asset: ProofAsset | None = None
     platform_notes: list[str] = field(default_factory=list)
 
     def as_clip_update(self, clip: ClipResult) -> dict[str, object]:

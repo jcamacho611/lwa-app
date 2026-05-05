@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 from uuid import uuid4
@@ -85,6 +86,77 @@ class MarketplaceOrderQuote:
     status: OrderStatus = OrderStatus.CREATED
 
 
+@dataclass
+class MarketplaceListing:
+    id: str
+    name: str
+    description: str
+    product_type: ProductType
+    price: float
+    creator_name: str
+    status: ProductStatus
+    created_at: datetime
+    download_count: int = 0
+    rating: float = 0.0
+    review_count: int = 0
+    preview_url: str | None = None
+    asset_urls: list[str] = field(default_factory=list)
+
+
+class MarketplaceCore:
+    """Compatibility facade for the marketplace route scaffold."""
+
+    def __init__(self) -> None:
+        self._listings: list[MarketplaceListing] = []
+
+    def search_listings(
+        self,
+        *,
+        query: str = "",
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[MarketplaceListing]:
+        normalized = query.strip().lower()
+        listings = self._listings
+        if normalized:
+            listings = [
+                item
+                for item in listings
+                if normalized in item.name.lower()
+                or normalized in item.description.lower()
+                or normalized in (item.product_type.value.lower())
+            ]
+        return listings[offset : offset + limit]
+
+    def create_product_draft(
+        self,
+        *,
+        name: str,
+        description: str,
+        product_type: ProductType,
+        price: float,
+        creator_name: str,
+        preview_url: str | None = None,
+        asset_urls: list[str] | None = None,
+    ) -> MarketplaceListing:
+        price_cents = int(round(price * 100))
+        validate_price_cents(price_cents)
+        listing = MarketplaceListing(
+            id=str(uuid4()),
+            name=name.strip(),
+            description=description.strip(),
+            product_type=product_type,
+            price=price,
+            creator_name=creator_name,
+            status=ProductStatus.DRAFT,
+            created_at=datetime.utcnow(),
+            preview_url=preview_url,
+            asset_urls=list(asset_urls or []),
+        )
+        self._listings.append(listing)
+        return listing
+
+
 def validate_price_cents(price_cents: int) -> None:
     if not isinstance(price_cents, int):
         raise ValueError("price_cents must be an integer number of cents")
@@ -167,3 +239,6 @@ def product_to_public_dict(product: MarketplaceProduct) -> dict[str, Any]:
         "ftc_disclosure_required": product.ftc_disclosure_required,
         "disclosure": public_marketplace_disclosure(),
     }
+
+
+marketplace_core = MarketplaceCore()

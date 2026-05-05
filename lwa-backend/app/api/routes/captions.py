@@ -12,8 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 
-from ...services.caption_engine import caption_engine
-
 router = APIRouter(prefix="/v1/captions", tags=["captions"])
 
 # Request/Response Models

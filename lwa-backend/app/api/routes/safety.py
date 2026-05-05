@@ -12,8 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 
-from ...services.safety_engine import safety_engine
-
 router = APIRouter(prefix="/v1/safety", tags=["safety"])
 
 # Request/Response Models

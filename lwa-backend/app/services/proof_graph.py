@@ -35,16 +35,16 @@ class ProofAsset:
     id: str
     user_id: str
     source_type: ProofSource
-    source_asset_id: Optional[str] = None  # Link to clip, job, etc.
     proof_type: ProofType
     title: str
     description: str
     confidence_score: int  # 0-100
+    created_at: datetime
+    source_asset_id: Optional[str] = None  # Link to clip, job, etc.
     related_offer: Optional[str] = None  # What this proof supports
     related_audience: Optional[str] = None  # Who this proof targets
     content_url: Optional[str] = None  # Link to content
     thumbnail_url: Optional[str] = None  # Image/preview
-    created_at: datetime
     tags: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -173,6 +173,7 @@ class ProofGraphManager:
             title=title,
             description=description,
             confidence_score=confidence,
+            created_at=datetime.now(),
             related_offer=self._infer_related_offer(clip),
             related_audience=self._infer_audience(clip),
             content_url=clip.preview_url or clip.edited_clip_url or clip.clip_url,

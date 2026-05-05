@@ -13,8 +13,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 
-from ...services.audio_engine import audio_engine
-
 router = APIRouter(prefix="/v1/audio", tags=["audio"])
 
 # Request/Response Models
