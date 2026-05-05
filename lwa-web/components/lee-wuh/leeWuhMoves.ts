@@ -39,7 +39,7 @@ export const leeWuhMoves: Record<LeeWuhMoveId, LeeWuhMove> = {
   },
   post_paid_work: {
     id: "post_paid_work",
-    label: "Post paid work",
+    label: "Draft paid task",
     href: "/marketplace/post-job",
     detail: "Draft a prepaid or partially paid creator task with clear work metadata.",
     state: "marketplaceGuide",

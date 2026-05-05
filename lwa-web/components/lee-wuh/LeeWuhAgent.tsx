@@ -29,12 +29,12 @@ export function LeeWuhAgent() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Hey! I'm Lee-Wuh. I can help you make clips, find paid work, or navigate LWA. What are we doing today?",
+      content: "Hey. I'm Lee-Wuh. I can help you make clips, explore marketplace lanes, or navigate LWA. What are we doing today?",
       timestamp: new Date(),
       actions: [
-        { label: "🎬 Make Clips", action: "navigate_to", params: { page: "/generate" } },
-        { label: "💰 Find Paid Work", action: "navigate_to", params: { page: "/opportunities" } },
-        { label: "📊 View Command Center", action: "navigate_to", params: { page: "/command-center" } },
+        { label: "Make clips", action: "navigate_to", params: { page: "/generate" } },
+        { label: "Explore marketplace", action: "navigate_to", params: { page: "/marketplace" } },
+        { label: "View Command Center", action: "navigate_to", params: { page: "/command-center" } },
       ],
     },
   ]);
@@ -95,8 +95,8 @@ export function LeeWuhAgent() {
         return "Taking you to clip generation...";
 
       case "find_opportunities":
-        window.location.href = "/opportunities";
-        return "Opening the opportunities board...";
+        window.location.href = "/marketplace";
+        return "Opening the marketplace lanes...";
 
       case "navigate_to":
         const { page } = toolCall.params;
@@ -126,13 +126,14 @@ export function LeeWuhAgent() {
   }
 
   // Send message to Lee-Wuh AI
-  async function sendMessage() {
-    if (!input.trim() || isLoading) return;
+  async function sendMessage(messageOverride?: string) {
+    const messageText = messageOverride ?? input;
+    if (!messageText.trim() || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: input,
+      content: messageText,
       timestamp: new Date(),
     };
 
@@ -193,7 +194,7 @@ export function LeeWuhAgent() {
             />
             <div className="hidden pr-2 text-left sm:block">
               <p className="text-sm font-black text-white">Ask Lee-Wuh</p>
-              <p className="text-xs text-white/45">3D mascot + clip guide</p>
+              <p className="text-xs text-white/45">Mascot and clip guide</p>
             </div>
           </div>
         </button>
@@ -284,7 +285,7 @@ export function LeeWuhAgent() {
                   className="flex-1 rounded-xl border border-white/10 bg-black/40 px-4 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#C9A24A]"
                 />
                 <button
-                  onClick={sendMessage}
+                  onClick={() => sendMessage()}
                   disabled={isLoading || !input.trim()}
                   className="rounded-xl bg-[#C9A24A] px-4 py-2 text-sm font-bold text-black transition hover:bg-[#E9C77B] disabled:opacity-50"
                 >
@@ -296,30 +297,27 @@ export function LeeWuhAgent() {
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   onClick={() => {
-                    setInput("Generate clips from this video");
-                    sendMessage();
+                    sendMessage("Generate clips from this video");
                   }}
                   className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/60 hover:bg-white/[0.08]"
                 >
-                  🎬 Make clips
+                  Make clips
                 </button>
                 <button
                   onClick={() => {
-                    setInput("Find me paid work");
-                    sendMessage();
+                    sendMessage("Show me marketplace lanes");
                   }}
                   className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/60 hover:bg-white/[0.08]"
                 >
-                  💰 Find work
+                  Explore marketplace
                 </button>
                 <button
                   onClick={() => {
-                    setInput("How do I use Proof Vault?");
-                    sendMessage();
+                    sendMessage("How do I use Proof Vault?");
                   }}
                   className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/60 hover:bg-white/[0.08]"
                 >
-                  ❓ Help
+                  Help
                 </button>
               </div>
             </div>

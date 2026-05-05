@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getMarketplaceProducts } from "../../lib/api";
+import { useState } from "react";
 
 interface MarketplaceProduct {
   id: string;
@@ -31,26 +30,26 @@ interface MarketplaceJob {
 const mockProducts: MarketplaceProduct[] = [
   {
     id: "prod_001",
-    name: "Viral Clip Pack Starter",
-    description: "10 ready-to-post clips optimized for TikTok and Instagram",
+    name: "Clip Pack Starter Shell",
+    description: "Example product lane for reviewed clip packages and metadata.",
     product_type: "clip_pack",
-    price: 49.99,
-    creator_name: "ViralStudios",
-    status: "active",
-    rating: 4.8,
-    review_count: 124,
+    price: 0,
+    creator_name: "Example creator",
+    status: "draft",
+    rating: 0,
+    review_count: 0,
     preview_url: "/previews/starter-pack.jpg",
   },
   {
     id: "prod_002",
-    name: "Gaming Highlights Bundle",
-    description: "Gaming clips with trending music and effects",
+    name: "Highlights Bundle Shell",
+    description: "Example product lane for gameplay or stream highlight review.",
     product_type: "clip_pack",
-    price: 79.99,
-    creator_name: "GameEditPro",
-    status: "active",
-    rating: 4.9,
-    review_count: 89,
+    price: 0,
+    creator_name: "Example creator",
+    status: "draft",
+    rating: 0,
+    review_count: 0,
     preview_url: "/previews/gaming-bundle.jpg",
   },
 ];
@@ -61,9 +60,9 @@ const mockJobs: MarketplaceJob[] = [
     title: "Gaming Channel Clip Pack",
     description: "Create 10 engaging clips from 3 hours of gameplay footage",
     campaign_type: "clip_pack",
-    budget: 150,
-    status: "open",
-    deadline: "2025-05-15",
+    budget: 0,
+    status: "draft",
+    deadline: undefined,
     requirements: ["Gaming knowledge", "Fast turnaround", "TikTok experience"],
     applicant_count: 12,
   },
@@ -72,9 +71,9 @@ const mockJobs: MarketplaceJob[] = [
     title: "Podcast Promotion Series",
     description: "Generate clips promoting new podcast episodes",
     campaign_type: "promotion",
-    budget: 300,
-    status: "open",
-    deadline: "2025-05-20",
+    budget: 0,
+    status: "draft",
+    deadline: undefined,
     requirements: ["Audio editing", "Storytelling", "Social media savvy"],
     applicant_count: 8,
   },
@@ -98,12 +97,12 @@ export function MarketplacePanel() {
           </div>
           <div className="flex gap-4 text-right">
             <div>
-              <div className="text-sm text-white/50">Active Jobs</div>
-              <div className="text-xl font-bold text-[#00D9FF]">47</div>
+              <div className="text-sm text-white/50">Live Jobs</div>
+              <div className="text-xl font-bold text-[#00D9FF]">Off</div>
             </div>
             <div>
-              <div className="text-sm text-white/50">Products</div>
-              <div className="text-xl font-bold text-[#00D9FF]">128</div>
+              <div className="text-sm text-white/50">Rail State</div>
+              <div className="text-xl font-bold text-[#00D9FF]">V0</div>
             </div>
           </div>
         </div>
@@ -166,7 +165,7 @@ export function MarketplacePanel() {
                     <h4 className="font-medium text-white">{product.name}</h4>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-[#E9C77B]">${product.price}</div>
+                    <div className="text-lg font-bold text-[#E9C77B]">Pricing later</div>
                   </div>
                 </div>
 
@@ -179,8 +178,7 @@ export function MarketplacePanel() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
                     <span className="text-[#E9C77B]">★</span>
-                    <span className="text-sm font-medium text-white">{product.rating}</span>
-                    <span className="text-xs text-white/30">({product.review_count})</span>
+                    <span className="text-sm font-medium text-white">No reviews yet</span>
                   </div>
                   <button className="rounded-lg bg-[#C9A24A] px-3 py-2 text-sm font-medium text-black transition hover:bg-[#E9C77B]">
                     View
@@ -225,8 +223,8 @@ export function MarketplacePanel() {
                     <h4 className="text-lg font-medium text-white">{job.title}</h4>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-[#E9C77B]">${job.budget}</div>
-                    <div className="text-xs text-white/30">budget</div>
+                    <div className="text-xl font-bold text-[#E9C77B]">Draft</div>
+                    <div className="text-xs text-white/30">budget state</div>
                   </div>
                 </div>
 
@@ -245,7 +243,7 @@ export function MarketplacePanel() {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 text-sm">
-                    <span className="text-white/50">{job.applicant_count} applicants</span>
+                    <span className="text-white/50">Applications manual</span>
                     {job.deadline && (
                       <span className="text-white/30">Deadline: {job.deadline}</span>
                     )}
@@ -255,7 +253,7 @@ export function MarketplacePanel() {
                       Details
                     </button>
                     <button className="rounded-lg bg-[#C9A24A] px-3 py-2 text-sm font-medium text-black transition hover:bg-[#E9C77B]">
-                      Apply
+                      Draft only
                     </button>
                   </div>
                 </div>
@@ -270,10 +268,10 @@ export function MarketplacePanel() {
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[
-              { name: "ClipMaster Pro", specialty: "TikTok Shorts", rating: 4.9, jobs: 127, earnings: 15400 },
-              { name: "StyleStudio", specialty: "Captions & Text", rating: 4.7, jobs: 89, earnings: 12300 },
-              { name: "ViralVault", specialty: "Hook Writing", rating: 4.8, jobs: 203, earnings: 28700 },
-              { name: "EditElite", specialty: "Long-form to Short", rating: 4.6, jobs: 67, earnings: 8900 },
+              { name: "Creator profile shell", specialty: "TikTok Shorts", rating: "Not live", jobs: "Manual", earnings: "Disabled" },
+              { name: "Caption profile shell", specialty: "Captions & Text", rating: "Not live", jobs: "Manual", earnings: "Disabled" },
+              { name: "Hook profile shell", specialty: "Hook Writing", rating: "Not live", jobs: "Manual", earnings: "Disabled" },
+              { name: "Editor profile shell", specialty: "Long-form to Short", rating: "Not live", jobs: "Manual", earnings: "Disabled" },
             ].map((creator, idx) => (
               <div
                 key={idx}
@@ -293,11 +291,11 @@ export function MarketplacePanel() {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="rounded-lg bg-white/[0.02] p-2">
                     <div className="font-medium text-white">{creator.jobs}</div>
-                    <div className="text-xs text-white/30">Jobs</div>
+                    <div className="text-xs text-white/30">Reviews</div>
                   </div>
                   <div className="rounded-lg bg-white/[0.02] p-2">
-                    <div className="font-medium text-[#E9C77B]">${(creator.earnings / 1000).toFixed(1)}k</div>
-                    <div className="text-xs text-white/30">Earned</div>
+                    <div className="font-medium text-[#E9C77B]">{creator.earnings}</div>
+                    <div className="text-xs text-white/30">Payouts</div>
                   </div>
                 </div>
               </div>

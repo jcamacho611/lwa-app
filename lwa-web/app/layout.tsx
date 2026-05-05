@@ -73,7 +73,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <FreeLaunchBanner />
         <BackgroundCanvas />
         <CharacterStage />
-        <FreeLaunchBanner />
         <main className="lwa-ui-layer" style={{ position: "relative", zIndex: 10 }}>
           {children}
         </main>

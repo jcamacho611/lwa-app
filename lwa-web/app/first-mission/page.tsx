@@ -33,7 +33,7 @@ export default function FirstMissionPage() {
               selectedMission
                 ? selectedMission === "content"
                   ? "Let's make some clips! Paste your source."
-                  : "Let's find you some paid work."
+                  : "Let's open the marketplace lanes and campaign shells."
                 : "You got content or you tryna make money today?"
             }
           />
@@ -51,7 +51,7 @@ export default function FirstMissionPage() {
             }`}
           >
             <div className="flex items-center gap-4">
-              <span className="text-4xl">🎬</span>
+              <span className="text-4xl">01</span>
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-white">Content Mission</h2>
                 <p className="mt-1 text-sm text-white/60">
@@ -74,11 +74,11 @@ export default function FirstMissionPage() {
             }`}
           >
             <div className="flex items-center gap-4">
-              <span className="text-4xl">💰</span>
+              <span className="text-4xl">02</span>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-white">Money Mission</h2>
+                <h2 className="text-xl font-bold text-white">Marketplace Mission</h2>
                 <p className="mt-1 text-sm text-white/60">
-                  Find paid clip jobs and campaign opportunities
+                  Review task lanes, campaign shells, and payout-readiness placeholders
                 </p>
               </div>
               {selectedMission === "money" && (
@@ -92,29 +92,29 @@ export default function FirstMissionPage() {
         {selectedMission && (
           <div className="mt-8">
             <Link
-              href={selectedMission === "content" ? "/generate" : "/opportunities"}
+              href={selectedMission === "content" ? "/generate" : "/marketplace"}
               className="block w-full rounded-2xl bg-[#C9A24A] py-4 text-center text-lg font-bold text-black transition hover:bg-[#E9C77B]"
             >
               {selectedMission === "content"
-                ? "🎬 Start Creating Clips →"
-                : "💰 Find Paid Work →"}
+                ? "Start Creating Clips"
+                : "Open Marketplace"}
             </Link>
           </div>
         )}
 
-        {/* Stats / Trust */}
+        {/* Claim-safe product proof */}
         <div className="mt-12 grid grid-cols-3 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-[#C9A24A]">50K+</div>
-            <div className="text-xs text-white/40">Clips Created</div>
+            <div className="text-sm font-bold uppercase tracking-[0.18em] text-[#C9A24A]">Upload</div>
+            <div className="mt-1 text-xs text-white/40">Public URL or source file path</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-[#C9A24A]">$2M+</div>
-            <div className="text-xs text-white/40">Creator Earnings</div>
+            <div className="text-sm font-bold uppercase tracking-[0.18em] text-[#C9A24A]">Rank</div>
+            <div className="mt-1 text-xs text-white/40">Retention signals first</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-[#C9A24A]">4.9★</div>
-            <div className="text-xs text-white/40">User Rating</div>
+            <div className="text-sm font-bold uppercase tracking-[0.18em] text-[#C9A24A]">Package</div>
+            <div className="mt-1 text-xs text-white/40">Hooks, captions, timestamps</div>
           </div>
         </div>
 
