@@ -186,6 +186,12 @@ class IntelligenceDataCore:
     def viral_platform_rules(self) -> List[Dict]:
         return list(load_intelligence_tables().get("viral", {}).get("platform_rules", []))
 
+    def platform_modifiers(self) -> Dict[str, Dict[str, float]]:
+        return dict(load_intelligence_tables().get("viral", {}).get("platform_modifiers", {}))
+
+    def clip_scoring_weights(self) -> Dict[str, Any]:
+        return dict(load_intelligence_tables().get("viral", {}).get("clip_scoring_weights", {}))
+
     def viral_content_category_rules(self) -> List[Dict]:
         return list(load_intelligence_tables().get("viral", {}).get("content_category_rules", []))
 

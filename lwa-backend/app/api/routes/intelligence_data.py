@@ -29,6 +29,7 @@ def intelligence_index() -> dict[str, object]:
         "counts": {
             "viral_signals": len(core.viral_signal_rules()),
             "platform_rules": len(core.viral_platform_rules()),
+            "platform_modifiers": len(core.platform_modifiers()),
             "categories": len(core.viral_content_category_rules()),
             "hook_formulas": len(core.hook_formula_library()),
             "caption_styles": len(core.caption_presets()),
@@ -51,6 +52,18 @@ def viral_signals() -> dict[str, object]:
 def platform_profiles() -> dict[str, object]:
     core = get_intelligence_core()
     return {"items": core.unified_platform_profiles()}
+
+
+@router.get("/platform-modifiers")
+def platform_modifiers() -> dict[str, object]:
+    core = get_intelligence_core()
+    return {"items": core.platform_modifiers()}
+
+
+@router.get("/scoring-weights")
+def scoring_weights() -> dict[str, object]:
+    core = get_intelligence_core()
+    return {"items": core.clip_scoring_weights()}
 
 
 @router.get("/category-profiles")

@@ -49,6 +49,7 @@ class IntelligenceTableIntegrationTests(unittest.TestCase):
         category = build_unified_category_profile("podcast")
         self.assertEqual(platform["canonical_platform"], "reels")
         self.assertTrue(platform["rule"])
+        self.assertTrue(platform["platform_modifiers"])
         self.assertEqual(category["category"], "podcast")
         self.assertTrue(category["caption_preset"])
         self.assertTrue(category["hook_formulas"])
@@ -133,6 +134,19 @@ class IntelligenceTableIntegrationTests(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["ok"], True)
         self.assertEqual(payload["counts"]["caption_styles"], 7)
+        self.assertGreaterEqual(payload["counts"]["platform_modifiers"], 5)
+
+        response = self.client.get("/v1/intelligence/platform-modifiers")
+        self.assertEqual(response.status_code, 200)
+        modifiers = response.json()["items"]
+        self.assertIn("tiktok", modifiers)
+        self.assertIn("vs_001", modifiers["tiktok"])
+
+        response = self.client.get("/v1/intelligence/scoring-weights")
+        self.assertEqual(response.status_code, 200)
+        weights = response.json()["items"]
+        self.assertIn("base_weights", weights)
+        self.assertIn("vs_001", weights["base_weights"])
 
         response = self.client.get("/v1/intelligence/viral-signals")
         self.assertEqual(response.status_code, 200)

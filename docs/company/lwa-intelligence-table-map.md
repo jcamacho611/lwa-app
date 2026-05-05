@@ -68,6 +68,8 @@ Attention compilation runs after clip candidates are created and before final cl
 - `GET /v1/intelligence/viral-signals`
 - `GET /v1/intelligence/platform-profiles`
 - `GET /v1/intelligence/platform-profiles/{platform}`
+- `GET /v1/intelligence/platform-modifiers`
+- `GET /v1/intelligence/scoring-weights`
 - `GET /v1/intelligence/category-profiles`
 - `GET /v1/intelligence/category-profiles/{category}`
 - `GET /v1/intelligence/hook-formulas`
