@@ -45,7 +45,8 @@ class Settings:
         self.api_base_url = os.getenv("API_BASE_URL", "").strip() or derived_public_base_url
         self.port = _env_int("PORT", 8000, minimum=1)
         self.log_level = os.getenv("LOG_LEVEL", "info")
-        self.free_launch_mode = _env_bool("FREE_LAUNCH_MODE", os.getenv("LWA_FREE_LAUNCH_MODE", "false"))
+        free_launch_raw = os.getenv("FREE_LAUNCH_MODE") or os.getenv("LWA_FREE_LAUNCH_MODE", "false")
+        self.free_launch_mode = free_launch_raw.strip().lower() in {"1", "true", "yes", "on"}
         self.rate_limit_guest_rpm = _env_int("RATE_LIMIT_GUEST_RPM", os.getenv("LWA_RATE_LIMIT_GUEST_RPM", "30"), minimum=1)
         self.api_key_header_name = os.getenv("LWA_API_KEY_HEADER_NAME", "x-api-key").strip() or "x-api-key"
         self.api_key_secret = os.getenv("LWA_API_KEY_SECRET", "").strip()
@@ -53,8 +54,6 @@ class Settings:
         self.default_plan_name = os.getenv("LWA_DEFAULT_PLAN_NAME", "Guest access")
         self.default_credits_remaining = _env_int("LWA_DEFAULT_CREDITS_REMAINING", 10, minimum=0)
         self.default_turnaround = os.getenv("LWA_DEFAULT_TURNAROUND", "45 seconds")
-        self.free_launch_mode = _env_bool("FREE_LAUNCH_MODE", "false")
-        self.rate_limit_guest_rpm = _env_int("RATE_LIMIT_GUEST_RPM", 30, minimum=1)
         self.free_daily_limit = _env_int("LWA_FREE_DAILY_LIMIT", self.default_credits_remaining, minimum=0)
         self.pro_daily_limit = _env_int("LWA_PRO_DAILY_LIMIT", 25, minimum=-1)
         self.scale_daily_limit = _env_int("LWA_SCALE_DAILY_LIMIT", 100, minimum=-1)

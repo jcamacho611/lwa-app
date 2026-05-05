@@ -66,6 +66,22 @@ class EntitlementsTests(unittest.TestCase):
         self.assertTrue(settings.free_launch_mode)
         self.assertEqual(settings.rate_limit_guest_rpm, 45)
 
+    def test_lwa_prefixed_free_launch_settings_are_respected(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FREE_LAUNCH_MODE": "",
+                "RATE_LIMIT_GUEST_RPM": "",
+                "LWA_FREE_LAUNCH_MODE": "true",
+                "LWA_RATE_LIMIT_GUEST_RPM": "22",
+            },
+            clear=False,
+        ):
+            settings = Settings()
+
+        self.assertTrue(settings.free_launch_mode)
+        self.assertEqual(settings.rate_limit_guest_rpm, 22)
+
     def test_quota_exceeded_returns_structured_detail(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings()
