@@ -1,6 +1,6 @@
 "use client";
 
-import type { SignalSprintPlayerProfile } from "@/lib/game/types";
+import type { SignalSprintPlayerProfile } from "../../lib/game/types";
 
 interface RewardWalletPanelProps {
   profile: SignalSprintPlayerProfile;
@@ -18,30 +18,30 @@ export default function RewardWalletPanel({ profile }: RewardWalletPanelProps) {
 
       {/* Balances */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        {/* Coins */}
+        {/* Signal Fragments */}
         <div className="bg-[#1a1a1a] rounded-lg p-3">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-6 h-6 rounded-full bg-[#C9A24A] flex items-center justify-center">
-              <span className="text-black text-xs font-bold">C</span>
+              <span className="text-black text-xs font-bold">S</span>
             </div>
-            <span className="text-xs text-white/50">Coins</span>
+            <span className="text-xs text-white/50">Signal Fragments</span>
           </div>
-          <p className="text-xl font-bold text-white">{profile.coins.toLocaleString()}</p>
+          <p className="text-xl font-bold text-white">{profile.signalFragments.toLocaleString()}</p>
         </div>
 
-        {/* Demo Sats */}
+        {/* Compressed Signal */}
         <div className="bg-[#1a1a1a] rounded-lg p-3">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center">
-              <span className="text-black text-xs font-bold">⚡</span>
+              <span className="text-black text-xs font-bold">CS</span>
             </div>
-            <span className="text-xs text-white/50">Demo Sats</span>
+            <span className="text-xs text-white/50">Compressed Signal</span>
           </div>
-          <p className="text-xl font-bold text-white">{profile.demoSats}</p>
+          <p className="text-xl font-bold text-white">{profile.compressedSignal}</p>
         </div>
       </div>
 
-      {/* Withdrawable Sats (always 0 in demo) */}
+      {/* Withdrawable Signal (always 0 in demo) */}
       <div className="bg-[#1a1a1a] rounded-lg p-3 mb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -50,28 +50,28 @@ export default function RewardWalletPanel({ profile }: RewardWalletPanelProps) {
                 <path d="M4 4a2 2 0 00-2 2v1h2V6h12v1h2V6a2 2 0 00-2-2H4zm12 6h-2v6h2v-6zm-4 0h-2v6h2v-6zm-4 0H4v6h2v-6zm-4 0v4a2 2 0 002 2h12a2 2 0 002-2v-4H2z" />
               </svg>
             </div>
-            <span className="text-xs text-white/50">Withdrawable Sats</span>
+            <span className="text-xs text-white/50">Withdrawable Signal</span>
           </div>
-          <span className="text-lg font-bold text-white/40">{profile.withdrawableSats}</span>
+          <span className="text-lg font-bold text-white/40">{profile.withdrawableSignal}</span>
         </div>
         <p className="text-xs text-white/30 mt-1">
-          Real Bitcoin payouts disabled in demo
+          Real payouts disabled in demo
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="bg-[#1a1a1a] rounded p-2">
-          <p className="text-xs text-white/50">Rank</p>
-          <p className="text-lg font-bold text-white">{profile.rank}</p>
+          <p className="text-xs text-white/50">Realm</p>
+          <p className="text-sm font-bold text-white">{profile.realm}</p>
         </div>
         <div className="bg-[#1a1a1a] rounded p-2">
-          <p className="text-xs text-white/50">XP</p>
-          <p className="text-lg font-bold text-white">{profile.xp}</p>
+          <p className="text-xs text-white/50">Ascension</p>
+          <p className="text-lg font-bold text-white">{profile.ascension}</p>
         </div>
         <div className="bg-[#1a1a1a] rounded p-2">
-          <p className="text-xs text-white/50">Streak</p>
-          <p className="text-lg font-bold text-[#C9A24A]">{profile.streakDays}d</p>
+          <p className="text-xs text-white/50">Flow</p>
+          <p className="text-lg font-bold text-[#C9A24A]">{profile.flowStreak}d</p>
         </div>
       </div>
 
@@ -79,12 +79,12 @@ export default function RewardWalletPanel({ profile }: RewardWalletPanelProps) {
       <div className="mt-4 pt-4 border-t border-[#1a1a1a]">
         <div className="flex justify-between text-xs text-white/50 mb-2">
           <span>Daily Progress</span>
-          <span>{profile.dailySessions} sessions</span>
+          <span>{profile.dailyRuns} runs</span>
         </div>
         <div className="h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
           <div
             className="h-full bg-[#C9A24A]"
-            style={{ width: `${Math.min((profile.dailySessions / 10) * 100, 100)}%` }}
+            style={{ width: `${Math.min((profile.dailyRuns / 10) * 100, 100)}%` }}
           />
         </div>
         <p className="text-xs text-white/30 mt-2">

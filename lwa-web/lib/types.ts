@@ -488,6 +488,15 @@ export type GenerateResponse = {
     feature_flags?: FeatureFlags;
   };
   clips: ClipResult[];
+  clips_summary?: Array<{
+    clip_id: string;
+    title?: string;
+    duration_seconds?: number;
+    ai_score?: number;
+    render_status?: string;
+  }>;
+  strategy_only?: boolean;
+  generation_method?: string;
   scripts?: GeneratedScripts | null;
 };
 

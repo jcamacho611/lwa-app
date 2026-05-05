@@ -9,7 +9,7 @@ interface PlatformShellProps {
   title?: string;
   subtitle?: string;
   showNavigation?: boolean;
-  variant?: "default" | "dashboard" | "generate" | "game";
+  variant?: "default" | "dashboard" | "generate" | "game" | "marketplace";
 }
 
 /**

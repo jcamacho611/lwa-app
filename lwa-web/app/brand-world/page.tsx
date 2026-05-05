@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
   CompanyOsShell,
   SectionHeader,
@@ -108,8 +109,16 @@ export default function BrandWorldPage() {
           <SectionHeader
             eyebrow="Assets"
             title="Brand asset paths"
-            description="These paths are the official places Windsurf should use or create assets."
+            description="These paths are the official places Codex should use or create assets."
           />
+          <div className="mb-5 flex flex-wrap gap-3">
+            <Link
+              href="/lee-wuh/assets"
+              className="rounded-full border border-[#C9A24A]/30 bg-[#C9A24A]/10 px-4 py-2 text-sm font-semibold text-[#E9C77B] transition hover:bg-[#C9A24A]/20"
+            >
+              Open separated asset pipeline
+            </Link>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             {brandAssets.map((asset) => (
               <div

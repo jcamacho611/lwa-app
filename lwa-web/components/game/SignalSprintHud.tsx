@@ -1,6 +1,6 @@
 "use client";
 
-import type { GameState } from "@/lib/game/types";
+import type { GameState } from "../../lib/game/types";
 
 interface SignalSprintHudProps {
   score: number;
@@ -28,15 +28,25 @@ export default function SignalSprintHud({
   if (gameState === "idle") {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a]">
-        <div className="text-center mb-8">
+        {/* Lee-Wuh Realm Aura */}
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-[#0a0a0a] pointer-events-none" />
+
+        <div className="text-center mb-8 relative z-10">
           <h2 className="text-3xl font-bold text-white mb-2">Signal Sprint</h2>
           <p className="text-white/60 text-sm max-w-xs">
-            Dodge Noise. Collect Signal. Build streaks.
+            A ritual of proving you can control chaos.
           </p>
         </div>
 
-        {/* Tutorial */}
-        <div className="mb-8 space-y-2 text-sm">
+        {/* Lee-Wuh Presents */}
+        <div className="mb-6 px-4 py-2 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+          <p className="text-xs text-purple-400 text-center italic">
+            Prove your signal.
+          </p>
+        </div>
+
+        {/* Tutorial — Lee-Wuh System */}
+        <div className="mb-8 space-y-2 text-sm relative z-10">
           <div className="flex items-center gap-2 text-white/70">
             <span className="w-6 h-6 rounded bg-[#C9A24A] flex items-center justify-center text-black text-xs">↑</span>
             <span>Collect Signal (gold)</span>
@@ -46,20 +56,20 @@ export default function SignalSprintHud({
             <span>Avoid Noise (red)</span>
           </div>
           <div className="flex items-center gap-2 text-white/70">
-            <span className="text-[#C9A24A]">⌨️ ← →</span>
+            <span className="text-purple-400">⌨️ ← →</span>
             <span>or tap arrows to move</span>
           </div>
         </div>
 
         <button
           onClick={onStart}
-          className="px-8 py-3 bg-[#C9A24A] hover:bg-[#D4AF37] text-black font-semibold rounded-lg transition-colors"
+          className="px-8 py-3 bg-[#C9A24A] hover:bg-[#D4AF37] text-black font-semibold rounded-lg transition-colors relative z-10"
         >
-          Play Signal Sprint
+          Enter the Realm
         </button>
 
         <p className="mt-4 text-xs text-white/40">
-          60-second sessions • Demo rewards only
+          60-second runs • Demo mode
         </p>
       </div>
     );
@@ -77,10 +87,10 @@ export default function SignalSprintHud({
           <p className="text-xl font-bold text-white">{score.toLocaleString()}</p>
         </div>
 
-        {/* Streak */}
+        {/* Flow State (reframed from Streak) */}
         <div className="bg-[#1a1a1a] rounded-lg px-3 py-2">
-          <p className="text-xs text-white/50">STREAK</p>
-          <p className={`text-xl font-bold ${streak > 0 ? "text-[#C9A24A]" : "text-white/40"}`}>
+          <p className="text-xs text-white/50">FLOW</p>
+          <p className={`text-xl font-bold ${streak > 0 ? "text-purple-400" : "text-white/40"}`}>
             {streak}x
           </p>
         </div>

@@ -1,7 +1,6 @@
 "use client";
 
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import React, { useEffect, useMemo, useRef, useState, type FormEvent, type ChangeEvent, type ReactNode } from "react";
 
@@ -3167,9 +3166,6 @@ export function ClipStudio({
                       ) : null}
                     </>
                   ) : null}
-                  </div>
-                  ) : null}
-
                   {showHistory && user ? (
                     <HistoryPanel
                       clipPacks={clipPacks}
@@ -3265,7 +3261,7 @@ export function ClipStudio({
                       )}
                     </div>
                   ) : null}
-                </div>
+                </>
               )}
 
               {selectedClipPack && user ? (
@@ -3285,6 +3281,7 @@ export function ClipStudio({
               ) : null}
             </div>
           </div>
+        </div>
         </div>
       )}
     </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import type { SignalSprintReward, SignalSprintPlayerProfile, GameStats } from "@/lib/game/types";
+import type { SignalSprintReward, SignalSprintPlayerProfile, GameStats } from "../../lib/game/types";
 import RewardWalletPanel from "./RewardWalletPanel";
 
 interface SignalSprintResultsProps {
@@ -64,8 +64,8 @@ export default function SignalSprintResults({
             <span className="text-red-400">{stats.noiseHits}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/60">Rank Progress</span>
-            <span className="text-white">{profile.xp} XP</span>
+            <span className="text-white/60">Ascension</span>
+            <span className="text-white">{profile.ascension}</span>
           </div>
         </div>
       </div>
@@ -76,20 +76,20 @@ export default function SignalSprintResults({
           <h3 className="text-sm font-medium text-[#C9A24A] mb-3">Rewards Earned</h3>
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
-              <p className="text-2xl font-bold text-white">+{reward.xpEarned}</p>
-              <p className="text-xs text-white/50">XP</p>
+              <p className="text-2xl font-bold text-white">+{reward.ascensionEarned}</p>
+              <p className="text-xs text-white/50">Ascension</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-[#C9A24A]">+{reward.coinsEarned}</p>
-              <p className="text-xs text-white/50">Coins</p>
+              <p className="text-2xl font-bold text-[#C9A24A]">+{reward.fragmentsEarned}</p>
+              <p className="text-xs text-white/50">Fragments</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-white">+{reward.demoSatsEarned}</p>
-              <p className="text-xs text-white/50">Demo Sats</p>
+              <p className="text-2xl font-bold text-white">+{reward.compressedEarned}</p>
+              <p className="text-xs text-white/50">Compressed</p>
             </div>
           </div>
           <p className="text-xs text-center text-white/40 mt-3">
-            Demo sats are not withdrawable
+            Demo rewards are not withdrawable
           </p>
         </div>
       )}

@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import SignalSprintGame from "@/components/game/SignalSprintGame";
-import RewardWalletPanel from "@/components/game/RewardWalletPanel";
-import { getSignalSprintProfile, resetMockProfile } from "@/lib/game/mockGameApi";
-import type { SignalSprintPlayerProfile } from "@/lib/game/types";
+import SignalSprintGame from "../../components/game/SignalSprintGame";
+import RewardWalletPanel from "../../components/game/RewardWalletPanel";
+import { getSignalSprintProfile, resetMockProfile } from "../../lib/game/mockGameApi";
+import type { SignalSprintPlayerProfile } from "../../lib/game/types";
 
 export default function GamePage() {
   const router = useRouter();

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { GameState, Lane, GameObject, GameStats } from "@/lib/game/types";
-import { startSignalSprintSession, completeSignalSprintSession } from "@/lib/game/mockGameApi";
+import type { GameState, Lane, GameObject, GameStats } from "../../lib/game/types";
+import { startSignalSprintSession, completeSignalSprintSession } from "../../lib/game/mockGameApi";
 import SignalSprintHud from "./SignalSprintHud";
 import SignalSprintResults from "./SignalSprintResults";
 
