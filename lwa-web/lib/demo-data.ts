@@ -54,14 +54,17 @@ export type DemoClip = typeof DEMO_CLIPS[0];
  */
 export function loadDemoClips() {
   return {
-    job_id: "demo_job",
+    request_id: "demo_job",
+    video_url: "",
     status: "completed",
     clips: DEMO_CLIPS.map(clip => ({
+      id: clip.clip_id,
       clip_id: clip.clip_id,
       title: clip.hook,
       hook: clip.hook,
       caption: clip.caption,
       text: clip.text,
+      score: clip.score,
       ai_score: clip.score,
       why_this_matters: clip.why,
       cta: clip.cta,

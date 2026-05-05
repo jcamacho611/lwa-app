@@ -1,9 +1,9 @@
 "use client";
 
-import/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, type FormEvent, type ChangeEvent, type ReactNode } from "react";
 
 // ============================================
 // ELITE DESIGN SYSTEM - /GENERATE PAGE
@@ -177,7 +177,6 @@ const EliteCopyButton = ({ onClick, label }: { onClick: () => void; label: strin
 // ============================================
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { buildUtmUrl, getPrimaryMoneyLink } from "../lib/money-links";
 import { AccountWorkspace } from "./account-workspace";
 import { AuthPanel } from "./auth-panel";
@@ -954,7 +953,7 @@ export function ClipStudio({
           // Fallback to deterministic text generation
           textResponse = await generateFromText({
             text: ideaPrompt.trim(),
-            campaignGoal: undefined,
+            campaign_goal: undefined,
             target_platforms: useManualPlatform ? [platform] : ["tiktok", "youtube_shorts", "instagram_reels"],
             min_clips: 3,
           });
@@ -962,15 +961,17 @@ export function ClipStudio({
         
         // Convert response to standard format
         const mappedData: GenerateResponse = {
-          request_id: textResponse.job_id || `analysis_${Date.now()}`,
-          video_url: undefined,
+          request_id: `analysis_${Date.now()}`,
+          video_url: "",
           status: "completed",
           clips: textResponse.clips.map((clip) => ({
+            id: clip.clip_id,
             clip_id: clip.clip_id,
             title: clip.hook,
             hook: clip.hook,
             caption: clip.caption,
             text: clip.text,
+            score: (clip as {score?: number}).score ?? 0.5,
             ai_score: (clip as {score?: number; ai_score?: number}).score ?? (clip as {ai_score?: number}).ai_score ?? 0.5,
             why_this_matters: (clip as {why?: string; why_this_matters?: string}).why ?? (clip as {why_this_matters?: string}).why_this_matters ?? "",
             cta: clip.cta,
@@ -1321,7 +1322,7 @@ export function ClipStudio({
       return;
     }
 
-    emitLWACharacterEvent({ state: "alert", trigger: "user_action" });
+    emitLWACharacterEvent({ state: "react", trigger: "user_action" });
     void fireGodTrigger("url_pasted", {
       route: window.location.pathname,
       platform: useManualPlatform ? platform : "Auto",
@@ -2829,7 +2830,7 @@ export function ClipStudio({
 
   return (
     <section className={["app-shell-grid min-h-screen", motionLocked ? "results-motion-locked" : ""].join(" ")}>
-      </EliteBackground>
+      <EliteBackground>
       <CharacterLayer
         isLoading={isLoading}
         loadingStageIndex={loadingStageIndex}
