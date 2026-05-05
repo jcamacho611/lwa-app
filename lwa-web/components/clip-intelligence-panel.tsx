@@ -2,14 +2,29 @@
 
 import { getClipFallbackMessage, getClipScore } from "../lib/clip-utils";
 import { buildLeadReason } from "../lib/result-copy";
-import { ClipResult } from "../lib/types";
+import type { ClipResult } from "../lib/types";
 
 type ClipIntelligencePanelProps = {
   clip: ClipResult;
   compact?: boolean;
 };
 
-type BadgeValue = string | { badge?: string; label?: string; color?: string; priority?: string; placement?: string };
+type BadgeValue = string | { badge?: string; label?: string; color?: string; priority?: string | number; placement?: string };
+
+const VIRAL_SIGNAL_LABELS: Record<string, string> = {
+  vs_001: "Hook First 3s",
+  vs_002: "Standalone Coherence",
+  vs_003: "Emotional Spike",
+  vs_004: "Quotable Line",
+  vs_005: "Information Density",
+  vs_006: "Tension Payoff Arc",
+  vs_007: "Shareability Phrase",
+  vs_008: "Curiosity Gap",
+  vs_009: "Speaker Authority",
+  vs_010: "Visual Anchor",
+  vs_011: "Conflict Beat",
+  vs_012: "Loopability",
+};
 
 function labelize(value: string) {
   return value
@@ -21,7 +36,7 @@ function labelize(value: string) {
 
 function normalizeBadges(values?: BadgeValue[] | null) {
   return (values || [])
-    .map((value) => (typeof value === "string" ? value : value.label || value.badge || value.priority || ""))
+    .map((value) => String(typeof value === "string" ? value : value.label || value.badge || value.priority || ""))
     .map((value) => value.trim())
     .filter(Boolean)
     .slice(0, 4);
@@ -33,6 +48,21 @@ function scoreRows(clip: ClipResult, compact?: boolean) {
     .filter((entry): entry is [string, number] => typeof entry[1] === "number" && Number.isFinite(entry[1]))
     .sort((left, right) => right[1] - left[1])
     .slice(0, maxRows);
+}
+
+function signalRows(clip: ClipResult, compact?: boolean) {
+  const maxRows = compact ? 4 : 6;
+  return Object.entries(clip.signals || {})
+    .filter((entry): entry is [string, number] => typeof entry[1] === "number" && Number.isFinite(entry[1]))
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, maxRows)
+    .map(([label, value]) => [VIRAL_SIGNAL_LABELS[label] || labelize(label), Math.round(Math.max(0, Math.min(1, value)) * 100)] as const);
+}
+
+function platformCompatibilityRows(clip: ClipResult) {
+  return Object.entries(clip.platform_compatibility || {})
+    .filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean")
+    .map(([platform, ok]) => ({ platform: labelize(platform), ok }));
 }
 
 function metricValue(value?: string | number | null) {
@@ -52,15 +82,33 @@ function directorMetric(label: string, value?: string | number | null) {
   );
 }
 
+function renderStatusFor(clip: ClipResult) {
+  const rendered = Boolean(clip.is_rendered || clip.rendered || clip.preview_url || clip.edited_clip_url || clip.clip_url);
+  const strategyOnly = Boolean(clip.is_strategy_only || clip.strategy_only);
+  if (rendered && !strategyOnly) return "Rendered";
+  if (clip.render_status === "failed" || clip.rendered_status === "render_failed") return "Render Failed";
+  if (strategyOnly) return "Strategy Only";
+  return clip.render_status || clip.rendered_status || null;
+}
+
 export function ClipIntelligencePanel({ clip, compact = false }: ClipIntelligencePanelProps) {
   const rows = scoreRows(clip, compact);
+  const signals = signalRows(clip, compact);
+  const compatibility = platformCompatibilityRows(clip);
   const badges = normalizeBadges(clip.frontend_badges);
   const fallbackMessage = getClipFallbackMessage(clip);
   const whyThisRanks = buildLeadReason(clip.why_this_matters || clip.reason || clip.retention_reason || clip.scoring_explanation);
+  const renderStatus = renderStatusFor(clip);
   const directorMetrics = [
+    directorMetric("Rank", clip.rank),
+    directorMetric("Post order", clip.post_rank || clip.best_post_order || clip.suggested_post_order),
     directorMetric("Platform", clip.recommended_platform || clip.suggested_platform || clip.platform_fit),
+    directorMetric("Compatibility", compatibility.length ? compatibility.map((item) => `${item.platform}: ${item.ok ? "pass" : "mismatch"}`).join(", ") : null),
     directorMetric("Content type", clip.recommended_content_type),
     directorMetric("Output style", clip.recommended_output_style || clip.caption_style || clip.suggested_caption_style || clip.caption_preset),
+    directorMetric("Caption preset", clip.caption_preset),
+    directorMetric("Render state", renderStatus),
+    directorMetric("Render readiness", clip.render_readiness_score),
     directorMetric("Quality gate", clip.quality_gate_status),
     directorMetric("Offer fit", clip.offer_fit_score),
     directorMetric("Revenue intent", clip.revenue_intent_score),
@@ -74,6 +122,8 @@ export function ClipIntelligencePanel({ clip, compact = false }: ClipIntelligenc
   const hasDirectorDetails = Boolean(clip.algorithm_version || directorMetrics.length || directorNotes.length || warnings.length);
   const hasDetails = Boolean(
     rows.length ||
+      signals.length ||
+      compatibility.length ||
       badges.length ||
       whyThisRanks ||
       clip.confidence_score ||
@@ -81,6 +131,8 @@ export function ClipIntelligencePanel({ clip, compact = false }: ClipIntelligenc
       clip.first_three_seconds_assessment ||
       clip.hook_strength ||
       clip.platform_fit ||
+      clip.caption_preset ||
+      renderStatus ||
       fallbackMessage ||
       hasDirectorDetails,
   );
@@ -163,6 +215,27 @@ export function ClipIntelligencePanel({ clip, compact = false }: ClipIntelligenc
               </div>
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {signals.length ? (
+        <div className="mt-4 rounded-[18px] border border-[var(--divider)] bg-[var(--surface-soft)] p-3">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Retention signals</p>
+          <div className="mt-3 grid gap-2">
+            {signals.map(([label, value]) => (
+              <div key={label} className="grid grid-cols-[minmax(0,1fr),44px] items-center gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="truncate text-xs font-medium text-ink/78">{label}</p>
+                    <p className="text-xs font-semibold text-ink/72">{value}</p>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--surface-veil)]">
+                    <div className="h-full rounded-full bg-[var(--gold)]" style={{ width: `${value}%` }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 
