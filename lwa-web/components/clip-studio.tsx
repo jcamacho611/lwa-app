@@ -14,24 +14,18 @@ import React, { useEffect, useMemo, useRef, useState, type FormEvent, type Chang
 /** Background World Layer - Sets mood without distraction */
 const EliteBackground = ({ children }: { children: React.ReactNode }) => (
   <div className="relative min-h-screen w-full overflow-hidden bg-[#0A0A0A]">
-    {/* Layer 1: Background World (blurred, atmospheric) */}
-    <div 
-      className="fixed inset-0 z-0"
+    <div
+      className="pointer-events-none fixed inset-0 z-0 opacity-40"
       style={{
-        backgroundImage: 'url(/worlds/lee-wuh-realm-blur.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        filter: 'blur(20px) brightness(0.3)',
-        opacity: 0.4,
+        backgroundImage: "url(/worlds/lee-wuh-realm-blur.jpg)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        filter: "blur(20px) brightness(0.3)",
       }}
+      aria-hidden="true"
     />
-    {/* Dark overlay for better contrast */}
-    <div className="fixed inset-0 z-[1] bg-gradient-to-b from-[#0A0A0A]/60 via-transparent to-[#0A0A0A]/80" />
-    
-    {/* Content */}
-    <div className="relative z-10">
-      {children}
-    </div>
+    <div className="pointer-events-none fixed inset-0 z-[1] bg-gradient-to-b from-[#0A0A0A]/60 via-transparent to-[#0A0A0A]/80" />
+    <div className="relative z-10">{children}</div>
   </div>
 );
 
@@ -2829,9 +2823,9 @@ export function ClipStudio({
   ) : null;
 
   return (
-    <section className={["app-shell-grid min-h-screen", motionLocked ? "results-motion-locked" : ""].join(" ")}>
-      <EliteBackground>
-      <CharacterLayer
+    <EliteBackground>
+      <section className={["app-shell-grid min-h-screen", motionLocked ? "results-motion-locked" : ""].join(" ")}>
+        <CharacterLayer
         isLoading={isLoading}
         loadingStageIndex={loadingStageIndex}
         hasSource={hasSourceSelected}
@@ -2977,7 +2971,7 @@ export function ClipStudio({
           {resultsSection ? <div className="space-y-6 pb-8">{resultsSection}</div> : null}
         </div>
       ) : (
-        <EliteBackground>
+        <div className="relative flex h-full flex-col">
           <CharacterPresence />
           <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
             <Navbar
@@ -3000,6 +2994,7 @@ export function ClipStudio({
                     </button>
                   </div>
                 ) : FREE_LAUNCH_MODE ? (
+                <div className="flex items-center gap-2">
                   <span className="credits-bar hidden sm:inline-flex">
                     <span className="credits-count">Open</span>
                     free launch
@@ -3291,6 +3286,7 @@ export function ClipStudio({
         </div>
       )}
     </section>
+  </EliteBackground>
   );
 }
 
@@ -3431,12 +3427,14 @@ function ReviewOrderPanel({ clips }: { clips: ClipResult[] }) {
                   {order}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="line-clamp-1 text-sm font-semibold text-ink">{clip.hook}</p>
-                    {active ? <StatPill tone="signal">Lead</StatPill> : null}
-                    <StatPill tone={active ? "accent" : "neutral"}>{authority}</StatPill>
+                  <div className="relative flex h-full flex-col">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="line-clamp-1 text-sm font-semibold text-ink">{clip.hook}</p>
+                      {active ? <StatPill tone="signal">Lead</StatPill> : null}
+                      <StatPill tone={active ? "accent" : "neutral"}>{authority}</StatPill>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-xs leading-6 text-ink/62">{detail}</p>
                   </div>
-                  <p className="mt-2 line-clamp-2 text-xs leading-6 text-ink/62">{detail}</p>
                 </div>
               </div>
             </div>

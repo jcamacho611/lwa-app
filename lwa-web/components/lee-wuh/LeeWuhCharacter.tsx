@@ -32,29 +32,6 @@ const moodConfig: Record<LeeWuhMood, { emoji: string; animation: string; color: 
     color: "#00D9FF",
     defaultMessage: "Rendering your clips... almost there.",
   },
-  complete: {
-    emoji: "✨",
-    animation: "animate-pulse",
-    color: "#C9A24A",
-    defaultMessage: "Done! Your clips are ready.",
-  },
-  victory: {
-    emoji: "🏆",
-    animation: "animate-bounce",
-    color: "#FFD700",
-    defaultMessage: "Epic work! High engagement predicted.",
-  },
-  error: {
-    emoji: "💫",
-    animation: "animate-pulse",
-    color: "#FF6B35",
-    defaultMessage: "Hmm, something went wrong. Try again?",
-  },
-  helping: {
-    emoji: "💡",
-    animation: "animate-pulse",
-    color: "#E9C77B",
-    defaultMessage: "Here's what I recommend...",
   },
   focused: {
     emoji: "🎯",
@@ -257,7 +234,8 @@ export function LeeWuhMascotCard({
             }}
           />
           <div className="absolute bottom-3 left-3 rounded-full border border-[#C9A24A]/30 bg-black/70 px-3 py-1 text-xs font-bold text-[#E9C77B]">
-            {config.emoji} {mood}
+            <span className="mr-1 inline-block h-2 w-2 rounded-full bg-[#C9A24A]"></span>
+            {mood}
           </div>
         </div>
 

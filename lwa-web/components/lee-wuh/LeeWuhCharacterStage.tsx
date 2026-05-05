@@ -203,13 +203,22 @@ export function LeeWuhCharacterStage({
       ) : null}
 
       {mode === "fallback" ? (
-        <div className="absolute inset-0 z-30 flex items-center justify-center text-6xl">{copy.emoji}</div>
+        <div className="flex items-center justify-center">
+          <img
+            src="/brand/lee-wuh/lee-wuh-avatar.png"
+            alt="Lee-Wuh mascot"
+            className="h-16 w-16 rounded-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        </div>
       ) : null}
 
       {showLabel && variant !== "floating" ? (
         <div className="absolute inset-x-0 bottom-0 z-40 bg-gradient-to-t from-black/95 via-black/55 to-transparent p-5">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#E9C77B]">
-            {title} // {copy.label}
+            {title}{" // "}{copy.label}
           </p>
           <p className="mt-2 max-w-xl text-sm leading-6 text-[#D8D0BF]">
             {message || copy.message}

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { ClipStudio } from "../../components/clip-studio";
+import { Wallet, TrendingUp, Clock } from "lucide-react";
+import { PlatformShell } from "../../components/platform/PlatformShell";
+import { PlatformCard } from "../../components/platform/PlatformCard";
 import { buildPageMetadata } from "../../lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
