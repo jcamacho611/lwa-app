@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { LeeWuhCharacter, LeeWuhAvatar } from "./LeeWuhCharacter";
+import { LeeWuhAvatar } from "./LeeWuhCharacter";
 import { LeeWuhCharacterStage } from "./LeeWuhCharacterStage";
+import { resolveLeeWuhChatResponse } from "./leeWuhIntelligence";
+import type { LeeWuhAnimationState } from "./leeWuhAnimationStates";
 
 interface ChatMessage {
   id: string;
@@ -20,41 +22,6 @@ interface ToolCall {
   tool: string;
   params: Record<string, unknown>;
 }
-
-const TOOL_DEFINITIONS = {
-  generate_clips: {
-    description: "Generate clips from a video URL",
-    parameters: {
-      video_url: "string - The video URL to process",
-      platform: "string - Target platform (tiktok, youtube, instagram)",
-    },
-  },
-  find_opportunities: {
-    description: "Find paid clip jobs and opportunities",
-    parameters: {
-      skill_level: "string - beginner, intermediate, expert",
-      platform: "string - Preferred platform",
-    },
-  },
-  navigate_to: {
-    description: "Navigate to a specific page",
-    parameters: {
-      page: "string - The page to navigate to",
-    },
-  },
-  get_clip_status: {
-    description: "Check the status of clip generation",
-    parameters: {
-      job_id: "string - The job ID to check",
-    },
-  },
-  save_to_proof_vault: {
-    description: "Save a clip to the proof vault",
-    parameters: {
-      clip_id: "string - The clip ID to save",
-    },
-  },
-};
 
 export function LeeWuhAgent() {
   const [isOpen, setIsOpen] = useState(false);
@@ -75,6 +42,28 @@ export function LeeWuhAgent() {
   const [isLoading, setIsLoading] = useState(false);
   const [mood, setMood] = useState<"idle" | "analyzing" | "confident" | "helping" | "playful" | "focused" | "victory" | "error" | "rendering" | "complete">("idle");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  function animationStateToMood(state: LeeWuhAnimationState) {
+    switch (state) {
+      case "analyzing":
+        return "analyzing";
+      case "rendering":
+        return "rendering";
+      case "victory":
+        return "victory";
+      case "error":
+        return "error";
+      case "marketplaceGuide":
+      case "realmOpen":
+      case "speak":
+        return "helping";
+      case "thinking":
+      case "judgment":
+        return "focused";
+      default:
+        return "idle";
+    }
+  }
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -153,49 +142,20 @@ export function LeeWuhAgent() {
     setMood("analyzing");
 
     try {
-      // Call AI backend
-      const response = await fetch("/api/ai/lee-wuh", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMessage.content,
-          history: messages.map((m) => ({ role: m.role, content: m.content })),
-          tools: TOOL_DEFINITIONS,
-          userContext: {
-            currentPage: window.location.pathname,
-            hasSubscription: false, // Get from auth context
-            clipCount: 0, // Get from user stats
-          },
-        }),
-      });
-
-      const data = await response.json();
-
-      // Check if AI wants to use a tool
-      if (data.tool_call) {
-        const toolResult = await executeTool(data.tool_call);
-        
-        // Add AI message with tool result
-        const aiMessage: ChatMessage = {
-          id: `ai-${Date.now()}`,
-          role: "assistant",
-          content: `${data.message}\n\n${toolResult}`,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, aiMessage]);
-      } else {
-        // Regular response
-        const aiMessage: ChatMessage = {
-          id: `ai-${Date.now()}`,
-          role: "assistant",
-          content: data.message,
-          timestamp: new Date(),
-          actions: data.suggested_actions,
-        };
-        setMessages((prev) => [...prev, aiMessage]);
-      }
-
-      setMood("confident");
+      const localResponse = resolveLeeWuhChatResponse(userMessage.content, window.location.pathname);
+      const aiMessage: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        role: "assistant",
+        content: localResponse.message,
+        timestamp: new Date(),
+        actions: localResponse.moves.map((move) => ({
+          label: move.label,
+          action: "navigate_to",
+          params: { page: move.href },
+        })),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+      setMood(animationStateToMood(localResponse.state));
     } catch (error) {
       const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,

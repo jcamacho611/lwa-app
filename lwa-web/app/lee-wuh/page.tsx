@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LeeWuh3DViewer from "../../components/lee-wuh/LeeWuh3DViewer";
 import LivingLeeWuhAgent from "../../components/lee-wuh/LivingLeeWuhAgent";
 import LeeWuhWorldBackdrop from "../../components/lee-wuh/LeeWuhWorldBackdrop";
 
@@ -8,6 +9,7 @@ const routes = [
   { label: "Post a job", href: "/marketplace/post-job", detail: "Create a prepaid or partially paid task for creators." },
   { label: "Campaigns", href: "/campaigns", detail: "Package briefs, submissions, review, and exports." },
   { label: "Enter realm", href: "/realm", detail: "Open the game/world layer around Lee-Wuh." },
+  { label: "Asset pipeline", href: "/lee-wuh/assets", detail: "Inspect separated character, world, and sword layers." },
   { label: "Company OS", href: "/company-os", detail: "See the full LWA operating system." },
 ];
 
@@ -57,6 +59,14 @@ export default function LeeWuhLivingAgentPage() {
                 • {target}
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="mt-12">
+          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#E9C77B]">3D shell</p>
+          <h2 className="mt-3 text-3xl font-semibold text-white">GLB-ready viewer with fallback</h2>
+          <div className="mt-5">
+            <LeeWuh3DViewer />
           </div>
         </section>
       </section>

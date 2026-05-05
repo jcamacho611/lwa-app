@@ -1,75 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
-
-type LeeWuhMood = "idle" | "thinking" | "excited" | "marketplace" | "realm";
-
-type LeeWuhAction = {
-  label: string;
-  href: string;
-  detail: string;
-  mood: LeeWuhMood;
-};
-
-const actions: LeeWuhAction[] = [
-  {
-    label: "Generate clips",
-    href: "/generate",
-    detail: "Drop one source and let LWA find the best moments.",
-    mood: "excited",
-  },
-  {
-    label: "Explore marketplace",
-    href: "/marketplace",
-    detail: "Find paid creative work, campaigns, and clipping tasks.",
-    mood: "marketplace",
-  },
-  {
-    label: "Post a job",
-    href: "/marketplace/post-job",
-    detail: "Create a prepaid or partially paid creator task.",
-    mood: "marketplace",
-  },
-  {
-    label: "Start campaign",
-    href: "/campaigns",
-    detail: "Package requirements, assets, submissions, and review.",
-    mood: "thinking",
-  },
-  {
-    label: "Enter realm",
-    href: "/realm",
-    detail: "Step into the Lee-Wuh world and game layer.",
-    mood: "realm",
-  },
-  {
-    label: "Open Company OS",
-    href: "/company-os",
-    detail: "See the full LWA operating system.",
-    mood: "thinking",
-  },
-];
-
-function moodLine(mood: LeeWuhMood) {
-  switch (mood) {
-    case "excited":
-      return "Wussup. Feed me one source and I’ll find what deserves to move.";
-    case "marketplace":
-      return "Money flows when the work has a place to land. Pick the market path.";
-    case "realm":
-      return "You want the world? Step through the gate.";
-    case "thinking":
-      return "I can guide the next move. Choose the lane.";
-    default:
-      return "Wussup. I’m Lee-Wuh. Where we starting?";
-  }
-}
+import { getLeeWuhAnimationState, type LeeWuhAnimationState } from "./leeWuhAnimationStates";
+import { getLeeWuhRouteIntelligence } from "./leeWuhIntelligence";
 
 export default function LivingLeeWuhAgent({ compact = false }: { compact?: boolean }) {
+  const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
-  const [mood, setMood] = useState<LeeWuhMood>("idle");
-  const visibleActions = useMemo(() => actions, []);
+  const [state, setState] = useState<LeeWuhAnimationState>("idle");
+  const route = useMemo(() => getLeeWuhRouteIntelligence(pathname), [pathname]);
+  const activeState = getLeeWuhAnimationState(state === "idle" ? route.state : state);
+  const line = state === "idle" ? route.intro : activeState.line;
 
   return (
     <div className={compact ? "fixed bottom-4 right-4 z-50" : "fixed bottom-6 right-6 z-50"}>
@@ -82,16 +25,17 @@ export default function LivingLeeWuhAgent({ compact = false }: { compact?: boole
             </div>
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#E9C77B]">Lee-Wuh // Living Agent</p>
-              <p className="mt-2 text-sm leading-6 text-white/80">{moodLine(mood)}</p>
+              <p className="mt-2 text-sm leading-6 text-white/80">{line}</p>
             </div>
           </div>
 
           <div className="mt-5 grid gap-2">
-            {visibleActions.map((action) => (
+            {route.moves.map((action) => (
               <Link
-                key={action.href}
+                key={action.id}
                 href={action.href}
-                onMouseEnter={() => setMood(action.mood)}
+                onMouseEnter={() => setState(action.state)}
+                onFocus={() => setState(action.state)}
                 className="group rounded-2xl border border-white/10 bg-white/[0.04] p-3 transition hover:border-[#C9A24A]/40 hover:bg-[#C9A24A]/10"
               >
                 <div className="flex items-center justify-between gap-3">
@@ -108,8 +52,8 @@ export default function LivingLeeWuhAgent({ compact = false }: { compact?: boole
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        onMouseEnter={() => setMood("excited")}
-        onMouseLeave={() => setMood("idle")}
+        onMouseEnter={() => setState("hover")}
+        onMouseLeave={() => setState("idle")}
         className="group relative flex h-24 w-24 items-center justify-center rounded-full border border-[#C9A24A]/40 bg-black shadow-[0_0_42px_rgba(126,58,242,0.5)] transition hover:scale-105"
         aria-label="Open Lee-Wuh living agent"
       >

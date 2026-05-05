@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import LeeWuhAssetShowcase from "../../../components/lee-wuh/LeeWuhAssetShowcase";
+import LeeWuhLayeredStage from "../../../components/lee-wuh/LeeWuhLayeredStage";
 import { PlatformShell } from "../../../components/platform/PlatformShell";
 import { buildPageMetadata } from "../../../lib/seo";
 
@@ -47,6 +48,10 @@ export default function LeeWuhAssetsPage() {
             Generate clips
           </Link>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <LeeWuhLayeredStage />
       </div>
 
       <LeeWuhAssetShowcase />
