@@ -70,6 +70,7 @@ def create_app() -> FastAPI:
             cleanup_stats.get("deleted_count", 0),
             cleanup_stats.get("retained_count", 0),
             cleanup_stats.get("bytes_deleted", 0),
+            cleanup_stats.get("store_removed", 0),
         )
     initialize_databases(settings)
     app = FastAPI(

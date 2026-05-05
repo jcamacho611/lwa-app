@@ -15,6 +15,26 @@ from app.services.generated_asset_store import GeneratedAssetStore
 
 
 class AssetRetentionTests(unittest.TestCase):
+    def test_settings_reads_required_railway_retention_env_vars(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            generated_root = Path(temp_dir) / "generated"
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "LWA_GENERATED_ASSETS_DIR": str(generated_root),
+                    "LWA_GENERATED_ASSETS_RETENTION_HOURS": "6",
+                    "LWA_GENERATED_ASSETS_MAX_FILES": "150",
+                    "LWA_ASSET_CLEANUP_ON_STARTUP": "true",
+                },
+                clear=False,
+            ):
+                settings = Settings()
+
+            self.assertEqual(settings.generated_assets_dir, str(generated_root))
+            self.assertEqual(settings.generated_asset_retention_hours, 6)
+            self.assertEqual(settings.generated_assets_max_files, 150)
+            self.assertTrue(settings.asset_cleanup_on_startup)
+
     def test_old_file_is_deleted(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
