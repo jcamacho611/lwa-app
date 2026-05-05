@@ -1565,7 +1565,7 @@ export function ClipStudio({
           <div className="mt-3">
             <MoneyCtaPanel variant="compact" source="clip_studio_quota" title="Choose how to keep generating" />
           </div>
-        </div>
+        </>
       )}
     </div>
   ) : null;
@@ -2300,7 +2300,7 @@ export function ClipStudio({
                 <>
                   <StatPill tone="accent">{planSurface.name}</StatPill>
                   <StatPill tone="signal">{activeResult ? "Live output" : "Premium review"}</StatPill>
-                </div>
+                </>
               ) : null}
             </div>
           </div>
@@ -2871,7 +2871,7 @@ export function ClipStudio({
                       <span className="credits-count">{typeof creditsRemaining === "number" ? creditsRemaining : planLimits.generationsPerDay}</span>
                       credits
                     </span>
-                  </div>
+                  </>
                 ) : (
                   <>
                     <span className="credits-bar hidden sm:inline-flex">
@@ -3078,7 +3078,7 @@ export function ClipStudio({
                           <StatPill tone="accent">{planSurface.name}</StatPill>
                           <StatPill tone="neutral">{wallet ? `$${((wallet.available_cents || 0) / 100).toFixed(2)}` : "Wallet"}</StatPill>
                           <StatPill tone="neutral">{readyQueue.length} queued</StatPill>
-                        </div>
+                        </>
                       ) : (
                         <StatPill tone="neutral">Guest mode</StatPill>
                       )}
@@ -3164,8 +3164,9 @@ export function ClipStudio({
                             "Queue management inside the workspace",
                           ]}
                         />
-                      ) : null}
-                    </div>
+                      </>
+                    ) : null}
+                  </div>
                   ) : null}
 
                   {showHistory && user ? (
