@@ -77,9 +77,19 @@ Use fallback:
 /brand/lee-wuh-hero-16x9.svg
 ```
 
+## Current Status
+
+✅ Assets deployed at required paths:
+- `lwa-web/public/brand/lee-wuh/lee-wuh-character-transparent.png`
+- `lwa-web/public/brand/lee-wuh/backgrounds/lee-wuh-world-background.png`
+- `lwa-web/public/brand/lee-wuh/props/lee-wuh-realm-sword.png`
+
+✅ Source copies archived:
+- `brand-source/lee-wuh/separated-assets/` (all three assets)
+
 ## Next Production Step
 
-Replace fallback assets with generated PNGs at the exact public paths, then upgrade Lee-Wuh motion states:
+Replace placeholder assets with clean separated PNGs, then upgrade Lee-Wuh motion states:
 
 ```text
 idle
