@@ -2,7 +2,83 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import List, Optional, Literal
+from pydantic import BaseModel, HttpUrl
 
+
+# === CLIP PROCESSING MODELS (MVP) ===
+
+class Segment(BaseModel):
+    start: float
+    end: float
+    type: Literal["kept", "removed", "suggested"]
+
+
+class Clip(BaseModel):
+    clip_id: str
+    preview_url: Optional[str]
+    segments: List[Segment]
+    hook: str
+    caption: str
+    cta: str
+    virality_score: float
+    thumbnail_text: str
+    platform_tags: List[str]
+    render_status: Literal["strategy_only", "rendered"]
+
+
+class ClipPack(BaseModel):
+    pack_id: str
+    request_id: str
+    clips: List[Clip]
+    best_clip_id: Optional[str]
+    total_duration: float
+    created_at: str
+
+
+class GenerateRequest(BaseModel):
+    source_url: Optional[str]
+    description: Optional[str]
+    use_ai: bool = False
+
+
+class GenerateResponse(BaseModel):
+    request_id: str
+    status: Literal["queued", "processing", "complete"]
+    clips: List[Clip]
+    strategy_only: bool
+
+
+class VariantRequest(BaseModel):
+    request_id: str
+    variant_type: Literal["reorder", "new_hook", "length"]
+    count: int = 3
+
+
+class VariantResponse(BaseModel):
+    variants: List[ClipPack]
+
+
+class ProcessingStatus(BaseModel):
+    request_id: str
+    stage: Literal["ingest", "cutting", "analyzing", "complete"]
+    progress: float  # 0-100
+    clips_ready: int
+    total_clips: int
+
+
+class ExportRequest(BaseModel):
+    request_id: str
+    pack_id: str
+    format: Literal["mp4", "json", "markdown"]
+
+
+class ExportResponse(BaseModel):
+    download_url: Optional[str]
+    markdown_content: Optional[str]
+
+
+# === EXISTING MODELS ===
 
 class CampaignStatus(str, Enum):
     draft = "draft"
