@@ -13,52 +13,74 @@ interface LeeWuhCharacterProps {
   className?: string;
 }
 
-const moodConfig: Record<LeeWuhMood, { emoji: string; animation: string; color: string; defaultMessage: string }> = {
+type MoodConfig = {
+  animation: string;
+  color: string;
+  defaultMessage: string;
+};
+
+const moodConfig: Record<LeeWuhMood, MoodConfig> = {
   idle: {
-    emoji: "🦁",
     animation: "animate-pulse",
     color: "#C9A24A",
     defaultMessage: "Ready to create. Feed me a source.",
   },
   analyzing: {
-    emoji: "🧠",
     animation: "animate-bounce",
     color: "#6D3BFF",
     defaultMessage: "Analyzing content... finding the best moments.",
   },
   rendering: {
-    emoji: "⚡",
     animation: "animate-spin",
     color: "#00D9FF",
     defaultMessage: "Rendering your clips... almost there.",
   },
+  complete: {
+    animation: "animate-pulse",
+    color: "#10B981",
+    defaultMessage: "Your clip pack is ready.",
+  },
+  victory: {
+    animation: "animate-bounce",
+    color: "#C9A24A",
+    defaultMessage: "That one is ready to post first.",
+  },
+  error: {
+    animation: "animate-pulse",
+    color: "#EF4444",
+    defaultMessage: "Something blocked the source, but I can still help.",
+  },
+  helping: {
+    animation: "animate-pulse",
+    color: "#E9C77B",
+    defaultMessage: "Ask me what to do next.",
   },
   focused: {
-    emoji: "🎯",
     animation: "animate-pulse",
     color: "#00D9FF",
     defaultMessage: "Locked in. Let's get this done.",
   },
   confident: {
-    emoji: "😎",
     animation: "animate-bounce",
     color: "#C9A24A",
     defaultMessage: "I know exactly what to do.",
   },
   playful: {
-    emoji: "🎮",
     animation: "animate-bounce",
     color: "#6D3BFF",
-    defaultMessage: "Let's have some fun with this!",
+    defaultMessage: "Let's have some fun with this.",
   },
 };
 
 const sizeConfig = {
-  sm: { container: "w-12 h-12", emoji: "text-2xl", badge: "w-3 h-3" },
-  md: { container: "w-16 h-16", emoji: "text-3xl", badge: "w-4 h-4" },
-  lg: { container: "w-24 h-24", emoji: "text-5xl", badge: "w-5 h-5" },
-  xl: { container: "w-32 h-32", emoji: "text-6xl", badge: "w-6 h-6" },
+  sm: { container: "w-12 h-12", image: "h-10 w-10", badge: "w-3 h-3" },
+  md: { container: "w-16 h-16", image: "h-14 w-14", badge: "w-4 h-4" },
+  lg: { container: "w-24 h-24", image: "h-20 w-20", badge: "w-5 h-5" },
+  xl: { container: "w-32 h-32", image: "h-28 w-28", badge: "w-6 h-6" },
 };
+
+const leeWuhAvatarPath = "/brand/lee-wuh/lee-wuh-avatar.png";
+const leeWuhHeroPath = "/brand/lee-wuh/lee-wuh-hero-16x9.png";
 
 export function LeeWuhCharacter({
   mood = "idle",
@@ -103,10 +125,15 @@ export function LeeWuhCharacter({
         />
         
         {/* Character Emoji */}
-        <span className={`${sizeStyles.emoji} ${config.animation}`} style={{ animationDuration: "2s" }}>
-          {config.emoji}
-        </span>
-
+        <img
+          src={leeWuhAvatarPath}
+          alt="Lee-Wuh"
+          className={`${sizeStyles.image} ${config.animation} relative z-10 rounded-full object-cover`}
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+        />
+        
         {/* Status Badge */}
         <div
           className={`absolute -top-1 -right-1 ${sizeStyles.badge} rounded-full border-2 border-black`}
@@ -147,7 +174,14 @@ export function LeeWuhAvatar({ mood = "idle", size = "sm" }: { mood?: LeeWuhMood
         boxShadow: `0 0 15px ${config.color}20`,
       }}
     >
-      {config.emoji}
+      <img
+        src={leeWuhAvatarPath}
+        alt="Lee-Wuh"
+        className="h-full w-full object-cover"
+        onError={(event) => {
+          event.currentTarget.style.display = "none";
+        }}
+      />
     </div>
   );
 }

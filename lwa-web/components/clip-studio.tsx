@@ -1555,7 +1555,7 @@ export function ClipStudio({
               Save my work
             </button>
           </div>
-        </>
+        </div>
       ) : (
         <>
           <p className="text-sm font-semibold text-[var(--gold)]">
@@ -1565,7 +1565,7 @@ export function ClipStudio({
           <div className="mt-3">
             <MoneyCtaPanel variant="compact" source="clip_studio_quota" title="Choose how to keep generating" />
           </div>
-        </>
+        </div>
       )}
     </div>
   ) : null;
@@ -2300,7 +2300,7 @@ export function ClipStudio({
                 <>
                   <StatPill tone="accent">{planSurface.name}</StatPill>
                   <StatPill tone="signal">{activeResult ? "Live output" : "Premium review"}</StatPill>
-                </>
+                </div>
               ) : null}
             </div>
           </div>
@@ -2871,7 +2871,7 @@ export function ClipStudio({
                       <span className="credits-count">{typeof creditsRemaining === "number" ? creditsRemaining : planLimits.generationsPerDay}</span>
                       credits
                     </span>
-                  </>
+                  </div>
                 ) : (
                   <>
                     <span className="credits-bar hidden sm:inline-flex">
@@ -2904,7 +2904,7 @@ export function ClipStudio({
                     >
                       Generate clips
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
             }
@@ -3057,7 +3057,7 @@ export function ClipStudio({
                       title="Use the system in order"
                       description="Generate, queue winners, then move into campaign flow."
                     />
-                  </>
+                  </div>
                 ) : null}
               </div>
             </aside>
@@ -3078,7 +3078,7 @@ export function ClipStudio({
                           <StatPill tone="accent">{planSurface.name}</StatPill>
                           <StatPill tone="neutral">{wallet ? `$${((wallet.available_cents || 0) / 100).toFixed(2)}` : "Wallet"}</StatPill>
                           <StatPill tone="neutral">{readyQueue.length} queued</StatPill>
-                        </>
+                        </div>
                       ) : (
                         <StatPill tone="neutral">Guest mode</StatPill>
                       )}
@@ -3165,7 +3165,7 @@ export function ClipStudio({
                           ]}
                         />
                       ) : null}
-                    </>
+                    </div>
                   ) : null}
 
                   {showHistory && user ? (
@@ -3263,7 +3263,7 @@ export function ClipStudio({
                       )}
                     </div>
                   ) : null}
-                </>
+                </div>
               )}
 
               {selectedClipPack && user ? (
