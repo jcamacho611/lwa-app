@@ -1,4 +1,4 @@
-import pytest
+import unittest
 
 from app.services.marketplace_core import (
     MarketplaceProductDraft,
@@ -27,12 +27,12 @@ def test_create_product_draft_uses_integer_cents() -> None:
 
 
 def test_marketplace_rejects_float_money() -> None:
-    with pytest.raises(ValueError):
+    with unittest.TestCase().assertRaises(ValueError):
         calculate_platform_fee(19.99)  # type: ignore[arg-type]
 
 
 def test_marketplace_rejects_banned_category() -> None:
-    with pytest.raises(ValueError):
+    with unittest.TestCase().assertRaises(ValueError):
         create_product_draft(
             MarketplaceProductDraft(
                 seller_id="seller-1",
@@ -70,7 +70,7 @@ def test_quote_order_requires_listed_product() -> None:
         )
     )
 
-    with pytest.raises(ValueError):
+    with unittest.TestCase().assertRaises(ValueError):
         quote_order(product=product, buyer_id="buyer-1")
 
 

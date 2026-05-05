@@ -1,4 +1,4 @@
-import pytest
+import unittest
 
 from app.services.social_integrations_core import (
     OAuthStartRequest,
@@ -26,7 +26,7 @@ def test_posting_is_disabled_by_default_for_all_scaffold_providers() -> None:
 
 
 def test_oauth_authorization_url_requires_state() -> None:
-    with pytest.raises(ValueError):
+    with unittest.TestCase().assertRaises(ValueError):
         build_oauth_authorization_url(
             OAuthStartRequest(
                 provider=SocialProvider.YOUTUBE,

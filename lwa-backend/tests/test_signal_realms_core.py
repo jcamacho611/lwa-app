@@ -1,4 +1,4 @@
-import pytest
+import unittest
 
 from app.services.signal_realms_core import (
     RealmClass,
@@ -41,7 +41,7 @@ def test_create_character_and_award_xp() -> None:
 def test_award_xp_rejects_paid_or_invalid_amounts() -> None:
     character = create_character("user-1", RealmClass.CAPTIONEER, RealmFaction.BLACK_LOOM)
 
-    with pytest.raises(ValueError):
+    with unittest.TestCase().assertRaises(ValueError):
         award_xp(character, XpEvent(character_id=character.id, skill="captioneer", amount=0, reason="invalid"))
 
 

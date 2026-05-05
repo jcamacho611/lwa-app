@@ -6,6 +6,5 @@ imageio-ffmpeg>=0.5,<1.0
 openai>=1.58,<2.0
 pydantic>=2.10,<3.0
 python-multipart>=0.0.12,<1.0
-pytest>=8.0,<9.0
 uvicorn[standard]>=0.32,<1.0
 yt-dlp>=2025.3.31
