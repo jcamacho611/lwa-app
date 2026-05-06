@@ -79,8 +79,8 @@ lee-wuh-mascot.blend
 ## File Naming
 ```
 /brand/lee-wuh/
-├── lee-wuh-mascot.blend          # Master Blender file
-├── lee-wuh-mascot.glb            # Web export
+├── blender/lee-wuh-character-blockout.blend # Master Blender file
+├── 3d/lee-wuh-mascot.glb         # Web export
 ├── lee-wuh-mascot-idle.glb       # Idle animation only
 ├── lee-wuh-mascot-rigged.fbx     # For other engines
 ├── textures/

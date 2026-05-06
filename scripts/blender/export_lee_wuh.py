@@ -7,7 +7,9 @@ import bpy
 import os
 
 # Export settings
-EXPORT_DIR = "/Users/bdm/LWA/lwa-app/public/brand/lee-wuh"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
+EXPORT_DIR = os.path.join(REPO_ROOT, "lwa-web", "public", "brand", "lee-wuh", "3d")
 FILENAME = "lee-wuh-mascot.glb"
 
 # Ensure export directory exists

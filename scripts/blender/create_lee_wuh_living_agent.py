@@ -2,8 +2,13 @@ import bpy
 import math
 import os
 
-OUTPUT_BLEND = "/Users/bdm/LWA/lwa-app/brand-source/lee-wuh/lee-wuh-character-blockout.blend"
-OUTPUT_GLB = "/Users/bdm/LWA/lwa-app/lwa-web/public/brand/lee-wuh/lee-wuh-mascot.glb"
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+OUTPUT_BLEND_DIR = os.path.join(REPO_ROOT, "brand-source", "lee-wuh", "blender")
+OUTPUT_GLB_DIR = os.path.join(REPO_ROOT, "lwa-web", "public", "brand", "lee-wuh", "3d")
+
+OUTPUT_BLEND = os.path.join(OUTPUT_BLEND_DIR, "lee-wuh-character-blockout.blend")
+OUTPUT_GLB = os.path.join(OUTPUT_GLB_DIR, "lee-wuh-mascot.glb")
 
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete()
@@ -190,8 +195,8 @@ bpy.context.scene.camera = bpy.context.object
 bpy.context.scene.render.resolution_x = 1600
 bpy.context.scene.render.resolution_y = 900
 
-os.makedirs("/Users/bdm/LWA/lwa-app/brand-source/lee-wuh", exist_ok=True)
-os.makedirs("/Users/bdm/LWA/lwa-app/lwa-web/public/brand/lee-wuh", exist_ok=True)
+os.makedirs(OUTPUT_BLEND_DIR, exist_ok=True)
+os.makedirs(OUTPUT_GLB_DIR, exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=OUTPUT_BLEND)
 bpy.ops.export_scene.gltf(filepath=OUTPUT_GLB, export_format="GLB", export_animations=True, export_apply=True)
 print(f"Saved Blender file to {OUTPUT_BLEND}")

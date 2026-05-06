@@ -45,7 +45,7 @@ const brandRules: BrandRule[] = [
 const assetPaths = [
   { name: "Hero 16:9", path: "/brand/lee-wuh-hero-16x9.png", usage: "Homepage, Whop cover, social" },
   { name: "Avatar Square", path: "/brand/lee-wuh-avatar.png", usage: "Loading states, empty states" },
-  { name: "3D Model", path: "/brand/lee-wuh/lee-wuh-mascot.glb", usage: "Future 3D viewer" },
+  { name: "3D Model", path: "/brand/lee-wuh/3d/lee-wuh-mascot.glb", usage: "Future 3D viewer" },
   { name: "Rive States", path: "/brand/lee-wuh/lee-wuh-states.riv", usage: "Interactive animations" },
 ];
 
