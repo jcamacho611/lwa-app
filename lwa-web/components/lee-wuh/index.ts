@@ -22,3 +22,4 @@ export * from "./leeWuhMoves";
 export * from "./leeWuhIntelligence";
 export * from "./leeWuhActions";
 export * from "./leeWuhState";
+export { LeeWuhModelPreview } from "./LeeWuhModelPreview";

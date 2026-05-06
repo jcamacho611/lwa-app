@@ -1,3 +1,4 @@
+import { LeeWuhModelPreview } from "../../../components/lee-wuh";
 import Link from "next/link";
 import type { Metadata } from "next";
 import LeeWuhAssetShowcase from "../../../components/lee-wuh/LeeWuhAssetShowcase";
