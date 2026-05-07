@@ -7,6 +7,7 @@ import {
 } from "../../components/company-os/CompanyOsShell";
 import { LeeWuhCharacter } from "../../components/lee-wuh";
 import { ClipResultsPanel } from "../../components/command-center/ClipResultsPanel";
+import LwaEventBridgePanel from "../../components/command-center/LwaEventBridgePanel";
 
 const phases = [
   { name: "Source ingest", status: "complete" },
@@ -31,10 +32,10 @@ export default function CommandCenterPage() {
               Source intake
             </p>
             <h2 className="mt-3 text-3xl font-semibold text-white">
-              Feed Lee-Wuh one source. Let LWA find the moments worth posting.
+              Feed Lee-Wuh one source. Let LWA find moments worth posting.
             </h2>
             <p className="mt-3 text-sm leading-6 text-white/55">
-              This route is the Company OS command surface. The existing
+              This route is Company OS command surface. The existing
               generation flow stays preserved and reachable.
             </p>
 
@@ -66,7 +67,7 @@ export default function CommandCenterPage() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-[#C9A24A]/20 bg-[#C9A24A]/10 p-6">
+          <div className="rounded-[28px] border-2 border-[#C9A24A]/50 bg-gradient-to-b from-[#C9A24A]/20 to-transparent p-8">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#E9C77B]">
               Recommendation rail
             </p>
@@ -85,7 +86,7 @@ export default function CommandCenterPage() {
             <LeeWuhCharacter mood="idle" size="md" showMessage={false} />
             <div>
               <h2 className="text-2xl font-bold text-white">Drop one source. Get the best clips first.</h2>
-              <p className="text-white/60">Paste a YouTube, TikTok, Twitch, or podcast URL. Lee-Wuh finds the moments worth posting.</p>
+              <p className="text-white/60">Paste a YouTube, TikTok, Twitch, or podcast URL. Lee-Wuh finds moments worth posting.</p>
             </div>
           </div>
 
@@ -147,7 +148,7 @@ export default function CommandCenterPage() {
         </section>
 
         {/* NEXT ACTIONS - KILLER DEMO PATH CONTINUATION */}
-        <section className="rounded-[28px] border border-[#C9A24A]/30 bg-gradient-to-r from-[#C9A24A]/10 to-transparent p-6">
+        <section className="rounded-[28px] border-2 border-[#C9A24A]/50 bg-gradient-to-r from-[#C9A24A]/10 to-transparent p-6">
           <div className="mb-4 flex items-center gap-3">
             <span className="text-2xl">🎯</span>
             <h3 className="text-lg font-semibold text-white">Next Best Action</h3>
@@ -156,19 +157,24 @@ export default function CommandCenterPage() {
             <button className="rounded-2xl border border-green-400/30 bg-green-400/10 p-4 text-left transition hover:border-green-400/50">
               <p className="text-xs text-green-400">STEP 1</p>
               <p className="mt-1 font-medium text-white">Play Best Clip</p>
-              <p className="mt-1 text-xs text-white/50">Verify it&apos;s the one</p>
+              <p className="mt-1 text-xs text-white/50">Verify it's one</p>
             </button>
-            <button className="rounded-2xl border border-[#C9A24A]/30 bg-[#C9A24A]/10 p-4 text-left transition hover:border-[#C9A24A]/50">
+            <button className="rounded-2xl border-[#C9A24A]/30 bg-[#C9A24A]/10 p-4 text-left transition hover:border-[#C9A24A]/50">
               <p className="text-xs text-[#E9C77B]">STEP 2</p>
               <p className="mt-1 font-medium text-white">Save to Proof Vault</p>
               <p className="mt-1 text-xs text-white/50">Train Lee-Wuh</p>
             </button>
-            <button className="rounded-2xl border border-[#6D3BFF]/30 bg-[#6D3BFF]/10 p-4 text-left transition hover:border-[#6D3BFF]/50">
+            <button className="rounded-2xl border-[#6D3BFF]/30 bg-[#6D3BFF]/10 p-4 text-left transition hover:border-[#6D3BFF]/50">
               <p className="text-xs text-[#6D3BFF]">STEP 3</p>
               <p className="mt-1 font-medium text-white">Package &amp; Export</p>
               <p className="mt-1 text-xs text-white/50">Ready to post</p>
             </button>
           </div>
+        </section>
+
+        {/* LWA EVENT BRIDGE */}
+        <section>
+          <LwaEventBridgePanel />
         </section>
       </div>
     </CompanyOsShell>
