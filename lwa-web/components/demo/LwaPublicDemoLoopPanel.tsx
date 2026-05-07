@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, BadgeCheck, RefreshCw, ShieldAlert, Sparkles, Trophy } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, BadgeCheck, ExternalLink, RefreshCw, ShieldAlert, Sparkles, Trophy } from "lucide-react";
 import {
   getBlockingDemoChecks,
   getDemoNarrativeForPersona,
@@ -14,6 +15,7 @@ import {
   type LwaPublicDemoPersonaId,
   type LwaPublicDemoStageId,
 } from "../../lib/lwa-public-demo-loop";
+import { getEngineForStage } from "../../lib/lwa-engine-stage-map";
 
 export default function LwaPublicDemoLoopPanel() {
   const [stageId, setStageId] = useState<LwaPublicDemoStageId>("landing");
@@ -129,6 +131,32 @@ export default function LwaPublicDemoLoopPanel() {
                   {stage.id}
                 </span>
               </div>
+              {(() => {
+                const binding = getEngineForStage(stage.id);
+                if (!binding) return null;
+                return (
+                  <div className="mt-4 rounded-2xl border border-violet-300/20 bg-violet-950/25 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-violet-200/70">
+                          powered by engine
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-white">
+                          {binding.engineId.replace(/_/g, " ")}
+                        </p>
+                        <p className="mt-1 text-[11px] text-white/55">{binding.rationale}</p>
+                      </div>
+                      <Link
+                        href={`/engines/${binding.engineId}`}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-300/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-amber-100 transition hover:border-amber-200/60 hover:bg-amber-300/20"
+                      >
+                        Open engine proof
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
                   type="button"
@@ -203,25 +231,40 @@ export default function LwaPublicDemoLoopPanel() {
               <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white/70">What is live vs placeholder</h3>
             </div>
             <div className="mt-4 space-y-2 text-sm">
-              {lwaPublicDemoStages.map((demoStage) => (
-                <div key={demoStage.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-3 py-2">
-                  <div>
-                    <p className="font-medium text-white">{demoStage.title}</p>
-                    <p className="text-xs text-white/45">{demoStage.engineConnection}</p>
+              {lwaPublicDemoStages.map((demoStage) => {
+                const binding = getEngineForStage(demoStage.id);
+                return (
+                  <div key={demoStage.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-white">{demoStage.title}</p>
+                      <p className="truncate text-xs text-white/45">{demoStage.engineConnection}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${
+                        demoStage.demoStatus === "live"
+                          ? "bg-emerald-400/10 text-emerald-100"
+                          : demoStage.demoStatus === "local_demo"
+                            ? "bg-violet-400/10 text-violet-100"
+                            : demoStage.demoStatus === "placeholder"
+                              ? "bg-amber-300/10 text-amber-100"
+                              : "bg-white/5 text-white/45"
+                      }`}>
+                        {demoStage.demoStatus}
+                      </span>
+                      {binding && (
+                        <Link
+                          href={`/engines/${binding.engineId}`}
+                          aria-label={`Open ${binding.engineId} engine`}
+                          title={`Open ${binding.engineId} engine`}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-white/55 transition hover:border-amber-300/40 hover:text-amber-100"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                  <span className={`rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${
-                    demoStage.demoStatus === "live"
-                      ? "bg-emerald-400/10 text-emerald-100"
-                      : demoStage.demoStatus === "local_demo"
-                        ? "bg-violet-400/10 text-violet-100"
-                        : demoStage.demoStatus === "placeholder"
-                          ? "bg-amber-300/10 text-amber-100"
-                          : "bg-white/5 text-white/45"
-                  }`}>
-                    {demoStage.demoStatus}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

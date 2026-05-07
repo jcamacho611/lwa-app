@@ -56,9 +56,19 @@ export default function EnginesPage() {
                     <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/45">
                       stage {String(i + 1).padStart(2, "0")}
                     </span>
-                    <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-amber-100">
-                      {binding.engineId}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {(() => {
+                        const order = getDeployOrder(binding.engineId);
+                        return order ? (
+                          <span className="rounded-full border border-violet-300/30 bg-violet-300/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-violet-100">
+                            deploy {String(order).padStart(2, "0")}
+                          </span>
+                        ) : null;
+                      })()}
+                      <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-amber-100">
+                        {binding.engineId}
+                      </span>
+                    </div>
                   </div>
                   <h3 className="mt-2 text-base font-semibold text-white">
                     {binding.stageId.replace(/_/g, " ")}
