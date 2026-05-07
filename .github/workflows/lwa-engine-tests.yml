@@ -1,0 +1,111 @@
+name: LWA Engine Tests
+
+# Runs the backend engine foundation + Railway service tests on every push
+# and PR. Complements the existing lwa-ci.yml workflow (which covers full
+# repo compile + frontend gates) with engine-specific gates.
+
+on:
+  push:
+    branches: [main, develop, "claude/**", "codex/**"]
+    paths:
+      - "lwa-backend/app/engines/**"
+      - "lwa-backend/app/services/engine_runtime.py"
+      - "lwa-backend/app/services/engine_service_app.py"
+      - "lwa-backend/app/api/routes/engines.py"
+      - "lwa-backend/tests/test_engines.py"
+      - "lwa-backend/tests/test_engine_service_runtime.py"
+      - "lwa-backend/tests/test_engine_service_app.py"
+      - "lwa-backend/scripts/engine_demo.py"
+      - "lwa-backend/scripts/lint_engine_contract.py"
+      - "scripts/smoke_engines.sh"
+      - ".github/workflows/lwa-engine-tests.yml"
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  engine-foundation:
+    name: Engine foundation tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./lwa-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: ./lwa-backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+
+      - name: Compile engine modules
+        run: python3 -m compileall -q app/engines app/services scripts
+
+      - name: Run engine foundation tests
+        run: python3 -m pytest tests/test_engines.py -q
+
+      - name: Run engine service runtime tests
+        run: python3 -m pytest tests/test_engine_service_runtime.py -q
+
+      - name: Run engine service app tests
+        run: python3 -m pytest tests/test_engine_service_app.py -q
+
+      - name: Engine contract lint
+        run: python3 scripts/lint_engine_contract.py
+
+      - name: Engine CLI smoke (no network)
+        run: |
+          python3 scripts/engine_demo.py --list
+          python3 scripts/engine_demo.py operator_admin '{"focus":"ci"}'
+
+  engine-smoke-script:
+    name: Smoke script syntax + executability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bash syntax check
+        run: bash -n scripts/smoke_engines.sh
+
+      - name: Verify smoke script is executable
+        run: |
+          if [ ! -x scripts/smoke_engines.sh ]; then
+            echo "ERROR: scripts/smoke_engines.sh is not executable"
+            chmod +x scripts/smoke_engines.sh
+            echo "Hint: run 'chmod +x scripts/smoke_engines.sh' and recommit."
+            exit 1
+          fi
+
+  forbidden-areas:
+    name: Forbidden-area guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Engine foundation must not introduce forbidden touches
+        run: |
+          # Best-effort sentinel: fail if a PR mentions engines but also
+          # modifies blocked paths. Falls back to "ok" if base ref is missing.
+          set -e
+          BASE="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$BASE" ]; then
+            echo "No base ref; skipping forbidden-area diff check."
+            exit 0
+          fi
+          CHANGED=$(git diff --name-only "$BASE"...HEAD)
+          echo "$CHANGED"
+          if echo "$CHANGED" | grep -qE '^(lwa-ios/|lwa-backend/app/api/routes/generate\.py|lwa-web/app/command-center/|lwa-web/components/brain/LwaBrainEnginePanel\.tsx|lwa-web/lib/lwa-brain-engine\.ts)'; then
+            echo "ERROR: This PR touches forbidden areas reserved for other lanes."
+            exit 1
+          fi
+          if echo "$CHANGED" | grep -qE '\.env(\.|$)'; then
+            echo "ERROR: This PR modifies a .env file."
+            exit 1
+          fi
+          echo "Forbidden-area check passed."

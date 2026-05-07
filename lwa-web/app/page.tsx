@@ -5,7 +5,7 @@ import { useState } from "react";
 import { LeeWuhCharacterStage } from "../components/lee-wuh";
 
 export default function HomePage() {
-  const [selectedMission, setSelectedMission] = useState<"content" | "money" | null>(null);
+  const [selectedMission, setSelectedMission] = useState<"content" | "money" | "demo" | null>(null);
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-[#0A0A0B] text-[#F5F1E8] overflow-hidden p-6">
@@ -29,12 +29,14 @@ export default function HomePage() {
             mood={selectedMission ? "confident" : "idle"}
             variant="card"
             title="Lee-Wuh"
-            message={
-              selectedMission === "content"
-                ? "I'm ready to turn your source into clips, hooks, captions, and a ranked posting package."
-                : selectedMission === "money"
-                  ? "I'm ready to route you into marketplace tasks, campaign briefs, and payout-readiness placeholders."
-                  : "I'm your real-time character guide for clipping, campaigns, proof, style memory, and the money loop."
+              message={
+                selectedMission === "content"
+                  ? "I'm ready to turn your source into clips, hooks, captions, and a ranked posting package."
+                  : selectedMission === "demo"
+                    ? "I'm ready to show the public demo loop: source, recovery, proof, and Signal Sprint."
+                  : selectedMission === "money"
+                    ? "I'm ready to route you into marketplace tasks, campaign briefs, and payout-readiness placeholders."
+                    : "I'm your real-time character guide for clipping, campaigns, proof, style memory, and the money loop."
             }
             posterPath="/brand/lee-wuh/lee-wuh-hero-16x9.png"
           />
@@ -87,18 +89,49 @@ export default function HomePage() {
               )}
             </div>
           </button>
+
+          {/* Demo Mission */}
+          <button
+            onClick={() => setSelectedMission("demo")}
+            className={`group w-full rounded-2xl border p-6 text-left transition ${
+              selectedMission === "demo"
+                ? "border-[#6D3BFF] bg-[#6D3BFF]/20"
+                : "border-white/10 bg-white/[0.04] hover:border-[#6D3BFF]/50"
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">03</span>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-white">Public Demo Loop</h2>
+                <p className="mt-1 text-sm text-white/60">
+                  Open the first-session journey that explains LWA in 60 seconds
+                </p>
+              </div>
+              {selectedMission === "demo" && (
+                <span className="text-2xl text-[#6D3BFF]">→</span>
+              )}
+            </div>
+          </button>
         </div>
 
         {/* Action Button */}
         {selectedMission && (
           <div className="mt-8 animate-pulse">
             <Link
-              href={selectedMission === "content" ? "/generate" : "/marketplace"}
+              href={
+                selectedMission === "content"
+                  ? "/generate"
+                  : selectedMission === "demo"
+                    ? "/demo"
+                    : "/marketplace"
+              }
               className="block w-full rounded-2xl bg-[#C9A24A] py-4 text-center text-lg font-bold text-black transition hover:bg-[#E9C77B]"
             >
               {selectedMission === "content"
                 ? "Start Creating Clips"
-                : "Open Marketplace"}
+                : selectedMission === "demo"
+                  ? "Open Public Demo"
+                  : "Open Marketplace"}
             </Link>
           </div>
         )}

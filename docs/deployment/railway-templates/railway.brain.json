@@ -1,0 +1,46 @@
+{
+  "$comment": "LWA Railway engine service template. Documentation only \u2014 Railway services are created in the UI, not from this file.",
+  "engine_id": "brain",
+  "service_name": "lwa-engine-brain",
+  "deploy_order": 5,
+  "risk_level": "medium",
+  "rationale": "Provider-routable; ship with provider OFF.",
+  "github": {
+    "repo": "jcamacho611/lwa-app",
+    "branch_after_merge": "main",
+    "branch_during_review": "claude/railway-engine-services",
+    "root_directory": "."
+  },
+  "build": {
+    "builder": "nixpacks",
+    "python_version": "3.11.11",
+    "uses_existing_nixpacks_toml": true
+  },
+  "deploy": {
+    "start_command": "cd lwa-backend && uvicorn app.services.engine_service_app:app --host 0.0.0.0 --port $PORT",
+    "health_check_path": "/health",
+    "health_check_timeout_seconds": 30,
+    "restart_policy": "on_failure"
+  },
+  "env": {
+    "LWA_ENGINE_SERVICE_ID": "brain"
+  },
+  "safety_contract": {
+    "no_paid_provider_calls": true,
+    "no_payouts": true,
+    "no_external_posting": true,
+    "no_generate_changes": true,
+    "no_secret_consumption_beyond_main_backend": true
+  },
+  "smoke_tests": [
+    "GET  /health        -> 200, status=ok",
+    "GET  /engine        -> 200, engine_id matches LWA_ENGINE_SERVICE_ID",
+    "GET  /engine/health -> 200, has 'healthy' boolean",
+    "POST /engine/demo   -> 200, has 'engine_id' and 'output' fields"
+  ],
+  "promotion_blockers": [
+    "provider abstraction",
+    "cost guard",
+    "feature flag"
+  ]
+}

@@ -1,0 +1,42 @@
+name: Engine slice
+description: Report a backend engine, dev launcher, or engine-room issue
+labels: ["engine", "backend", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for engine foundation, engine-room, launcher, and contract issues.
+        Keep it scoped. Include the exact file paths and the verification commands you ran.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken or missing?
+      placeholder: Add a short, factual summary.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: File paths / scope
+      description: List the exact files or routes involved.
+      placeholder: lwa-backend/app/services/engine_service_app.py, scripts/dev.sh, .github/workflows/lwa-engine-tests.yml
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Verification
+      description: Paste the commands you ran and the results.
+      placeholder: |
+        cd lwa-backend && python3 -m compileall app scripts
+        cd lwa-web && npm run type-check
+        git diff --check
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety notes
+      description: Mention any payout, crypto, posting, or /generate risk.
+      placeholder: No payouts, no crypto, no /generate changes.

@@ -1,0 +1,168 @@
+### LWA Backend Engines — HTTP request collection
+###
+### Compatible with VS Code REST Client, JetBrains HTTP Client, and Postman
+### (paste each block as a separate request). All requests are read-only or
+### deterministic local demos. No payouts, no posting, no paid providers.
+###
+### Set the target by changing the @host variable below.
+
+@host = http://localhost:8000
+
+
+### Registry — list all 10 engines
+GET {{host}}/engines
+Accept: application/json
+
+
+### Roll-up health — healthy_count / count and per-engine status
+GET {{host}}/engines/health
+Accept: application/json
+
+
+### Engine detail — operator_admin (the read-only roll-up engine)
+GET {{host}}/engines/operator_admin
+Accept: application/json
+
+
+### Engine detail — brain
+GET {{host}}/engines/brain
+Accept: application/json
+
+
+### Engine detail — render
+GET {{host}}/engines/render
+Accept: application/json
+
+
+### Demo — creator (source ingest, mission seed)
+POST {{host}}/engines/creator/demo
+Content-Type: application/json
+
+{
+  "source": "demo source",
+  "title": "Demo upload"
+}
+
+
+### Demo — brain (signal ranking, recommended action)
+POST {{host}}/engines/brain/demo
+Content-Type: application/json
+
+{
+  "recommended_action": "Lead with the strongest hook"
+}
+
+
+### Demo — render (strategy-only fallback proof)
+POST {{host}}/engines/render/demo
+Content-Type: application/json
+
+{
+  "render_requested": false
+}
+
+
+### Demo — marketplace (teaser only)
+POST {{host}}/engines/marketplace/demo
+Content-Type: application/json
+
+{
+  "preview_offer": "Creator growth lane"
+}
+
+
+### Demo — wallet_entitlements (no payouts)
+POST {{host}}/engines/wallet_entitlements/demo
+Content-Type: application/json
+
+{
+  "credits": 120
+}
+
+
+### Demo — proof_history (demo proof record)
+POST {{host}}/engines/proof_history/demo
+Content-Type: application/json
+
+{
+  "proof_id": "proof_demo_001"
+}
+
+
+### Demo — world_game (Signal Sprint mission)
+POST {{host}}/engines/world_game/demo
+Content-Type: application/json
+
+{
+  "current_realm": "signal_realm"
+}
+
+
+### Demo — safety (claim/payout guard)
+POST {{host}}/engines/safety/demo
+Content-Type: application/json
+
+{
+  "request_type": "clip_review"
+}
+
+
+### Demo — safety BLOCKED path (payout request must be denied)
+POST {{host}}/engines/safety/demo
+Content-Type: application/json
+
+{
+  "request_type": "payout"
+}
+
+
+### Demo — social_distribution (no external posting)
+POST {{host}}/engines/social_distribution/demo
+Content-Type: application/json
+
+{
+  "destination": "manual_review"
+}
+
+
+### Demo — operator_admin (read-only system snapshot)
+POST {{host}}/engines/operator_admin/demo
+Content-Type: application/json
+
+{
+  "focus": "investor_demo"
+}
+
+
+### --- Single-engine Railway service routes ---
+### Each per-engine Railway service has a different host and serves
+### exactly one engine, chosen by LWA_ENGINE_SERVICE_ID env var.
+
+@engine_host = http://localhost:8001
+
+
+### Engine service — banner + selection
+GET {{engine_host}}/
+Accept: application/json
+
+
+### Engine service — liveness (never raises)
+GET {{engine_host}}/health
+Accept: application/json
+
+
+### Engine service — selected engine record
+GET {{engine_host}}/engine
+Accept: application/json
+
+
+### Engine service — selected engine health
+GET {{engine_host}}/engine/health
+Accept: application/json
+
+
+### Engine service — selected engine demo run
+POST {{engine_host}}/engine/demo
+Content-Type: application/json
+
+{}
