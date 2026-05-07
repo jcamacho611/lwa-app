@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import LeeWuhAssetShowcase from "../../../components/lee-wuh/LeeWuhAssetShowcase";
+import LeeWuhAssetRegistryPanel from "../../../components/lee-wuh/LeeWuhAssetRegistryPanel";
 import LeeWuhEngineMapPanel from "../../../components/lee-wuh/LeeWuhEngineMapPanel";
 import LeeWuhExperienceController from "../../../components/lee-wuh/LeeWuhExperienceController";
+import LwaRecoveryPanel from "../../../components/recovery/LwaRecoveryPanel";
 import LeeWuhLayeredStage from "../../../components/lee-wuh/LeeWuhLayeredStage";
 import LeeWuhReferencePanel from "../../../components/lee-wuh/LeeWuhReferencePanel";
 import { PlatformShell } from "../../../components/platform/PlatformShell";
@@ -58,6 +60,10 @@ export default function LeeWuhAssetsPage() {
       <LeeWuhEngineMapPanel />
 
       <LeeWuhExperienceController />
+
+      <LeeWuhAssetRegistryPanel />
+
+      <LwaRecoveryPanel />
 
       <div className="mt-8">
         <LeeWuhLayeredStage />
