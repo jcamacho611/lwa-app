@@ -1,0 +1,132 @@
+{
+  "package": "lwa-lee-wuh-assets-repo-patch",
+  "repo_root": "/Users/bdm/LWA/lwa-app",
+  "assets": [
+    {
+      "key": "background_world",
+      "source_file": "background:world layer.png",
+      "width": 1672,
+      "height": 941,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        255,
+        255
+      ],
+      "transparent": false,
+      "sha256": "dffdc3d181b864289da8453128bac18440755bda82c1c7fdfa40ffe8943b2dd6",
+      "bytes": 3379400,
+      "destinations": [
+        "brand-source/lee-wuh/references/lee-wuh-empty-world-background.png",
+        "lwa-web/public/brand/lee-wuh/backgrounds/lee-wuh-empty-world-background.png"
+      ]
+    },
+    {
+      "key": "character_world",
+      "source_file": "Lee-Wuh character reference.png",
+      "width": 1672,
+      "height": 941,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        255,
+        255
+      ],
+      "transparent": false,
+      "sha256": "8b7213bc59beb6c078470e00b0e5c2bb5138a19668009e7f4670e3f6e07c2198",
+      "bytes": 3107596,
+      "destinations": [
+        "brand-source/lee-wuh/references/lee-wuh-master-character-world.png",
+        "lwa-web/public/brand/lee-wuh/references/lee-wuh-master-character-world.png"
+      ]
+    },
+    {
+      "key": "ui_reference",
+      "source_file": "UI composition reference.png",
+      "width": 941,
+      "height": 1672,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        255,
+        255
+      ],
+      "transparent": false,
+      "sha256": "b628c80e4c7ac9635e691107eddef675a968f03b9fd9ec1dbd2ed32e53ab9fe5",
+      "bytes": 2956975,
+      "destinations": [
+        "brand-source/lee-wuh/references/lee-wuh-mobile-ui-reference.png",
+        "lwa-web/public/brand/lee-wuh/ui/lee-wuh-mobile-ui-reference.png"
+      ]
+    },
+    {
+      "key": "transparent_with_sword_aura",
+      "source_file": "ChatGPT Image May 6, 2026, 11_42_51 PM.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent": true,
+      "sha256": "68c74dd2ff89819c61aba7a30162a77d07957d34cc2ae9a419c6aeac12e9c288",
+      "bytes": 1699334,
+      "destinations": [
+        "brand-source/lee-wuh/cutouts/lee-wuh-transparent-with-sword-aura.png",
+        "lwa-web/public/brand/lee-wuh/characters/lee-wuh-transparent-with-sword-aura.png"
+      ]
+    },
+    {
+      "key": "sword_transparent_aura",
+      "source_file": "ChatGPT Image May 6, 2026, 11_45_20 PM.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent": true,
+      "sha256": "0dce893b2beeaedbbf39176a0b8d420378c222649196c1a708c4aae449d28570",
+      "bytes": 1001633,
+      "destinations": [
+        "brand-source/lee-wuh/cutouts/lee-wuh-sword-transparent-aura.png",
+        "lwa-web/public/brand/lee-wuh/weapons/lee-wuh-sword-transparent-aura.png"
+      ]
+    },
+    {
+      "key": "transparent_aura",
+      "source_file": "ChatGPT Image May 6, 2026, 11_47_24 PM.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent": true,
+      "sha256": "1dbc8cf02fbe726879a32e3994561ba51b7c7c86854632c9f385015cd435c7a2",
+      "bytes": 1591286,
+      "destinations": [
+        "brand-source/lee-wuh/cutouts/lee-wuh-transparent-aura.png",
+        "lwa-web/public/brand/lee-wuh/characters/lee-wuh-transparent-aura.png"
+      ]
+    },
+    {
+      "key": "transparent_clean",
+      "source_file": "ChatGPT Image May 6, 2026, 11_49_13 PM.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent": true,
+      "sha256": "cc7a14430cc2dc3092431248f91b5a05a310dcf87a35f61969933ce956248c6d",
+      "bytes": 903934,
+      "destinations": [
+        "brand-source/lee-wuh/cutouts/lee-wuh-transparent-clean.png",
+        "lwa-web/public/brand/lee-wuh/characters/lee-wuh-transparent-clean.png"
+      ]
+    }
+  ]
+}
