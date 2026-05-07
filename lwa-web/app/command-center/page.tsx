@@ -157,7 +157,7 @@ export default function CommandCenterPage() {
             <button className="rounded-2xl border border-green-400/30 bg-green-400/10 p-4 text-left transition hover:border-green-400/50">
               <p className="text-xs text-green-400">STEP 1</p>
               <p className="mt-1 font-medium text-white">Play Best Clip</p>
-              <p className="mt-1 text-xs text-white/50">Verify it's one</p>
+              <p className="mt-1 text-xs text-white/50">Verify it&apos;s one</p>
             </button>
             <button className="rounded-2xl border-[#C9A24A]/30 bg-[#C9A24A]/10 p-4 text-left transition hover:border-[#C9A24A]/50">
               <p className="text-xs text-[#E9C77B]">STEP 2</p>
