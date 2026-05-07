@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import LeeWuhAssetShowcase from "../../../components/lee-wuh/LeeWuhAssetShowcase";
 import LeeWuhEngineMapPanel from "../../../components/lee-wuh/LeeWuhEngineMapPanel";
+import LeeWuhExperienceController from "../../../components/lee-wuh/LeeWuhExperienceController";
 import LeeWuhLayeredStage from "../../../components/lee-wuh/LeeWuhLayeredStage";
 import LeeWuhReferencePanel from "../../../components/lee-wuh/LeeWuhReferencePanel";
 import { PlatformShell } from "../../../components/platform/PlatformShell";
@@ -55,6 +56,8 @@ export default function LeeWuhAssetsPage() {
       <LeeWuhReferencePanel />
 
       <LeeWuhEngineMapPanel />
+
+      <LeeWuhExperienceController />
 
       <div className="mt-8">
         <LeeWuhLayeredStage />
