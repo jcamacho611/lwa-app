@@ -1,13 +1,18 @@
 import bpy
 import math
 import os
+from mathutils import Vector
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 OUTPUT_BLEND_DIR = os.path.join(REPO_ROOT, "brand-source", "lee-wuh", "blender")
+OUTPUT_EXPORT_DIR = os.path.join(REPO_ROOT, "brand-source", "lee-wuh", "exports")
 OUTPUT_GLB_DIR = os.path.join(REPO_ROOT, "lwa-web", "public", "brand", "lee-wuh", "3d")
 
 OUTPUT_BLEND = os.path.join(OUTPUT_BLEND_DIR, "lee-wuh-character-blockout.blend")
+OUTPUT_CHARACTER_BLEND = os.path.join(OUTPUT_BLEND_DIR, "lee-wuh-character.blend")
+OUTPUT_CHARACTER_GLB = os.path.join(OUTPUT_EXPORT_DIR, "lee-wuh-character.glb")
+OUTPUT_SWORD_GLB = os.path.join(OUTPUT_EXPORT_DIR, "lee-wuh-realm-sword.glb")
 OUTPUT_GLB = os.path.join(OUTPUT_GLB_DIR, "lee-wuh-mascot.glb")
 
 bpy.ops.object.select_all(action="SELECT")
@@ -101,6 +106,11 @@ right_arm.rotation_euler[1] = math.radians(55)
 sphere("left paw", (-1.0, -0.22, 1.24), (0.18, 0.14, 0.18), fur)
 sphere("right paw", (1.0, -0.22, 1.24), (0.18, 0.14, 0.18), fur)
 
+left_leg = cylinder("left leg", (-0.32, -0.04, 0.74), 0.12, 0.58, fur)
+left_leg.rotation_euler[0] = math.radians(4)
+right_leg = cylinder("right leg", (0.32, -0.04, 0.74), 0.12, 0.58, fur)
+right_leg.rotation_euler[0] = math.radians(4)
+
 cube("left sneaker", (-0.34, -0.12, 0.35), (0.28, 0.42, 0.13), black_cloth)
 cube("right sneaker", (0.34, -0.12, 0.35), (0.28, 0.42, 0.13), black_cloth)
 cube("left sneaker sole", (-0.34, -0.16, 0.25), (0.30, 0.45, 0.055), sole)
@@ -180,6 +190,150 @@ for obj in [left_iris, right_iris]:
         obj.scale.x = sx
         obj.keyframe_insert(data_path="scale")
 
+
+COLLECTIONS = [
+    "body",
+    "head",
+    "face",
+    "eyes",
+    "mouth",
+    "arms",
+    "hands",
+    "legs",
+    "tail",
+    "dreadlocks",
+    "jewelry",
+    "robe",
+    "sneakers",
+    "sword",
+    "aura",
+    "rig_optional",
+    "lights_camera",
+]
+
+
+def move_to_collection(obj, collection):
+    for existing in list(obj.users_collection):
+        existing.objects.unlink(obj)
+    collection.objects.link(obj)
+
+
+def collection_for_object(obj_name):
+    name = obj_name.lower()
+    if "camera" in name or "softbox" in name or "rim" in name or "light" in name:
+        return "lights_camera"
+    if "rig" in name or "armature" in name:
+        return "rig_optional"
+    if "sword" in name or "blade" in name:
+        return "sword"
+    if "aura" in name or "energy" in name:
+        return "aura"
+    if "dread" in name:
+        return "dreadlocks"
+    if "sneaker" in name or "sole" in name:
+        return "sneakers"
+    if "leg" in name:
+        return "legs"
+    if "paw" in name or "hand" in name:
+        return "hands"
+    if "arm" in name:
+        return "arms"
+    if "tail" in name:
+        return "tail"
+    if "coat" in name or "robe" in name or "sash" in name or "trim" in name:
+        return "robe"
+    if "eye" in name or "iris" in name:
+        return "eyes"
+    if "muzzle" in name or "nose" in name or "mouth" in name:
+        return "mouth"
+    if "bead" in name or "gem" in name or "chain" in name or "sigil" in name or "jewel" in name:
+        return "jewelry"
+    if "head" in name or "ear" in name:
+        return "head"
+    return "body"
+
+
+def organize_collections():
+    master = bpy.data.collections.new("LEE_WUH_CHARACTER")
+    bpy.context.scene.collection.children.link(master)
+
+    subcollections = {}
+    for collection_name in COLLECTIONS:
+        collection = bpy.data.collections.new(collection_name)
+        master.children.link(collection)
+        subcollections[collection_name] = collection
+
+    for obj in list(bpy.context.scene.objects):
+        target = subcollections[collection_for_object(obj.name)]
+        move_to_collection(obj, target)
+
+
+def export_glb(filepath, use_selection=False):
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    kwargs = {
+        "filepath": filepath,
+        "export_format": "GLB",
+        "export_animations": True,
+        "export_apply": True,
+        "export_materials": "EXPORT",
+        "export_lights": False,
+        "export_cameras": False,
+    }
+    if use_selection:
+        kwargs["use_selection"] = True
+    bpy.ops.export_scene.gltf(**kwargs)
+
+
+def export_sword_prop():
+    sword_collection = bpy.data.collections.get("sword")
+    if not sword_collection:
+        print("Sword collection missing; skipping separate sword GLB export.")
+        return
+
+    bpy.ops.object.select_all(action="DESELECT")
+    selected = []
+    for obj in sword_collection.objects:
+        obj.select_set(True)
+        selected.append(obj)
+
+    if not selected:
+        print("Sword collection is empty; skipping separate sword GLB export.")
+        return
+
+    bpy.context.view_layer.objects.active = selected[0]
+    export_glb(OUTPUT_SWORD_GLB, use_selection=True)
+
+
+def point_camera(camera, target):
+    direction = Vector(target) - camera.location
+    camera.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
+
+
+def render_preview(name, camera_location, target=(0, 0, 1.75)):
+    camera = bpy.context.scene.camera
+    camera.location = camera_location
+    point_camera(camera, target)
+    bpy.context.scene.render.filepath = os.path.join(OUTPUT_EXPORT_DIR, name)
+    bpy.ops.render.render(write_still=True)
+
+
+def render_previews():
+    os.makedirs(OUTPUT_EXPORT_DIR, exist_ok=True)
+    bpy.context.scene.render.resolution_x = 1200
+    bpy.context.scene.render.resolution_y = 1200
+    try:
+        bpy.context.scene.render.engine = "BLENDER_EEVEE_NEXT"
+    except Exception:
+        try:
+            bpy.context.scene.render.engine = "BLENDER_EEVEE"
+        except Exception:
+            bpy.context.scene.render.engine = "CYCLES"
+
+    render_preview("preview-render-front.png", (0, -6.3, 2.35))
+    render_preview("preview-render-side.png", (6.3, 0, 2.35))
+    render_preview("preview-render-back.png", (0, 6.3, 2.35))
+    render_preview("preview-render-3quarter.png", (4.2, -4.9, 2.55))
+
 bpy.ops.object.light_add(type="AREA", location=(0, -4.5, 5.2))
 key = bpy.context.object
 key.name = "large cinematic softbox"
@@ -195,9 +349,19 @@ bpy.context.scene.camera = bpy.context.object
 bpy.context.scene.render.resolution_x = 1600
 bpy.context.scene.render.resolution_y = 900
 
+organize_collections()
+
 os.makedirs(OUTPUT_BLEND_DIR, exist_ok=True)
+os.makedirs(OUTPUT_EXPORT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_GLB_DIR, exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=OUTPUT_BLEND)
-bpy.ops.export_scene.gltf(filepath=OUTPUT_GLB, export_format="GLB", export_animations=True, export_apply=True)
+bpy.ops.wm.save_as_mainfile(filepath=OUTPUT_CHARACTER_BLEND)
+export_glb(OUTPUT_GLB)
+export_glb(OUTPUT_CHARACTER_GLB)
+export_sword_prop()
+render_previews()
 print(f"Saved Blender file to {OUTPUT_BLEND}")
+print(f"Saved artist handoff Blender file to {OUTPUT_CHARACTER_BLEND}")
 print(f"Exported GLB to {OUTPUT_GLB}")
+print(f"Exported source GLB to {OUTPUT_CHARACTER_GLB}")
+print(f"Exported sword prop GLB to {OUTPUT_SWORD_GLB}")
