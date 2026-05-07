@@ -6,6 +6,7 @@ import {
   LayoutDashboard, 
   Clapperboard, 
   Gamepad2, 
+  Sparkles,
   Store, 
   Target, 
   History, 
@@ -17,6 +18,7 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/generate", label: "Generate", icon: Clapperboard },
+  { href: "/demo", label: "Demo", icon: Sparkles },
   { href: "/realm", label: "Game", icon: Gamepad2 },
   { href: "/marketplace", label: "Market", icon: Store },
   { href: "/campaigns", label: "Campaigns", icon: Target },
