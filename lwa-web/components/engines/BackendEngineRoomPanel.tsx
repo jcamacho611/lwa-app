@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BadgeCheck, Cpu, RefreshCw, Sparkles, ShieldAlert } from "lucide-react";
 import {
   fetchBackendEngines,
   runBackendEngineDemo,
