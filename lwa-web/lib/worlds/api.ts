@@ -1095,12 +1095,6 @@ type BackendQuestResponse = {
   active: boolean;
 };
 
-type BackendQuestCompletion = {
-  quest_public_id: string;
-  progress: number;
-  status: string;
-};
-
 function badgeTier(value: string): import("./types").Badge["tier"] {
   const allowed = ["common", "rare", "epic", "mythic", "founder"] as const;
   return (allowed as readonly string[]).includes(value) ? (value as import("./types").Badge["tier"]) : "common";
@@ -1111,13 +1105,6 @@ function questCategory(value: string): import("./types").Quest["category"] {
   return (allowed as readonly string[]).includes(value)
     ? (value as import("./types").Quest["category"])
     : "clipping";
-}
-
-function questStatus(value: string): import("./types").Quest["status"] {
-  const allowed = ["available", "in_progress", "completed", "claimed"] as const;
-  return (allowed as readonly string[]).includes(value)
-    ? (value as import("./types").Quest["status"])
-    : "available";
 }
 
 export async function getMyBadges(): Promise<import("./types").Badge[]> {
@@ -1155,30 +1142,23 @@ export async function claimQuest(questId: string, token: string): Promise<{ stat
 }
 
 export async function listQuests(): Promise<import("./types").Quest[]> {
-  const [questDefs, completions] = await Promise.all([
-    request<BackendQuestResponse[]>("/worlds/quests"),
-    request<BackendQuestCompletion[]>("/worlds/quests/me").catch(() => [] as BackendQuestCompletion[]),
-  ]);
+  // Backend exposes only GET /worlds/quests (definitions) — no per-user
+  // completion list endpoint exists. Quests are shown as available/0 progress
+  // until the user triggers progress or claim via the per-quest endpoints.
+  const questDefs = await request<BackendQuestResponse[]>("/worlds/quests");
 
   if (!Array.isArray(questDefs)) return [];
 
-  const progressMap = new Map<string, BackendQuestCompletion>(
-    (Array.isArray(completions) ? completions : []).map((c) => [c.quest_public_id, c]),
-  );
-
   return questDefs
     .filter((q) => q.active)
-    .map((q) => {
-      const completion = progressMap.get(q.public_id);
-      return {
-        id: q.public_id,
-        title: q.title,
-        description: q.description,
-        category: questCategory(q.category),
-        progress: completion?.progress ?? 0,
-        goal: q.goal,
-        rewardXp: q.reward_xp,
-        status: completion ? questStatus(completion.status) : ("available" as const),
-      };
-    });
+    .map((q) => ({
+      id: q.public_id,
+      title: q.title,
+      description: q.description,
+      category: questCategory(q.category),
+      progress: 0,
+      goal: q.goal,
+      rewardXp: q.reward_xp,
+      status: "available" as const,
+    }));
 }

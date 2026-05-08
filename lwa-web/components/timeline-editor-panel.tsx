@@ -21,10 +21,13 @@ function formatTime(sec: number): string {
 }
 
 function toTimecode(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = Math.floor(sec % 60);
-  const ms = Math.round((sec % 1) * 1000);
+  // Work in integer milliseconds to prevent Math.round producing ms=1000
+  const totalMs = Math.round(sec * 1000);
+  const ms = totalMs % 1000;
+  const totalSec = Math.floor(totalMs / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
 }
 
