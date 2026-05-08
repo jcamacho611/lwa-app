@@ -705,7 +705,7 @@ export function ClipStudio({
       return;
     }
 
-    if (sourceMode === "video" && videoUrl.trim() && !bypassLiveCheck && isLiveStreamUrl(videoUrl)) {
+    if (sourceMode === "video" && videoUrl.trim() && !selectedUploadId && !bypassLiveCheck && isLiveStreamUrl(videoUrl)) {
       setLiveStreamWarning(true);
       return;
     }

@@ -216,8 +216,8 @@ def _heuristic_brain(
     retention = _clamp(0.50 * score + 0.30 * confidence + 0.20 * (100.0 if 8 <= duration <= 45 else 60.0))
     hook_s   = _clamp(hook if hook > 0 else (75.0 if has_hook_text else 45.0))
 
-    bd_clarity = _get(breakdown, "clarity") if isinstance(breakdown, dict) else None
-    bd_focus   = _get(breakdown, "focus") if isinstance(breakdown, dict) else None
+    bd_clarity = _get(breakdown, "clarity_score") if isinstance(breakdown, dict) else None
+    bd_focus   = None  # ScoreBreakdown has no focus field; use heuristic fallback
     clarity  = _clamp(_normalize_to_100(bd_clarity) or (80.0 if 4 <= len(transcript.split()) <= 60 else 55.0))
     focus    = _clamp(_normalize_to_100(bd_focus) or (70.0 if duration <= 60 else 45.0))
 
@@ -512,10 +512,7 @@ async def _enrich_one_async(
             export_profile_recommendation=_pick_profile(target_platform),
         )
     try:
-        return await asyncio.wait_for(
-            _ai_upgrade(clip, base, target_platform, source_type),
-            timeout=_LLM_TIMEOUT_S * (_LLM_MAX_RETRIES + 1) + 2.0,
-        )
+        return await _ai_upgrade(clip, base, target_platform, source_type)
     except Exception:
         logger.warning("auto_editor_brain ai upgrade failed; returning heuristic")
         base.provider_note = "ai-enrichment-error, returned heuristic"
