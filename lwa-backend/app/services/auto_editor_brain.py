@@ -522,6 +522,42 @@ async def _enrich_one_async(
         return base
 
 
+async def _safe_enrich_one(
+    clip: Any,
+    target_platform: Optional[str],
+    source_type: Optional[str],
+    fallback_reason: Optional[str],
+) -> Any:
+    """Wraps _enrich_one_async; returns clip with auto_editor attached. Never raises."""
+    try:
+        brain = await _enrich_one_async(
+            clip,
+            target_platform=target_platform or _get(clip, "target_platform"),
+            source_type=source_type,
+            fallback_reason=fallback_reason,
+        )
+        try:
+            object.__setattr__(clip, "auto_editor", brain)
+        except (AttributeError, TypeError):
+            clip = clip.model_copy(update={"auto_editor": brain})
+    except Exception:
+        logger.exception("auto_editor_brain failed for one clip; attaching skipped brain")
+        try:
+            skipped = AutoEditorBrain(
+                status="skipped",
+                provider="heuristic",
+                provider_note="per-clip-error",
+                export_profile_recommendation=_pick_profile(target_platform),
+            )
+            try:
+                object.__setattr__(clip, "auto_editor", skipped)
+            except (AttributeError, TypeError):
+                clip = clip.model_copy(update={"auto_editor": skipped})
+        except Exception:
+            pass
+    return clip
+
+
 async def enrich_clips_with_auto_editor_async(
     clips: Sequence[Any],
     target_platform: Optional[str] = None,
@@ -529,43 +565,21 @@ async def enrich_clips_with_auto_editor_async(
     fallback_reason: Optional[str] = None,
 ) -> List[Any]:
     """
-    Async entry point. Attaches `auto_editor` to each clip and returns the list.
-    Never raises. Designed to be awaited from clip_service.py.
+    Async entry point. Attaches `auto_editor` to each clip concurrently and returns
+    the list in original order. Bounded concurrency (max 6) prevents runaway
+    provider calls on large packs. Never raises.
     """
     if not clips:
         return list(clips or [])
 
-    out: List[Any] = []
-    for clip in clips:
-        try:
-            brain = await _enrich_one_async(
-                clip,
-                target_platform=target_platform or _get(clip, "target_platform"),
-                source_type=source_type,
-                fallback_reason=fallback_reason,
-            )
-            try:
-                object.__setattr__(clip, "auto_editor", brain)
-            except (AttributeError, TypeError):
-                # Pydantic v2 model — use model_copy
-                clip = clip.model_copy(update={"auto_editor": brain})
-        except Exception:
-            logger.exception("auto_editor_brain failed for one clip; attaching skipped brain")
-            try:
-                skipped = AutoEditorBrain(
-                    status="skipped",
-                    provider="heuristic",
-                    provider_note="per-clip-error",
-                    export_profile_recommendation=_pick_profile(target_platform),
-                )
-                try:
-                    object.__setattr__(clip, "auto_editor", skipped)
-                except (AttributeError, TypeError):
-                    clip = clip.model_copy(update={"auto_editor": skipped})
-            except Exception:
-                pass
-        out.append(clip)
-    return out
+    _MAX_CONCURRENT = 6
+    sem = asyncio.Semaphore(_MAX_CONCURRENT)
+
+    async def bounded(clip: Any) -> Any:
+        async with sem:
+            return await _safe_enrich_one(clip, target_platform, source_type, fallback_reason)
+
+    return list(await asyncio.gather(*[bounded(c) for c in clips]))
 
 
 __all__ = [

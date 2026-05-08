@@ -339,12 +339,13 @@ function ensureApiBase() {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit, token?: string | null): Promise<T> {
   ensureApiBase();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers || {}),
     },
     cache: "no-store",
@@ -356,6 +357,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function listMyJobsWithAuth(token: string): Promise<WorldJob[]> {
+  const result = await request<BackendWorldJob[]>("/worlds/jobs/me", undefined, token);
+  if (!Array.isArray(result)) return [];
+  return result.map(mapWorldJob);
 }
 
 function campaignStatus(value: string): MarketplaceCampaign["status"] {
