@@ -11,14 +11,6 @@ type Props = {
   onClose: () => void;
 };
 
-function parseSeconds(ts: string | null | undefined): number | null {
-  if (!ts) return null;
-  const parts = ts.split(":").map(Number);
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  return parseFloat(ts) || null;
-}
-
 function formatTime(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
@@ -36,28 +28,42 @@ function toTimecode(sec: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
 }
 
+// The backend applies -ss/-to against the rendered clip asset, not the original
+// source, so trim bounds must be clip-relative (0 … clip.duration).
+function clipDuration(clip: ClipResult): number {
+  if (clip.duration && clip.duration > 0) return clip.duration;
+  return 60; // conservative fallback when duration is unknown
+}
+
 export function TimelineEditorPanel({ clip, token, onSaved, onClose }: Props) {
   const clipId = clip.record_id || clip.clip_id || clip.id;
-  const durationRaw = clip.duration ?? null;
+  const duration = clipDuration(clip);
 
-  const origStart = parseSeconds(clip.start_time ?? clip.timestamp_start) ?? 0;
-  const origEnd =
-    parseSeconds(clip.end_time ?? clip.timestamp_end) ??
-    (durationRaw ? origStart + durationRaw : origStart + 60);
-
-  const [trimStart, setTrimStart] = useState(origStart);
-  const [trimEnd, setTrimEnd] = useState(origEnd);
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(duration);
   const [captionText, setCaptionText] = useState(clip.caption || "");
   const [burnCaptions, setBurnCaptions] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const totalDuration = origEnd - origStart;
-  const trackRef = useRef<HTMLDivElement>(null);
+  // Reset all state when the selected clip changes (P2 fix)
+  useEffect(() => {
+    const d = clipDuration(clip);
+    setTrimStart(0);
+    setTrimEnd(d);
+    setCaptionText(clip.caption || "");
+    setBurnCaptions(false);
+    setSaving(false);
+    setError(null);
+    setSaved(false);
+  }, [clip.id]);
 
-  const startPct = totalDuration > 0 ? ((trimStart - origStart) / totalDuration) * 100 : 0;
-  const endPct = totalDuration > 0 ? ((trimEnd - origStart) / totalDuration) * 100 : 100;
+  const trackRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef<"start" | "end" | null>(null);
+
+  const startPct = duration > 0 ? (trimStart / duration) * 100 : 0;
+  const endPct = duration > 0 ? (trimEnd / duration) * 100 : 100;
 
   function clampedInput(val: string, min: number, max: number): number {
     const n = parseFloat(val);
@@ -91,14 +97,11 @@ export function TimelineEditorPanel({ clip, token, onSaved, onClose }: Props) {
     }
   }
 
-  // Drag handle logic for the scrub bar
-  const dragging = useRef<"start" | "end" | null>(null);
-
   function onTrackMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     if (!dragging.current || !trackRef.current) return;
     const rect = trackRef.current.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const t = origStart + pct * totalDuration;
+    const t = pct * duration;
     if (dragging.current === "start") {
       setTrimStart(Math.min(t, trimEnd - 0.5));
     } else {
@@ -122,11 +125,11 @@ export function TimelineEditorPanel({ clip, token, onSaved, onClose }: Props) {
         </button>
       </div>
 
-      {/* Scrub bar */}
+      {/* Scrub bar — positions are clip-relative (0 … duration) */}
       <div className="space-y-2">
         <div className="flex justify-between text-[10px] text-ink/46">
-          <span>{formatTime(origStart)}</span>
-          <span>{formatTime(origEnd)}</span>
+          <span>0:00</span>
+          <span>{formatTime(duration)}</span>
         </div>
         <div
           ref={trackRef}
@@ -135,12 +138,10 @@ export function TimelineEditorPanel({ clip, token, onSaved, onClose }: Props) {
           onMouseUp={() => { dragging.current = null; }}
           onMouseLeave={() => { dragging.current = null; }}
         >
-          {/* active region */}
           <div
             className="absolute top-0 h-full bg-[var(--gold-dim)] border-x border-[var(--gold-border)]"
             style={{ left: `${startPct}%`, width: `${endPct - startPct}%` }}
           />
-          {/* start handle */}
           <div
             className="absolute top-0 h-full w-3 cursor-ew-resize flex items-center justify-center group"
             style={{ left: `calc(${startPct}% - 6px)` }}
@@ -148,7 +149,6 @@ export function TimelineEditorPanel({ clip, token, onSaved, onClose }: Props) {
           >
             <div className="w-1 h-5 rounded-full bg-[var(--gold)] opacity-80 group-hover:opacity-100" />
           </div>
-          {/* end handle */}
           <div
             className="absolute top-0 h-full w-3 cursor-ew-resize flex items-center justify-center group"
             style={{ left: `calc(${endPct}% - 6px)` }}
@@ -163,10 +163,10 @@ export function TimelineEditorPanel({ clip, token, onSaved, onClose }: Props) {
             <input
               type="number"
               step="0.1"
-              min={origStart}
+              min={0}
               max={trimEnd - 0.5}
               value={trimStart.toFixed(1)}
-              onChange={(e) => setTrimStart(clampedInput(e.target.value, origStart, trimEnd - 0.5))}
+              onChange={(e) => setTrimStart(clampedInput(e.target.value, 0, trimEnd - 0.5))}
               className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-ink outline-none focus:border-[var(--gold-border)]"
             />
           </label>
@@ -176,15 +176,15 @@ export function TimelineEditorPanel({ clip, token, onSaved, onClose }: Props) {
               type="number"
               step="0.1"
               min={trimStart + 0.5}
-              max={origEnd}
+              max={duration}
               value={trimEnd.toFixed(1)}
-              onChange={(e) => setTrimEnd(clampedInput(e.target.value, trimStart + 0.5, origEnd))}
+              onChange={(e) => setTrimEnd(clampedInput(e.target.value, trimStart + 0.5, duration))}
               className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-ink outline-none focus:border-[var(--gold-border)]"
             />
           </label>
         </div>
         <p className="text-[10px] text-ink/40">
-          Duration: {formatTime(trimEnd - trimStart)} &nbsp;·&nbsp; Original: {formatTime(totalDuration)}
+          Duration: {formatTime(trimEnd - trimStart)} &nbsp;·&nbsp; Clip length: {formatTime(duration)}
         </p>
       </div>
 
