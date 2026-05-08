@@ -1,10 +1,18 @@
 import Link from "next/link";
-import { mockCampaigns, mockEarnings, mockWorldProfile } from "../../lib/worlds/mock-data";
+import type { EarningSummary, UserWorldProfile } from "../../lib/worlds/types";
 import { formatMoney } from "../../lib/worlds/utils";
 import { SafetyNotice } from "./SafetyNotice";
 import { StatPill } from "./StatPill";
 
-export function CommandCenter() {
+export function CommandCenter({
+  profile,
+  earnings,
+  campaignCount,
+}: {
+  profile: UserWorldProfile;
+  earnings: EarningSummary;
+  campaignCount: number;
+}) {
   return (
     <div className="space-y-6">
       <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
@@ -46,16 +54,16 @@ export function CommandCenter() {
 
         <div className="glass-panel rounded-[28px] p-6">
           <p className="section-kicker">World Identity</p>
-          <h3 className="mt-3 text-2xl font-semibold text-ink">{mockWorldProfile.displayName}</h3>
+          <h3 className="mt-3 text-2xl font-semibold text-ink">{profile.displayName}</h3>
           <p className="mt-2 text-sm leading-7 text-ink/62">
-            {mockWorldProfile.className} of {mockWorldProfile.faction}
+            {profile.className} of {profile.faction}
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <StatPill label="Level" value={mockWorldProfile.level} accent />
-            <StatPill label="XP" value={`${mockWorldProfile.xp}/${mockWorldProfile.nextLevelXp}`} />
-            <StatPill label="Badges" value={mockWorldProfile.badges.length} />
-            <StatPill label="Relics" value={mockWorldProfile.relics.length} />
+            <StatPill label="Level" value={profile.level} accent />
+            <StatPill label="XP" value={`${profile.xp}/${profile.nextLevelXp}`} />
+            <StatPill label="Badges" value={profile.badges.length} />
+            <StatPill label="Relics" value={profile.relics.length} />
           </div>
 
           <Link href="/worlds/profile" className="primary-button mt-6 inline-flex rounded-full px-4 py-2 text-sm font-semibold">
@@ -67,17 +75,17 @@ export function CommandCenter() {
       <section className="grid gap-5 md:grid-cols-3">
         <div className="metric-tile rounded-[24px] p-5">
           <p className="text-sm text-ink/46">Marketplace campaigns</p>
-          <p className="mt-2 text-3xl font-semibold text-ink">{mockCampaigns.length}</p>
+          <p className="mt-2 text-3xl font-semibold text-ink">{campaignCount}</p>
           <p className="mt-2 text-sm text-ink/62">Open and review-ready jobs.</p>
         </div>
         <div className="metric-tile rounded-[24px] p-5">
           <p className="text-sm text-ink/46">Approved earnings</p>
-          <p className="mt-2 text-3xl font-semibold text-ink">{formatMoney(mockEarnings.approved.amount)}</p>
+          <p className="mt-2 text-3xl font-semibold text-ink">{formatMoney(earnings.approved.amount)}</p>
           <p className="mt-2 text-sm text-ink/62">Not guaranteed until payout clears.</p>
         </div>
         <div className="metric-tile rounded-[24px] p-5">
           <p className="text-sm text-ink/46">Pending review</p>
-          <p className="mt-2 text-3xl font-semibold text-ink">{formatMoney(mockEarnings.pendingReview.amount)}</p>
+          <p className="mt-2 text-3xl font-semibold text-ink">{formatMoney(earnings.pendingReview.amount)}</p>
           <p className="mt-2 text-sm text-ink/62">Admin or buyer approval required.</p>
         </div>
       </section>

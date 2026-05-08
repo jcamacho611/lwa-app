@@ -1,11 +1,11 @@
-import { mockQuests } from "../../lib/worlds/mock-data";
+import type { Quest } from "../../lib/worlds/types";
 import { StatPill } from "./StatPill";
 import { StatusBadge } from "./StatusBadge";
 
-export function QuestBoard() {
+export function QuestBoard({ quests }: { quests: Quest[] }) {
   return (
     <div className="grid gap-5 lg:grid-cols-2">
-      {mockQuests.map((quest) => {
+      {quests.map((quest) => {
         const progress = Math.min(Math.round((quest.progress / quest.goal) * 100), 100);
         return (
           <article key={quest.id} className="glass-panel rounded-[24px] p-5">

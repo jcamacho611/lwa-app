@@ -1,8 +1,7 @@
-import { mockQuests, mockWorldProfile } from "../../lib/worlds/mock-data";
+import type { Quest, UserWorldProfile } from "../../lib/worlds/types";
 import { StatPill } from "./StatPill";
 
-export function WorldProfile() {
-  const profile = mockWorldProfile;
+export function WorldProfile({ profile, quests }: { profile: UserWorldProfile; quests: Quest[] }) {
   const progress = Math.min(Math.round((profile.xp / profile.nextLevelXp) * 100), 100);
 
   return (
@@ -65,7 +64,7 @@ export function WorldProfile() {
       <section className="glass-panel rounded-[24px] p-5">
         <h3 className="text-2xl font-semibold text-ink">Active Quests</h3>
         <div className="mt-4 grid gap-3">
-          {mockQuests.map((quest) => (
+          {quests.map((quest) => (
             <div key={quest.id} className="metric-tile rounded-[18px] p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h4 className="font-semibold text-ink">{quest.title}</h4>
