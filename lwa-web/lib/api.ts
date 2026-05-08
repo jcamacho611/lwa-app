@@ -480,3 +480,16 @@ export async function updateScheduledPost(token: string, postId: string, payload
     body: JSON.stringify(payload),
   });
 }
+
+export type TrendItem = {
+  id: string;
+  title: string;
+  source: string;
+  detail: string;
+  url?: string | null;
+};
+
+export async function loadTrends(): Promise<TrendItem[]> {
+  const payload = await jsonRequest<{ trends: TrendItem[] }>("/api/trends");
+  return Array.isArray(payload.trends) ? payload.trends : [];
+}

@@ -103,6 +103,7 @@ import { getPlanSurface } from "../lib/plans";
 import { RESULT_COPY } from "../lib/result-copy";
 import { resolveWorldPhase, resolveWorldState, type WorldSignal } from "../lib/world-state";
 import { useStableResults } from "../hooks/useStableResults";
+import { TrendSignals } from "./TrendSignals";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 type SourceMode = "video" | "image" | "idea";
@@ -2704,7 +2705,12 @@ export function ClipStudio({
             </div>
           </section>
 
-          {!activeResult && !isLoading ? <HomeDiscoveryGrid sections={homeDiscoverySections.slice(0, 3)} /> : null}
+          {!activeResult && !isLoading ? (
+            <div className="mx-auto max-w-5xl space-y-8 pb-4">
+              <TrendSignals />
+              <HomeDiscoveryGrid sections={homeDiscoverySections.slice(0, 3)} />
+            </div>
+          ) : null}
           {resultsSection ? <div className="space-y-6 pb-8">{resultsSection}</div> : null}
         </div>
       ) : (
