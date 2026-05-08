@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { readStoredToken } from "../../lib/auth";
-import { loadPostingConnections } from "../../lib/api";
+import { createPostingConnection, loadPostingConnections } from "../../lib/api";
 import type { PostingConnection } from "../../lib/types";
+
+const PROVIDERS = ["tiktok", "instagram", "youtube", "twitter", "facebook", "snapchat", "pinterest", "linkedin"];
 
 const PROVIDER_LABELS: Record<string, string> = {
   tiktok: "TikTok",
@@ -24,14 +26,22 @@ export function PostingConnectionsView() {
   const [connections, setConnections] = useState<PostingConnection[]>([]);
   const [state, setState] = useState<"loading" | "no-token" | "error" | "ready">("loading");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+
+  const [showForm, setShowForm] = useState(false);
+  const [formProvider, setFormProvider] = useState("tiktok");
+  const [formLabel, setFormLabel] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = readStoredToken();
-    if (!token) {
+    const t = readStoredToken();
+    if (!t) {
       setState("no-token");
       return;
     }
-    loadPostingConnections(token)
+    setToken(t);
+    loadPostingConnections(t)
       .then((data) => {
         setConnections(data);
         setState("ready");
@@ -41,6 +51,26 @@ export function PostingConnectionsView() {
         setState("error");
       });
   }, []);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token) return;
+    setAdding(true);
+    setAddError(null);
+    try {
+      const conn = await createPostingConnection(token, {
+        provider: formProvider,
+        account_label: formLabel.trim() || undefined,
+      });
+      setConnections((prev) => [...prev, conn]);
+      setShowForm(false);
+      setFormLabel("");
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : "Failed to add connection.");
+    } finally {
+      setAdding(false);
+    }
+  }
 
   if (state === "loading") {
     return <div className="glass-panel rounded-[28px] p-6 text-sm text-ink/60">Loading integrations…</div>;
@@ -74,12 +104,59 @@ export function PostingConnectionsView() {
         <span className="font-semibold">Scheduling readiness only.</span> Connections stored here record provider intent, not live OAuth tokens. Direct API posting is not yet active. No content is published automatically.
       </div>
 
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-ink/60">{connections.length} connection{connections.length !== 1 ? "s" : ""}</p>
+        <button
+          type="button"
+          onClick={() => setShowForm((v) => !v)}
+          className="secondary-button rounded-full px-4 py-2 text-sm font-semibold"
+        >
+          {showForm ? "Cancel" : "Add connection"}
+        </button>
+      </div>
+
+      {showForm ? (
+        <form onSubmit={handleAdd} className="glass-panel grid gap-4 rounded-[28px] p-6">
+          {addError ? (
+            <p className="rounded-[16px] border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">{addError}</p>
+          ) : null}
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-ink/70">Platform</span>
+            <select
+              value={formProvider}
+              onChange={(e) => setFormProvider(e.target.value)}
+              className="input-surface rounded-[20px] px-4 py-3 text-sm"
+            >
+              {PROVIDERS.map((p) => (
+                <option key={p} value={p}>{providerLabel(p)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-ink/70">Account label (optional)</span>
+            <input
+              value={formLabel}
+              onChange={(e) => setFormLabel(e.target.value)}
+              placeholder="@handle or channel name"
+              className="input-surface rounded-[20px] px-4 py-3 text-sm"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={adding}
+            className="primary-button rounded-full px-5 py-3 text-sm font-semibold disabled:opacity-60"
+          >
+            {adding ? "Adding…" : "Add connection"}
+          </button>
+        </form>
+      ) : null}
+
       {connections.length === 0 ? (
         <div className="glass-panel rounded-[28px] p-6">
           <p className="section-kicker">No connections yet</p>
           <h3 className="mt-3 text-xl font-semibold text-ink">Platform readiness starts here</h3>
           <p className="mt-3 text-sm leading-7 text-ink/60">
-            When a posting connection is added via the generator workspace, it will appear here. OAuth flows and live publishing are not yet active.
+            Add a posting connection to record your intended platform targets. OAuth flows and live publishing are not yet active.
           </p>
         </div>
       ) : (
