@@ -14,6 +14,9 @@ export function JobsView() {
   const [state, setState] = useState<"loading" | "no-token" | "error" | "ready">("loading");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  // Incremented after every silent poll (success or failure) so the scheduling
+  // useEffect always re-runs and reschedules the next tick even after errors.
+  const [pollTick, setPollTick] = useState(0);
   const tokenRef = useRef<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -29,7 +32,13 @@ export function JobsView() {
         setState("error");
       }
     } finally {
-      if (!silent) setRefreshing(false);
+      if (!silent) {
+        setRefreshing(false);
+      } else {
+        // Always bump the tick so the scheduling effect re-runs and reschedules
+        // the next poll even when the request fails transiently.
+        setPollTick((n) => n + 1);
+      }
     }
   }, []);
 
@@ -55,7 +64,7 @@ export function JobsView() {
     return () => {
       if (pollRef.current) clearTimeout(pollRef.current);
     };
-  }, [jobs, state, load]);
+  }, [jobs, state, load, pollTick]);
 
   const counts = {
     queued: jobs.filter((j) => j.status === "queued").length,

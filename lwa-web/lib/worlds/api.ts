@@ -852,20 +852,24 @@ export async function getCampaign(id: string): Promise<MarketplaceCampaign> {
   return mapCampaign(await request<BackendCampaign>(`/worlds/marketplace/campaigns/${id}`));
 }
 
-export async function createCampaign(payload: {
-  title: string;
-  description: string;
-  target_platform: string;
-  source_type: string;
-  budget_amount: number;
-  clip_count: number;
-  rights_required?: string;
-}) {
+export async function createCampaign(
+  payload: {
+    title: string;
+    description: string;
+    target_platform: string;
+    source_type: string;
+    budget_amount: number;
+    clip_count: number;
+    rights_required?: string;
+  },
+  token?: string | null,
+) {
   return mapCampaign(
-    await request<BackendCampaign>("/worlds/marketplace/campaigns", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+    await request<BackendCampaign>(
+      "/worlds/marketplace/campaigns",
+      { method: "POST", body: JSON.stringify(payload) },
+      token,
+    ),
   );
 }
 

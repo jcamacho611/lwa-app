@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { readStoredToken } from "../../lib/auth";
 import { createCampaign } from "../../lib/worlds/api";
 import { SafetyNotice } from "./SafetyNotice";
 
@@ -32,19 +33,28 @@ export function PostJobForm() {
       return;
     }
 
+    const token = readStoredToken();
+    if (!token) {
+      setError("You must be signed in to post a campaign.");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
     try {
-      await createCampaign({
-        title,
-        description: description + (requirements ? `\n\nRequirements: ${requirements}` : ""),
-        target_platform: "tiktok",
-        source_type: "video",
-        budget_amount: budget,
-        clip_count: clipCount || 1,
-        rights_required: deadline ? `Deadline: ${deadline}` : undefined,
-      });
+      await createCampaign(
+        {
+          title,
+          description: description + (requirements ? `\n\nRequirements: ${requirements}` : ""),
+          target_platform: "tiktok",
+          source_type: "video",
+          budget_amount: budget,
+          clip_count: clipCount || 1,
+          rights_required: deadline ? `Deadline: ${deadline}` : undefined,
+        },
+        token,
+      );
       router.push("/marketplace/campaigns");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create campaign. Try again.");
