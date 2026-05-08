@@ -1,32 +1,61 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { readStoredToken } from "../../lib/auth";
 import { listMyJobsWithAuth } from "../../lib/worlds/api";
 import type { WorldJob } from "../../lib/worlds/types";
 import { JobStatusCard } from "./JobStatusCard";
 
+const ACTIVE_STATUSES = new Set(["queued", "running", "retrying"]);
+const AUTO_POLL_MS = 8_000;
+
 export function JobsView() {
   const [jobs, setJobs] = useState<WorldJob[]>([]);
   const [state, setState] = useState<"loading" | "no-token" | "error" | "ready">("loading");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const tokenRef = useRef<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const load = useCallback(async (t: string, silent = false) => {
+    if (!silent) setRefreshing(true);
+    try {
+      const data = await listMyJobsWithAuth(t);
+      setJobs(data);
+      setState("ready");
+    } catch (err) {
+      if (!silent) {
+        setErrorMsg(err instanceof Error ? err.message : "Unable to load jobs.");
+        setState("error");
+      }
+    } finally {
+      if (!silent) setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const token = readStoredToken();
-    if (!token) {
+    const t = readStoredToken();
+    if (!t) {
       setState("no-token");
       return;
     }
-    listMyJobsWithAuth(token)
-      .then((data) => {
-        setJobs(data);
-        setState("ready");
-      })
-      .catch((err) => {
-        setErrorMsg(err instanceof Error ? err.message : "Unable to load jobs.");
-        setState("error");
-      });
-  }, []);
+    tokenRef.current = t;
+    void load(t);
+  }, [load]);
+
+  useEffect(() => {
+    if (state !== "ready") return;
+    const hasActive = jobs.some((j) => ACTIVE_STATUSES.has(j.status));
+    if (!hasActive || !tokenRef.current) return;
+
+    pollRef.current = setTimeout(() => {
+      if (tokenRef.current) void load(tokenRef.current, true);
+    }, AUTO_POLL_MS);
+
+    return () => {
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
+  }, [jobs, state, load]);
 
   const counts = {
     queued: jobs.filter((j) => j.status === "queued").length,
@@ -76,6 +105,20 @@ export function JobsView() {
 
       {state === "ready" && (
         <>
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-ink/46">
+              {jobs.some((j) => ACTIVE_STATUSES.has(j.status)) ? "Auto-refreshing every 8 s" : `${jobs.length} total`}
+            </p>
+            <button
+              type="button"
+              disabled={refreshing}
+              onClick={() => tokenRef.current && void load(tokenRef.current)}
+              className="secondary-button rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60"
+            >
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
+
           <section className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
             {(Object.entries(counts) as [string, number][]).map(([label, value]) => (
               <div key={label} className="metric-tile rounded-[24px] p-5">
