@@ -481,6 +481,18 @@ export async function updateScheduledPost(token: string, postId: string, payload
   });
 }
 
+export async function editClip(
+  clipId: string,
+  payload: { start_time?: string; end_time?: string; caption_text?: string },
+  token: string,
+): Promise<ClipResult> {
+  return jsonRequest<ClipResult>("/api/clip-edit", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ clip_id: clipId, ...payload }),
+  });
+}
+
 export type JobCreatedResponse = {
   job_id: string;
   status: string;
