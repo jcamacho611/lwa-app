@@ -1,8 +1,68 @@
+"use client";
+
+import { useState } from "react";
 import type { Quest } from "../../lib/worlds/types";
+import { claimQuest } from "../../lib/worlds/api";
+import { readStoredToken } from "../../lib/auth";
 import { StatPill } from "./StatPill";
 import { StatusBadge } from "./StatusBadge";
 
-export function QuestBoard({ quests }: { quests: Quest[] }) {
+function ClaimButton({ quest, onClaimed }: { quest: Quest; onClaimed: (id: string) => void }) {
+  const [claiming, setClaiming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [xpAwarded, setXpAwarded] = useState<number | null>(null);
+
+  if (quest.status === "claimed" || xpAwarded !== null) {
+    return (
+      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400">
+        {xpAwarded !== null ? `+${xpAwarded} XP claimed` : "Claimed"}
+      </span>
+    );
+  }
+
+  if (quest.status !== "completed") return null;
+
+  async function handleClaim() {
+    const token = readStoredToken();
+    if (!token) {
+      setError("Sign in to claim rewards.");
+      return;
+    }
+    setClaiming(true);
+    setError(null);
+    try {
+      const result = await claimQuest(quest.id, token);
+      setXpAwarded(result.xp_awarded ?? quest.rewardXp);
+      onClaimed(quest.id);
+    } catch {
+      setError("Claim failed. Try again.");
+    } finally {
+      setClaiming(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={handleClaim}
+        disabled={claiming}
+        className="rounded-full bg-[var(--gold)] px-4 py-1.5 text-xs font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
+      >
+        {claiming ? "Claiming…" : "Claim reward"}
+      </button>
+      {error ? <p className="text-[10px] text-red-400">{error}</p> : null}
+    </div>
+  );
+}
+
+export function QuestBoard({ quests: initial }: { quests: Quest[] }) {
+  const [quests, setQuests] = useState(initial);
+
+  function handleClaimed(id: string) {
+    setQuests((prev) => prev.map((q) => (q.id === id ? { ...q, status: "claimed" as const } : q)));
+  }
+
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       {quests.map((quest) => {
@@ -26,6 +86,11 @@ export function QuestBoard({ quests }: { quests: Quest[] }) {
                 <div className="h-full rounded-full bg-[var(--gold)]" style={{ width: `${progress}%` }} />
               </div>
             </div>
+            {quest.status === "completed" || quest.status === "claimed" ? (
+              <div className="mt-4 flex justify-end">
+                <ClaimButton quest={quest} onClaimed={handleClaimed} />
+              </div>
+            ) : null}
           </article>
         );
       })}

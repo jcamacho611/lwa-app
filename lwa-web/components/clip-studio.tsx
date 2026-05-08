@@ -43,6 +43,7 @@ import {
 } from "../lib/types";
 import {
   ApiError,
+  editClip,
   createBatch,
   createCampaignAssignments,
   createCampaign,
@@ -105,6 +106,7 @@ import { resolveWorldPhase, resolveWorldState, type WorldSignal } from "../lib/w
 import { useStableResults } from "../hooks/useStableResults";
 import { TrendSignals } from "./TrendSignals";
 import { HookFormulasPanel } from "./HookFormulasPanel";
+import { TimelineEditorPanel } from "./timeline-editor-panel";
 
 const platforms: PlatformOption[] = ["TikTok", "Instagram Reels", "YouTube Shorts"];
 type SourceMode = "video" | "image" | "idea";
@@ -372,6 +374,7 @@ export function ClipStudio({
   const [bundleExportState, setBundleExportState] = useState<"idle" | "exporting" | "ready" | "failed">("idle");
   const [bundleExportMessage, setBundleExportMessage] = useState<string | null>(null);
   const [latestBundleExport, setLatestBundleExport] = useState<ExportBundleResponse | null>(null);
+  const [timelineClip, setTimelineClip] = useState<ClipResult | null>(null);
   const [liveStreamWarning, setLiveStreamWarning] = useState(false);
   const [copiedPackageAction, setCopiedPackageAction] = useState<"lead" | "rendered" | "strategy" | "all" | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
@@ -2335,6 +2338,59 @@ export function ClipStudio({
           </div>
         )}
       </div>
+
+      {activeFeatureFlags.timeline_editor && user ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="section-kicker">Timeline editor</p>
+              <h4 className="mt-2 text-2xl font-semibold text-ink">Trim and caption burn</h4>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-ink/60">
+                Select a rendered clip below to open the frame-accurate trim editor.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {renderedClips.slice(0, 6).map((clip) => (
+              <button
+                key={clip.id}
+                type="button"
+                onClick={() => setTimelineClip(timelineClip?.id === clip.id ? null : clip)}
+                className={[
+                  "rounded-full border px-4 py-2 text-xs font-medium transition",
+                  timelineClip?.id === clip.id
+                    ? "border-[var(--gold-border)] bg-[var(--gold-dim)] text-[var(--gold)]"
+                    : "border-white/10 bg-white/[0.04] text-ink/72 hover:border-white/20",
+                ].join(" ")}
+              >
+                {clip.title?.slice(0, 32) || `Clip ${renderedClips.indexOf(clip) + 1}`}
+              </button>
+            ))}
+          </div>
+          {timelineClip && token != null ? (
+            <TimelineEditorPanel
+              clip={timelineClip}
+              token={token}
+              onSaved={(updated) => {
+                setTimelineClip(null);
+                setResult((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        clips: prev.clips?.map((c) =>
+                          c.id === updated.id ? updated : c,
+                        ),
+                      }
+                    : prev,
+                );
+              }}
+              onClose={() => setTimelineClip(null)}
+            />
+          ) : !renderedClips.length ? (
+            <p className="text-sm text-ink/50">No rendered clips available to edit yet.</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

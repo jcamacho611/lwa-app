@@ -13,6 +13,7 @@ const nav = [
   { label: "Integrations", href: "/integrations" },
   { label: "Admin", href: "/admin/marketplace" },
   { label: "Moderation", href: "/admin/moderation" },
+  { label: "Audit Log", href: "/admin/audit-log" },
 ];
 
 export function LwaShell({

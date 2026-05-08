@@ -1,4 +1,5 @@
 import type { Quest, UserWorldProfile } from "../../lib/worlds/types";
+import { QuestBoard } from "./QuestBoard";
 import { StatPill } from "./StatPill";
 
 export function WorldProfile({ profile, quests }: { profile: UserWorldProfile; quests: Quest[] }) {
@@ -62,21 +63,8 @@ export function WorldProfile({ profile, quests }: { profile: UserWorldProfile; q
       </section>
 
       <section className="glass-panel rounded-[24px] p-5">
-        <h3 className="text-2xl font-semibold text-ink">Active Quests</h3>
-        <div className="mt-4 grid gap-3">
-          {quests.map((quest) => (
-            <div key={quest.id} className="metric-tile rounded-[18px] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h4 className="font-semibold text-ink">{quest.title}</h4>
-                <span className="text-sm font-semibold text-[var(--gold)]">+{quest.rewardXp} XP</span>
-              </div>
-              <p className="mt-2 text-sm leading-7 text-ink/62">{quest.description}</p>
-              <p className="mt-2 text-xs text-ink/46">
-                Progress: {quest.progress}/{quest.goal}
-              </p>
-            </div>
-          ))}
-        </div>
+        <h3 className="mb-5 text-2xl font-semibold text-ink">Active Quests</h3>
+        <QuestBoard quests={quests} />
       </section>
     </div>
   );

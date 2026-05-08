@@ -952,6 +952,24 @@ export async function listRightsClaims(): Promise<ContentRightsClaim[]> {
   return result.map(mapRightsClaim);
 }
 
+export type AdminAuditEntry = {
+  public_id: string;
+  actor_user_id: string | null;
+  action_type: string;
+  target_type: string;
+  target_public_id: string | null;
+  before_state: string | null;
+  after_state: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+export async function listAuditLog(): Promise<AdminAuditEntry[]> {
+  const result = await request<AdminAuditEntry[]>("/worlds/admin/audit-log");
+  if (!Array.isArray(result)) throw new Error("Malformed audit log response");
+  return result;
+}
+
 export async function getMyWorldProfile(): Promise<UserWorldProfile> {
   const result = await request<{
     user_id: string;
@@ -1122,6 +1140,14 @@ export async function getMyRelics(): Promise<import("./types").Badge[]> {
     lore: r.lore,
     unlockedAt: r.unlocked_at,
   }));
+}
+
+export async function claimQuest(questId: string, token: string): Promise<{ status: string; xp_awarded?: number }> {
+  const result = await request<{ status: string; xp_awarded?: number }>(
+    `/worlds/quests/${encodeURIComponent(questId)}/claim`,
+    { method: "POST", headers: { Authorization: `Bearer ${token}` } },
+  );
+  return result;
 }
 
 export async function listQuests(): Promise<import("./types").Quest[]> {
