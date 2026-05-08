@@ -1,10 +1,10 @@
 import Link from "next/link";
+import type { MarketplaceCampaign } from "../../lib/worlds/types";
 import { safetyCopy } from "../../lib/worlds/copy";
-import { mockCampaigns } from "../../lib/worlds/mock-data";
 import { CampaignCard } from "./CampaignCard";
 import { SafetyNotice } from "./SafetyNotice";
 
-export function MarketplaceOverview() {
+export function MarketplaceOverview({ campaigns }: { campaigns: MarketplaceCampaign[] }) {
   return (
     <div className="space-y-6">
       <section className="hero-card rounded-[32px] p-6 sm:p-8">
@@ -34,11 +34,15 @@ export function MarketplaceOverview() {
           <p className="section-kicker">Open Campaigns</p>
           <h3 className="mt-2 text-2xl font-semibold text-ink">Available work</h3>
         </div>
-        <div className="grid gap-5 lg:grid-cols-2">
-          {mockCampaigns.map((campaign) => (
-            <CampaignCard key={campaign.id} campaign={campaign} />
-          ))}
-        </div>
+        {campaigns.length === 0 ? (
+          <p className="text-sm text-ink/46">No open campaigns right now — check back soon.</p>
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-2">
+            {campaigns.map((campaign) => (
+              <CampaignCard key={campaign.id} campaign={campaign} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

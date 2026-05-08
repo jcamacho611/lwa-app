@@ -1,12 +1,16 @@
-import { mockSubmissions } from "../../lib/worlds/mock-data";
-import type { MarketplaceCampaign } from "../../lib/worlds/types";
+import type { CampaignSubmission, MarketplaceCampaign } from "../../lib/worlds/types";
 import { formatDate, formatMoney } from "../../lib/worlds/utils";
 import { SafetyNotice } from "./SafetyNotice";
 import { StatPill } from "./StatPill";
 import { StatusBadge } from "./StatusBadge";
 
-export function CampaignDetail({ campaign }: { campaign: MarketplaceCampaign }) {
-  const submissions = mockSubmissions.filter((submission) => submission.campaignId === campaign.id);
+export function CampaignDetail({
+  campaign,
+  submissions,
+}: {
+  campaign: MarketplaceCampaign;
+  submissions: CampaignSubmission[];
+}) {
 
   return (
     <div className="space-y-6">
