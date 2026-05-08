@@ -1,9 +1,14 @@
+import type { AdminQueueItem } from "../../lib/worlds/types";
 import { mockAdminQueue } from "../../lib/worlds/mock-data";
 import { SafetyNotice } from "./SafetyNotice";
 import { StatPill } from "./StatPill";
 import { StatusBadge } from "./StatusBadge";
 
-export function AdminMarketplace() {
+export function AdminMarketplace({ queue = mockAdminQueue }: { queue?: AdminQueueItem[] }) {
+  const payoutReview = queue.filter((i) => i.type === "payout_review").length;
+  const disputes = queue.filter((i) => i.type === "dispute").length;
+  const fraudFlags = queue.filter((i) => i.type === "fraud_flag").length;
+
   return (
     <div className="space-y-6">
       <SafetyNotice title="Admin control">
@@ -14,26 +19,26 @@ export function AdminMarketplace() {
       <section className="grid gap-5 md:grid-cols-4">
         <div className="metric-tile rounded-[24px] p-5">
           <p className="text-sm text-ink/46">Open queue</p>
-          <p className="mt-2 text-3xl font-semibold text-ink">{mockAdminQueue.length}</p>
+          <p className="mt-2 text-3xl font-semibold text-ink">{queue.length}</p>
         </div>
         <div className="metric-tile rounded-[24px] p-5">
           <p className="text-sm text-ink/46">Payout review</p>
-          <p className="mt-2 text-3xl font-semibold text-ink">1</p>
+          <p className="mt-2 text-3xl font-semibold text-ink">{payoutReview}</p>
         </div>
         <div className="metric-tile rounded-[24px] p-5">
           <p className="text-sm text-ink/46">Disputes</p>
-          <p className="mt-2 text-3xl font-semibold text-ink">0</p>
+          <p className="mt-2 text-3xl font-semibold text-ink">{disputes}</p>
         </div>
         <div className="metric-tile rounded-[24px] p-5">
           <p className="text-sm text-ink/46">Fraud flags</p>
-          <p className="mt-2 text-3xl font-semibold text-ink">0</p>
+          <p className="mt-2 text-3xl font-semibold text-ink">{fraudFlags}</p>
         </div>
       </section>
 
       <section className="glass-panel rounded-[28px] p-5">
         <h2 className="text-2xl font-semibold text-ink">Review queue</h2>
         <div className="mt-5 grid gap-3">
-          {mockAdminQueue.map((item) => (
+          {queue.map((item) => (
             <article key={item.id} className="metric-tile rounded-[18px] p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
