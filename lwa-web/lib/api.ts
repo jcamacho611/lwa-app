@@ -481,6 +481,41 @@ export async function updateScheduledPost(token: string, postId: string, payload
   });
 }
 
+export type JobCreatedResponse = {
+  job_id: string;
+  status: string;
+  poll_url: string;
+  message: string;
+};
+
+export type JobStatusResponse = {
+  job_id: string;
+  status: "queued" | "processing" | "done" | "failed" | "cancelled";
+  progress_message?: string | null;
+  result?: unknown;
+  error?: string | null;
+  clips?: unknown[] | null;
+};
+
+export async function createJob(payload: {
+  video_url?: string;
+  upload_file_id?: string;
+  target_platform?: string;
+  content_angle?: string;
+}, token?: string | null): Promise<JobCreatedResponse> {
+  return jsonRequest<JobCreatedResponse>("/api/jobs", {
+    method: "POST",
+    headers: authHeaders(token, true),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function pollJobStatus(jobId: string, token?: string | null): Promise<JobStatusResponse> {
+  return jsonRequest<JobStatusResponse>(`/api/jobs/${encodeURIComponent(jobId)}`, {
+    headers: authHeaders(token, false),
+  });
+}
+
 export type TrendItem = {
   id: string;
   title: string;
