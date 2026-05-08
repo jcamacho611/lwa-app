@@ -1042,3 +1042,113 @@ export async function getIntegrations(): Promise<IntegrationCard[]> {
     adminOnly: item.admin_only,
   }));
 }
+
+type BackendUserBadge = {
+  badge_public_id: string;
+  name: string;
+  tier: string;
+  description: string;
+  lore: string;
+  unlocked_at: string;
+};
+
+type BackendUserRelic = {
+  relic_public_id: string;
+  name: string;
+  tier: string;
+  description: string;
+  lore: string;
+  future_collectible_eligible: boolean;
+  unlocked_at: string;
+};
+
+type BackendQuestResponse = {
+  public_id: string;
+  title: string;
+  description: string;
+  category: string;
+  goal: number;
+  reward_xp: number;
+  reward_badge_public_id: string | null;
+  active: boolean;
+};
+
+type BackendQuestCompletion = {
+  quest_public_id: string;
+  progress: number;
+  status: string;
+};
+
+function badgeTier(value: string): import("./types").Badge["tier"] {
+  const allowed = ["common", "rare", "epic", "mythic", "founder"] as const;
+  return (allowed as readonly string[]).includes(value) ? (value as import("./types").Badge["tier"]) : "common";
+}
+
+function questCategory(value: string): import("./types").Quest["category"] {
+  const allowed = ["daily", "weekly", "clipping", "marketplace", "ugc", "faction", "founder", "seasonal"] as const;
+  return (allowed as readonly string[]).includes(value)
+    ? (value as import("./types").Quest["category"])
+    : "clipping";
+}
+
+function questStatus(value: string): import("./types").Quest["status"] {
+  const allowed = ["available", "in_progress", "completed", "claimed"] as const;
+  return (allowed as readonly string[]).includes(value)
+    ? (value as import("./types").Quest["status"])
+    : "available";
+}
+
+export async function getMyBadges(): Promise<import("./types").Badge[]> {
+  const result = await request<BackendUserBadge[]>("/worlds/badges/me");
+  if (!Array.isArray(result)) return [];
+  return result.map((b) => ({
+    id: b.badge_public_id,
+    name: b.name,
+    tier: badgeTier(b.tier),
+    description: b.description,
+    lore: b.lore,
+    unlockedAt: b.unlocked_at,
+  }));
+}
+
+export async function getMyRelics(): Promise<import("./types").Badge[]> {
+  const result = await request<BackendUserRelic[]>("/worlds/relics/me");
+  if (!Array.isArray(result)) return [];
+  return result.map((r) => ({
+    id: r.relic_public_id,
+    name: r.name,
+    tier: badgeTier(r.tier),
+    description: r.description,
+    lore: r.lore,
+    unlockedAt: r.unlocked_at,
+  }));
+}
+
+export async function listQuests(): Promise<import("./types").Quest[]> {
+  const [questDefs, completions] = await Promise.all([
+    request<BackendQuestResponse[]>("/worlds/quests"),
+    request<BackendQuestCompletion[]>("/worlds/quests/me").catch(() => [] as BackendQuestCompletion[]),
+  ]);
+
+  if (!Array.isArray(questDefs)) return [];
+
+  const progressMap = new Map<string, BackendQuestCompletion>(
+    (Array.isArray(completions) ? completions : []).map((c) => [c.quest_public_id, c]),
+  );
+
+  return questDefs
+    .filter((q) => q.active)
+    .map((q) => {
+      const completion = progressMap.get(q.public_id);
+      return {
+        id: q.public_id,
+        title: q.title,
+        description: q.description,
+        category: questCategory(q.category),
+        progress: completion?.progress ?? 0,
+        goal: q.goal,
+        rewardXp: q.reward_xp,
+        status: completion ? questStatus(completion.status) : ("available" as const),
+      };
+    });
+}

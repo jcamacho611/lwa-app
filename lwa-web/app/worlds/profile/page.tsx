@@ -1,15 +1,28 @@
 import { LwaShell } from "../../../components/worlds/LwaShell";
 import { WorldProfile } from "../../../components/worlds/WorldProfile";
-import { getMyWorldProfile } from "../../../lib/worlds/api";
+import { getMyBadges, getMyRelics, getMyWorldProfile, listQuests } from "../../../lib/worlds/api";
 import { mockQuests, mockWorldProfile } from "../../../lib/worlds/mock-data";
 
 async function getProfileData() {
-  try {
-    const profile = await getMyWorldProfile();
-    return { profile, quests: mockQuests };
-  } catch {
-    return { profile: mockWorldProfile, quests: mockQuests };
-  }
+  const [profile, badges, relics, quests] = await Promise.allSettled([
+    getMyWorldProfile(),
+    getMyBadges(),
+    getMyRelics(),
+    listQuests(),
+  ]);
+
+  const resolvedProfile =
+    profile.status === "fulfilled"
+      ? {
+          ...profile.value,
+          badges: badges.status === "fulfilled" ? badges.value : [],
+          relics: relics.status === "fulfilled" ? relics.value : [],
+        }
+      : mockWorldProfile;
+
+  const resolvedQuests = quests.status === "fulfilled" && quests.value.length > 0 ? quests.value : mockQuests;
+
+  return { profile: resolvedProfile, quests: resolvedQuests };
 }
 
 export default async function WorldProfilePage() {
